@@ -1,0 +1,106 @@
+{
+  "Scope": "Installed vanilla base models listed below; does not establish a claim about modded models or live constraint deformation.",
+  "Method": "VRageRender.Import.MyModelImporter.ImportData(modelPath, new string[] { \"Dummies\" }); GetTagData()[\"Dummies\"][\"electric_motor\"].Matrix.Translation",
+  "DefinitionPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpaceEngineers\\Content\\Data\\CubeBlocks\\CubeBlocks_Mechanical.sbc",
+  "DefinitionSha256": "45EECAB865C03974C1796860E7CAF249C2DF7BD9CA16A3B1EC92D6CCE35AB656",
+  "ImporterAssemblyPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpaceEngineers\\Bin64\\VRage.Render.dll",
+  "ImporterAssemblySha256": "DF174FA5E34B35B9D3AFCF3229EAC0C509E626C4D7F6573BD25CB8EDAD4AC229",
+  "Models": [
+    {
+      "Subtype": "LargeStator",
+      "ModelPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpaceEngineers\\Content\\Models\\Cubes\\Large\\MotorStator.mwm",
+      "ModelSha256": "0036718BF75CE570873B5A5A9EF4A56E52B5DD18F7A338B7475E2551ACC200C6",
+      "Dummy": "electric_motor",
+      "LocalTranslationMetres": [
+        1.033530949712258E-07,
+        0.4208642244338989,
+        1.3662192088759184E-07
+      ],
+      "PerpendicularDistanceToLocalUpMetres": 1.713108621983633E-07
+    },
+    {
+      "Subtype": "SmallStator",
+      "ModelPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpaceEngineers\\Content\\Models\\Cubes\\Small\\MotorStator.mwm",
+      "ModelSha256": "8DAD61B276E208888A9703432FC205FCF8C69E616E66A659D22710A730021779",
+      "Dummy": "electric_motor",
+      "LocalTranslationMetres": [
+        2.17650750755638E-07,
+        0.036039892584085464,
+        3.7548051068370114E-07
+      ],
+      "PerpendicularDistanceToLocalUpMetres": 4.340016857199818E-07
+    },
+    {
+      "Subtype": "LargeAdvancedStator",
+      "ModelPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpaceEngineers\\Content\\Models\\Cubes\\Large\\MotorAdvancedStator.mwm",
+      "ModelSha256": "1E461D130CD1EAD22B9F9957F7B9195337BBBF35163CCB3EF427E906AD352447",
+      "Dummy": "electric_motor",
+      "LocalTranslationMetres": [
+        1.033530949712258E-07,
+        0.19979000091552734,
+        1.2796517978586053E-07
+      ],
+      "PerpendicularDistanceToLocalUpMetres": 1.6448996771158669E-07
+    },
+    {
+      "Subtype": "SmallAdvancedStator",
+      "ModelPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpaceEngineers\\Content\\Models\\Cubes\\Small\\MotorAdvancedStator.mwm",
+      "ModelSha256": "B60CE8D65D5044F50D626021FB5B1277C98418FBBE25744AA5EA44E02DF1F866",
+      "Dummy": "electric_motor",
+      "LocalTranslationMetres": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "PerpendicularDistanceToLocalUpMetres": 0.0
+    },
+    {
+      "Subtype": "SmallAdvancedStatorSmall",
+      "ModelPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpaceEngineers\\Content\\Models\\Cubes\\Small\\MotorAdvancedStatorSmall.mwm",
+      "ModelSha256": "F459C81CF0B071BAAAECDC6DAAF47ACF5715B4CD61974AD48222C1D08AC1E9B3",
+      "Dummy": "electric_motor",
+      "LocalTranslationMetres": [
+        2.553320221920785E-08,
+        0.047984808683395386,
+        5.927423671892029E-07
+      ],
+      "PerpendicularDistanceToLocalUpMetres": 5.932920514187147E-07
+    },
+    {
+      "Subtype": "LargeHinge",
+      "ModelPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpaceEngineers\\Content\\Models\\Cubes\\Large\\Hinge.mwm",
+      "ModelSha256": "53026CDB4089F1C64026CCCFC11020C8AE3AAD81C9FDC699B269AECF0987B463",
+      "Dummy": "electric_motor",
+      "LocalTranslationMetres": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "PerpendicularDistanceToLocalUpMetres": 0.0
+    },
+    {
+      "Subtype": "MediumHinge",
+      "ModelPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpaceEngineers\\Content\\Models\\Cubes\\Small\\HingeMedium.mwm",
+      "ModelSha256": "4D77A61EB4A567E88DE266ADF19724454B34F5A446C33F4E93AC10A485C79587",
+      "Dummy": "electric_motor",
+      "LocalTranslationMetres": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "PerpendicularDistanceToLocalUpMetres": 0.0
+    },
+    {
+      "Subtype": "SmallHinge",
+      "ModelPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpaceEngineers\\Content\\Models\\Cubes\\Small\\HingeSmall.mwm",
+      "ModelSha256": "734CF861A6B2908CED61BFEA43A07CDF46ED38468C1313BCA283A79EE11B7FE3",
+      "Dummy": "electric_motor",
+      "LocalTranslationMetres": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "PerpendicularDistanceToLocalUpMetres": 0.0
+    }
+  ]
+}

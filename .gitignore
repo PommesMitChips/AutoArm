@@ -6,3 +6,7 @@ tools/ArmTests/obj/
 *.user
 *.suo
 .vs/
+
+# Exclude build output at any tool nesting depth.
+**/bin/
+**/obj/
