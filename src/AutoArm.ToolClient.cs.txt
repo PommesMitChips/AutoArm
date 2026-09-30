@@ -1,0 +1,215 @@
+// AutoArm owns topology, targets and every velocity write. This client contains
+// no parking or attachment state machine; the second PB supplies equipment data.
+sealed class ToolSwapLink
+{
+    readonly Program P;
+    readonly ModuleLink Link;
+    readonly List<IMyMotorStator> Couplers = new List<IMyMotorStator>();
+    readonly List<IMyTerminalBlock> Markers = new List<IMyTerminalBlock>();
+    readonly List<long> Tops = new List<long>();
+    readonly List<List<IMyShipMergeBlock>> Merges = new List<List<IMyShipMergeBlock>>();
+    IMyCubeBlock Frame;
+    ToolTopInfo Tip;
+    IMyTerminalBlock End;
+    string PeerName = "", Queued = "", Error = "";
+    long Ignore, Request, MoveRequest;
+    bool Lease, Rebuilding, Driving, Permitted, Settled, Changing;
+    ArmPath Path;
+    double Move, Turn, PosTol, AngleTol, ReportElapsed;
+    public bool Busy => Lease || Queued.Length > 0;
+    public bool Automatic => Lease && Changing;
+    public bool Configured => PeerName.Length > 0;
+    public IMyTerminalBlock Endpoint => End;
+    public IMyCubeBlock EndFrame => Frame;
+    public ToolTopInfo Focus => Tip;
+    public long IgnoredMount => Ignore;
+    public ToolSwapLink(Program p) { P = p; Link = new ModuleLink(p); }
+    public bool Load(out string why)
+    {
+        why = ""; MyIni ini;
+        if (!AutoConfig.ReadCurrent(P.Me.CustomData, out ini, out why)) return false;
+        PeerName = ini.Get("Modules", "ToolSwapPB").ToString().Trim();
+        Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = false; Error = "";
+        if (!Configured) { Link.Peer = null; End = null; Frame = null; Tip = null; Couplers.Clear(); Markers.Clear(); Tops.Clear(); Merges.Clear(); return true; }
+        Link.Resolve(PeerName); Link.Generation++; Link.RemoteEpoch = Link.Received = 0; Link.Age = 0;
+        Queued = "Reload"; return true;
+    }
+    public void WriteConfig(MyIni ini) { ini.Set("Modules", "ToolSwapPB", PeerName); }
+    public void StartOn() { Queued = "On"; P.Runtime.UpdateFrequency = UpdateFrequency.Update1; P.Say("On: waiting for ToolSwap PB."); }
+    public bool Handle(string command)
+    {
+        string verb = command.Trim().Split(' ')[0].ToLowerInvariant();
+        if (verb != "tool" && verb != "toolswap" && verb != "toolscan" && verb != "toolinfo" && verb != "park" && verb != "swapcancel") return false;
+        if (!Configured) { P.Say("Configure Modules.ToolSwapPB."); return true; }
+        if (verb == "swapcancel") { P.StopMotion(""); Cancel("Swap canceled; inspect, then On."); P.Say("Swap canceled; arm OFF."); return true; }
+        if (verb != "toolinfo")
+        {
+            if (Lease) { P.Say("ToolSwap busy; Stop first."); return true; }
+            P.StopMotion(""); Link.Generation++; Lease = true; Driving = Rebuilding = Permitted = false; Link.Age = 0;
+            Changing = verb != "toolscan" && verb != "swapcancel";
+            P.Say("Tools " + command + "; arm OFF.");
+        }
+        SendCommand(command); return true;
+    }
+    void SendCommand(string command)
+    { var packet = Link.Packet("COMMAND"); packet.Set(LinkSection, "Command", command); packet.Set(LinkSection, "Stopped", !Driving); Link.Send(packet); }
+    public void Cancel(string why)
+    {
+        Driving = Rebuilding = Lease = Permitted = false; Queued = ""; Error = why; Link.Generation++;
+        P.Topology.ZeroOwned(); ZeroMount();
+        if (Link.Peer != null) try { SendCommand("Stop"); } catch { }
+    }
+    public void ZeroMount()
+    { foreach (var rotor in Couplers) if (!rotor.Closed) rotor.TargetVelocityRad = 0; }
+    public bool AllowManual(out string why)
+    {
+        why = ""; if (!Configured) return true;
+        if (Busy || !Permitted || Link.Age > .5) { why = "ToolSwap not ready/responding; run On."; return false; }
+        for (int i = 0; i < Couplers.Count; i++)
+        {
+            var rotor = Couplers[i]; var marker = Markers[i];
+            if (rotor.Closed || marker.Closed || !rotor.IsFunctional || rotor.CubeGrid.EntityId != marker.CubeGrid.EntityId || rotor.PendingAttachment ||
+                (rotor.Top == null ? 0 : rotor.Top.EntityId) != Tops[i] || rotor.IsAttached != (Tops[i] != 0)) { why = "Tool equipment changed; run On."; return false; }
+            if (Tops[i] != 0)
+            {
+                if (rotor.Top.Base == null || rotor.Top.Base.EntityId != rotor.EntityId) { why = "Tool attachment is not reciprocal."; return false; }
+                foreach (var merge in Merges[i]) if (merge.Closed || merge.CubeGrid.EntityId != marker.CubeGrid.EntityId || merge.IsConnected) { why = "Mounted tool still supported/split."; return false; }
+            }
+        }
+        return true;
+    }
+    public void Receive(double elapsed)
+    {
+        if (Finite(elapsed) && elapsed > 0) Link.Age += elapsed;
+        int count = 0;
+        while (P.IGC.UnicastListener.HasPendingMessage && count++ < 16)
+        {
+            if (P.Runtime.MaxInstructionCount > 0 && P.Runtime.CurrentInstructionCount >= P.Runtime.MaxInstructionCount * .5) break;
+            var message = P.IGC.UnicastListener.AcceptMessage(); MyIni ini;
+            if (!Link.Read(message, out ini)) continue;
+            long epoch = ini.Get(LinkSection, "Epoch").ToInt64(), seq = ini.Get(LinkSection, "Sequence").ToInt64();
+            string op = ini.Get(LinkSection, "Operation").ToString();
+            if (op == "HELLO")
+            {
+                if (ini.Get(LinkSection, "Remote").ToInt64() != 0 && ini.Get(LinkSection, "Remote").ToInt64() != Link.Epoch) continue;
+                bool acquire = ini.Get(LinkSection, "Acquire").ToBoolean();
+                if (epoch < Link.RemoteEpoch) continue;
+                if (Link.RemoteEpoch != epoch) { P.StopMotion(""); Link.RemoteEpoch = epoch; Link.Received = 0; Lease = Driving = Rebuilding = Permitted = false; }
+                if (seq <= Link.Received) continue;
+                Link.Received = seq;
+                if (acquire && P.ConfigValid && ini.Get(LinkSection, "Remote").ToInt64() == Link.Epoch && ini.Get(LinkSection, "Generation").ToInt64() == Link.Generation)
+                { P.StopMotion(""); Lease = true; Driving = Rebuilding = Permitted = false; Changing = ini.Get(LinkSection, "Changing").ToBoolean(); Error = ""; }
+                Link.Age = 0; Request = seq; Reply("STATE"); continue;
+            }
+            if (epoch != Link.RemoteEpoch || seq <= Link.Received || ini.Get(LinkSection, "Remote").ToInt64() != Link.Epoch || ini.Get(LinkSection, "Generation").ToInt64() != Link.Generation) continue;
+            Link.Received = seq; Link.Age = 0; Request = seq;
+            try
+            {
+                if (op == "INFO") { P.DisplayPinned = true; P.Say(ini.Get(LinkSection, "Text").ToString()); }
+                else if (op == "PING")
+                {
+                    Permitted = ini.Get(LinkSection, "Permit").ToBoolean();
+                    if (P.Enabled && !Permitted) { P.Fault("ToolSwap equipment not ready."); }
+                }
+                else if (!Lease) throw new Exception("No movement lease.");
+                else if (op == "ABORT")
+                { Driving = Rebuilding = Lease = Permitted = false; Path = null; Error = ini.Get(LinkSection, "Reason").ToString(); P.StopMotion(Error); P.Say("ToolSwap stopped: " + Error); }
+                else if (op == "STOP" || op == "PAUSE") { Driving = false; Path = null; P.StopMotion(""); }
+                else if (op == "BUILD")
+                {
+                    if (!P.ConfigValid) throw new Exception("Arm configuration invalid; run On on arm PB.");
+                    Driving = false; P.StopMotion(""); ApplyEndpoint(ini);
+                    string why; if (!P.RebuildToolTopology(out why)) throw new Exception(why);
+                    Rebuilding = true; Settled = false;
+                }
+                else if (op == "PATH")
+                {
+                    if (!P.Topology.Ready || Rebuilding) throw new Exception("Arm topology is not ready.");
+                    Move = Number(ini, "Move", .001, 1); Turn = Number(ini, "Turn", .01, 30);
+                    PosTol = Number(ini, "PosTol", .001, .05); AngleTol = Number(ini, "AngleTol", .01, 2);
+                    Path = P.ReadPath(ini.Get(LinkSection, "Waypoints").ToString(), ini.Get(LinkSection, "Anchor").ToInt64(), seq, Move, Turn, PosTol, AngleTol);
+                    Driving = true; Settled = false; MoveRequest = seq;
+                }
+                else if (op == "RESUME" || op == "RELEASE")
+                {
+                    Driving = false; P.StopMotion(""); ApplyEquipment(ini); Permitted = ini.Get(LinkSection, "Permit").ToBoolean();
+                    Lease = false; if (op == "RESUME") P.EnableControl();
+                }
+                else throw new Exception("Unknown module operation.");
+                Reply("STATE");
+            }
+            catch (Exception e) { Error = e.Message; Driving = Rebuilding = false; P.StopMotion(Error); Reply("STATE"); }
+        }
+        if (Configured && Link.Age > .5 && (P.Enabled || Lease))
+        { Driving = Rebuilding = false; P.Fault("ToolSwap communication timeout."); }
+    }
+    static double Number(MyIni ini, string key, double lo, double hi)
+    { double v; if (!ini.Get(LinkSection, key).TryGetDouble(out v) || !Finite(v) || v < lo || v > hi) throw new Exception("Bad module " + key); return v; }
+    void ApplyEndpoint(MyIni ini)
+    {
+        End = P.GridTerminalSystem.GetBlockWithId(ini.Get(LinkSection, "Endpoint").ToInt64());
+        var owner = P.GridTerminalSystem.GetBlockWithId(ini.Get(LinkSection, "AnchorOwner").ToInt64());
+        Frame = LinkAnchor(owner, ini.Get(LinkSection, "Anchor").ToInt64());
+        if (End == null || End.Closed || !End.IsSameConstructAs(P.Me) || !owner.IsSameConstructAs(P.Me)) throw new Exception("Foreign/lost module endpoint.");
+        Ignore = ini.Get(LinkSection, "Ignore").ToInt64(); Tip = null;
+        if (ini.Get(LinkSection, "Focus").ToBoolean())
+        {
+            var inventory = new List<IMyTerminalBlock>(); P.GridTerminalSystem.GetBlocks(inventory);
+            Tip = new ToolTopInfo { Marker = Frame, EntityId = ini.Get(LinkSection, "Part").ToInt64(), Local = LinkFrame(ini, "Local"), Inventory = inventory };
+            if (!Tip.CubeGrid.CubeExists(Tip.Position)) throw new Exception("Module focus is outside the arm.");
+        }
+        ApplyEquipment(ini);
+    }
+    void ApplyEquipment(MyIni ini)
+    {
+        var couplers = new List<IMyMotorStator>(); var markers = new List<IMyTerminalBlock>();
+        var tops = new List<long>(); var merges = new List<List<IMyShipMergeBlock>>();
+        string[] rows = ini.Get(LinkSection, "Equipment").ToString().Split('\n');
+        if (rows.Length > 16) throw new Exception("Module equipment limit.");
+        foreach (var row in rows)
+        {
+            string[] cells = row.Split('|'); long rotorId, markerId, topId;
+            if (cells.Length != 4 || !long.TryParse(cells[0], out rotorId) || !long.TryParse(cells[1], out markerId) || !long.TryParse(cells[2], out topId)) throw new Exception("Bad module equipment row.");
+            var rotor = P.GridTerminalSystem.GetBlockWithId(rotorId) as IMyMotorStator; var marker = P.GridTerminalSystem.GetBlockWithId(markerId);
+            if (rotor == null || marker == null || !rotor.IsSameConstructAs(P.Me) || !marker.IsSameConstructAs(P.Me) || couplers.Contains(rotor)) throw new Exception("Lost/duplicate module equipment.");
+            var ports = new List<IMyShipMergeBlock>();
+            foreach (var cell in cells[3].Split(',')) if (cell.Length > 0)
+            {
+                long id; if (!long.TryParse(cell, out id) || ports.Count >= 16) throw new Exception("Bad module merge list.");
+                var port = P.GridTerminalSystem.GetBlockWithId(id) as IMyShipMergeBlock;
+                if (port == null || !port.IsSameConstructAs(P.Me)) throw new Exception("Lost module merge."); ports.Add(port);
+            }
+            couplers.Add(rotor); markers.Add(marker); tops.Add(topId); merges.Add(ports);
+        }
+        Couplers.Clear(); Couplers.AddRange(couplers); Markers.Clear(); Markers.AddRange(markers); Tops.Clear(); Tops.AddRange(tops); Merges.Clear(); Merges.AddRange(merges);
+    }
+    public void Tick(double dt, double observationDt)
+    {
+        if (Queued.Length > 0) { string command = Queued; Queued = ""; Lease = true; SendCommand(command); }
+        if (Link.Age > .5) return;
+        if (Rebuilding)
+        { string why; if (P.SettleToolTopology(out why)) { Rebuilding = false; Reply("STATE"); } }
+        if (Driving)
+        {
+            string why; int previous = Path.Completed;
+            if (!P.StepPath(Path, dt, observationDt, out why))
+            { Error = why; Driving = false; P.StopMotion(why); }
+            else if (Path.Done) { Settled = true; Driving = false; P.StopMotion(""); }
+            ReportElapsed += observationDt;
+            if (!Driving || previous != Path.Completed || ReportElapsed >= .1) { ReportElapsed = 0; Reply("STATE"); }
+        }
+    }
+    void Reply(string operation)
+    {
+        var ini = Link.Packet(operation); ini.Set(LinkSection, "Ack", Request); ini.Set(LinkSection, "MoveAck", MoveRequest);
+        ini.Set(LinkSection, "Lease", Lease); ini.Set(LinkSection, "Ready", P.ConfigValid && P.Topology.Ready && !Rebuilding);
+        ini.Set(LinkSection, "Stopped", !Driving && !P.Enabled); ini.Set(LinkSection, "Settled", Settled);
+        ini.Set(LinkSection, "PathId", Path == null ? 0 : Path.Id); ini.Set(LinkSection, "Completed", Path == null ? 0 : Path.Completed); ini.Set(LinkSection, "Count", Path == null ? 0 : Path.Waypoints.Count);
+        ini.Set(LinkSection, "Error", Error); ini.Set(LinkSection, "Pilot", P.HasPilotInput());
+        ini.Set(LinkSection, "Keyboard", P.ReadKeyboard); ini.Set(LinkSection, "Mouse", P.ReadMouse); ini.Set(LinkSection, "Roll", P.ReadRoll);
+        ini.Set(LinkSection, "Head", P.Topology.Head == null ? 0 : P.Topology.Head.EntityId);
+        var rows = new List<string>(); foreach (var group in P.Topology.Groups)
+        { var ids = new List<string>(); foreach (var member in group.M) ids.Add(member.B.EntityId.ToString()); rows.Add(string.Join(",", ids)); }
+        ini.Set(LinkSection, "Groups", string.Join("\n", rows)); Link.Send(ini);
+    }
+}

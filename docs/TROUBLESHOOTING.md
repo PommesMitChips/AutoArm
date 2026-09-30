@@ -2,9 +2,13 @@
 
 ## “Head*; found X”
 
-With tools disabled, exactly one terminal block must start with the arm's head prefix. For `Arm 1`, names such as `Arm 1 - Head 1 - Drill` and `Arm 1 - Head 1 - HeadMerge` both match `Arm 1 - Head`. Keep that prefix on only the reference block for a simple arm.
+With `[Modules] ToolSwapPB` empty, exactly one terminal block must start with the arm's head prefix. For `Arm 1`, names such as `Arm 1 - Head 1 - Drill` and `Arm 1 - Head 1 - HeadMerge` both match `Arm 1 - Head`. Keep that prefix on only the reference block for a simple arm.
 
-For a tool setup, enable `[Tools]`, configure each tool-side rotor base in `[ToolNN] Mount`, and complete marker names in `Heads`. Run `On` to load the edits, scan and enable control. `Check` alone does not load configuration edits.
+For a tool setup, install the second PB and set the arm PB's `Modules.ToolSwapPB` to its exact name. Put `[Tools]` and `[ToolNN]` sections in the ToolSwap PB, with complete marker names in `Heads` and tool-side rotor bases in `Mount`. Run `On` on the arm PB to load, scan and enable. `Check` alone does not load configuration edits.
+
+## Module PB missing or not responding
+
+Both PBs must be functional, running and on the same construct. Their code must use the same arm name. `Modules.ToolSwapPB` in the arm PB and `Link.ArmPB` in the ToolSwap PB must name the other PB exactly. Check that each PB contains the correct script and configuration example. Run `On` on the arm PB after fixing them. Loss of module communication stops movement.
 
 ## Missing or ambiguous names
 
@@ -28,7 +32,7 @@ Automatic generic parking uses numbered names such as `Arm 1 - ParkMerge 1`. An 
 
 ## Configuration format
 
-Current configuration uses Format 5. If the loader reports the wrong format, save the preferences you want to retain, delete Custom Data and run `On`. When installing into another PB, clear a copied `Actuators` table so the new PB can generate its own rows.
+Arm configuration uses Format 6; ToolSwap configuration uses Format 1. If the loader reports the wrong format, save the preferences you want to retain, delete Custom Data and copy the current example for that PB. Run `On` on the arm PB. When installing into another arm PB, clear a copied `Actuators` table so the new PB can generate its own rows.
 
 ## Interrupted swaps
 

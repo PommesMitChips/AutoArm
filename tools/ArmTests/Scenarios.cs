@@ -31,9 +31,9 @@ internal static partial class Scenarios
     }
     static void WaitForOn(object script)
     {
-        bool waiting = (bool)Get(script,"PendingOn")! || (bool)Get(Get(script,"Tools")!,"StartAfterScan")!;
+        bool waiting = (bool)Get(script,"PendingOn")!;
         if(waiting) RecordProxy.Of(((TestHost)script).Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(1d/60);
-        for(int i=0;i<200 && ((bool)Get(script,"PendingOn")! || (bool)Get(Get(script,"Tools")!,"StartAfterScan")!);i++)
+        for(int i=0;i<200 && (bool)Get(script,"PendingOn")!;i++)
             script.GetType().GetMethod("Main")!.Invoke(script,new object[]{"",UpdateType.Update1});
         if(waiting && Enabled(script)) script.GetType().GetMethod("Main")!.Invoke(script,new object[]{"",UpdateType.Update1});
     }
@@ -69,8 +69,10 @@ internal static partial class Scenarios
         GravityHoldCases(type);
         ViewControlCases(type);
         PoseCommandsCases(type);
-        ToolSwapCases(type);
-        OneShotOnCases(type);
+        PathCases(type);
+        var toolType=Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_ToolSwap_Source.txt")));
+        NativeReverseGeometry(toolType);
+        DualModuleCases(type,toolType);
         Console.WriteLine($"Automatic arm integration: PASS ({Tests.Assertions} assertions).");
     }
     static void Discovery(Type type)
@@ -117,7 +119,7 @@ internal static partial class Scenarios
     }
     static void Configuration(Type type)
     {
-        var rig=Fixtures.Serial(out _,out _,out _,out _);RecordProxy.Of(rig.PB).Values["CustomData"]="[AutoArm]\nArm=Arm 1\nFormat=5\n[Unrelated]\nKeep=original\n";
+        var rig=Fixtures.Serial(out _,out _,out _,out _);RecordProxy.Of(rig.PB).Values["CustomData"]="[AutoArm]\nArm=Arm 1\nFormat=6\n[Unrelated]\nKeep=original\n";
         var script=Start(type,rig);
         var ini=new MyIni();Check(ini.TryParse(rig.PB.CustomData),"Generated INI invalid.");
         Check(ini.Get("Unrelated","Keep").ToString()=="original","Unrelated configuration lost.");

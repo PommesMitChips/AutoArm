@@ -1,0 +1,84 @@
+// Versioned unicast transport. Epochs survive recompilation; generations revoke
+// outstanding commands on Stop. Messages never grant direct actuator access.
+const string LinkTag = "AutoArm/3";
+const string LinkSection = "Link";
+
+sealed class ModuleLink
+{
+    readonly Program P;
+    public IMyProgrammableBlock Peer;
+    public readonly long Epoch;
+    public long RemoteEpoch, Generation, Sequence, Received;
+    public double Age;
+    bool Persisted;
+    public ModuleLink(Program p)
+    {
+        P = p;
+        var ini = LinkSaved(p.Storage); long epoch = ini.Get("AutoArm Link", "Epoch").ToInt64();
+        if (epoch < 0 || epoch == long.MaxValue) throw new Exception("Invalid link epoch.");
+        Epoch = epoch + 1;
+        p.IGC.UnicastListener.SetMessageCallback(LinkTag);
+    }
+    public void Resolve(string name)
+    {
+        Peer = null;
+        var blocks = new List<IMyProgrammableBlock>(); P.GridTerminalSystem.GetBlocksOfType(blocks);
+        foreach (var b in blocks) if (b.CustomName == name && !b.Closed && b.IsSameConstructAs(P.Me))
+        { if (Peer != null) throw new Exception("Duplicate PB: " + name); Peer = b; }
+        if (Peer == null || Peer == P.Me || !Peer.IsFunctional) throw new Exception("Missing/invalid PB: " + name);
+    }
+    public MyIni Packet(string operation)
+    {
+        var ini = new MyIni(); ini.Set(LinkSection, "Version", 3); ini.Set(LinkSection, "Arm", ArmName);
+        ini.Set(LinkSection, "Epoch", Epoch); ini.Set(LinkSection, "Remote", RemoteEpoch);
+        ini.Set(LinkSection, "Generation", Generation); ini.Set(LinkSection, "Sequence", ++Sequence);
+        ini.Set(LinkSection, "Operation", operation); return ini;
+    }
+    public void Send(MyIni ini)
+    {
+        if (Peer == null || Peer.Closed || !Peer.IsFunctional || !Peer.IsSameConstructAs(P.Me)) throw new Exception("Module PB unavailable.");
+        if (!Persisted) { var saved = LinkSaved(P.Storage); saved.Set("AutoArm Link", "Epoch", Epoch); P.Storage = saved.ToString(); Persisted = true; }
+        string text = ini.ToString(); if (text.Length > 16000) throw new Exception("Module packet too large.");
+        P.IGC.SendUnicastMessage(Peer.EntityId, LinkTag, text);
+    }
+    public bool Read(MyIGCMessage message, out MyIni ini)
+    {
+        ini = new MyIni(); var text = message.Data as string;
+        return Peer != null && !Peer.Closed && Peer.IsFunctional && Peer.IsSameConstructAs(P.Me) && message.Source == Peer.EntityId && message.Tag == LinkTag &&
+            text != null && text.Length <= 16000 && ini.TryParse(text) && ini.Get(LinkSection, "Version").ToInt32() == 3 && ini.Get(LinkSection, "Arm").ToString() == ArmName &&
+            ini.Get(LinkSection, "Epoch").ToInt64() > 0 && ini.Get(LinkSection, "Sequence").ToInt64() > 0;
+    }
+}
+static MyIni LinkSaved(string text)
+{
+    var ini = new MyIni(); if (!ini.TryParse(text ?? "")) { ini.Clear(); ini.EndContent = text ?? ""; } return ini;
+}
+static void WriteVector(MyIni ini, string key, Vector3D value)
+{ ini.Set(LinkSection, key, value.X.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + " " + value.Y.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + " " + value.Z.ToString("R", System.Globalization.CultureInfo.InvariantCulture)); }
+static Vector3D LinkVector(MyIni ini, string key)
+{
+    string[] cells = ini.Get(LinkSection, key).ToString().Split(' '); double x, y, z;
+    if (cells.Length != 3 || !ReadDouble(cells[0], out x) || !ReadDouble(cells[1], out y) || !ReadDouble(cells[2], out z)) throw new Exception("Invalid module vector: " + key);
+    return new Vector3D(x, y, z);
+}
+static void WriteFrame(MyIni ini, string key, MatrixD frame)
+{ WriteVector(ini, key + "P", frame.Translation); WriteVector(ini, key + "F", frame.Forward); WriteVector(ini, key + "U", frame.Up); }
+static MatrixD LinkFrame(MyIni ini, string key)
+{
+    var p = LinkVector(ini, key + "P"); var f = LinkVector(ini, key + "F"); var u = LinkVector(ini, key + "U");
+    if (Math.Abs(f.LengthSquared() - 1) > .001 || Math.Abs(u.LengthSquared() - 1) > .001 || Math.Abs(Vector3D.Dot(f, u)) > .001 || !Orthonormalise(ref f, ref u)) throw new Exception("Invalid module frame.");
+    return MatrixD.CreateWorld(p, f, u);
+}
+static IMyCubeBlock LinkAnchor(IMyTerminalBlock block, long entity)
+{
+    if (block == null || block.Closed) throw new Exception("Module anchor lost.");
+    if (block.EntityId == entity) return block;
+    var joint = block as IMyMechanicalConnectionBlock;
+    if (joint != null && joint.IsAttached && joint.Top != null && joint.Top.EntityId == entity) return joint.Top;
+    throw new Exception("Module anchor attachment changed.");
+}
+static string PathRow(MatrixD frame)
+{
+    var values = new double[] { frame.Translation.X, frame.Translation.Y, frame.Translation.Z, frame.Forward.X, frame.Forward.Y, frame.Forward.Z, frame.Up.X, frame.Up.Y, frame.Up.Z };
+    var row = new List<string>(); foreach (double v in values) row.Add(AutoSettings.Number(v)); return string.Join(" ", row);
+}

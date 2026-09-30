@@ -43,7 +43,7 @@ const double OrientationTaskWeight = 5.0;
 const double StatusRefreshSeconds = 0.25;
 
 AutoTopology Topology;
-ToolSwapController Tools;
+ToolSwapLink Tools;
 PivotProbeTool PivotProbe;
 bool Enabled, GoingHome, PendingOn, ConfigValid;
 bool ReadKeyboard = true, ReadRoll = true, AimingTarget, LastCounterCorrectionLimited;
@@ -102,7 +102,7 @@ public Program()
 {
     Runtime.UpdateFrequency = UpdateFrequency.Update10;
     Topology = new AutoTopology(this, ArmName);
-    Tools = new ToolSwapController(this);
+    Tools = new ToolSwapLink(this);
     try { ZeroSavedDrives(); Discover(false); }
     catch (Exception e)
     {
@@ -135,19 +135,10 @@ void ZeroSavedDrives()
                 if (token.Length > 1 && (token.EndsWith("+") || token.EndsWith("-")) && long.TryParse(token.Substring(0, token.Length - 1), out id)) ids.Add(id);
             }
         }
-    var config = new MyIni(); MyIniParseResult error;
-    config.TryParse(Me.CustomData, out error);
-    var mounts = new List<string>();
-    if (config.Get(ArmSection, "Arm").ToString() == ArmName && config.Get(ToolsSection, EnabledKey).ToBoolean(false))
-        for (int i = 1; i <= 16; i++)
-        { string name = config.Get("Tool" + i.ToString("00"), "Mount").ToString().Trim(); if (name.Length > 0 && !mounts.Contains(name)) mounts.Add(name); }
     var blocks = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(blocks);
-    var unique = new HashSet<long>();
-    foreach (string name in mounts)
-    { IMyTerminalBlock found = null; int count = 0; foreach (var b in blocks) if (b.CustomName == name) { found = b; count++; } if (count == 1) unique.Add(found.EntityId); }
     foreach (var b in blocks)
     {
-        if (b.Closed || !b.IsSameConstructAs(Me) || (!ids.Contains(b.EntityId) && !unique.Contains(b.EntityId))) continue;
+        if (b.Closed || !b.IsSameConstructAs(Me) || !ids.Contains(b.EntityId)) continue;
         try { var piston = b as IMyPistonBase; var rotor = b as IMyMotorStator;
             if (piston != null) piston.Velocity = 0; else if (rotor != null && !(rotor is IMyMotorSuspension)) rotor.TargetVelocityRad = 0;
         } catch { }
@@ -167,7 +158,8 @@ public void Main(string argument, UpdateType source)
     }
     try
     {
-        if (!string.IsNullOrWhiteSpace(argument)) RunCommands(argument);
+        if (Tools != null) Tools.Receive(elapsed);
+        if (!string.IsNullOrWhiteSpace(argument) && !((source & UpdateType.IGC) != 0 && argument == LinkTag)) RunCommands(argument);
         if (Tools != null && Tools.Busy)
         {
             if (!ConfigValid) { Tools.Cancel("Invalid configuration; Reload required."); return; }
@@ -178,7 +170,6 @@ public void Main(string argument, UpdateType source)
             double toolDt = ControlElapsed;
             if (toolDt <= 0.000001) return;
             ControlElapsed = 0;
-            ToolGeometry.Owner = this;
             Tools.Tick(Math.Min(toolDt, .1), toolDt);
             return;
         }
@@ -212,7 +203,13 @@ public void Main(string argument, UpdateType source)
         if (dt <= 0.000001) return;
         ControlElapsed = 0;
         if (dt > 0.5) { Fault("Control update gap exceeded 0.5 seconds."); return; }
-        if (GoingHome) UpdateHome(Math.Min(dt, 0.1));
+        if (LocalPath != null)
+        {
+            string why; if (HasPilotInput()) { StopMotion("Pilot canceled path."); Say(Status); return; }
+            if (!Tools.AllowManual(out why) || !StepPath(LocalPath, Math.Min(dt, .1), dt, out why)) { Fault(why); return; }
+            if (LocalPath.Done) { LocalPath = null; EnableControl(); Say("Path complete; ON hold."); }
+        }
+        else if (GoingHome) UpdateHome(Math.Min(dt, 0.1));
         else UpdateControl(Math.Min(dt, 0.1), dt);
     }
     catch (Exception e)
@@ -249,14 +246,16 @@ void Discover(bool explicitRequest)
     AutoConfig.EnsureDefaults(this);
     MyIni toolConfig; var options = new AutoSettings();
     if (!AutoConfig.ReadCurrent(Me.CustomData, out toolConfig, out why) || !options.Read(toolConfig, out why)) throw new Exception(why);
-    bool toolEnabled;
-    if (toolConfig.ContainsKey(ToolsSection, EnabledKey) && !toolConfig.Get(ToolsSection, EnabledKey).TryGetBoolean(out toolEnabled)) throw new Exception("Tools.Enabled must be true/false.");
-    if (toolConfig.Get(ToolsSection, EnabledKey).ToBoolean(false) && Topology.Groups.Count > 0)
+    if (Tools != null && !Tools.Load(out why)) throw new Exception(why);
+    if (Tools != null && Tools.Configured)
     {
         string preserved; bool differs;
         if (!AutoConfig.LoadOrGenerate(this, Topology, Me.CustomData, out preserved, out differs, out why, true)) throw new Exception(why);
+        foreach (var group in Topology.Groups)
+        { double[] values; if (ToolWeights.TryGetValue(ToolGroupKey(group), out values)) { group.MoveW = values[0]; group.TurnW = values[1]; } }
+        ApplySettings(options); ConfigValid = true; Runtime.UpdateFrequency = UpdateFrequency.Update1;
+        Status = "Waiting for ToolSwap setup."; if (explicitRequest) Say(Status); return;
     }
-    if (Tools != null && !Tools.Load(out why)) throw new Exception(why);
     Topology.SetEndpointOverride(Tools == null ? null : Tools.Endpoint, Tools == null ? 0 : Tools.IgnoredMount, Tools == null ? null : Tools.EndFrame, Tools == null ? null : Tools.Focus);
     if (!Topology.Discover(out why))
     {
@@ -368,6 +367,7 @@ void StopMotion(string reason)
     if (Topology != null) Topology.ZeroOwned();
     if (Tools != null) Tools.ZeroMount();
     Enabled = GoingHome = PendingOn = false;
+    LocalPath = null;
     ControlElapsed = 0;
     DisplayPinned = false;
     TargetValid = ObservationValid = false;
@@ -497,9 +497,11 @@ void RenderRoutineStatus()
     if (DisplayWritten || DisplayPinned || StatusElapsed < StatusRefreshSeconds) return;
     StatusElapsed = 0;
     RoutineStatusBuilds++;
-    Status = (ToolDriving ? "TOOL motion | error " : "ON | input+feedback | error ") + LastPositionError.ToString(ThreeDecimals) + " m / " +
+    Status = (ToolDriving ? "PATH motion | remaining " : "ON | input+feedback | error ") + LastPositionError.ToString(ThreeDecimals) + " m / " +
         LastOrientationErrorDeg.ToString("0.00") + " deg";
     if (LastCounterCorrectionLimited) Status += " | manual priority";
+    if (ToolDriving)
+    { Say(Status + "\nSpeed command " + LastRequestedLinear.Length().ToString(ThreeDecimals) + " m/s. Stop cancels the path."); return; }
     Say(Status + "\nPilot " + LastPilotLinear.Length().ToString(ThreeDecimals) + " + feedback " +
         LastFeedbackLinear.Length().ToString(ThreeDecimals) + " m/s; advance " +
         (100 * LastLinearAdvance).ToString("0") + "%\nSolver " + LastSolverPasses +
@@ -837,6 +839,7 @@ void SetMovementMode(string text)
 
 void HoldCurrent()
 {
+    LocalPath = null;
     if (!Enabled) { EnableControl(); return; }
     Vector3D p, f, u;
     if (!ReadPose(out p, out f, out u)) { Fault("Hold failed: markers unavailable."); return; }
@@ -878,6 +881,7 @@ void PoseCommand(string[] w, int parts)
     if (w.Length != n + 1) throw new Exception("Pose command has wrong arity.");
     var v = new double[n];
     for (int i = 0; i < n; i++) v[i] = Parse(w[i + 1]);
+    LocalPath = null;
     Vector3D p = parts == 2 ? TargetP : new Vector3D(v[0], v[1], v[2]);
     int j = parts == 3 ? 3 : 0;
     Vector3D f = parts == 1 ? TargetF : new Vector3D(v[j], v[j + 1], v[j + 2]);
@@ -891,6 +895,7 @@ void PoseCommand(string[] w, int parts)
 
 void Face(string direction)
 {
+    if (LocalPath != null) HoldCurrent();
     if (!Enabled) throw new Exception("Run On before Face.");
     Vector3D forward = new Vector3D(1, 0, 0), left = new Vector3D(0, 1, 0), up = new Vector3D(0, 0, 1);
     if (MovementMode != PilotMode.HEAD) ControllerAxes(FindInputController(true), out forward, out left, out up);
@@ -913,6 +918,7 @@ void Face(string direction)
 
 void Step(string axis, double degrees)
 {
+    if (LocalPath != null) HoldCurrent();
     if (!Enabled) throw new Exception("Run On before a rotation step.");
     string kind = axis.ToLowerInvariant();
     if (kind != "yaw" && kind != "pitch" && kind != "roll") throw new Exception("Step expects Yaw, Pitch or Roll.");
@@ -947,7 +953,6 @@ void RunCommand(string command)
     string[] w = command.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
     if (w.Length == 0) return;
     string c = w[0].ToLowerInvariant();
-    ToolGeometry.Owner = this;
     if (Tools != null && Tools.Handle(command)) { SwapBatchLock = true; return; }
     if (Tools != null && Tools.Busy && c != "on" && c != "toggle" && c != "onoff" && c != "-oo" && c != "off" && c != "stop" && c != "info" && c != "status" && c != "version")
         throw new Exception("Tool busy; SwapCancel/Stop first.");
@@ -1012,6 +1017,7 @@ void RunCommand(string command)
         case "moveto": PoseCommand(w, 1); break;
         case "orientto": PoseCommand(w, 2); break;
         case "movetoposori": PoseCommand(w, 3); break;
+        case "path": PathCommand(command); break;
         case "move": case "relmove": case "runfrompanel":
             throw new Exception(c + " is not supported by AutoArm's discovered pose control.");
         default: throw new Exception("Unknown command '" + w[0] + "'. Use Info.");
@@ -1265,11 +1271,6 @@ void UpdateHome(double dt)
     else Commit();
 }
 
-static bool Unlimited(IMyMotorStator r)
-{
-    return r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000;
-}
-
 bool ResolveHome(AutoMember m, double requested, out double resolved)
 {
     resolved = requested;
@@ -1325,7 +1326,7 @@ double Parse(string text)
         throw new Exception("Expected a finite number with decimal point.");
     return value;
 }
-static bool ReadDouble(string text, out double value) => double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) && Finite(value);
+
 
 static bool Cholesky(double[,] a, double[] b, double[,] l, double[] temp, double[] answer)
 {
@@ -1398,48 +1399,3 @@ static Vector3D RotationError(Vector3D f, Vector3D u, Vector3D tf, Vector3D tu)
     if (skew.LengthSquared() > 1e-16 && Vector3D.Dot(axis, skew) < 0) axis = -axis;
     return Unit(axis) * angle;
 }
-
-static Vector3D Rotate(Vector3D value, Vector3D rotation)
-{
-    double angle = rotation.Length();
-    if (angle < 1e-12) return value;
-    Vector3D axis = rotation / angle;
-    return value * Math.Cos(angle) + Vector3D.Cross(axis, value) * Math.Sin(angle) +
-        axis * Vector3D.Dot(axis, value) * (1 - Math.Cos(angle));
-}
-
-static bool Orthonormalise(ref Vector3D f, ref Vector3D u)
-{
-    double fn = f.Length();
-    if (!Finite(fn) || fn < 1e-10) return false;
-    f /= fn;
-    u -= f * Vector3D.Dot(u, f);
-    double un = u.Length();
-    if (!Finite(un) || un < 1e-10) return false;
-    u /= un;
-    return true;
-}
-
-static Vector3D Unit(Vector3D value)
-{
-    double n = value.Length();
-    if (!Finite(n) || n < 1e-12) throw new Exception("Invalid zero/non-finite vector.");
-    return value / n;
-}
-
-static Vector3D ClampLength(Vector3D value, double cap)
-{
-    double n = value.Length();
-    if (!Finite(n)) return new Vector3D(double.NaN);
-    return n > cap && n > 1e-12 ? value * (cap / n) : value;
-}
-
-static Vector3D InFrame(Vector3D value, MatrixD frame) => new Vector3D(Vector3D.Dot(value, frame.Forward), Vector3D.Dot(value, frame.Left), Vector3D.Dot(value, frame.Up));
-
-static double Clamp(double value, double lo, double hi) => Math.Max(lo, Math.Min(hi, value));
-
-static double Wrap(double angle) => angle - Math.Floor((angle + Math.PI) / (2 * Math.PI)) * (2 * Math.PI);
-
-static bool Finite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
-
-static bool Finite(Vector3D value) => Finite(value.X) && Finite(value.Y) && Finite(value.Z);

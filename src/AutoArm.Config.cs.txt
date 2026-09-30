@@ -67,7 +67,7 @@ sealed class AutoSettings
 
 static class AutoConfig
 {
-    public const int Format = 5;
+    public const int Format = 6;
     const string Identity = "AutoArm Config";
     const string Header = "Name | Kind | Translation | Orientation";
 
@@ -110,7 +110,7 @@ static class AutoConfig
         updated = customData ?? ""; changed = false; why = "";
         MyIni ini;
         if (!ReadCurrent(updated, out ini, out why)) throw new Exception(why);
-        if (t == null || t.Groups.Count == 0 || t.Fingerprint.Length == 0)
+        if (t == null || !captureToolWeights && (t.Groups.Count == 0 || t.Fingerprint.Length == 0))
             return Refuse(t, "Discover a valid arm before loading actuator settings.", out why);
         var settings = new AutoSettings();
         if (!settings.Read(ini, out why)) return Refuse(t, why, out why);
@@ -206,7 +206,7 @@ static class AutoConfig
             table.Append('\n').Append(name).Append(" | ").Append(Kind(g.Sig)).Append(" | ").Append(AutoSettings.Number(values[i][0])).Append(" | ").Append(AutoSettings.Number(values[i][1]));
             if (i > 0) identities.Append('\n'); identities.Append(name).Append('|').Append(g.Sig);
         }
-        ini.Set(ConfigSection, "Actuators", table.ToString()); ini.SetComment(ConfigSection, "Actuators", "Edit only the two weights (0..10), then Reload.");
+        ini.Set(ConfigSection, "Actuators", table.ToString()); ini.SetComment(ConfigSection, "Actuators", "Edit only weights (0..10), then On.");
         saved.DeleteSection(Identity); saved.Set(Identity, "Format", 1); saved.Set(Identity, "Arm", t.Arm); saved.Set(Identity, "PB", p.Me.EntityId); saved.Set(Identity, "Rows", identities.ToString());
         state = saved.ToString(); return ini.ToString();
     }

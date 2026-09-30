@@ -1,45 +1,27 @@
-AutoArm 2.8.1 — One-shot startup and automatic tool-control resume
+AutoArm 3.0 — Separate ToolSwap PB and ordered motion paths
 
-On now reloads current configuration, discovers the arm, scans configured tools
-and enables manual control after stopped setup succeeds. It works during the
-initial scan and on fresh bare arms. Toggle/OnOff follow the same startup path.
-Successful tool pickup/swapping resumes manual control at the mounted tool's
-current pose. Selecting an already mounted tool also enables control. Parking,
-diagnostic scans, failed operations and cancellations remain OFF. Stop cancels
-deferred startup; On cannot interrupt an active automatic swap.
+AutoArm owns the arm, joint state, targets, movement and Home. ToolSwap now runs
+in a second PB and owns tool profiles, docking geometry and equipment sequencing.
+Only AutoArm writes actuator velocities. ToolSwap sends complete approach and
+insertion pose lists; AutoArm executes them and reports waypoint completion.
+Retreat is also a path. Optional live anchors follow moving stands. The arm also
+accepts world-space pose lists through the public Path Run argument.
 
-Custom Data remains Format 5. Existing v2.8 settings need no format changes.
-AutoArm_Compact.txt: 99,777 UTF-16 characters; 223 free under 100,000.
-C#6/installed SE API compilation, exact token reversal, identical method IL and
-178,062 simulated assertions pass. Live game physics remains unverified.
+Transport uses versioned unicast IGC, scoped peer identities, persistent session
+epochs, request sequences and revocable movement generations. Missing valid
+communication stops the arm. Attachment changes wait for stopped output; native
+part identity, live coupling pose and support observations still gate release.
+Stop cancels queued startup/paths. Tool PB restart retains pending-lock recovery.
 
-AutoArm 2.8 — Automatic bare endpoint discovery
+Install AutoArm_Compact.txt in the arm PB and AutoArm_ToolSwap_Compact.txt in
+another PB on the same construct. Configure their exact names in Modules.ToolSwapPB
+and Link.ArmPB. Run On on the arm PB once. Successful mounting resumes control;
+parking, cancellation and failed operations remain OFF. A simple arm still needs
+only the arm PB, with the module name empty.
 
-Name the arm Base and configure the tools' markers, rotor bases and merges.
-An arm-side ToolMount name, reference camera and ArmTip offset are unnecessary.
-The script follows moving grids and finds a single loose rotor part, including
-one directly on the final hinge's moving head. That part is the bare-arm focus;
-a mounted tool uses its configured marker. Startup rescans without teaching or
-saved coupler geometry. Ordinary arm joints remain pistons, rotors and hinges.
-
-Detection excludes known attached tops and refuses multiple parts, unsupported
-shapes or ambiguous mounting faces. Native pivot/axis alignment permits arbitrary
-rotor azimuth during first acquisition. The selected rotor's angle limits must
-be unlimited for that acquisition; Rotor Lock is temporarily released and restored
-only after verification. Actual part cell, family, finite axis, moving grid and
-reciprocal base precede the existing two-observation pose/support release gate.
-Interrupted lock intent is journaled and explicitly reconciled while supported.
-
-Custom Data uses Format 5. Incompatible formats are rejected: keep settings you
-want to re-enter, delete Custom Data and copy the current example or Reload.
-No migration is included. Instructions and boilerplate setup banners are removed.
-README is the setup/command guide. ToolNN.Mount still names each tool's rotor base.
-
-Packing additionally fuses equivalent adjacent fields, unqualifies imported types
-and converts single-return methods, preserving original-source method IL.
-AutoArm_Compact.txt: 99,505 UTF-16 characters; 495 free under 100,000.
-Build passes C#6/installed SE API checks, exact token reversal, identical IL and
-177,705 simulated assertions. Cold automatic pickup tests cover no camera/name/
-offset, a final hinge, rotor quarter turns, signed multi-cell small-grid parts,
-unknown ownership, wrong observed parts, ambiguity, budgets, lock restart recovery,
-and existing control/Home/discovery. Live game physics remains unverified.
+Configuration is strict: Format 6 for the arm PB, Format 1 for ToolSwap.
+Re-enter existing settings in the supplied examples; no migration is included.
+Current compact sizes: arm 78,266 characters; ToolSwap 48,330 characters.
+C#6/installed SE API, exact token reversal, identical original-source method IL
+and 178,559 simulated assertions pass. Live-game physics remains unverified.
+Collision geometry/voxel sensing is not implemented in this release.

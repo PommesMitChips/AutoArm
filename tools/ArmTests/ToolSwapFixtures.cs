@@ -143,17 +143,17 @@ internal sealed class ToolSwapFixture
         RecordProxy.Of(grid).Values["WorldMatrix"]=grid.WorldMatrix*delta;
         foreach(var b in Cells[grid].Values.Select(s=>s.FatBlock).Where(b=>b!=null).Distinct()) RecordProxy.Of(b!).Values["WorldMatrix"]=b!.WorldMatrix*delta;
     }
-    internal void MoveSource(MatrixD target)
+    internal void MoveSource(MatrixD target,int source=0)
     {
-        var delta=MatrixD.Invert(Markers[0].WorldMatrix)*target;
-        TransformGrid(Markers[0].CubeGrid,delta); TransformGrid(ArmTip.CubeGrid,delta);
+        var delta=MatrixD.Invert(Markers[source].WorldMatrix)*target;
+        TransformGrid(Markers[source].CubeGrid,delta); TransformGrid(ArmTip.CubeGrid,delta);
     }
     internal void MoveArm(MatrixD target) => TransformGrid(ArmTip.CubeGrid,MatrixD.Invert(MotionReference.WorldMatrix)*target);
     internal void ShiftIncoming(Vector3D shift) { var delta=MatrixD.Identity; delta.Translation=shift; TransformGrid(Markers[1].CubeGrid,delta); }
-    internal void LockSource(int count=2)
+    internal void LockSource(int count=2,int source=0)
     {
-        foreach(var stand in Stands[0]) { var pose=stand.WorldMatrix; Put(stand,Markers[0].CubeGrid,stand.Position,true); RecordProxy.Of(stand).Values["WorldMatrix"]=pose; }
-        for(int j=0;j<Heads[0].Length;j++) { RecordProxy.Of(Heads[0][j]).Values["IsConnected"]=j<count; RecordProxy.Of(Stands[0][j]).Values["IsConnected"]=j<count; }
+        foreach(var stand in Stands[source]) { var pose=stand.WorldMatrix; Put(stand,Markers[source].CubeGrid,stand.Position,true); RecordProxy.Of(stand).Values["WorldMatrix"]=pose; }
+        for(int j=0;j<Heads[source].Length;j++) { RecordProxy.Of(Heads[source][j]).Values["IsConnected"]=j<count; RecordProxy.Of(Stands[source][j]).Values["IsConnected"]=j<count; }
     }
     internal void SplitTool(int n)
     {

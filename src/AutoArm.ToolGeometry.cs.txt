@@ -1,36 +1,6 @@
 // Tool components are occupied-cell regions. Opposed merge faces are cuts even
 // while disabled; adjacent parallel merge blocks are ordinary component edges.
 class ToolPortPair { public IMyShipMergeBlock Head, Stand; }
-// The unnamed arm top is captured from an attached tool base. Saved geometry
-// is relative to the fixed arm reference; every other tool has a visible base.
-class ToolTopInfo
-{
-    public IMyCubeBlock Marker;
-    public IMyMotorRotor Live;
-    public long EntityId;
-    public string Subtype;
-    public MatrixD Local;
-    public List<IMyTerminalBlock> Inventory;
-    public bool Closed => Marker.Closed || (Live != null && Live.Closed);
-    public IMyCubeGrid CubeGrid => Live == null ? Marker.CubeGrid : Live.CubeGrid;
-    public MatrixD WorldMatrix => Live == null ? Local * Marker.WorldMatrix : Live.WorldMatrix;
-    public Vector3I Position => Live == null ? CubeGrid.WorldToGridInteger(WorldMatrix.Translation) : Live.Position;
-    public IMyMechanicalConnectionBlock Base
-    {
-        get
-        {
-            if (Live != null) return Live.Base;
-            foreach (var b in Inventory)
-            { var m = b as IMyMechanicalConnectionBlock; if (m != null && m.Top != null && (m.Top.EntityId == EntityId || EntityId == 0 && m.Top.CubeGrid.EntityId == CubeGrid.EntityId && m.Top.Position == Position)) return m; }
-            return null;
-        }
-    }
-    public static ToolTopInfo Capture(IMyCubeBlock marker, IMyMotorRotor top, List<IMyTerminalBlock> inventory)
-    {
-        var pose = top.WorldMatrix; pose.Translation = top.CubeGrid.GridIntegerToWorld(top.Position);
-        return new ToolTopInfo { Marker = marker, Live = top, EntityId = top.EntityId, Subtype = top.BlockDefinition.SubtypeName, Local = pose * MatrixD.Invert(marker.WorldMatrix), Inventory = inventory };
-    }
-}
 class ToolRegionScan
 {
     Program P; IMyCubeBlock Marker; IMyCubeGrid Grid;

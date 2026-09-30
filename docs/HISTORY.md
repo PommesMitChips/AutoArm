@@ -16,6 +16,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v2.7` | Rotor-only tool couplers, fresh headless pickup from declared arm-tip pose, shared control logic and inferred declarations | 99,846 |
 | `v2.8` | Automatic arm-end/rotor-part discovery, bare rotor focus, no arm Mount/offset/Instructions, bounded scans and field packing | 99,505 |
 | `v2.8.1` | One-shot On setup and automatic manual-control resume after tool mounting | 99,777 |
+| `v3.0` | Separate arm/ToolSwap PBs, acknowledged ordered paths, movement leases and restart/timeout fences | Arm 78,266; ToolSwap 48,330 |
 
 Read a previous script without changing your working tree:
 
@@ -32,6 +33,6 @@ git switch --detach v2.4
 
 Run `git switch -` to return to your previous branch. Tags retain their original notes and configuration examples as well as the top-level source and compact script. Historical folder names exist only in those snapshots. Earlier versions preserve combined source; the full maintainable fragments and current toolchain were introduced with v2.5.
 
-Historical notes describe the configuration and behavior at their own version. In particular, their migration advice does not apply to the current version: nonblank Custom Data must use Format 5. Re-enter previous preferences after deleting older Custom Data.
+Historical notes describe configuration and behavior at their own version. The current arm PB requires Format 6 and the ToolSwap PB requires Format 1. Re-enter previous preferences in the current examples after deleting older Custom Data; there is no migration.
 
 The supplied `reference/MiningArm_v2_0_HeadOnly.txt` remains a behavior-comparison fixture required by the tests; it is not a parallel AutoArm release.
