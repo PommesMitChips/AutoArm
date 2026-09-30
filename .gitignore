@@ -1,0 +1,8 @@
+tools/ScriptPack/bin/
+tools/ScriptPack/obj/
+tools/.dotnet/
+tools/ArmTests/bin/
+tools/ArmTests/obj/
+*.user
+*.suo
+.vs/
