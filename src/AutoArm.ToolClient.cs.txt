@@ -34,7 +34,7 @@ sealed class ToolSwapLink
         Link.Resolve(PeerName); Link.Generation++; Link.RemoteEpoch = Link.Received = 0; Link.Age = 0;
         Queued = "Reload"; return true;
     }
-    public void WriteConfig(MyIni ini) { ini.Set("Modules", "ToolSwapPB", PeerName); }
+    public void WriteConfig(MyIni ini) { ini.Set("Modules", "ToolSwapPB", PeerName); if (P.Services != null) P.Services.WriteConfig(ini); }
     public void StartOn() { Queued = "On"; P.Runtime.UpdateFrequency = UpdateFrequency.Update1; P.Say("On: waiting for ToolSwap PB."); }
     public bool Handle(string command)
     {
@@ -86,6 +86,7 @@ sealed class ToolSwapLink
         {
             if (P.Runtime.MaxInstructionCount > 0 && P.Runtime.CurrentInstructionCount >= P.Runtime.MaxInstructionCount * .5) break;
             var message = P.IGC.UnicastListener.AcceptMessage(); MyIni ini;
+            if (P.Services != null && P.Services.Receive(message)) continue;
             if (!Link.Read(message, out ini)) continue;
             long epoch = ini.Get(LinkSection, "Epoch").ToInt64(), seq = ini.Get(LinkSection, "Sequence").ToInt64();
             string op = ini.Get(LinkSection, "Operation").ToString();

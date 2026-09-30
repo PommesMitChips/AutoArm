@@ -10,7 +10,7 @@ if (!topology.Discover(out why)) { /* remain Off; Echo why */ }
 if (!topology.StableSetup(out why)) { /* wait or report */ }
 ```
 
-`AutoTopology` exposes `Groups`, `Base`, `Head`, `Fingerprint`, `Report`, and `Ready`. A successful `Discover` zeros only actuators in the accepted groups and leaves `Ready=false`. `StableSetup` requires two unchanged scans with zero owned targets, captures member `Q0`, then sets `Ready=true`; the caller must supply distinct positive-time observations. `Validate(out why, bool full = false)` checks cached known connections and synchronization every call, performing a full snapshot every 30 active calls or when `full` is true. Failure clears `Ready` and zeros owned actuators. Call default validation once before each active control pass and force validation for explicit safety/setup boundaries. Unknown additions/markers have up to 30 active-pass detection latency.
+`AutoTopology` exposes `Groups`, `Base`, `Head`, `Fingerprint`, `Report`, and `Ready`. A successful `Discover` zeros only actuators in the accepted groups and leaves `Ready=false`. `StableSetup` requires two unchanged scans with zero owned targets, captures member `Q0`, then sets `Ready=true`; the caller must supply distinct positive-time observations. `Validate(out why, bool full = false, bool refreshBeforeCommit = false)` checks markers, endpoint and cached connections, performing a full snapshot every 30 active calls or when `full` is true. Default/full validation includes all edges and synchronization. Active control/Home pass `refreshBeforeCommit=true`: validation checks only a precomputed list of unowned edges, and each owned group's mandatory `Refresh` covers attachment, unchanged exact endpoints, names, bounds and parallel synchronization before any output commit. Callers must refresh every group before committing when using this option. Failure clears `Ready` and zeros owned actuators. Unknown additions/markers retain up to 30 active-pass detection latency; owned attachment/sync failures remain immediate.
 
 Each ordered `AutoGroup` exposes `Index`, `Rotary`, exact sorted-ID `Sig`, `Label`, `MoveW`, `TurnW`, members `M`, and the last refreshed full physical `Lin`/`Ang` twist. Each `AutoMember` exposes block `B`, command `Sign`, setup position `Q0`, endpoints `U`/`V`, and `Home` storage. Rotary native units are radians and radians/second; piston native units are metres and metres/second.
 
@@ -23,6 +23,8 @@ if (!topology.Refresh(group, topology.Head.GetPosition(), baseFrame,
 ```
 
 `Refresh` verifies live member screws and pair synchronization, writes the real full twist to `group.Lin/Ang`, and returns the common signed physical/travel velocity interval. The controller intersects that interval with its cap and acceleration bounds. Weights are allocation preferences and must not mask components of the physical twist. Commit a generalized rate using `topology.Set(group, qdot)`; call `ZeroOwned()` for explicit Stop.
+
+`PruneToolWeights` runs after successful stopped discovery/setup, including cold load. It removes a saved signed-member key if any actuator identity is absent, closed or has the wrong actuator family. Live parked/nonfunctional actuators are retained regardless of changed grid identity. No terminal enumeration is added to active ticks. Cleanup collects removals before committing; an exhausted instruction reserve or failed discovery leaves persisted weights unchanged. Other Storage sections are preserved.
 
 Configuration uses:
 

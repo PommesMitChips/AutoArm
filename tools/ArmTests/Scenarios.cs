@@ -73,6 +73,8 @@ internal static partial class Scenarios
         var toolType=Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_ToolSwap_Source.txt")));
         NativeReverseGeometry(toolType);
         DualModuleCases(type,toolType);
+        ServiceCases(type,toolType);
+        ValidationAndCacheCases(type);
         Console.WriteLine($"Automatic arm integration: PASS ({Tests.Assertions} assertions).");
     }
     static void Discovery(Type type)

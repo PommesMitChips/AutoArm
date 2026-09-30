@@ -53,6 +53,52 @@ ToolSwap automatically stores parked marker pose relative to a real stand anchor
 
 Other PB automation can also invoke the arm's public `Path` Run argument with world-space rows. ToolSwap uses the acknowledged IGC form because it needs progress and a stopped-output fence before changing equipment.
 
+## Additional direct peers
+
+`[Modules] Peers` authorizes up to 16 additional same-construct PBs by exact name, independently of `ToolSwapPB`. Each row is `PB name | Role`. The optional setting is shown in [Modules.ini](../examples/Modules.ini). Arm Format 6 remains valid without it. Invalid roles, duplicate/self/missing/nonfunctional PBs and reuse of the ToolSwap PB as a service peer refuse setup. Apply changes with `On` or `Reload`.
+
+| Role | Authority |
+| --- | --- |
+| `Observe` | Read readiness, pose, defaults, path progress and current motion owner |
+| `Plan` | Submit a complete path while the arm is ON, ready and unowned; cancel its own path |
+| `Stop` | Stop manual control, Home, any planner or an active ToolSwap operation |
+
+Unicast is a transport choice, not a two-node topology restriction. Every authorized PB addresses the Arm PB directly. One helper can serve multiple arms if it keeps separate sessions keyed by destination EntityId and arm name; each Arm PB independently lists that helper. No ToolSwap relay or central star is required. Multiple helpers can offload planning, geometry or monitoring into their own instruction budgets. Native joint state and the numerical solver still belong to the Arm PB; this release does not split a solver across PBs.
+
+Service messages use the existing `AutoArm/4` tag and `[Link]` Version 4 envelope with the additional discriminator `Service=1`. The specialized ToolSwap protocol is unchanged. The Arm PB routes by authorized sender EntityId before parsing, with the same packet-size and per-callback instruction limits. A service peer cannot send ToolSwap BUILD, equipment descriptors, attachment transitions or RESUME.
+
+### Service client contract
+
+1. Send `HELLO` with `Service=1`, the target's `Arm`, a positive sender `Epoch` persisted/incremented on restart, increasing `Sequence`, and `Remote=0`. Accept replies only from that configured Arm PB with matching tag/version/arm/service and monotonically increasing reply epoch/sequence. `STATE` returns its `Epoch`, expected client `Remote`, current `Generation`, and your `Ack`.
+2. Subsequent requests use that arm epoch in `Remote`, the returned revision in `Generation`, and the latest accepted arm reply Sequence in `Seen`. `STATUS` and `PING` may read/refresh state across revisions. `HELLO` also refreshes state; a new sender epoch cancels only that sender's active path. Responses are per-peer, not shared sequence counters. PATH requires acknowledgement of an arm STATE. An active owner must keep receiving/echoing newer replies as well as sending heartbeats: 0.5 seconds without either direction stops motion.
+3. A `Plan` peer sends `PATH` with `Waypoints` (the same 1–32 pose rows), optional `Anchor`, and optional `Moves`, `Turns`, `Lines`. Omitted speed lists inherit HeadSpeed/HeadTurnSpeed; list entries of zero also inherit. Tolerances are 0.005 m and 0.2 degrees. All rows and policies validate before any motion changes. Invalid or unauthorized requests return `Error` and do not interrupt another controller.
+4. A successful path returns the new `Generation`, `Owner` EntityId, and its `PathId` (your request Sequence). Retain the new revision and poll `PING` or `STATUS` at least every 0.1 seconds during motion; the 0.5-second watchdog cancels/zeros only when a planner owns motion. Polls report `State=Moving`, `Completed`, and `Count`. Final measured completion reports `State=Complete`, releases ownership and resumes ON hold. Do not treat receipt of a path as completion.
+5. `STOP` is permitted for a `Stop` peer or the current path owner. It requires a current authenticated epoch and fresh sequence, but may use an older motion revision so a safety stop cannot lose a race with a newly accepted path. It never grants restart authority. Motion-changing PATH requests require the current revision; Stop, pilot input, reload, owner restart, lost communication or native faults revoke it. To move again, explicitly run `On` on the arm, refresh the session, and send a new request.
+
+Every service `STATE` contains `Ack`, `Role`, `Owner`, `Ready`, `Enabled`, `Busy`, `State`, `Error`, `PathId`, `Completed`, `Count`, `DefaultMove` and `DefaultTurn`. When ready, `PoseP`, `PoseF`, `PoseU` are the authoritative world-space focus frame. `Busy` includes ToolSwap, Home and local/planner paths. ToolSwap retains its specialized exclusive topology lease; planners cannot take over a swap or another active path. An idle observer's failed reply does not stop a healthy arm.
+
+For example, after a HELLO response supplies the epochs/revision, a planner's payload can contain:
+
+```ini
+[Link]
+Version=4
+Service=1
+Arm=Arm 1
+Epoch=7
+Remote=12
+Generation=19
+Sequence=24
+Seen=8
+Operation=PATH
+Anchor=0
+Waypoints=0 0 10 0 0 -1 0 1 0 | 0 0 11 0 0 -1 0 1 0
+Moves=0|0.05
+Turns=0|2
+Lines=false|true
+```
+
+The numeric epochs/revision/sequence and waypoints above are illustrative: use live session values and reachable targets. Send with `IGC.SendUnicastMessage(armPB.EntityId, "AutoArm/4", ini.ToString())`. A worker can compute its own path in another PB and submit it through this contract; an observer can consume pose/state without participating in motion ownership.
+
 ## Further modules
 
-A collision service is not included. Its insertion point is the arm's requested next motion before solver/output commit. A future service can receive proposed motion plus current arm/ship geometry, return bounded corrections or revoke movement, while AutoArm remains the only joint writer. Camera/voxel sensing belongs in that service. Extending the transport requires an explicit registered peer and permissions; the current configured ToolSwap peer is the only IGC movement owner. Merely broadcasting a path or Stop from another PB does not grant control.
+A collision service is not included. The Stop role provides an emergency-stop integration point, and planners can supply paths calculated elsewhere. Continuous collision nudging before solver/output commit needs an additional protocol and control boundary; this release does not implement it. Camera/voxel sensing belongs in a separate service. Merely broadcasting a path or Stop from an unregistered PB does not grant control.

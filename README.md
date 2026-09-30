@@ -5,8 +5,8 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 ## Installation
 
 1. Run `Stop` on the previous controller, if one is installed.
-2. Copy the entire [AutoArm script](https://github.com/PommesMitChips/AutoArm/blob/v3.1/AutoArm_Compact.txt) into the arm programmable block's script editor. A simple arm needs only this PB.
-3. For parking or tool swapping, install the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v3.1/AutoArm_ToolSwap_Compact.txt) in a second PB on the same construct. Name the PBs `Arm 1 - Arm PB` and `Arm 1 - ToolSwap PB`.
+2. Copy the entire [AutoArm script](https://github.com/PommesMitChips/AutoArm/blob/v3.2/AutoArm_Compact.txt) into the arm programmable block's script editor. A simple arm needs only this PB.
+3. For parking or tool swapping, install the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v3.2/AutoArm_ToolSwap_Compact.txt) in a second PB on the same construct. Name the PBs `Arm 1 - Arm PB` and `Arm 1 - ToolSwap PB`.
 4. Change `const string ArmName = "Arm 1";` to your arm's name in each installed script, then check/compile them in the game editor.
 5. Choose a setup below. Name the parts and put the matching configuration in each **programmable block's Custom Data**.
 6. Run `On` once on the **arm PB**. AutoArm loads configuration, discovers/scans and enables control when setup succeeds. Keep both PBs running when tools are configured.
@@ -28,7 +28,7 @@ Use this for one fixed tool without automatic parking or swapping.
 
 Name only one arm joint with the `Arm 1 - Base` prefix and only one reference block with the `Arm 1 - Head` prefix. Other drills, merges and spare tools must not use that head prefix in this setup.
 
-Put [SimpleArm.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.1/examples/SimpleArm.ini) in the arm PB. Leave `[Modules] ToolSwapPB` empty, then run `On`. No second PB is needed.
+Put [SimpleArm.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/SimpleArm.ini) in the arm PB. Leave `[Modules] ToolSwapPB` empty, then run `On`. No second PB is needed.
 
 ### One tool with automatic parking
 
@@ -47,7 +47,7 @@ Keep the tool's reference, base and head merge connected together. The head merg
 
 Start with the tool parked and its merges connected. ToolSwap records its actual position and orientation relative to the stand and remembers that pose across restarts. Returning it preserves that orientation; you do not need to identify the merge blocks' hidden roll. A tool introduced already mounted has no recorded parked pose yet: its first park follows merge geometry, which can rotate the tool by 90°.
 
-Put [ArmWithTools.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.1/examples/ArmWithTools.ini) in the arm PB and [Park.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.1/examples/Park.ini) in the ToolSwap PB. `[Tool01] Mount` names the tool's rotor base. Run `On` on the arm PB and wait for setup to finish. `ToolInfo` shows the detected tools if you want to check them.
+Put [ArmWithTools.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/ArmWithTools.ini) in the arm PB and [Park.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/Park.ini) in the ToolSwap PB. `[Tool01] Mount` names the tool's rotor base. Run `On` on the arm PB and wait for setup to finish. `ToolInfo` shows the detected tools if you want to check them.
 
 - `Park` or `Park 1` parks and detaches the tool.
 - `Tool Head 1` picks it up again.
@@ -72,7 +72,7 @@ Use the same arrangement: one unnamed rotor top stays on the arm, and each tool 
 | Welder stand merge | `Arm 1 - Head 2 - StandMerge` |
 | Rotor top carried by the arm | Leave unnamed |
 
-Put [ArmWithTools.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.1/examples/ArmWithTools.ini) in the arm PB and [ToolSwap.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.1/examples/ToolSwap.ini) in the ToolSwap PB. Each `[ToolNN] Mount` names that tool's rotor base. List the complete drill/welder names in `Heads`; their order matches `Tool01`, `Tool02`, and so on. The example lists the merges explicitly and provides the command aliases `Head 1` and `Head 2`.
+Put [ArmWithTools.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/ArmWithTools.ini) in the arm PB and [ToolSwap.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/ToolSwap.ini) in the ToolSwap PB. Each `[ToolNN] Mount` names that tool's rotor base. List the complete drill/welder names in `Heads`; their order matches `Tool01`, `Tool02`, and so on. The example lists the merges explicitly and provides the command aliases `Head 1` and `Head 2`.
 
 Start with all tools secured on their stands to record their return orientations automatically. The arm can start bare with its unnamed rotor part installed. An already mounted tool is also supported, with the first-park limitation described above. Run `On` and wait for setup to finish. Then `Tool 2` or `Tool Head 2` parks Head 1 and picks up Head 2. `Tool 1` or `Tool Head 1` switches back. Control resumes automatically after the selected tool separates from its stand. Each spare tool can be used immediately; you do not need to mount it first or teach a parking position.
 
@@ -100,8 +100,13 @@ AutoArm supports:
 - Head, excavator and crane movement views.
 - Saved home positions, tool parking and tool swapping.
 - Adjustable movement speeds, actuator speed/acceleration limits and control preferences in Custom Data.
+- Additional programmable blocks for path planning, monitoring and emergency stops.
 
 Choose clear routes for automatic parking and swapping; AutoArm does not avoid ship geometry.
+
+### Additional programmable blocks
+
+Optional helper PBs connect directly to the arm. Add their exact names under `[Modules] Peers`, using `Plan`, `Observe` or `Stop` permissions as shown in [Modules.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/Modules.ini), then run `On`. Leave this setting out if you do not use helpers. A helper can serve several arms; each arm has its own name and configuration. Helpers need a compatible script; the integration guide is [PB modules and paths](docs/MODULES.md).
 
 ### Movement views
 

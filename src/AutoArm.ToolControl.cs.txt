@@ -12,6 +12,7 @@ void RememberToolWeights(bool capture = true)
     if (!ToolWeightsLoaded)
     {
         var saved = AutoConfig.Saved(Storage);
+        var loaded = new Dictionary<string, double[]>();
         string rows = saved.Get(ToolWeightsSection, "Rows").ToString();
         foreach (string row in rows.Split('\n'))
         {
@@ -21,12 +22,54 @@ void RememberToolWeights(bool capture = true)
                 !ReadDouble(cells[2], out r) ||
                 !Finite(m) || !Finite(r) || m < 0 || m > 10 || r < 0 || r > 10)
                 throw new Exception("Invalid saved tool actuator preferences.");
-            ToolWeights[cells[0]] = new double[] { m, r };
+            ToolWeightIds(cells[0]);
+            loaded[cells[0]] = new double[] { m, r };
         }
+        foreach (var pair in loaded) ToolWeights[pair.Key] = pair.Value;
         ToolWeightsLoaded = true;
     }
     if (!capture) return;
     foreach (var g in Topology.Groups) ToolWeights[ToolGroupKey(g)] = new double[] { g.MoveW, g.TurnW };
+    WriteToolWeights();
+}
+
+static List<long> ToolWeightIds(string key)
+{
+    string[] parts = key.Split(':'); var ids = new List<long>();
+    if (parts.Length < 2 || parts.Length > 49 || parts[0] != "R" && parts[0] != "P") throw new Exception("Invalid saved tool actuator identity.");
+    for (int i = 1; i < parts.Length; i++)
+    {
+        string part = parts[i]; long id;
+        if (part.Length < 2 || part[part.Length - 1] != '+' && part[part.Length - 1] != '-' ||
+            !long.TryParse(part.Substring(0, part.Length - 1), out id) || id == 0 || ids.Contains(id)) throw new Exception("Invalid saved tool actuator identity.");
+        ids.Add(id);
+    }
+    return ids;
+}
+
+// Prune only after successful stopped discovery. A different grid ID or an
+// unlocked/parked actuator is not deletion. Failed discovery never prunes.
+void PruneToolWeights()
+{
+    RememberToolWeights(false);
+    var dead = new List<string>();
+    foreach (var pair in ToolWeights)
+    {
+        if (Runtime.MaxInstructionCount > 0 && Runtime.CurrentInstructionCount >= Runtime.MaxInstructionCount * .5) return;
+        foreach (long id in ToolWeightIds(pair.Key))
+        {
+            var block = GridTerminalSystem.GetBlockWithId(id);
+            if (block == null || block.Closed || (pair.Key[0] == 'P' ? !(block is IMyPistonBase) : !(block is IMyMotorStator) || block is IMyMotorSuspension))
+            { dead.Add(pair.Key); break; }
+        }
+    }
+    if (dead.Count == 0) return;
+    foreach (string key in dead) ToolWeights.Remove(key);
+    WriteToolWeights();
+}
+
+void WriteToolWeights()
+{
     var keys = new List<string>(ToolWeights.Keys); keys.Sort(StringComparer.Ordinal);
     var text = new System.Text.StringBuilder();
     foreach (string key in keys)
@@ -62,6 +105,7 @@ bool SettleToolTopology(out string why)
 {
     if (!ConfigValid) { why = "Tool topology is not configured."; return false; }
     if (!Topology.StableSetup(out why)) return false;
+    PruneToolWeights();
     AutoConfig.UpdateGroups(this); LoadHome();
     return true;
 }

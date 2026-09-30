@@ -2,6 +2,7 @@
 class AutoMember
 {
     public IMyMechanicalConnectionBlock B;
+    public AutoEdge Edge;
     public int Sign;
     public double Q0, Last, Home;
     public long U, V;
@@ -45,6 +46,7 @@ class AutoTopology
     readonly List<string> SnapshotRows = new List<string>();
     readonly System.Text.StringBuilder SnapshotText = new System.Text.StringBuilder();
     readonly List<AutoEdge> Edges = new List<AutoEdge>();
+    readonly List<AutoEdge> Unowned = new List<AutoEdge>();
     readonly HashSet<long> Used = new HashSet<long>();
     readonly HashSet<long> Corridor = new HashSet<long>();
     readonly HashSet<long> Watch = new HashSet<long>();
@@ -111,7 +113,7 @@ class AutoTopology
     {
         ZeroOwned(); Building = true;
         why = ""; Ready = false; StableCount = 0; Groups.Clear(); Rigid.Clear();
-        Edges.Clear(); Used.Clear(); Corridor.Clear(); Watch.Clear(); Report = Fingerprint = "";
+        Edges.Clear(); Unowned.Clear(); Used.Clear(); Corridor.Clear(); Watch.Clear(); Report = Fingerprint = "";
         if (Arm.Length == 0) return Bad("ArmName is empty.", out why);
         if (!Guard("pre-inventory reserve", out why)) return false;
         All.Clear(); Inventory.Clear(); P.GridTerminalSystem.GetBlocks(Inventory);
@@ -225,6 +227,7 @@ class AutoTopology
             }
         }
         if (!ClassifyUnused(out why)) return false;
+        foreach (var edge in Edges) if (!Used.Contains(edge.B.EntityId)) Unowned.Add(edge);
         if (!BuildWatch(out why)) return false;
         if (!SnapshotFromInventory(out Snapshot, out why)) return Bad(why, out why);
         var fp = new System.Text.StringBuilder();
@@ -327,7 +330,7 @@ class AutoTopology
         {
             var l = links[i];
             if (Kind(l.E.B) != kind) return Bad("Parallel stage mixes piston and rotary actuators.", out why);
-            var m = new AutoMember { B = l.E.B, U = l.U, V = l.V, Sign = 1 };
+            var m = new AutoMember { B = l.E.B, Edge = l.E, U = l.U, V = l.V, Sign = 1 };
             Vector3D lin, ang;
             if (!Raw(m, EndPosition, out lin, out ang, out why)) return Bad(why, out why);
             if (i == 0) { baseL = lin; baseA = ang; }
@@ -357,11 +360,13 @@ class AutoTopology
         return true;
     }
 
-    bool Raw(AutoMember m, Vector3D head, out Vector3D lin, out Vector3D ang, out string why)
+    bool Raw(AutoMember m, Vector3D head, out Vector3D lin, out Vector3D ang, out string why, bool liveChecked = false)
     {
         lin = ang = Vector3D.Zero; why = ""; var b = m.B;
-        if (!Attached(b)) { why = "Detached actuator: " + b.CustomName; return false; }
+        if (!liveChecked && !Attached(b)) { why = "Detached actuator: " + b.CustomName; return false; }
         long a = b.CubeGrid.EntityId, z = b.TopGrid.EntityId; int dir;
+        if (m.Edge != null && (a != m.Edge.A || z != m.Edge.Z))
+        { why = "Actuator endpoints changed: " + b.CustomName; return false; }
         if (a == m.U && z == m.V) dir = 1; else if (a == m.V && z == m.U) dir = -1;
         else { why = "Actuator endpoints changed: " + b.CustomName; return false; }
         Vector3D axis = b.WorldMatrix.Up; double n = axis.Length();
@@ -407,12 +412,14 @@ class AutoTopology
     public bool Refresh(AutoGroup g, Vector3D headWorld, MatrixD reference, out double lo, out double hi, out string why)
     {
         lo = -1e6; hi = 1e6; why = ""; Vector3D sl = Vector3D.Zero, sa = Vector3D.Zero, firstL = Vector3D.Zero, firstA = Vector3D.Zero;
-        if (!CheckSync(g, out why)) return Fail(why);
+        if (g.M.Count > 1 && !CheckSync(g, out why)) return Fail(why);
         for (int i = 0; i < g.M.Count; i++)
         {
             var m = g.M[i]; var b = m.B;
             if (!Attached(b) || !b.Enabled || !b.IsWorking) { why = "Unavailable owned actuator: " + b.CustomName; return Fail(why); }
-            Vector3D l, a; if (!Raw(m, headWorld, out l, out a, out why)) return Fail(why);
+            if (!Finite(m.Q0) || Mark(b.CustomName, "Base") != m.Edge.BaseMark || HeadMark(b) != m.Edge.HeadMark)
+            { why = "Owned actuator identity/marker changed: " + b.CustomName; return Fail(why); }
+            Vector3D l, a; if (!Raw(m, headWorld, out l, out a, out why, true)) return Fail(why);
             l *= m.Sign; a *= m.Sign;
             if (i == 0) { firstL = l; firstA = a; }
             else if (g.Rotary ? Vector3D.Dot(firstA, a) < AxisCos || (firstL - l).Length() > RotaryLineM : Vector3D.Dot(firstL, l) < AxisCos)
@@ -488,7 +495,7 @@ class AutoTopology
         Ready = true; return true;
     }
 
-    public bool Validate(out string why, bool full = false)
+    public bool Validate(out string why, bool full = false, bool refreshBeforeCommit = false)
     {
         why = "";
         if (!BudgetAvailable()) { why = "Budget low; motion refused."; return Fail(why); }
@@ -501,14 +508,18 @@ class AutoTopology
             Focus != null && (Focus.Closed || Focus.CubeGrid.EntityId != EndGrid || Focus.Marker.CubeGrid.EntityId != EndGrid) ||
             Focus == null && End != Head && marker != null && (!Attached(marker) || marker.Top.EntityId != EndId))
         { why = "Endpoint changed; Rescan is required."; return Fail(why); }
-        for (int i = 0; i < Edges.Count; i++)
+        var checkedEdges = !full && refreshBeforeCommit ? Unowned : Edges;
+        for (int i = 0; i < checkedEdges.Count; i++)
         {
-            var e = Edges[i]; var b = e.B;
+            var e = checkedEdges[i]; var b = e.B;
+            // Active control refreshes every owned group before any output. Its
+            // Raw/Bounds/sync checks cover these edges once, rather than twice.
             if (!Attached(b) || b.CubeGrid.EntityId != e.A || b.TopGrid.EntityId != e.Z || Kind(b) != e.K ||
                 Mark(b.CustomName, "Base") != e.BaseMark || HeadMark(b) != e.HeadMark)
             { why = "Known mechanical connection changed: " + (b == null ? "missing block" : b.CustomName) + ". Rescan is required."; return Fail(why); }
         }
-        for (int i = 0; i < Groups.Count; i++) if (!CheckSync(Groups[i], out why)) return Fail(why);
+        if (full || !refreshBeforeCommit)
+            for (int i = 0; i < Groups.Count; i++) if (!CheckSync(Groups[i], out why)) return Fail(why);
         if (!full && --FullScanIn > 0) return true;
         string current;
         if (!CurrentSnapshot(out current, out why)) return Fail(why);

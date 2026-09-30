@@ -44,6 +44,7 @@ const double StatusRefreshSeconds = 0.25;
 
 AutoTopology Topology;
 ToolSwapLink Tools;
+ArmServices Services;
 PivotProbeTool PivotProbe;
 bool Enabled, GoingHome, PendingOn, ConfigValid;
 bool ReadKeyboard = true, ReadRoll = true, AimingTarget, LastCounterCorrectionLimited;
@@ -103,6 +104,7 @@ public Program()
     Runtime.UpdateFrequency = UpdateFrequency.Update10;
     Topology = new AutoTopology(this, ArmName);
     Tools = new ToolSwapLink(this);
+    Services = new ArmServices(this);
     try { ZeroSavedDrives(); Discover(false); }
     catch (Exception e)
     {
@@ -159,6 +161,7 @@ public void Main(string argument, UpdateType source)
     try
     {
         if (Tools != null) Tools.Receive(elapsed);
+        if (Services != null) Services.Tick(elapsed);
         if (!string.IsNullOrWhiteSpace(argument) && !((source & UpdateType.IGC) != 0 && argument == LinkTag)) RunCommands(argument);
         if (Tools != null && Tools.Busy)
         {
@@ -247,6 +250,7 @@ void Discover(bool explicitRequest)
     MyIni toolConfig; var options = new AutoSettings();
     if (!AutoConfig.ReadCurrent(Me.CustomData, out toolConfig, out why) || !options.Read(toolConfig, out why)) throw new Exception(why);
     if (Tools != null && !Tools.Load(out why)) throw new Exception(why);
+    Services.Load(toolConfig);
     if (Tools != null && Tools.Configured)
     {
         string preserved; bool differs;
@@ -292,6 +296,7 @@ void MaintainSetup()
         return;
     }
     Status = "Ready and OFF. Run On.";
+    PruneToolWeights();
     Say(Banner() + "\n" + Status);
 }
 
@@ -364,6 +369,7 @@ void StartControl()
 
 void StopMotion(string reason)
 {
+    if (Services != null) Services.Revoke(reason);
     if (Topology != null) Topology.ZeroOwned();
     if (Tools != null) Tools.ZeroMount();
     Enabled = GoingHome = PendingOn = false;
@@ -407,7 +413,7 @@ void UpdateControl(double dt, double observationDt)
 {
     string why;
     if (!ToolDriving && Tools != null && !Tools.AllowManual(out why)) { Fault(why); return; }
-    if (!Topology.Validate(out why)) { Fault("Topology changed: " + why); return; }
+    if (!Topology.Validate(out why, false, true)) { Fault("Topology changed: " + why); return; }
     Vector3D p, f, u;
     if (!ReadPose(out p, out f, out u)) { Fault("Base/Head marker became unavailable."); return; }
     if (!TargetValid) { Fault("No held pose. Run On."); return; }
@@ -1055,6 +1061,7 @@ void Reload()
     ConfigValid = false;
     MyIni configIni;
     if (!AutoConfig.ReadCurrent(Me.CustomData, out configIni, out why)) throw new Exception(why);
+    Services.Load(configIni);
     if (Topology.Groups.Count == 0 || (Tools != null && Tools.Configured) || configIni.Get(ToolsSection, EnabledKey).ToBoolean(false)) { Discover(true); return; }
     if (Topology.Groups.Count > 0 && !Topology.Validate(out why, true))
     {
@@ -1222,7 +1229,7 @@ void UpdateHome(double dt)
     if (HasPilotInput()) { Fault("GoHome cancelled by pilot input."); return; }
     string why;
     if (Tools != null && !Tools.AllowManual(out why)) { Fault(why); return; }
-    if (!Topology.Validate(out why)) { Fault("GoHome topology fault: " + why); return; }
+    if (!Topology.Validate(out why, false, true)) { Fault("GoHome topology fault: " + why); return; }
     bool complete = true;
     for (int i = 0; i < Topology.Groups.Count; i++)
     {

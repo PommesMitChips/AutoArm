@@ -18,6 +18,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v2.8.1` | One-shot On setup and automatic manual-control resume after tool mounting | 99,777 |
 | `v3.0` | Separate arm/ToolSwap PBs, acknowledged ordered paths, movement leases and restart/timeout fences | Arm 78,266; ToolSwap 48,330 |
 | `v3.1` | Recorded parked orientation, inherited travel speeds, linear insertion/withdrawal and expected-topology continuation | Arm 79,911; ToolSwap 51,414 |
+| `v3.2` | Additional direct PB peers, one-pass active joint validation and stale tool-weight pruning | Arm 84,975; ToolSwap 51,414 |
 
 Read a previous script without changing your working tree:
 

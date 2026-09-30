@@ -10,6 +10,7 @@ public class RecordProxy : DispatchProxy
     public static string Actor = "";
     public readonly List<(string Actor,string Name,object? Value)> ActorWrites = new();
     public readonly Dictionary<string, object?> Values = new();
+    public readonly Dictionary<string,int> Reads = new();
     public readonly List<(string Name, object? Value)> Writes = new();
     public Func<MethodInfo, object?[]?, object?>? Call;
     protected override object? Invoke(MethodInfo? target, object?[]? args)
@@ -17,6 +18,7 @@ public class RecordProxy : DispatchProxy
         var method = target!;
         if (method.Name.StartsWith("get_"))
         {
+            string read=method.Name[4..]; Reads.TryGetValue(read,out int count); Reads[read]=count+1;
             if (Values.TryGetValue(method.Name[4..], out var value)) return value;
         }
         if (method.Name.StartsWith("set_"))

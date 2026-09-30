@@ -1,26 +1,32 @@
-AutoArm 3.1 — Predictable tool return, linear docking and expected transitions
+AutoArm 3.2 — Direct PB peers and leaner validation
 
-ToolSwap records the actual parked position/orientation relative to a stand while
-its merge pairs are connected. The record survives restart and is validated by
-marker/merge identities and rigid layout. Returning to that rack preserves the
-original rest pose rather than choosing a visually indistinguishable quarter turn.
-Start with all tools parked; no manual orientation input or teaching is required.
+Optional Modules.Peers accepts up to 16 additional exact PB names with Observe,
+Plan or Stop permissions. Each peer talks directly to the Arm PB. A shared helper
+can maintain independent sessions with several arm owners; no ToolSwap relay is
+required. Planners submit complete paths with inherited arm speeds and optional
+per-point policies; observers read live pose/state/progress; safety peers can stop
+manual control, Home, planner paths and ToolSwap. The Arm PB remains the only
+joint writer. Numerical solving is not distributed across PBs.
 
-Travel uses HeadSpeed and HeadTurnSpeed from the arm PB. ToolSwap MoveSpeed and
-TurnSpeed apply only to final docking/insertion and withdrawal. Optional per-point
-policies select inherited arm speeds. Manual correction caps no longer impose a
-hidden ceiling on autonomous travel; physical actuator/acceleration bounds remain.
-Linear stages align first, hold orientation and track a reference on the captured
-Cartesian segment. Completion checks the endpoint, including very slow movement.
+Independent authenticated sessions, bounded traffic, exclusive path ownership,
+revocable revisions and a 0.5-second active-planner watchdog fence stale traffic
+and competing clients. Extra peers cannot change topology or attach equipment.
+The specialized ToolSwap protocol and automatic resume behavior are preserved.
 
-Before native merge/mount changes, the coordinator declares a stopped transition.
-The arm pauses stale topology without canceling the swap. Once separation/attachment
-is observed, it rewalks and settles the arm, then activates control on a fresh timed
-update. Source support merges stay disabled during travel to prevent early snap.
-Unexpected upstream changes still stop. Collision avoidance remains outside scope.
+Active topology validation checks only a precomputed list of unowned edges.
+Owned availability/endpoints/names/synchronization are checked once by each
+mandatory Refresh before output. Singleton position validation comes from Bounds.
+A ten-rotary simulated active pass now has one attachment check and one Angle
+read per joint. Owned disconnect and paired desynchronization remain immediate;
+full snapshots still run every 30 active passes and on explicit full checks.
 
-Replace BOTH PB scripts: protocol v4 requires matching peers. Existing v3.0
-configuration remains valid (arm Format 6, ToolSwap Format 1); no migration added.
-Arm: 79,911 characters, 20,089 free. ToolSwap: 51,414, 48,586 free.
-C#6/installed SE API, token reversal, original-source identical IL and 179,223
-simulated assertions pass. Live game physics remains unverified.
+Saved tool preferences prune absent, closed or wrong-family actuator identities
+after successful stopped discovery/setup, including cold load. Parked/live weights
+and unrelated Storage survive. Failed discovery and low-budget cleanup do not
+commit removals. No terminal enumeration is added to active ticks.
+
+Arm Format 6 and ToolSwap Format 1 are unchanged; Peers is optional. Both current
+PB scripts are supplied. Arm: 84,975 characters, 15,025 free. ToolSwap: 51,414,
+48,586 free. C#6/installed SE API, token reversal, original-source identical IL
+and 179,678 simulated assertions pass. Live game physics and instruction timing
+remain unverified.
