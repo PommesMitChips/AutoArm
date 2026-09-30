@@ -365,7 +365,7 @@ class AutoTopology
         var p = m.B as IMyPistonBase; return p != null ? p.CurrentPosition : ((IMyMotorStator)m.B).Angle;
     }
 
-    double Wrap(double a) { return a - Math.Floor((a + Math.PI) / (2 * Math.PI)) * (2 * Math.PI); }
+
 
     public bool CheckSync(AutoGroup g, out string why)
     {
@@ -409,7 +409,7 @@ class AutoTopology
         }
         if (lo > hi) { why = "No common signed velocity remains in G" + (g.Index + 1) + "."; return Fail(why); }
         sl /= g.M.Count; sa /= g.M.Count;
-        g.Lin = ToFrame(sl, reference); g.Ang = ToFrame(sa, reference);
+        g.Lin = InFrame(sl, reference); g.Ang = InFrame(sa, reference);
         return true;
     }
 
@@ -435,10 +435,7 @@ class AutoTopology
         return true;
     }
 
-    Vector3D ToFrame(Vector3D v, MatrixD f)
-    {
-        return new Vector3D(Vector3D.Dot(v, f.Forward), Vector3D.Dot(v, f.Left), Vector3D.Dot(v, f.Up));
-    }
+
 
     public void Set(AutoGroup g, double velocity)
     {

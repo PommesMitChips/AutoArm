@@ -1,21 +1,21 @@
 // Tool components are occupied-cell regions. Opposed merge faces are cuts even
 // while disabled; adjacent parallel merge blocks are ordinary component edges.
 class ToolPortPair { public IMyShipMergeBlock Head, Stand; }
-// PB GetCubeBlock hides non-terminal tops. Learn only real mounted couplers;
-// parked poses are reconstructed in the tool marker frame and verified on attach.
+// The unnamed arm top is captured from an attached tool base. Saved geometry
+// is relative to the fixed arm reference; every other tool has a visible base.
 class ToolTopInfo
 {
-    const string Section = "AutoArm Couplers";
+    const string Section = "AutoArm Arm Tip";
     public IMyTerminalBlock Marker;
     public IMyMotorRotor Live;
     public long EntityId;
     public string Subtype;
     public MatrixD Local;
     public List<IMyTerminalBlock> Inventory;
-    public bool Closed { get { return Marker.Closed || (Live != null && Live.Closed); } }
-    public IMyCubeGrid CubeGrid { get { return Live == null ? Marker.CubeGrid : Live.CubeGrid; } }
-    public MatrixD WorldMatrix { get { return Live == null ? Local * Marker.WorldMatrix : Live.WorldMatrix; } }
-    public Vector3I Position { get { return Live == null ? CubeGrid.WorldToGridInteger(WorldMatrix.Translation) : Live.Position; } }
+    public bool Closed => Marker.Closed || (Live != null && Live.Closed);
+    public IMyCubeGrid CubeGrid => Live == null ? Marker.CubeGrid : Live.CubeGrid;
+    public MatrixD WorldMatrix => Live == null ? Local * Marker.WorldMatrix : Live.WorldMatrix;
+    public Vector3I Position => Live == null ? CubeGrid.WorldToGridInteger(WorldMatrix.Translation) : Live.Position;
     public IMyMechanicalConnectionBlock Base
     {
         get
@@ -37,7 +37,7 @@ class ToolTopInfo
         if (ini.Get(Section, "PB").ToInt64() != p.Me.EntityId || ini.Get(Section, "Arm").ToString() != ArmName) return null;
         string text = ini.Get(Section, "E" + marker.EntityId).ToString(); if (text.Length == 0) return null;
         var row = text.Split('|'); long id; var v = new double[9];
-        if (ini.Get(Section, "Format").ToInt32() != 1 || row.Length != 11 || !long.TryParse(row[0], out id) || id <= 0 || row[1].Length == 0) throw new Exception("Invalid coupler cache; clear AutoArm Couplers in Storage.");
+        if (ini.Get(Section, "Format").ToInt32() != 1 || row.Length != 11 || !long.TryParse(row[0], out id) || id <= 0 || row[1].Length == 0) throw new Exception("Invalid coupler cache; clear AutoArm Arm Tip in Storage.");
         for (int i = 0; i < 9; i++) if (!ReadDouble(row[i + 2], out v[i])) throw new Exception("Invalid coupler geometry.");
         var forward = new Vector3D(v[3], v[4], v[5]); var up = new Vector3D(v[6], v[7], v[8]);
         if (Math.Abs(forward.LengthSquared() - 1) > 1e-6 || Math.Abs(up.LengthSquared() - 1) > 1e-6 || Math.Abs(Vector3D.Dot(forward, up)) > 1e-6) throw new Exception("Invalid coupler axes.");
@@ -55,25 +55,18 @@ class ToolTopInfo
 }
 class ToolRegionScan
 {
-    Program P; IMyTerminalBlock Marker; IMyMotorStator Mount; IMyCubeGrid Grid;
-    long GridId; int Limit; string Axis, Fault, OtherBase;
+    Program P; IMyTerminalBlock Marker; IMyCubeGrid Grid;
+    long GridId; int Limit; string Axis, Fault;
     Queue<Vector3I> Pending = new Queue<Vector3I>();
-    HashSet<Vector3I> Cells = new HashSet<Vector3I>();
+    public HashSet<Vector3I> Cells = new HashSet<Vector3I>();
     public HashSet<long> Blocks = new HashSet<long>();
     public List<IMyShipMergeBlock> Merges = new List<IMyShipMergeBlock>();
-    public ToolTopInfo Top;
-    ToolTopInfo Known;
-    IMyMotorRotor Mounted;
-    List<IMyTerminalBlock> Inventory;
     static Vector3I[] Dirs = { Vector3I.UnitX, -Vector3I.UnitX, Vector3I.UnitY, -Vector3I.UnitY, Vector3I.UnitZ, -Vector3I.UnitZ };
-    public ToolRegionScan(Program p, IMyTerminalBlock marker, IMyMotorStator mount, int cellLimit, string mergeAxis, ToolTopInfo known, List<IMyTerminalBlock> inventory)
+    public ToolRegionScan(Program p, IMyTerminalBlock marker, IMyMotorStator mount, int cellLimit, string mergeAxis)
     {
-        P = p; Marker = marker; Mount = mount; Limit = Math.Min(4096, Math.Max(1, cellLimit)); Axis = mergeAxis;
+        P = p; Marker = marker; Limit = Math.Min(4096, Math.Max(1, cellLimit)); Axis = mergeAxis;
         if (marker == null || mount == null) { Fault = "Missing Head/Mount."; return; }
         Grid = marker.CubeGrid; GridId = Grid.EntityId;
-        Known = known; Inventory = inventory;
-        Mounted = mount.Top as IMyMotorRotor;
-        if (Mounted != null && Mounted.CubeGrid.EntityId != GridId) Mounted = null;
         if (Grid.GetCubeBlock(marker.Position) == null) { Fault = "Head cell missing."; return; }
         Cells.Add(marker.Position); Pending.Enqueue(marker.Position);
     }
@@ -92,17 +85,6 @@ class ToolRegionScan
             {
                 var merge = fat as IMyShipMergeBlock;
                 if (merge != null) { Vector3I d; if (!ToolGeometry.MergeDirection(merge, Axis, out d, out why)) { Fault = why; return false; } Merges.Add(merge); }
-                var top = fat as IMyMotorRotor;
-                if (top != null)
-                {
-                    var owner = top.Base;
-                    if (owner != null && owner.EntityId != Mount.EntityId) OtherBase = owner.CustomName;
-                    else
-                    {
-                        if (Top != null) return ToolGeometry.Fail(out why, Fault = "Multiple eligible tops.");
-                        Top = ToolTopInfo.Capture(Marker, top, Inventory);
-                    }
-                }
             }
             foreach (var d in Dirs)
             {
@@ -119,26 +101,13 @@ class ToolRegionScan
                 Cells.Add(next); Pending.Enqueue(next);
             }
         }
-        done = Pending.Count == 0;
-        if (done)
-        {
-            if (Mounted != null && Cells.Contains(Mounted.Position))
-            { if (Top != null && Top.EntityId != Mounted.EntityId) return ToolGeometry.Fail(out why, Fault = "Multiple eligible tops."); Top = ToolTopInfo.Capture(Marker, Mounted, Inventory); }
-            if (Top == null && Known != null)
-            {
-                if (Known.Closed || Known.CubeGrid.EntityId != GridId || !Cells.Contains(Known.Position) || !Grid.CubeExists(Known.Position)) return ToolGeometry.Fail(out why, Fault = "Cached top outside tool; mount again.");
-                if (Known.Base != null && Known.Base.EntityId != Mount.EntityId) return ToolGeometry.Fail(out why, Fault = "Top attached to " + Known.Base.CustomName);
-                Top = Known;
-            }
-            if (Top == null && OtherBase != null) return ToolGeometry.Fail(out why, Fault = "Top attached to " + OtherBase);
-        }
-        return true;
+        done = Pending.Count == 0; return true;
     }
 }
 static class ToolGeometry
 {
     public static Program Owner;
-    static bool Budget() { return Owner == null || Owner.Runtime.MaxInstructionCount <= 0 || Owner.Runtime.CurrentInstructionCount < Owner.Runtime.MaxInstructionCount * .6; }
+    static bool Budget() => Owner == null || Owner.Runtime.MaxInstructionCount <= 0 || Owner.Runtime.CurrentInstructionCount < Owner.Runtime.MaxInstructionCount * .6;
     public static bool Fail(out string why, string message) { why = message; return false; }
     static string[] Axes = { "right", "left", "up", "down", "forward", "backward" };
     static Vector3D[] Normals = { Vector3D.Right, Vector3D.Left, Vector3D.Up, Vector3D.Down, Vector3D.Forward, Vector3D.Backward };
@@ -149,8 +118,8 @@ static class ToolGeometry
     {
         public Vector3D Center, Normal, U, V; public double HalfU, HalfV;
     }
-    static bool Finite(double x) { return !double.IsNaN(x) && !double.IsInfinity(x); }
-    static bool Finite(Vector3D v) { return Finite(v.X) && Finite(v.Y) && Finite(v.Z); }
+
+
     public static bool MergeDirection(IMyShipMergeBlock b, string axis, out Vector3I d, out string why)
     {
         d = Vector3I.Zero; why = null; Vector3D n;
@@ -171,10 +140,7 @@ static class ToolGeometry
         if (Math.Abs(d.X) + Math.Abs(d.Y) + Math.Abs(d.Z) != 1) return Fail(out why, "Bad merge axis.");
         return true;
     }
-    public static bool OnFace(IMyShipMergeBlock b, Vector3I c, Vector3I d)
-    {
-        return d.X > 0 ? c.X == b.Max.X : d.X < 0 ? c.X == b.Min.X : d.Y > 0 ? c.Y == b.Max.Y : d.Y < 0 ? c.Y == b.Min.Y : d.Z > 0 ? c.Z == b.Max.Z : c.Z == b.Min.Z;
-    }
+    public static bool OnFace(IMyShipMergeBlock b, Vector3I c, Vector3I d) => d.X > 0 ? c.X == b.Max.X : d.X < 0 ? c.X == b.Min.X : d.Y > 0 ? c.Y == b.Max.Y : d.Y < 0 ? c.Y == b.Min.Y : d.Z > 0 ? c.Z == b.Max.Z : c.Z == b.Min.Z;
     static bool GetFace(IMyShipMergeBlock b, string axis, out Face f, out string why)
     {
         f = null; Vector3I d; if (!Budget()) return Fail(out why, GeometryBudgetMessage); if (!MergeDirection(b, axis, out d, out why)) return false;
@@ -236,10 +202,7 @@ static class ToolGeometry
         if (other == null || !PairLocked(new ToolPortPair { Head = a, Stand = other }, axis)) return false;
         partner = other; return true;
     }
-    public static bool TryDockPose(IMyTerminalBlock marker, List<IMyShipMergeBlock> own, List<IMyShipMergeBlock> rack, string axis, double clearance, out MatrixD pose, out List<ToolPortPair> pairs, out string why)
-    {
-        return TryDockPoseAt(marker, own, rack, axis, clearance, 0, out pose, out pairs, out why);
-    }
+    public static bool TryDockPose(IMyTerminalBlock marker, List<IMyShipMergeBlock> own, List<IMyShipMergeBlock> rack, string axis, double clearance, out MatrixD pose, out List<ToolPortPair> pairs, out string why) => TryDockPoseAt(marker, own, rack, axis, clearance, 0, out pose, out pairs, out why);
     public static bool TryDockPoseAt(IMyTerminalBlock marker, List<IMyShipMergeBlock> own, List<IMyShipMergeBlock> rack, string axis, double clearance, long primaryStandID, out MatrixD pose, out List<ToolPortPair> pairs, out string why)
     {
         pose = MatrixD.Identity; pairs = null; why = null;
@@ -287,6 +250,17 @@ static class ToolGeometry
         if (pairs == null) return Fail(out why, "No unique merge layout; check ports/mergeAxis.");
         return true;
     }
+    public static bool TryTopPose(IMyMotorStator mount, ToolTopInfo top, out MatrixD pose, out string why)
+    {
+        pose = MatrixD.Identity; MatrixD desiredBase;
+        if (!TryAttachPose(mount, top, out desiredBase, out why)) return false;
+        var delta = MatrixD.Invert(desiredBase) * mount.WorldMatrix;
+        var desiredTop = top.WorldMatrix * delta;
+        desiredTop.Translation = Vector3D.Transform(top.CubeGrid.GridIntegerToWorld(top.Position), delta);
+        pose = MatrixD.Invert(top.Local) * desiredTop;
+        if (!Finite(pose.Translation) || !Finite(pose.Up) || !Finite(pose.Forward)) return Fail(out why, "Bad arm coupling frame.");
+        return true;
+    }
     public static bool TryAttachPose(IMyMotorStator mount, ToolTopInfo top, out MatrixD pose, out string why)
     {
         pose = MatrixD.Identity; why = null;
@@ -302,8 +276,6 @@ static class ToolGeometry
         if ((index == 0 || index == 2) && top.CubeGrid.GridSizeEnum == MyCubeSize.Large) { lo = -.4; hi = .2; }
         double displacement = mount.Displacement;
         if (!Finite(displacement) || displacement < lo - .000001 || displacement > hi + .000001) return Fail(out why, "Attach would clamp displacement; use " + lo + " .. " + hi + ".");
-        if (top.Base != null && top.Base.EntityId != mount.EntityId) return Fail(out why, "Top belongs to another mount.");
-        if (top.Base != null && Vector3D.Dot(mount.WorldMatrix.Up, top.WorldMatrix.Up) < -.95) return Fail(out why, "Flipped coupling unsupported.");
         // Attach retains Angle and lock state. Preserve that phase for either
         // factory joint type instead of imposing a zero-angle head frame.
         double q = mount.Angle;

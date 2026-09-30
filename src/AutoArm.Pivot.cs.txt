@@ -12,7 +12,7 @@ class PivotProbeTool
         public int Group; public double Delta,Travel,Orientation;
         public readonly double[] Error=new double[3],Spread=new double[3]; public string Verdict;
     }
-    public IList<Result> Trials { get { return R.AsReadOnly(); } }
+    public IList<Result> Trials => R.AsReadOnly();
     public PivotProbeTool(Program owner,AutoTopology topology){P=owner;T=topology;}
 
     public void Run(string[] w)
@@ -51,22 +51,22 @@ class PivotProbeTool
     bool Capture(int selected,out Shot s,out string why)
     {
         s=new Shot();why="";MatrixD f=T.Base.WorldMatrix;Vector3D o=T.Base.GetPosition();
-        s.P=Point(T.Head.GetPosition(),o,f);s.F=Vec(T.Head.WorldMatrix.Forward,f);s.U=Vec(T.Head.WorldMatrix.Up,f);
-        if(!Good(s.P)||!Unit(ref s.F)||!Unit(ref s.U)){why="invalid Base/Head pose.";return false;}
+        s.P=Point(T.Head.GetPosition(),o,f);s.F=InFrame(T.Head.WorldMatrix.Forward,f);s.U=InFrame(T.Head.WorldMatrix.Up,f);
+        if(!Finite(s.P)||!Unit(ref s.F)||!Unit(ref s.U)){why="invalid Base/Head pose.";return false;}
         s.Q=new double[T.Groups.Count][];
         for(int i=0;i<T.Groups.Count;i++){s.Q[i]=new double[T.Groups[i].M.Count];for(int j=0;j<s.Q[i].Length;j++){s.Q[i][j]=T.Position(T.Groups[i].M[j]);if(!Finite(s.Q[i][j])){why="non-finite joint position.";return false;}}}
         AutoGroup g=T.Groups[selected];int count=g.M.Count;s.Axis=new Vector3D[count];s.Base=new Vector3D[count];s.Top=new Vector3D[count];
         for(int i=0;i<count;i++)
         {
-            AutoMember m=g.M[i];IMyMotorStator r=m.B as IMyMotorStator;
+            AutoMember m=g.M[i];var r=m.B as IMyMotorStator;
             if(r==null||r.RotorLock||m.B.Top==null){why="selected member unavailable/locked.";return false;}
             double q=s.Q[selected][i],margin=.25*Math.PI/180;
             if(!Finite(r.LowerLimitRad)||!Finite(r.UpperLimitRad)||r.LowerLimitRad>r.UpperLimitRad){why="selected limits are invalid.";return false;}
             if((r.LowerLimitRad>-1e6&&q<=r.LowerLimitRad+margin)||(r.UpperLimitRad<1e6&&q>=r.UpperLimitRad-margin)){why="selected member near limit: "+m.B.CustomName;return false;}
             int dir=m.B.CubeGrid.EntityId==m.U&&m.B.TopGrid.EntityId==m.V?1:m.B.CubeGrid.EntityId==m.V&&m.B.TopGrid.EntityId==m.U?-1:0;
             if(dir==0){why="selected endpoints changed.";return false;}
-            s.Axis[i]=Vec(m.B.WorldMatrix.Up*(-dir*m.Sign),f);s.Base[i]=Point(m.B.GetPosition(),o,f);s.Top[i]=Point(m.B.Top.GetPosition(),o,f);
-            if(!Unit(ref s.Axis[i])||!Good(s.Base[i])||!Good(s.Top[i])){why="invalid axis/pivot candidate.";return false;}
+            s.Axis[i]=InFrame(m.B.WorldMatrix.Up*(-dir*m.Sign),f);s.Base[i]=Point(m.B.GetPosition(),o,f);s.Top[i]=Point(m.B.Top.GetPosition(),o,f);
+            if(!Unit(ref s.Axis[i])||!Finite(s.Base[i])||!Finite(s.Top[i])){why="invalid axis/pivot candidate.";return false;}
         }return true;
     }
     bool Analyse(Shot a,Shot b,int group,out Result result,out string why)
@@ -107,10 +107,10 @@ class PivotProbeTool
     Vector3D Candidate(Shot s,int i,int k){return k==0?s.Base[i]:k==1?s.Top[i]:(s.Base[i]+s.Top[i])*.5;}
     string Name(int k){return k==0?"Base center":k==1?"Top center":"Midpoint";}
     void Clear(){A=null;G=-1;Fingerprint="";}void Help(){Say("PivotProbe Start <group> | End | Report | Reset");}void Say(string s){P.Say(s);}
-    static double Wrap(double a){return a-Math.Floor((a+Math.PI)/(2*Math.PI))*(2*Math.PI);}static double Deg(double a){return a*180/Math.PI;}
-    static bool Good(Vector3D v){return Finite(v.X)&&Finite(v.Y)&&Finite(v.Z);}
-    static bool Unit(ref Vector3D v){double n=v.Length();if(!Good(v)||!Finite(n)||n<1e-10)return false;v/=n;return true;}
-    static Vector3D Point(Vector3D p,Vector3D o,MatrixD f){return Vec(p-o,f);}static Vector3D Vec(Vector3D v,MatrixD f){return new Vector3D(Vector3D.Dot(v,f.Forward),Vector3D.Dot(v,f.Left),Vector3D.Dot(v,f.Up));}
-    static Vector3D Rot(Vector3D v,Vector3D a,double x){return v*Math.Cos(x)+Vector3D.Cross(a,v)*Math.Sin(x)+a*Vector3D.Dot(a,v)*(1-Math.Cos(x));}
+    static double Deg(double a) => a*180/Math.PI;
+
+    static bool Unit(ref Vector3D v){double n=v.Length();if(!Finite(v)||!Finite(n)||n<1e-10)return false;v/=n;return true;}
+    static Vector3D Point(Vector3D p,Vector3D o,MatrixD f) => InFrame(p-o,f);
+    static Vector3D Rot(Vector3D v,Vector3D a,double x) => v*Math.Cos(x)+Vector3D.Cross(a,v)*Math.Sin(x)+a*Vector3D.Dot(a,v)*(1-Math.Cos(x));
     static double Angle(Vector3D a,Vector3D b){double n=a.Length()*b.Length();return n>1e-12&&Finite(n)?Math.Acos(Math.Max(-1,Math.Min(1,Vector3D.Dot(a,b)/n)))*180/Math.PI:double.NaN;}
 }

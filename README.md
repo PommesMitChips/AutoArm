@@ -5,7 +5,7 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 ## Installation
 
 1. Run `Stop` on the previous controller, if one is installed.
-2. Copy the entire [AutoArm script](https://github.com/PommesMitChips/AutoArm/blob/v2.5.1/AutoArm_Compact.txt) into the programmable block's script editor.
+2. Copy the entire [AutoArm script](https://github.com/PommesMitChips/AutoArm/blob/v2.6/AutoArm_Compact.txt) into the programmable block's script editor.
 3. Change `const string ArmName = "Arm 1";` to your arm's name, then check/compile it in the game editor.
 4. Choose a setup below. Name the parts and put the matching configuration in the **programmable block's Custom Data**.
 5. Run `Reload`, wait for setup to finish OFF, then `Check` and `On`.
@@ -27,59 +27,55 @@ Use this for one fixed tool without automatic parking or swapping.
 
 Name only one arm joint with the `Arm 1 - Base` prefix and only one reference block with the `Arm 1 - Head` prefix. Other drills, merges and spare tools must not use that head prefix in this setup.
 
-Use [SimpleArm.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.5.1/examples/SimpleArm.ini). Keep `[Tools] Enabled=false`, then run `Reload`, `Check` and `On`.
+Use [SimpleArm.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.6/examples/SimpleArm.ini). Keep `[Tools] Enabled=false`, then run `Reload`, `Check` and `On`.
 
 ### One tool with automatic parking
 
-The arm needs a separate detachable end rotor/hinge. Its base stays on the arm; its top stays on the tool. The tool also carries a merge block that faces a matching merge block on its parking support.
+For automatic parking and swapping, put the detachable rotor/hinge **base on the tool**, and its unnamed **top on the arm**. Keep an existing terminal block or camera on the arm's end as its reference. The reference stays with the arm when a tool is removed.
 
 | Part | Exact example name |
 | --- | --- |
 | First arm joint | `Arm 1 - Base - Rotor` |
-| Detachable end rotor/hinge base | `Arm 1 - ToolMount` |
+| Reference block at the arm's end | `Arm 1 - ToolMount` |
+| Rotor/hinge base carried by the tool | `Arm 1 - Head 1 - Mount` |
 | Drill used as the tool reference | `Arm 1 - Head 1 - Drill` |
 | Merge carried by the tool | `Arm 1 - Head 1 - HeadMerge` |
 | Merge fixed to the parking support | `Arm 1 - ParkMerge 1` |
-| Detachable rotor/hinge top | Leave unnamed |
+| Rotor/hinge top carried by the arm | Leave unnamed |
 
-Keep the reference block, merge and top together on the same tool assembly. `ToolMount` must be separate from the first joint marked `Base`.
+Keep the tool's reference, base and head merge connected together. The head merge must face the support merge. Avoid another solid connection between tool and support that would prevent separation.
 
-Use [Park.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.5.1/examples/Park.ini). Begin with the tool attached to `ToolMount`, then run `Reload` or `ToolScan` once and inspect `ToolInfo`.
+Use [Park.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.6/examples/Park.ini). `[Tools] Mount` names the arm-end reference; `[Tool01] Mount` names the tool's rotor/hinge base. Begin installation with the tool attached, then run `Reload`, wait for the scan to finish, and inspect `ToolInfo`.
 
 - `Park` or `Park 1` parks and detaches the tool.
 - `Tool Head 1` picks it up again.
 - Each operation finishes OFF. Run `On` to resume manual control.
 
-If the tool has several support merges, list every required head-side merge and matching park merge in the configuration.
+If the tool has several support merges, list every required head merge and matching park merge in the configuration.
 
 ### Tool swapping
 
-Keep the reference block, compatible rotor/hinge top and head-side merges connected together on each tool. Each stand has matching merge blocks facing the tool's merges.
+Use the same arrangement: one unnamed rotor/hinge top stays on the arm, and each tool carries its own named, compatible rotor/hinge base. Each tool also carries its reference block and head merges; its stand has matching merges facing them.
 
 | Part | Exact example name |
 | --- | --- |
 | First arm joint | `Arm 1 - Base - Rotor` |
-| Detachable end rotor/hinge base | `Arm 1 - ToolMount` |
+| Reference block at the arm's end | `Arm 1 - ToolMount` |
+| Drill tool's rotor/hinge base | `Arm 1 - Head 1 - Mount` |
 | Drill tool reference | `Arm 1 - Head 1 - Drill` |
 | Drill tool merge | `Arm 1 - Head 1 - HeadMerge` |
 | Drill stand merge | `Arm 1 - Head 1 - StandMerge` |
+| Welder tool's rotor/hinge base | `Arm 1 - Head 2 - Mount` |
 | Welder tool reference | `Arm 1 - Head 2 - Welder` |
 | Welder tool merge | `Arm 1 - Head 2 - HeadMerge` |
 | Welder stand merge | `Arm 1 - Head 2 - StandMerge` |
-| Each tool's detachable top | Leave unnamed |
+| Rotor/hinge top carried by the arm | Leave unnamed |
 
-Use [ToolSwap.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.5.1/examples/ToolSwap.ini). Set `Mount` to the exact name of the end rotor/hinge base and list the complete drill/welder names in `Heads`. The supplied example lists the merges explicitly and provides the command aliases `Head 1` and `Head 2`.
+Use [ToolSwap.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.6/examples/ToolSwap.ini). `[Tools] Mount` names the arm-end reference. Each `[ToolNN] Mount` names that tool's rotor/hinge base. List the complete drill/welder names in `Heads`; their order matches `Tool01`, `Tool02`, and so on. The example lists the merges explicitly and provides the command aliases `Head 1` and `Head 2`.
 
-Before the first automatic swap, mount each tool once and run `ToolScan`:
+Start installation with Head 1 attached to the arm and Head 2 secured on its stand. Run `Reload`, wait for the scan to finish, and check `ToolInfo`. Then `Tool 2` or `Tool Head 2` parks Head 1 and picks up Head 2. `Tool 1` or `Tool Head 1` switches back. Each spare tool can be used immediately; you do not need to mount it first or teach a parking position.
 
-1. Scan the drill while it is attached to `ToolMount`.
-2. Keep the controller OFF. Support the drill on its stand before detaching it, then manually attach `ToolMount` to the supported welder and scan again.
-3. Confirm the welder is attached before turning off only its head-side merges. Wait for separation from the stand and run `ToolScan` again.
-4. Use `ToolInfo` to confirm both tools are ready. Tools shown as `unlearned` still need their setup mount.
-
-This setup is remembered when the same PB is saved or recompiled. Replacing the PB, tool top or reference block, or changing the tool layout, may require repeating it.
-
-Use `Tool Head 2` to park the drill on its stand and mount the welder. Use `Tool Head 1` to switch back. `Tool 1` and `Tool 2` also select them by list order. To add a common parking support, configure its merges under `ParkMerges`.
+The arm-end setup is saved automatically and survives saving or recompiling the same PB, including while the arm is headless. If you replace the PB, arm top or reference block, begin setup with any compatible tool attached. To add a common parking support, configure its merges under `ParkMerges`.
 
 ## Use and features
 
@@ -120,14 +116,23 @@ Add a programmable-block **Run** action to your toolbar and enter one of these a
 | `Info` or `Joints` | Show the arm or joint details |
 | `SetHome` | Save the current joint positions |
 | `GoHome` | Return the attached arm to those positions |
+| `MoveTo x y z` | Move to a position while holding orientation |
+| `OrientTo fx fy fz ux uy uz` | Turn to an orientation while holding position |
+| `MoveToPosOri x y z fx fy fz ux uy uz` | Set both position and orientation |
 | `Mode HEAD`, `Mode HRZ`, `Mode VRT` | Select a movement view |
-| `ToolScan` | Scan configured tools and record a mounted tool |
+| `ToolScan` | Scan configured tools and check their setup |
 | `ToolInfo` | Show tool setup and current state |
 | `Tool Head 1` or `Tool Head 2` | Select a configured tool |
 | `Park` | Park and detach the current tool |
 | `SwapCancel` | Cancel an automatic tool operation |
 
 Tool parking and swapping finish OFF. Run `On` afterward to resume manual control. Pilot input or `Stop` cancels automatic movement; inspect the equipment and run `ToolScan` before continuing.
+
+### Position and orientation commands
+
+Run `On` first. `MoveTo` coordinates are metres from the base in its Forward, Left and Up directions. For example, `MoveTo 2 0 1` requests a position two metres forward and one metre up from the base. The head keeps its held orientation.
+
+`OrientTo` takes a desired forward direction followed by an up direction, using the same base directions. For example, `OrientTo 1 0 0 0 0 1` points forward with up aligned to the base. `MoveToPosOri` combines the three position values and six orientation values. Choose reachable targets with a clear path. Live pilot input remains active and adjusts the target; these commands also accept PB Run actions from other automation.
 
 ### Fine tuning
 

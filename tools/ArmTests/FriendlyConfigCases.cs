@@ -24,7 +24,7 @@ internal static partial class Scenarios
         FCMetadataAndReset(type);
         FCStorageCoexistence(type);
         FCReportedLayoutAndHome(type);
-        Console.WriteLine("Friendly configuration: strict Format 3, readable/reordered rows, stable identities, atomic refusal, settings/bindings, topology evolution, reset and Storage coexistence.");
+        Console.WriteLine("Friendly configuration: strict Format 4, readable/reordered rows, stable identities, atomic refusal, settings/bindings, topology evolution, reset and Storage coexistence.");
     }
 
     static void FCStrictFormatAndRows(Type type)
@@ -32,7 +32,7 @@ internal static partial class Scenarios
         var rig=Fixtures.Serial(out _,out _,out _,out _);var script=Start(type,rig);var groups=Groups(script);
         string sig0=FCSig(groups[0]),sig1=FCSig(groups[1]);
         string current=rig.PB.CustomData,storage=((TestHost)script).Storage;
-        Check(FCIni(current).Get("AutoArm","Format").ToInt32()==3,"Blank Custom Data did not generate Format 3.");
+        Check(FCIni(current).Get("AutoArm","Format").ToInt32()==4,"Blank Custom Data did not generate Format 4.");
         var legacy=new MyIni();legacy.Set("MArmOS","Format",1);
         legacy.Set("MArmOS Group 01","Signature",sig0);legacy.Set("MArmOS Group 01","Translation",.25);legacy.Set("MArmOS Group 01","Orientation",2.5);
         legacy.Set("MArmOS Group 02","Signature",sig1);legacy.Set("MArmOS Group 02","Translation",.75);legacy.Set("MArmOS Group 02","Orientation",1.5);
@@ -57,7 +57,7 @@ internal static partial class Scenarios
 
         RecordProxy.Of(rig.PB).Values["CustomData"]=" \r\n\t";Run(script,"Reload");
         var defaults=FCIni(rig.PB.CustomData);
-        Check(defaults.Get("AutoArm","Format").ToInt32()==3&&defaults.Get("AutoArm","Arm").ToString()=="Arm 1","Whitespace Custom Data did not regenerate current defaults.");
+        Check(defaults.Get("AutoArm","Format").ToInt32()==4&&defaults.Get("AutoArm","Arm").ToString()=="Arm 1","Whitespace Custom Data did not regenerate current defaults.");
         Check(Groups(script).All(g=>FCWeight(g,"MoveW")==1&&FCWeight(g,"TurnW")==1),"Blank Custom Data retained previous actuator preferences.");
     }
 
@@ -156,7 +156,7 @@ internal static partial class Scenarios
         var rig=ReportedTenRotaries(out var fingerprint);var script=Start(type,rig);string text=rig.PB.CustomData;
         Check(!text.Contains(fingerprint)&&!text.Contains("Signature=")&&!text.Contains("MArmOS"),"New layout exposed legacy branding or physical identities.");
         Check(FCRows(FCIni(text)).Length==11,"Reported ten-actuator table lost rows.");
-        Check(FCIni(text).Get("AutoArm","Format").ToInt32()==3,"Generated preview does not use Format 3.");
+        Check(FCIni(text).Get("AutoArm","Format").ToInt32()==4,"Generated preview does not use Format 4.");
         var exampleDirectory=Path.Combine(Tests.Workspace,"examples");
         Directory.CreateDirectory(exampleDirectory);
         File.WriteAllText(Path.Combine(exampleDirectory,"CustomData.ini"),text);
@@ -168,7 +168,7 @@ internal static partial class Scenarios
         Check(((TestHost)script).Storage.Contains("[AutoArm Home]")&&!((TestHost)script).Storage.Contains("MArmOS"),"Old home branding was not removed.");
 
         var unrelated=Fixtures.Serial(out _,out _,out _,out _);
-        RecordProxy.Of(unrelated.PB).Values["CustomData"]="[AutoArm]\nArm=Arm 1\nFormat=3\n[Lighting]\nFormat=1\n[Lighting Group 01]\nSignature=pattern-v1\n";
+        RecordProxy.Of(unrelated.PB).Values["CustomData"]="[AutoArm]\nArm=Arm 1\nFormat=4\n[Lighting]\nFormat=1\n[Lighting Group 01]\nSignature=pattern-v1\n";
         Start(type,unrelated);var data=FCIni(unrelated.PB.CustomData);
         Check(data.Get("Lighting Group 01","Signature").ToString()=="pattern-v1","Unrelated signature namespace was mistaken for arm configuration.");
     }

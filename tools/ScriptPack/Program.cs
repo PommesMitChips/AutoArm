@@ -130,8 +130,7 @@ internal static class ScriptPack
         foreach (var token in program.DescendantTokens().Where(t => t.IsKind(SyntaxKind.IdentifierToken)))
         {
             var symbol = SymbolFor(token);
-            bool local = symbol is ILocalSymbol or IParameterSymbol;
-            if (symbol == null || symbol.IsImplicitlyDeclared || protectedNames.Contains(symbol.Name) || symbol.Name.Length <= (local ? 1 : 2) ||
+            if (symbol == null || symbol.IsImplicitlyDeclared || protectedNames.Contains(symbol.Name) || symbol.Name.Length <= 1 ||
                 !symbol.Locations.Any(l => l.IsInSource) || symbol is INamedTypeSymbol { TypeKind: TypeKind.Enum } ||
                 symbol is IFieldSymbol { ContainingType.TypeKind: TypeKind.Enum }) continue;
             if (symbol is not (IFieldSymbol or IMethodSymbol or IPropertySymbol or INamedTypeSymbol or ILocalSymbol or IParameterSymbol)) continue;
@@ -140,7 +139,7 @@ internal static class ScriptPack
         var taken = root.DescendantTokens().Where(t => t.IsKind(SyntaxKind.IdentifierToken)).Select(t => t.ValueText).ToHashSet(StringComparer.Ordinal);
         int next = 0;
         foreach (var group in byToken.Values.Where(s => s is not (ILocalSymbol or IParameterSymbol))
-            .GroupBy(s => s, SymbolEqualityComparer.Default).OrderByDescending(g => g.Count() * (g.Key!.Name.Length - 2)))
+            .GroupBy(s => s, SymbolEqualityComparer.Default).OrderByDescending(g => g.Count() * (g.Key!.Name.Length - 1)))
         {
             string name;
             do { name = ShortName(next++); } while (taken.Contains(name) || SyntaxFacts.GetKeywordKind(name) != SyntaxKind.None || SyntaxFacts.GetContextualKeywordKind(name) != SyntaxKind.None);
@@ -184,14 +183,14 @@ internal static class ScriptPack
             }
         }
         var tokens = program.DescendantTokens().Where(t => t.SpanStart >= boundary && t != program.CloseBraceToken && t.Span.Length > 0).ToArray();
-        var numbers = new Dictionary<int, string>();
+        var literalReplacements = new Dictionary<int, string>();
         var renamed = tokens.Select(t =>
         {
             if (byToken.TryGetValue(t.SpanStart, out var s) && symbols.TryGetValue(s, out var n)) return SyntaxFactory.Identifier(n);
-            var number = ShortNumber(t);
-            if (number == null) return t.WithoutTrivia();
-            numbers.Add(t.SpanStart, number);
-            return SyntaxFactory.ParseTokens(number, options: ParseOptions).First();
+            var literal = ShortNumber(t) ?? ShortString(t);
+            if (literal == null) return t.WithoutTrivia();
+            literalReplacements.Add(t.SpanStart, literal);
+            return SyntaxFactory.ParseTokens(literal, options: ParseOptions).First();
         }).ToArray();
         var compact = Compact(renamed);
         // Full token round-trip, not a delimiter-count approximation.
@@ -221,7 +220,7 @@ internal static class ScriptPack
         {
             var restored = reparsed[i].Text;
             string? replacement = byToken.TryGetValue(tokens[i].SpanStart, out var s) && symbols.TryGetValue(s, out var n) ? n :
-                numbers.GetValueOrDefault(tokens[i].SpanStart);
+                literalReplacements.GetValueOrDefault(tokens[i].SpanStart);
             if (replacement != null)
             {
                 if (restored != replacement) throw new Exception("Substitution round-trip failed.");
@@ -272,9 +271,24 @@ internal static class ScriptPack
         }
     }
 
+    static readonly string MemberAlphabet = BuildMemberAlphabet();
+    static string BuildMemberAlphabet()
+    {
+        var alphabet = new StringBuilder("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        // Keep the Greek local-alias pool separate. These BMP letters each
+        // occupy one UTF-16 code unit and remain valid C# 6 identifier starts.
+        foreach (var range in new[] { (First: 0x0100, Last: 0x02AF), (First: 0x0400, Last: 0x04FF) })
+            for (int code = range.First; code <= range.Last; code++)
+            {
+                char letter = (char)code;
+                if (char.IsLetter(letter) && SyntaxFacts.IsIdentifierStartCharacter(letter)) alphabet.Append(letter);
+            }
+        return alphabet.ToString();
+    }
+
     static string ShortName(int index)
     {
-        const string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        string alphabet = MemberAlphabet;
         var name = "";
         do { name = alphabet[index % alphabet.Length] + name; index = index / alphabet.Length - 1; } while (index >= 0);
         return name;
@@ -316,6 +330,20 @@ internal static class ScriptPack
             if (parsed.IsKind(SyntaxKind.NumericLiteralToken) && parsed.Value?.GetType() == token.Value?.GetType() && Equals(parsed.Value, token.Value)) best = candidate;
         }
         return best == token.Text ? null : best;
+    }
+
+    static string? ShortString(SyntaxToken token)
+    {
+        if (!token.IsKind(SyntaxKind.StringLiteralToken)) return null;
+        string value = token.ValueText;
+        // Verbatim strings retain literal newlines and tabs. Keep other control
+        // characters escaped so the generated file remains safe to copy/paste.
+        if (value.Any(c => char.IsControl(c) && c != '\n' && c != '\r' && c != '\t')) return null;
+        string candidate = "@\"" + value.Replace("\"", "\"\"") + "\"";
+        if (candidate.Length >= token.Text.Length) return null;
+        var parsed = SyntaxFactory.ParseTokens(candidate, options: ParseOptions).ToArray();
+        return parsed.Length == 2 && parsed[0].IsKind(SyntaxKind.StringLiteralToken) &&
+            parsed[0].ValueText == value ? candidate : null;
     }
 
     static string Compact(SyntaxToken[] tokens)

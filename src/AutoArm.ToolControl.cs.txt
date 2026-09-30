@@ -76,11 +76,10 @@ bool ToolPoseStep(MatrixD world, double dt, double observationDt, double moveCap
         !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0)
     { why = "Invalid tool movement interval or cap."; return false; }
     MatrixD basis = Topology.Base.WorldMatrix;
-    TargetP = InFrame(world.Translation - Topology.Base.GetPosition(), basis);
-    TargetF = InFrame(world.Forward, basis); TargetU = InFrame(world.Up, basis);
-    if (!Finite(TargetP.LengthSquared()) || !Orthonormalise(ref TargetF, ref TargetU))
+    if (!SetPoseTarget(InFrame(world.Translation - Topology.Base.GetPosition(), basis),
+        InFrame(world.Forward, basis), InFrame(world.Up, basis), 3))
     { why = "Invalid tool target frame."; return false; }
-    TargetValid = true; ToolDriveMoveCap = moveCap; ToolDriveTurnCap = turnCap * Math.PI / 180;
+    ToolDriveMoveCap = moveCap; ToolDriveTurnCap = turnCap * Math.PI / 180;
     ToolDriving = true;
     try { UpdateControl(Math.Min(dt, .1), observationDt); }
     finally { ToolDriving = false; }

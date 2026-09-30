@@ -1,115 +1,49 @@
-AutoArm 2.5.1 — Tool Head Swap / hidden-top discovery fix
+AutoArm 2.6 — Tool-side couplers and shared pose targets
 
 DELIVERY
-Paste the entire AutoArm_Compact.txt into the game's programmable block.
-Only ArmName needs editing in code. The compact script is 99,772 UTF-16 characters:
-228 characters remain under the 100,000 limit. Longer arm names consume that
-space. AutoArm_Source.txt is the readable development source.
+Paste AutoArm_Compact.txt into the Space Engineers programmable block.
+Only ArmName needs editing in code. The compact script is 99,238 UTF-16 characters; 762 remain under 100,000. Source fragments remain readable;
+the build generates compact C#6 with single-character Unicode identifiers.
 
-UPGRADE
-Stop the arm before replacing the script. Custom Data requires Format=3.
-An older, missing or invalid format is rejected: delete Custom Data, then Reload
-to generate the current configuration. There is no Custom Data migration.
-Record any settings you want to re-enter before deleting the old data.
-Saved Home and unrelated PB Storage are preserved; Home still requires a
-matching arm fingerprint. Never paste another PB's populated actuator table:
-its identities belong to that PB. Clear Actuators to generate fresh defaults.
-When updating from 2.5 to 2.5.1, keep valid Format 3 Custom Data and PB Storage.
-Version should report 2.5.1. Unseen parked tools now report unlearned: mount each
-one once and run ToolScan to record its real top. Unlearned parked profiles do
-not block manual control of a learned mounted tool.
+CONFIGURATION
+Custom Data requires Format=4. Wrong, missing or invalid formats are rejected;
+save settings you wish to retain, delete Custom Data and run Reload.
+No config migration is included. Saved Home still needs a matching fingerprint.
 
-TOOLS SETUP
-Tools are disabled by default. Enable them in [Tools], set Mount to the exact
-unique name of the detachable rotor/hinge BASE, and list exact head-marker
-names in Heads, one per INI continuation line. The detachable mount must be
-the last coupler between the upstream arm and the tool assembly. A tool has
-one unambiguous eligible rotor/hinge top. Settings in Tool01, Tool02, etc.
-correspond to the order of Heads. Name is a convenient toolbar alias.
+TOOL LAYOUT
+The compatible unnamed rotor/hinge TOP stays on the arm.
+Each tool carries a named rotor/hinge BASE, marker and optional head merges.
+[Tools] Mount names a fixed terminal reference on the arm-tip grid.
+[ToolNN] Mount names the base on that tool. Heads lists exact markers.
+Start a fresh installation with any compatible tool attached. Its real Top
+establishes the single arm-tip identity/geometry automatically. Every other
+named parked tool can then be selected immediately; no per-tool teaching or
+manual setup mount is required. The arm-tip record persists across a headless
+restart of the same PB. A new PB or changed arm tip/reference needs setup
+with one attached tool.
 
-examples/ToolSwap.ini is a complete starter with two profiles and explicit names.
-Rename the example mount and markers to actual blocks, or rename those blocks
-to match. Its empty actuator table regenerates current physical groups.
+Parking verifies all selected merges before the source TOOL BASE detaches.
+Pickup computes the arm-reference goal from the incoming visible BASE pose,
+retained angle, subtype and displacement, then requests Attach on that base.
+Exact arm-top identity, reciprocal owner, grid and two aligned observations
+are required before disabling only the selected tool's head merges. Actual
+split precedes topology rebuilding. Interrupted swaps stay OFF and preserve
+support; explicit ToolScan reconciles recovery. Failed pending requests are
+cancelled only when a base is observed bare, then bare state must persist.
+Unsupported/corrupt layouts and unexpected ownership refuse motion.
 
-With markers named exactly Arm 1 - Head 1 / Arm 1 - Head 2, automatic stand
-names are:
-  Arm 1 - Head 1 - StandMerge 1
-  Arm 1 - Head 1 - StandMerge 2
-  Arm 1 - Head 2 - StandMerge 1
-Optional generic park ports are Arm 1 - ParkMerge 1, Arm 1 - ParkMerge 2, etc.
-The current ToolSwap.ini instead uses full drill/welder marker names and explicit
-unnumbered merge lists. Those lists avoid automatic stand-prefix inference.
-Head-side merges are found inside each tool's occupied-cell region. You can
-instead set HeadMerges and StandMerges to exact names in each ToolNN section,
-and ParkMerges in Tools. These lists use the same one-name-per-line syntax.
-ScanHeadMerges, ScanStandMerges and ScanParkMerges disable automatic adoption;
-explicit lists still work. Facing-merge inspection remains necessary to prove
-the tool boundary and to detect connected support.
+MOVEMENT REUSE
+MoveTo x y z sets absolute Base Forward/Left/Up position in metres.
+OrientTo fx fy fz ux uy uz sets normalized forward/up directions in that frame.
+MoveToPosOri accepts both (nine values). On is required; normal live pilot
+input remains additive. Invalid arity, non-finite and degenerate directions
+are rejected before any target assignment. The common target setter is also
+used by Face, Step and tool pose motion; tool-only guards/caps are retained.
+Enable and Hold share observation/bias reset. GoHome keeps native joint-space
+routes, limits and exact saved configuration instead of Cartesian IK.
 
-The scan walks occupied cube cells from the marker. Only adjacent opposed
-merge faces cut the walk: tool merge >< stand merge. Parallel or non-facing
-merges do not create a barrier. An armor connection around the merge interface
-defeats that boundary and may prevent the grids separating; AutoArm refuses
-ambiguous tools or waits for a real split rather than declaring success.
-CellLimit bounds the region (4096 maximum). Modded merge normals can use the
-MergeNormal direction override; coupler geometry still has to be supported.
-
-COMMANDS
-Reload: validate config and scan; remains OFF.
-ToolInfo: report profiles, support and current operation/recovery state.
-Tool Head 1 / Tool Head 2: select the configured alias.
-Tool 1 / Tool 2: select the profile index.
-Tool <exact marker name>: select the exact marker.
-Park: park the current tool using generic ParkMerge ports.
-Park 2: require the primary generic port with suffix 2.
-ToolScan: explicitly rescan and reconcile a stopped/recovered setup.
-SwapCancel / Stop / Off: stop and retain existing mechanical/support state.
-
-Swapping first aligns the current tool's merge ports with its stand, verifies
-all selected ports are locked, and detaches the configured mount. The bare arm
-then approaches the incoming tool's exact rotor/hinge top, attaches, verifies
-the reciprocal identities and coupling pose, and disables only that selected
-tool's head-side merges. Stand, park and unrelated merges are not switched off.
-It waits for actual separation, rebuilds the endpoint/groups and finishes OFF.
-Run On when you want manual control again. There is no automatic pilot resume.
-
-Head, stand and park merge sets are optional for ordinary manual use. Automatic
-parking/pickup needs proven compatible support: it refuses to release a tool
-without that proof. Pilot input cancels automatic motion, including when manual
-Speed is zero. A cancelled/interrupted operation requires explicit ToolScan;
-a passive startup scan does not clear the recovery interlock.
-
-CONTROL RETAINED
-HEAD uses live head axes. HRZ uses the active cockpit's Forward/Left/Up.
-VRT uses cockpit Up/Left/Backward: W/S are screen Up/Down; C/Space are depth.
-Config.MovementMode chooses the default; Mode HEAD|HRZ|VRT changes it at runtime.
-Translation retains the orientation target; Q/E rolls about the head. Optional
-mouse pitch/yaw uses the view frame. Toolbar actions use their text names.
-Bounded load bias counters constant drift; opposing feedback is limited to
-half the live pilot demand. Physical limits, synchronization and acceleration
-caps still apply. Actuator preferences survive expected tool grid-ID changes.
-
-LIMITS AND VALIDATION
-Automatic pickup supports the installed vanilla rotor/hinge families with
-known attachment geometry. Unknown/modded couplers, incompatible families,
-flipped couplers or displacement that would clamp are refused. One setup
-mount is required for each new tool. The PB cell API hides unnamed tops,
-so ToolScan records the real mounted top's identity and marker-relative pose.
-Learned parked tools use that saved pose and occupied-region checks, but actual
-attachment identity and coupling pose must pass before support is released.
-General closed linkages and
-variable-ratio parallel branches remain unsupported.
-
-ApproachDistance provides approach clearance, not obstacle avoidance. There
-is no collision checking or path planning. Test with clear routes and low
-speeds; volumetric restrictions are still a later feature.
-
-Installed SE API/C# 6 compatibility passes. The packed script preserves the
-source token stream under renaming and has identical method IL. Simulated PB
-regressions pass 174,768 assertions, including facing-merge boundaries, complete
-swap/park sequences, partial support, wrong tops, cancellation/restart, actual
-coupling-pose gates, Home external-attachment stop, startup persisted-drive
-stop, hidden-top API behavior, learned/cache restart and wrong-identity/actual
-coupling-pose refusal, gravity bias, manual input priority and HEAD/HRZ/VRT controls. Geometry
-and actuator models were checked locally. Live SE physics, merge timing under
-load and real-world clearance have not been tested in-game.
+VERIFICATION
+Build checks C#6 against installed game interfaces, exact compact-token
+reversal and identical method IL. Simulated regression tests cover control,
+discovery, configuration, gravity bias, views, pose commands and tool state
+transitions (176,822 assertions pass). Live game physics and actual instruction costs remain unverified.

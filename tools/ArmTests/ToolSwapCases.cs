@@ -1,561 +1,327 @@
 using Sandbox.ModAPI.Ingame;
 using VRage.Game.ModAPI.Ingame.Utilities;
 using VRageMath;
-
 #if TOOL_SWAP_FOCUS
-// Optional focused entry point, compiled only by an explicit test invocation.
 internal static class ToolSwapFocusRunner
 {
     static int Main(string[] args)
     {
         try
         {
-            System.Runtime.Loader.AssemblyLoadContext.Default.Resolving += (_,name) =>
+            System.Runtime.Loader.AssemblyLoadContext.Default.Resolving+=(_,name)=>
             {
-                var file = Path.Combine(Tests.GameBin,name.Name+".dll");
-                return File.Exists(file) ? System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(file) : null;
+                var file=Path.Combine(Tests.GameBin,name.Name+".dll");
+                return File.Exists(file)?System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(file):null;
             };
-            Tests.Workspace = Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
+            Tests.Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
             Scenarios.ToolSwapCases(Tests.Script(File.ReadAllText(args[0])));
-            Console.WriteLine("Tool swap focus PASS: "+Tests.Assertions+" assertions.");
-            return 0;
+            Console.WriteLine("Reverse tool swap focus PASS: "+Tests.Assertions+" assertions."); return 0;
         }
         catch(Exception e) { Console.Error.WriteLine(e); return 1; }
     }
 }
 #endif
-
 internal static partial class Scenarios
 {
-    static object SwapController(object script) => Get(script,"Tools")!;
-    static string SwapPhase(object script) => (string)Get(SwapController(script),"Phase")!;
-    static MatrixD SwapWorldGoal(object script,string poseField)
+    static object SwapController(object script)=>Get(script,"Tools")!;
+    static string SwapPhase(object script)=>(string)Get(SwapController(script),"Phase")!;
+    static void SwapFrame(object script,string command="",bool timed=true,double dt=1d/60)
     {
-        var tools = SwapController(script);
-        string anchorField = poseField=="Dock" || poseField=="Approach" ? "DockAnchor" : poseField=="Retreat" ? "RetreatAnchor" : "AttachAnchor";
-        return (MatrixD)Get(tools,poseField)! * (MatrixD)Get(Get(tools,anchorField)!,"WorldMatrix")!;
+        RecordProxy.Of(((TestHost)script).Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(dt);
+        script.GetType().GetMethod("Main")!.Invoke(script,new object[]{command,timed?UpdateType.Update1:UpdateType.Terminal});
     }
-    static void SwapFrame(object script, string command = "", bool timed = true, double dt = 1d/60)
+    static MatrixD SwapGoal(object script,string field)
     {
-        RecordProxy.Of(((TestHost)script).Runtime).Values["TimeSinceLastRun"] = TimeSpan.FromSeconds(dt);
-        script.GetType().GetMethod("Main")!.Invoke(script,new object[]{command,timed ? UpdateType.Update1 : UpdateType.Terminal});
+        var tools=SwapController(script); string anchor=field=="Dock" || field=="Approach"?"DockAnchor":field=="Retreat"?"RetreatAnchor":"AttachAnchor";
+        return (MatrixD)Get(tools,field)! * (MatrixD)Get(Get(tools,anchor)!,"WorldMatrix")!;
     }
-    static object SwapStart(Type type, ToolSwapFixture fixture)
+    static object SwapStart(Type type,ToolSwapFixture f,bool recovery=false)
     {
-        var script = Tests.Create(type,fixture.Rig);
-        fixture.Host = (TestHost)script;
-        for(int i=0;i<160 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
-        Check(SwapPhase(script)=="Idle" && !(bool)Get(SwapController(script),"Recovery")!, "Fixture scan failed: "+string.Join(" | ",fixture.Rig.Log.TakeLast(5)));
-        Check(!Enabled(script),"Tool scan must finish OFF.");
+        var script=Tests.Create(type,f.Rig); f.Host=(TestHost)script;
+        for(int i=0;i<200 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
+        Check(SwapPhase(script)=="Idle" && !Enabled(script) && (bool)Get(SwapController(script),"Recovery")! == recovery,"Reverse fixture startup scan failed: "+string.Join(" | ",f.Rig.Log.TakeLast(4)));
         return script;
     }
-    static void SwapReach(object script, ToolSwapFixture fixture, string phase, int ticks = 200)
+    static bool SwapPlant(object script,ToolSwapFixture f,string until,bool autoLock=true,bool autoSplit=true,int maximum=5000)
     {
-        for(int i=0;i<ticks && SwapPhase(script)!=phase;i++)
+        bool drove=false; string previous="";
+        for(int i=0;i<maximum && SwapPhase(script)!=until;i++)
         {
-            Check(SwapPhase(script)!="Idle", "Tool operation stopped before "+phase+": "+string.Join(" | ",fixture.Rig.Log.TakeLast(4)));
-            SwapFrame(script);
+            string phase=SwapPhase(script);
+            Check(phase!="Idle","Operation stopped before "+until+": "+string.Join(" | ",f.Rig.Log.TakeLast(4)));
+            string? field=phase=="ApproachDock"?"Approach":phase=="Dock"?"Dock":phase=="Retreat"?"Retreat":phase=="ApproachTop"?"TopApproach":phase=="AlignTop"?"Attach":null;
+            if(field!=null && previous!=phase)
+            {
+                SwapFrame(script,dt:.05); drove|=f.AnyDrive;
+                if(SwapPhase(script)!=phase) { previous=phase; continue; }
+            }
+            if(field!=null)
+            {
+                var goal=SwapGoal(script,field);
+                if(phase=="ApproachDock" || phase=="Dock") f.MoveSource(goal); else f.MoveArm(goal);
+            }
+            else if(phase=="Lock" && autoLock) f.LockSource();
+            else if(phase=="Release" && autoSplit) f.SplitTool(1);
+            SwapFrame(script,dt:.05); drove|=f.AnyDrive; previous=phase;
         }
-        Check(SwapPhase(script)==phase,"Tool operation did not reach "+phase+"; at "+SwapPhase(script));
+        Check(SwapPhase(script)==until,"Reverse operation did not reach "+until+"; at "+SwapPhase(script)); return drove;
     }
-    static bool SwapMove(object script,ToolSwapFixture fixture,string phase,string poseField,bool source)
+    static void SwapStationUntouched(ToolSwapFixture f)=>Check(!f.StationWritten,"Controller wrote selected or unrelated station merge blocks.");
+    static void SwapReverseMember(object script,IMyMotorStator coupler)
     {
-        SwapReach(script,fixture,phase);
-        bool drove = false;
-        // Exercise the real actuator solver before the plant supplies its next
-        // observed pose. Terminal calls at zero time cannot satisfy a settle.
-        for(int i=0;i<4 && SwapPhase(script)==phase;i++) { SwapFrame(script); drove |= fixture.AnyDrive; }
-        var target = SwapWorldGoal(script,poseField);
-        if(source) fixture.MoveSource(target);
-        else RecordProxy.Of(fixture.Mount).Values["WorldMatrix"] = target;
-        for(int i=0;i<240 && SwapPhase(script)==phase;i++) SwapFrame(script);
-        Check(SwapPhase(script)!=phase && SwapPhase(script)!="Idle","Motion phase failed after plant observation: "+phase+" | "+string.Join(" | ",fixture.Rig.Log.TakeLast(4)));
-        return drove;
-    }
-    static void SwapUnchangedMerges(ToolSwapFixture f,string message)
-    {
-        Check(!f.StandWritten,message+": station merge was written.");
+        var member=Groups(script).SelectMany(Members).Single(m=>((IMyMechanicalConnectionBlock)Get(m,"B")!).EntityId==coupler.EntityId);
+        Check(Convert.ToInt64(Get(member,"U"))==coupler.TopGrid.EntityId && Convert.ToInt64(Get(member,"V"))==coupler.CubeGrid.EntityId,"Tool-side stator corridor must traverse the physical connection from its top grid toward its base grid.");
     }
     internal static void ToolSwapCases(Type type)
     {
-        OptionalToolPorts(type);
-        BareToolPickup(type,false);
-        BareToolPickup(type,true);
-        GenericToolPark(type);
-        AlreadyPartialToolSupport(type);
-        ToolStrictFormat(type);
-        FullToolSwap(type);
-        PickupCancelBoundaries(type);
-        ToolSupportWaitAndCancel(type);
-        ToolHostileGuards(type);
-        ToolFinalAttachGuards(type);
-        ToolBareHomeAttachmentGuards(type);
-        ToolRejectedStartupStopsOwned(type);
-        HiddenToolTopCases(type);
-        Console.WriteLine("Tool changes: occupied cell cuts, optional ports, explicit scan overrides, timed pickup/release, wrong-top refusal, partial support, cancellation/restart, full swap OFF and strict Format.");
+        ReverseOptionalAndConfiguration(type);
+        ReverseFreshSwap(type,0,false);
+        ReverseFreshSwap(type,.4,true);
+        ReverseFreshSwap(type,-.4,false);
+        ReverseHingeSwap(type);
+        NativeReverseGeometry(type);
+        ReverseWeightRetention(type);
+        ReverseParkRestart(type);
+        ReverseWrongPartAndTiming(type);
+        ReversePartialAndRecovery(type);
+        ReverseRuntimeGuards(type);
+        ReverseSetupAndCacheScope(type);
+        ReverseStartupStop(type);
+        Console.WriteLine("Reverse tool changes: visible tool-side bases, hidden shared arm tip, first-use/restart swaps without teaching, reverse signs, support/identity/pose guards, recovery and startup ownership.");
     }
-    static void OptionalToolPorts(Type type)
+    static void ReverseOptionalAndConfiguration(Type type)
     {
-        var f = new ToolSwapFixture(ports:false);
-        var script = SwapStart(type,f);
-        SwapFrame(script,"On",false,0); SwapFrame(script);
-        Check(Enabled(script),"Tool profiles with no optional parking ports must permit manual On.");
-        SwapFrame(script,"Off",false,0);
-        SwapFrame(script,"Tool 2;On",false,0);
-        for(int i=0;i<120 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
-        Check(!Enabled(script),"Tool command and semicolon On resumed after refusal.");
-        Check(f.Mutations.Count==0,"Port-less tool change made a mechanical mutation.");
-        SwapUnchangedMerges(f,"Optional ports");
-    }
-    static void BareToolPickup(Type type,bool wrongTop)
-    {
-        var f = new ToolSwapFixture(explicitOnly:true,headless:true);
-        if(wrongTop) f.AttachResult = f.Tops[0];
-        var script = SwapStart(type,f);
-        var tools = SwapController(script);
-        Check(Get(Get(script,"Topology")!,"Head") == f.Mount,"Headless discovery must use configured Mount endpoint.");
-        Check(!f.Rig.Blocks.Any(b=>ReferenceEquals(b,f.Tops[1])),"Fixture top accidentally entered terminal inventory.");
-        SwapFrame(script,"Tool 2",false,0);
-        Check(!Enabled(script),"Tool pickup must start OFF.");
-        string phase = SwapPhase(script);
-        for(int i=0;i<8;i++) SwapFrame(script,"",true,0);
-        Check(SwapPhase(script)==phase && f.Mutations.Count==0,"Zero-time updates advanced tool state or attached.");
-        if(!wrongTop)
-        {
-            SwapReach(script,f,"ApproachTop");
-            var before = SwapWorldGoal(script,"TopApproach");
-            var shift = new Vector3D(.08,0,0); f.ShiftRegion(1,shift);
-            var after = SwapWorldGoal(script,"TopApproach");
-            Check(Vector3D.Distance(after.Translation,before.Translation+shift)<1e-9,"Moving support anchor did not update world approach target.");
-            SwapFrame(script);
-            var d = after.Translation-f.Base.GetPosition(); var frame = f.Base.WorldMatrix;
-            var expected = new Vector3D(Vector3D.Dot(d,frame.Forward),Vector3D.Dot(d,frame.Left),Vector3D.Dot(d,frame.Up));
-            Check(Vector3D.Distance((Vector3D)Get(script,"TargetP")!,expected)<1e-8,"Real pose control used stale world approach target after support moved.");
-        }
-        bool drove = SwapMove(script,f,"ApproachTop","TopApproach",false);
-        drove |= SwapMove(script,f,"AlignTop","Attach",false);
-        Check(drove,"Pickup approach never exercised a nonzero actuator output.");
-        SwapReach(script,f,"Attach");
-        Check(f.Mutations.SequenceEqual(new[]{"Attach"}),"Pickup must request one Attach without Detach.");
-        Check(f.MutationJournals.SequenceEqual(new[]{"Attach"}) && f.StoppedAtMutation.All(x=>x),"Attach was not journaled before mutation with every owned drive stopped.");
-        Check(f.Heads[1].All(m=>m.Enabled),"Support released in the Attach request frame.");
-        if(wrongTop)
-        {
-            SwapFrame(script);
-            Check(SwapPhase(script)=="Idle" && (bool)Get(tools,"Recovery")!,"Wrong top attachment must cancel into recovery.");
-            Check(f.Heads[1].All(m=>m.Enabled),"Wrong top attachment released destination supports.");
-            Check(!f.Heads[1].Any(m=>RecordProxy.Of(m).Writes.Any(w=>w.Name=="Enabled" && Equals(w.Value,false))),"Wrong top observed a disable write.");
-            Check(!Enabled(script),"Wrong top attachment resumed manual control.");
-        }
-        else
-        {
-            SwapFrame(script);
-            Check(SwapPhase(script)=="Attach" && f.Heads[1].All(m=>m.Enabled),"One attachment observation released support.");
-            SwapFrame(script);
-            Check(SwapPhase(script)=="Release" && f.Heads[1].All(m=>!m.Enabled),"Verified attachment did not release all head supports.");
-            for(int i=0;i<8;i++) SwapFrame(script);
-            Check(SwapPhase(script)=="Release","Connected/support-grid overlap must prevent split discovery.");
-            f.SplitDestination();
-            SwapReach(script,f,"Idle");
-            Check(!(bool)Get(tools,"Recovery")! && !Enabled(script),"Successful pickup did not finish healthy and OFF.");
-            Check(Get(Get(script,"Topology")!,"Head") == f.Markers[1],"Completed pickup did not restore full marker endpoint.");
-            SwapFrame(script,"On",false,0); SwapFrame(script);
-            Check(Enabled(script),"Completed pickup requires and accepts explicit On.");
-        }
-        SwapUnchangedMerges(f,"Pickup");
-    }
-    static void ToolSupportWaitAndCancel(Type type)
-    {
-        var f = new ToolSwapFixture(); var script = SwapStart(type,f);
-        SwapFrame(script,"Tool 2",false,0);
-        bool drove = SwapMove(script,f,"ApproachDock","Approach",true);
-        drove |= SwapMove(script,f,"Dock","Dock",true);
-        Check(drove,"Parking approach never drove actual actuators.");
-        Check(f.Heads[0].All(m=>m.Enabled),"Settled Dock did not enable head ports.");
-        f.LockSource(1);
-        for(int i=0;i<20;i++) SwapFrame(script);
-        Check(SwapPhase(script)=="Lock" && !f.Mutations.Contains("Detach"),"Partial two-port lock detached the source.");
-        SwapFrame(script,"Off",false,0);
-        Check(!Enabled(script) && SwapPhase(script)=="Idle" && (bool)Get(SwapController(script),"Recovery")!,"Off during support wait failed to require recovery.");
-        Check(f.Heads[0].All(m=>m.Enabled),"Cancel automatically released source support.");
-        SwapFrame(script,"On",false,0); SwapFrame(script);
-        Check(!Enabled(script),"On resumed a canceled tool operation.");
-        f.Rig.Storage = ((TestHost)script).Storage;
-        var saved = new MyIni(); Check(saved.TryParse(f.Rig.Storage),"Tool mutation journal is invalid INI.");
-        Check(saved.Get("AutoArm Swap","Phase").ToString().StartsWith("Recovery:"),"Cancel did not journal the interrupted phase.");
-        var restarted = SwapStartRecovery(type,f);
-        SwapFrame(restarted,"On",false,0); SwapFrame(restarted);
-        Check(!Enabled(restarted),"Journal restart resumed canceled motion.");
-        Check(!f.Mutations.Contains("Detach") && f.Heads[0].All(m=>m.Enabled),"Restart mutated or released partial support.");
-        SwapUnchangedMerges(f,"Cancel/restart");
-    }
-    static object SwapStartRecovery(Type type,ToolSwapFixture f)
-    {
-        var script = Tests.Create(type,f.Rig);
-        f.Host = (TestHost)script;
+        var f=new ToolSwapFixture(ports:false); var script=SwapStart(type,f); SwapReverseMember(script,f.Couplers[0]);
+        SwapFrame(script,"On",false,0); SwapFrame(script); Check(Enabled(script),"Optional absent merge ports blocked reverse-layout manual On.");
+        SwapFrame(script,"Off",false,0); SwapFrame(script,"Tool 2;On",false,0);
         for(int i=0;i<160 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
-        Check(!Enabled(script) && (bool)Get(SwapController(script),"Recovery")!,"Interrupted journal did not retain recovery OFF on startup.");
-        return script;
-    }
-    static void PickupCancelBoundaries(Type type)
-    {
-        foreach(string boundary in new[]{"Attach","Release"})
+        Check(!Enabled(script) && f.Mutations.Count==0,"Missing optional ports/semicolon On permitted mechanical change or resumed motion."); SwapStationUntouched(f);
+        foreach(string fault in new[]{"Missing","WrongType","ArmGrid","Duplicate"})
         {
-            var f = new ToolSwapFixture(headless:true); var script = SwapStart(type,f);
-            SwapFrame(script,"Tool 2",false,0);
-            SwapMove(script,f,"ApproachTop","TopApproach",false);
-            SwapMove(script,f,"AlignTop","Attach",false);
-            SwapReach(script,f,boundary);
-            if(boundary=="Release") f.SplitDestination();
-            bool[] enabled = f.Heads[1].Select(m=>m.Enabled).ToArray();
-            int[] writes = f.Heads[1].Select(m=>RecordProxy.Of(m).Writes.Count).ToArray();
-            int mutations = f.Mutations.Count;
-            SwapFrame(script,"SwapCancel",false,0);
-            Check(SwapPhase(script)=="Idle" && !Enabled(script),"Cancel at "+boundary+" failed to stop.");
-            f.Rig.Storage = ((TestHost)script).Storage;
-            var saved = new MyIni(); saved.TryParse(f.Rig.Storage);
-            Check(saved.Get("AutoArm Swap","Phase").ToString()=="Recovery:"+boundary,"Cancel did not persist mechanical boundary "+boundary);
-            var restarted = SwapStartRecovery(type,f);
-            SwapFrame(restarted,"On",false,0); SwapFrame(restarted);
-            Check(!Enabled(restarted) && f.Mutations.Count==mutations,"Restart at "+boundary+" resumed or repeated a mutation.");
-            for(int n=0;n<2;n++) Check(f.Heads[1][n].Enabled==enabled[n] && RecordProxy.Of(f.Heads[1][n]).Writes.Count==writes[n],"Cancel/restart at "+boundary+" wrote destination supports.");
-            SwapUnchangedMerges(f,"Boundary recovery "+boundary);
+            var invalid=new ToolSwapFixture(); var ini=new MyIni(); ini.TryParse(invalid.Rig.PB.CustomData);
+            if(fault=="Missing") ini.Delete("Tool02","Mount");
+            else if(fault=="WrongType") ini.Set("Tool02","Mount",invalid.Markers[1].CustomName);
+            else if(fault=="ArmGrid") ini.Set("Tool02","Mount",invalid.Base.CustomName);
+            else ini.Set("Tool02","Mount",invalid.Couplers[0].CustomName);
+            string text=ini.ToString(); RecordProxy.Of(invalid.Rig.PB).Values["CustomData"]=text;
+            var refused=Tests.Create(type,invalid.Rig); SwapFrame(refused,"On",false,0); SwapFrame(refused);
+            Check(!Enabled(refused) && invalid.Rig.PB.CustomData==text && invalid.Mutations.Count==0,"Invalid per-tool Mount "+fault+" enabled, rewrote, or mutated reverse setup.");
         }
     }
-    static void FullToolSwap(Type type)
+    static void ReverseFreshSwap(Type type,double angle,bool explicitOnly)
     {
-        var f = new ToolSwapFixture(); var script = SwapStart(type,f);
-        var ini = new MyIni(); Check(ini.TryParse(f.Rig.PB.CustomData),"Initial swap config is invalid.");
-        var rows = ini.Get("Config","Actuators").ToString().Split('\n');
-        for(int n=1;n<rows.Length;n++) { var cells=rows[n].Split('|'); cells[2]=(n*.23).ToString(System.Globalization.CultureInfo.InvariantCulture); cells[3]=(n*.41).ToString(System.Globalization.CultureInfo.InvariantCulture); rows[n]=string.Join("|",cells); }
-        ini.Set("Config","Actuators",string.Join("\n",rows)); RecordProxy.Of(f.Rig.PB).Values["CustomData"] = ini.ToString();
-        SwapFrame(script,"Reload",false,0); SwapReach(script,f,"Idle");
-        for(int n=0;n<Groups(script).Length;n++) Check(Math.Abs(Convert.ToDouble(Get(Groups(script)[n],"MoveW"))-(n+1)*.23)<1e-12,"Reload lost configured physical-group tool weight.");
-        var weights = Groups(script).ToDictionary(g=>((IMyMechanicalConnectionBlock)Get(Members(g)[0],"B")!).EntityId,g=>(Move:Convert.ToDouble(Get(g,"MoveW")),Turn:Convert.ToDouble(Get(g,"TurnW"))));
-        long oldGrid = f.Markers[1].CubeGrid.EntityId;
+        var f=new ToolSwapFixture(explicitOnly:explicitOnly,destinationAngle:angle);
+        Check(f.Rig.Storage=="" && f.ArmGrid.GetCubeBlock(f.ArmTip.Position)==null && f.ArmGrid.CubeExists(f.ArmTip.Position),"Fresh fixture must have no Storage and genuinely hidden occupied arm tip.");
+        var script=SwapStart(type,f); SwapReverseMember(script,f.Couplers[0]);
+        Check(!f.Rig.Blocks.Any(b=>ReferenceEquals(b,f.ArmTip)),"Arm tip accidentally entered terminal inventory.");
+        var saved=new MyIni(); saved.TryParse(((TestHost)script).Storage);
+        Check(saved.Get("AutoArm Arm Tip","E"+f.ArmRef.EntityId).ToString().StartsWith(f.ArmTip.EntityId+"|"),"Initial mounted Head1 did not automatically persist arm-reference geometry.");
         SwapFrame(script,"Tool 2",false,0);
-        bool drove = SwapMove(script,f,"ApproachDock","Approach",true);
-        drove |= SwapMove(script,f,"Dock","Dock",true);
-        f.LockSource();
-        SwapFrame(script); Check(!f.Mutations.Contains("Detach"),"Source detached after one support observation.");
-        SwapFrame(script); Check(f.Mutations.SequenceEqual(new[]{"Detach"}),"Full source support did not detach exactly once.");
-        SwapReach(script,f,"Retreat");
-        Check(Get(Get(script,"Topology")!,"Head") == f.Mount,"Detached source did not select bare Mount endpoint.");
-        drove |= SwapMove(script,f,"Retreat","Retreat",false);
-        drove |= SwapMove(script,f,"ApproachTop","TopApproach",false);
-        drove |= SwapMove(script,f,"AlignTop","Attach",false);
-        Check(drove,"Complete tool swap never drove actual actuators.");
-        SwapReach(script,f,"Release");
-        Check(f.Mutations.SequenceEqual(new[]{"Detach","Attach"}),"Swap attach/detach ordering or repetition wrong.");
-        Check(f.MutationJournals.SequenceEqual(new[]{"Detach","Attach"}) && f.StoppedAtMutation.All(x=>x),"Swap mechanical mutations were not preceded by a journal and stopped drives.");
-        Check(f.Heads[0].All(m=>m.Enabled && m.IsConnected),"Source support was released during incoming pickup.");
-        Check(f.Heads[1].All(m=>!m.Enabled),"Incoming support not released after correct attach verification.");
-        f.SplitDestination(); SwapReach(script,f,"Idle");
-        Check(!Enabled(script) && !(bool)Get(SwapController(script),"Recovery")!,"Completed full swap did not finish healthy OFF.");
-        Check(Get(Get(script,"Topology")!,"Head") == f.Markers[1],"Final topology did not rediscover destination marker.");
-        Check(Groups(script).Sum(g=>Members(g).Length)==3,"Final topology did not restore complete physical actuator corridor.");
-        Check(f.Markers[1].CubeGrid.EntityId!=oldGrid,"Fixture did not exercise incoming grid identity change.");
+        string first=SwapPhase(script); for(int i=0;i<8;i++) SwapFrame(script,timed:true,dt:0);
+        Check(SwapPhase(script)==first && f.Mutations.Count==0,"Zero-time updates advanced reverse change or mutated attachments.");
+        bool drove=SwapPlant(script,f,"ApproachTop");
+        var before=SwapGoal(script,"Attach"); f.ShiftIncoming(new Vector3D(.08,0,0)); var after=SwapGoal(script,"Attach");
+        Check(Vector3D.Distance(after.Translation,before.Translation+new Vector3D(.08,0,0))<1e-9,"Moving incoming tool anchor did not carry desired arm-reference target.");
+        drove|=SwapPlant(script,f,"Release");
+        Check(drove && f.Mutations.Select(m=>(m.Tool,m.Kind)).SequenceEqual(new[]{(0,"Detach"),(1,"Attach")}),"Fresh reverse swap did not drive and detach Source before attaching Destination once.");
+        Check(f.Mutations.All(m=>m.Stopped && m.Supported) && f.Mutations.Select(m=>m.Journal).SequenceEqual(new[]{"Detach","Attach"}),"Reverse mutations lacked stopped drives, proven support, or prior journal.");
+        Check(f.Couplers[1].Top?.EntityId==f.ArmTip.EntityId && f.ArmTip.Base?.EntityId==f.Couplers[1].EntityId && f.ArmTip.CubeGrid==f.ArmRef.CubeGrid,"Incoming tool base did not acquire actual shared arm tip reciprocally on ARM grid.");
+        var tipForward=f.ArmTip.WorldMatrix.Forward; var up=f.ArmTip.WorldMatrix.Up;
+        var baseForward=tipForward*Math.Cos(f.Couplers[1].Angle)+Vector3D.Cross(up,tipForward)*Math.Sin(f.Couplers[1].Angle);
+        Check(Vector3D.Dot(baseForward,f.Couplers[1].WorldMatrix.Forward)>.999999,"Reverse pose failed retained signed tool-angle roundtrip.");
+        Check(f.Heads[0].All(m=>m.Enabled && m.IsConnected) && f.Heads[1].All(m=>!m.Enabled),"Reverse release changed parked source or failed incoming head-side release.");
+        for(int i=0;i<8;i++) SwapFrame(script);
+        Check(SwapPhase(script)=="Release","Connected tool/stand overlap permitted premature full rediscovery.");
+        long oldGrid=f.Markers[1].CubeGrid.EntityId; f.SplitTool(1); SwapPlant(script,f,"Idle");
+        Check(!Enabled(script) && !(bool)Get(SwapController(script),"Recovery")! && f.Markers[1].CubeGrid.EntityId!=oldGrid,"Successful reverse swap did not finish healthy OFF after tool-grid split.");
+        Check(Get(Get(script,"Topology")!,"Head")==f.Markers[1] && Groups(script).Sum(g=>Members(g).Length)==3,"Reverse incoming full topology/marker endpoint was not restored.");
+        SwapReverseMember(script,f.Couplers[1]); SwapFrame(script,"On",false,0); SwapFrame(script);
+        Check(Enabled(script),"Completed reverse swap failed fresh explicit manual On."); SwapStationUntouched(f);
+    }
+    static void ReverseParkRestart(Type type)
+    {
+        var f=new ToolSwapFixture(); var script=SwapStart(type,f); SwapFrame(script,"Park",false,0);
+        bool drove=SwapPlant(script,f,"Idle");
+        Check(drove && !Enabled(script) && f.ArmTip.Base==null && f.Couplers[0].Top==null && Get(Get(script,"Topology")!,"Head")==f.ArmRef,"Generic Park did not drive, detach tool base, and finish bare-reference OFF.");
+        f.Rig.Storage=((TestHost)script).Storage; int before=f.Mutations.Count;
+        var restarted=SwapStart(type,f); SwapFrame(restarted,"Tool 2",false,0); SwapPlant(restarted,f,"Idle");
+        Check(!Enabled(restarted) && f.Couplers[1].Top?.EntityId==f.ArmTip.EntityId && f.Mutations.Count==before+1,"Saved bare-arm restart required per-tool learning or failed automatic incoming attachment."); SwapStationUntouched(f);
+    }
+    static void ReverseWeightRetention(Type type)
+    {
+        var f=new ToolSwapFixture(); var script=SwapStart(type,f); var ini=new MyIni(); ini.TryParse(f.Rig.PB.CustomData);
+        var rows=ini.Get("Config","Actuators").ToString().Split('\n');
+        for(int n=1;n<rows.Length;n++) { var cells=rows[n].Split('|'); cells[2]=(n*.23).ToString(System.Globalization.CultureInfo.InvariantCulture); cells[3]=(n*.41).ToString(System.Globalization.CultureInfo.InvariantCulture); rows[n]=string.Join("|",cells); }
+        ini.Set("Config","Actuators",string.Join("\n",rows)); RecordProxy.Of(f.Rig.PB).Values["CustomData"]=ini.ToString();
+        SwapFrame(script,"Reload",false,0); for(int i=0;i<200 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
         foreach(var g in Groups(script))
         {
-            var block = (IMyMechanicalConnectionBlock)Get(Members(g)[0],"B")!; var expected = weights[block.EntityId];
-            Check(Math.Abs(Convert.ToDouble(Get(g,"MoveW"))-expected.Move)<1e-12 && Math.Abs(Convert.ToDouble(Get(g,"TurnW"))-expected.Turn)<1e-12,"Merge/split identity rewrite lost physical actuator preferences.");
+            var block=(IMyMechanicalConnectionBlock)Get(Members(g)[0],"B")!; int n=block.EntityId==f.Base.EntityId?1:block.EntityId==f.Piston.EntityId?2:3;
+            Check(Math.Abs(Convert.ToDouble(Get(g,"MoveW"))-n*.23)<1e-12 && Math.Abs(Convert.ToDouble(Get(g,"TurnW"))-n*.41)<1e-12,"Reverse Reload lost configured physical actuator preference.");
         }
-        SwapUnchangedMerges(f,"Full swap");
+        SwapFrame(script,"Tool 2",false,0); SwapPlant(script,f,"Idle");
+        foreach(var g in Groups(script))
+        {
+            var block=(IMyMechanicalConnectionBlock)Get(Members(g)[0],"B")!; int n=block.EntityId==f.Base.EntityId?1:block.EntityId==f.Piston.EntityId?2:0;
+            if(n>0) Check(Math.Abs(Convert.ToDouble(Get(g,"MoveW"))-n*.23)<1e-12 && Math.Abs(Convert.ToDouble(Get(g,"TurnW"))-n*.41)<1e-12,"Reverse bare/full topology rebuilding lost stable upstream actuator preferences.");
+            else Check(Math.Abs(Convert.ToDouble(Get(g,"MoveW"))-1)<1e-12 && Math.Abs(Convert.ToDouble(Get(g,"TurnW"))-1)<1e-12,"New physical incoming actuator inherited another tool's editable preferences.");
+        }
     }
-    static void GenericToolPark(Type type)
+    static void ReverseHingeSwap(Type type)
     {
-        var f = new ToolSwapFixture(); var script = SwapStart(type,f);
-        SwapFrame(script,"Park",false,0);
-        bool drove = SwapMove(script,f,"ApproachDock","Approach",true);
-        drove |= SwapMove(script,f,"Dock","Dock",true); f.LockSource();
-        SwapReach(script,f,"Retreat");
-        var target = SwapWorldGoal(script,"Retreat");
-        SwapFrame(script); drove |= f.AnyDrive;
-        RecordProxy.Of(f.Mount).Values["WorldMatrix"] = target;
-        SwapReach(script,f,"Idle",300);
-        Check(drove && !Enabled(script) && !f.Mount.IsAttached && f.Mount.Top==null,"Generic Park did not drive, detach and finish headless OFF.");
-        Check(f.Mutations.SequenceEqual(new[]{"Detach"}) && f.Heads[0].All(m=>m.Enabled && m.IsConnected),"Generic Park attached or released parked support.");
-        Check(Get(Get(script,"Topology")!,"Head")==f.Mount,"Generic Park lost bare Mount endpoint.");
-        SwapUnchangedMerges(f,"Generic Park");
+        var f=new ToolSwapFixture(destinationAngle:-.3);
+        foreach(var c in f.Couplers) RecordProxy.Of(c).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargeHinge");
+        RecordProxy.Of(f.ArmTip).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargeHingeHead");
+        var reference=f.ArmRef.WorldMatrix; reference.Translation-=Vector3D.Up*.4208642244338989; f.MoveArm(reference);
+        var script=SwapStart(type,f); SwapFrame(script,"Tool 2",false,0); bool drove=SwapPlant(script,f,"Idle");
+        Check(drove && !Enabled(script) && !(bool)Get(SwapController(script),"Recovery")! && f.Couplers[1].Top?.EntityId==f.ArmTip.EntityId,"Visible tool-side hinge swap failed without per-tool teaching.");
+        Check(f.Mutations.Select(m=>(m.Tool,m.Kind)).SequenceEqual(new[]{(0,"Detach"),(1,"Attach")}) && f.Mutations.All(m=>m.Supported && m.Stopped),"Hinge swap mechanical ordering/support guards differ from rotor swap.");
+        SwapReverseMember(script,f.Couplers[1]); SwapStationUntouched(f);
     }
-    static void AlreadyPartialToolSupport(Type type)
+    static void NativeReverseGeometry(Type type)
     {
-        var f = new ToolSwapFixture(); var script = SwapStart(type,f);
-        f.LockSource(1); SwapFrame(script,"Park",false,0);
+        string[] bases={"LargeStator","SmallStator","LargeAdvancedStator","SmallAdvancedStator","SmallAdvancedStatorSmall","LargeHinge","MediumHinge","SmallHinge"};
+        var dummies=new[]{new Vector3D(1.033530949712258e-7,.4208642244338989,1.3662192088759184e-7),new Vector3D(2.17650750755638e-7,.036039892584085464,3.7548051068370114e-7),new Vector3D(1.033530949712258e-7,.19979000091552734,1.2796517978586053e-7),Vector3D.Zero,new Vector3D(2.553320221920785e-8,.047984808683395386,5.927423671892029e-7)};
+        var geometry=type.GetNestedType("ToolGeometry",All)!; var info=type.GetNestedType("ToolTopInfo",All)!;
+        var capture=info.GetMethod("Capture",All)!; var inverse=geometry.GetMethod("TryTopPose",All)!;
+        for(int index=0;index<bases.Length;index++) foreach(bool large in new[]{false,true})
+        {
+            bool hinge=index>=5;
+            string[] heads=hinge?(large?new[]{"LargeHingeHead"}:new[]{"MediumHingeHead","SmallHingeHead"}):(large?new[]{"LargeRotor","LargeAdvancedRotor"}:new[]{"SmallRotor","SmallAdvancedRotor","SmallAdvancedRotorSmall"});
+            foreach(string head in heads) foreach(double q in new[]{-.4,.4})
+            {
+                var f=new ToolSwapFixture(); var c=f.Couplers[1];
+                RecordProxy.Of(c).Values["BlockDefinition"]=ToolSwapFixture.Definition(bases[index]); RecordProxy.Of(c).Values["Angle"]=(float)q;
+                RecordProxy.Of(f.ArmTip).Values["BlockDefinition"]=ToolSwapFixture.Definition(head);
+                RecordProxy.Of(f.ArmGrid).Values["GridSize"]=large?2.5f:.5f; RecordProxy.Of(f.ArmGrid).Values["GridSizeEnum"]=large?VRage.Game.MyCubeSize.Large:VRage.Game.MyCubeSize.Small;
+                var tipPose=f.ArmTip.WorldMatrix; tipPose.Translation=f.ArmGrid.GridIntegerToWorld(f.ArmTip.Position); RecordProxy.Of(f.ArmTip).Values["WorldMatrix"]=tipPose;
+                var refPose=f.ArmRef.WorldMatrix; refPose.Translation=f.ArmGrid.GridIntegerToWorld(f.ArmRef.Position); RecordProxy.Of(f.ArmRef).Values["WorldMatrix"]=refPose;
+                var top=capture.Invoke(null,new object[]{f.ArmRef,f.ArmTip,f.Rig.Blocks})!; var local=(MatrixD)Get(top,"Local")!;
+                double lo=hinge?0:index==3?-.02:(index==0 || index==2) && large?-.4:-.11;
+                double hi=hinge?0:(index==0 || index==2) && large?.2:.11;
+                foreach(double displacement in new[]{lo,0,hi}.Distinct())
+                {
+                    RecordProxy.Of(c).Values["Displacement"]=(float)displacement;
+                    var args=new object?[]{c,top,MatrixD.Identity,""}; bool ok=(bool)inverse.Invoke(null,args)!;
+                    Check(ok,"Native inverse refused supported "+bases[index]+"/"+head+" displacement "+displacement+": "+args[3]);
+                    var desiredTip=local*(MatrixD)args[2]!;
+                    var dummy=hinge?Vector3D.Zero:dummies[index]; double offset=index==1 || index==4?.045:index==3?.11:0;
+                    var expected=c.GetPosition()+Vector3D.TransformNormal(dummy+Vector3D.Up*(c.Displacement-offset),c.WorldMatrix);
+                    Check(Vector3D.Distance(desiredTip.Translation,expected)<1e-7,"Reverse coupling pivot does not match native stator dummy and displacement.");
+                    var forward=desiredTip.Forward*Math.Cos(c.Angle)+Vector3D.Cross(desiredTip.Up,desiredTip.Forward)*Math.Sin(c.Angle);
+                    Check(Vector3D.Dot(forward,c.WorldMatrix.Forward)>1-1e-8 && Vector3D.Dot(desiredTip.Up,c.WorldMatrix.Up)>1-1e-8,"Signed retained angle inverse failed native orientation roundtrip.");
+                }
+                foreach(double bad in new[]{lo-.001,hi+.001,double.NaN})
+                {
+                    RecordProxy.Of(c).Values["Displacement"]=(float)bad; var args=new object?[]{c,top,MatrixD.Identity,""};
+                    Check(!(bool)inverse.Invoke(null,args)!,"Native inverse accepted clamping/nonfinite displacement for "+bases[index]+"/"+head);
+                }
+                RecordProxy.Of(c).Values["Displacement"]=0f; RecordProxy.Of(c).Values["LowerLimitRad"]=.6f; RecordProxy.Of(c).Values["UpperLimitRad"]=.8f;
+                var limits=new object?[]{c,top,MatrixD.Identity,""}; Check(!(bool)inverse.Invoke(null,limits)!,"Native inverse accepted retained angle outside real tool mount limits.");
+            }
+        }
+    }
+    static void ReverseWrongPartAndTiming(Type type)
+    {
+        var f=new ToolSwapFixture(); f.AttachResult=f.WrongArmPart(); var script=SwapStart(type,f);
+        SwapFrame(script,"Tool 2",false,0); SwapPlant(script,f,"Attach");
+        Check(f.Heads[1].All(m=>m.Enabled),"Reverse Attach request released support before observations."); SwapFrame(script);
+        Check(SwapPhase(script)=="Idle" && !Enabled(script) && (bool)Get(SwapController(script),"Recovery")! && f.Heads[1].All(m=>m.Enabled),"Wrong rotor-part identity on correct ARM grid released support.");
+        Check(!f.Heads[1].Any(m=>RecordProxy.Of(m).Writes.Any(w=>w.Name=="Enabled" && Equals(w.Value,false))),"Wrong arm-part ID produced a head merge disable write."); SwapStationUntouched(f);
+        var pose=new ToolSwapFixture(); var good=SwapStart(type,pose); SwapFrame(good,"Tool 2",false,0); SwapPlant(good,pose,"Attach");
+        SwapFrame(good); Check(SwapPhase(good)=="Attach" && pose.Heads[1].All(m=>m.Enabled),"Single correct attachment observation released support.");
+        var shifted=pose.ArmRef.WorldMatrix; shifted.Translation+=Vector3D.Up*.02; pose.MoveArm(shifted);
+        for(int i=0;i<8;i++) SwapFrame(good);
+        Check(SwapPhase(good)=="Attach" && pose.Heads[1].All(m=>m.Enabled),"Correct ID but actual arm pose 2cm off alignment released support.");
+        SwapFrame(good,"SwapCancel",false,0); SwapStationUntouched(pose);
+    }
+    static void ReversePartialAndRecovery(Type type)
+    {
+        var f=new ToolSwapFixture(); var script=SwapStart(type,f); SwapFrame(script,"Tool 2",false,0); SwapPlant(script,f,"Lock",autoLock:false);
+        f.LockSource(1); for(int i=0;i<20;i++) SwapFrame(script);
+        Check(SwapPhase(script)=="Lock" && f.Mutations.Count==0,"Partial support detached reversed source stator.");
+        SwapFrame(script,"Off",false,0);
+        Check(SwapPhase(script)=="Idle" && !Enabled(script) && (bool)Get(SwapController(script),"Recovery")! && f.Heads[0].All(m=>m.Enabled),"Off during support wait failed recovery/support retention.");
+        f.Rig.Storage=((TestHost)script).Storage; var restarted=SwapStart(type,f,recovery:true);
+        SwapFrame(restarted,"On;GoHome",false,0); SwapFrame(restarted);
+        Check(!Enabled(restarted) && f.Mutations.Count==0,"Interrupted reverse journal resumed attachments/manual/Home movement."); SwapStationUntouched(f);
+        foreach(string boundary in new[]{"Attach","Release"})
+        {
+            var x=new ToolSwapFixture(); var active=SwapStart(type,x); SwapFrame(active,"Tool 2",false,0); SwapPlant(active,x,boundary);
+            if(boundary=="Release") x.SplitTool(1);
+            bool[] enabled=x.Heads[1].Select(m=>m.Enabled).ToArray(); int mutations=x.Mutations.Count;
+            SwapFrame(active,"SwapCancel",false,0); x.Rig.Storage=((TestHost)active).Storage;
+            var back=SwapStart(type,x,recovery:true); SwapFrame(back,"On",false,0); SwapFrame(back);
+            Check(!Enabled(back) && x.Mutations.Count==mutations && x.Heads[1].Select(m=>m.Enabled).SequenceEqual(enabled),"Reverse restart at "+boundary+" resumed mutation or changed supports."); SwapStationUntouched(x);
+        }
+    }
+    static void ReverseRuntimeGuards(Type type)
+    {
+        var split=new ToolSwapFixture(ports:false); var manual=SwapStart(type,split); SwapFrame(manual,"On",false,0); SwapFrame(manual);
+        split.SplitCouplerFromMarker(0); SwapFrame(manual);
+        Check(!Enabled(manual) && !split.AnyDrive,"Coupler/marker split kept stale reverse manual topology active.");
+        foreach(bool partition in new[]{false,true})
+        {
+            var x=new ToolSwapFixture(); var active=SwapStart(type,x); SwapFrame(active,"Tool 2",false,0); SwapPlant(active,x,"Lock",autoLock:false);
+            x.LockSource();
+            if(partition) x.SeparateMarkerAndCouplerFromSupport(0); else x.SplitCouplerFromMarker(0);
+            SwapFrame(active);
+            Check(SwapPhase(active)=="Idle" && !Enabled(active) && x.Mutations.Count==0 && x.Heads[0].All(m=>m.Enabled),"Support/marker/coupler partition detached an unsupported tool despite still-locked merge pair.");
+            SwapStationUntouched(x);
+        }
+        foreach(bool home in new[]{false,true})
+        {
+            var f=new ToolSwapFixture(); var owner=f.OtherOwner(); var script=SwapStart(type,f); SwapFrame(script,"Park",false,0); SwapPlant(script,f,"Idle");
+            if(home) { SwapFrame(script,"SetHome",false,0); RecordProxy.Of(f.Piston).Values["CurrentPosition"]=6f; SwapFrame(script,"GoHome",false,0); }
+            else { SwapFrame(script,"On",false,0); RecordProxy.Of(f.Rig.Blocks.OfType<IMyShipController>().Single()).Values["MoveIndicator"]=new Vector3(0,0,-1); }
+            SwapFrame(script); Check(Enabled(script) && f.AnyDrive,"Foreign-owner fixture did not first drive the bare arm.");
+            var v=RecordProxy.Of(owner).Values; v["IsAttached"]=true; v["Top"]=f.ArmTip; v["TopGrid"]=f.ArmGrid; RecordProxy.Of(f.ArmTip).Values["Base"]=owner;
+            SwapFrame(script);
+            Check(!Enabled(script) && !(bool)Get(script,"GoingHome")! && !f.AnyDrive,"Unconfigured tip owner did not stop "+(home?"Home":"manual")+" control.");
+            SwapStationUntouched(f);
+        }
+        var restart=new ToolSwapFixture(); var foreign=restart.OtherOwner(); var parked=SwapStart(type,restart); SwapFrame(parked,"Park",false,0); SwapPlant(parked,restart,"Idle");
+        restart.Rig.Storage=((TestHost)parked).Storage;
+        var foreignValues=RecordProxy.Of(foreign).Values; foreignValues["IsAttached"]=true; foreignValues["Top"]=restart.ArmTip; foreignValues["TopGrid"]=restart.ArmGrid;
+        RecordProxy.Of(restart.ArmTip).Values["Base"]=foreign; RecordProxy.Of(foreign).Writes.Clear(); int before=restart.Mutations.Count;
+        var refused=Tests.Create(type,restart.Rig); for(int i=0;i<200 && SwapPhase(refused)!="Idle";i++) SwapFrame(refused);
+        SwapFrame(refused,"Tool 2",false,0); for(int i=0;i<160 && SwapPhase(refused)!="Idle";i++) SwapFrame(refused);
+        Check(!Enabled(refused) && !restart.AnyDrive && restart.Mutations.Count==before,"Cached bare restart with foreign arm-tip owner authorized pickup/motion.");
+        Check(RecordProxy.Of(foreign).Writes.Count==0,"Cached bare restart wrote an unconfigured tip-owning stator.");
+        var pilot=new ToolSwapFixture(); var changing=SwapStart(type,pilot); SwapFrame(changing,"Tool 2",false,0); SwapPlant(changing,pilot,"ApproachTop");
+        RecordProxy.Of(pilot.Rig.Blocks.OfType<IMyShipController>().Single()).Values["MoveIndicator"]=new Vector3(0,0,-1); SwapFrame(changing);
+        Check(SwapPhase(changing)=="Idle" && !Enabled(changing) && !pilot.AnyDrive && pilot.Heads[1].All(m=>m.Enabled),"Raw pilot did not stop reversed automatic pickup while retaining support."); SwapStationUntouched(pilot);
+    }
+    static void ReverseSetupAndCacheScope(Type type)
+    {
+        var fresh=new ToolSwapFixture(headless:true); var script=SwapStart(type,fresh); SwapFrame(script,"Tool 2",false,0);
         for(int i=0;i<160 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
-        Check(SwapPhase(script)=="Idle" && !f.Mutations.Contains("Detach"),"Already supported source with one of two locks detached.");
-        Check(!Enabled(script) && f.Heads[0].All(m=>RecordProxy.Of(m).Writes.All(w=>w.Name!="Enabled")),"Partial support refusal changed merges or resumed motion.");
-        SwapUnchangedMerges(f,"Already partial support");
-    }
-    static void ToolHostileGuards(Type type)
-    {
-        var startup = new ToolSwapFixture(headless:true);
-        RecordProxy.Of(startup.Mount).Values["TargetVelocityRad"] = .37f;
-        RecordProxy.Of(startup.Mount).Writes.Clear();
-        var journal = new MyIni(); journal.Set("AutoArm Swap","Phase","Attach"); startup.Rig.Storage = journal.ToString();
-        var interrupted = Tests.Create(type,startup.Rig);
-        Check(startup.Mount.TargetVelocityRad==0 && RecordProxy.Of(startup.Mount).Writes.Any(w=>w.Name=="TargetVelocityRad" && Equals(w.Value,0f)),"Restart did not stop excluded Mount immediately before any timed scan.");
-        Check(!Enabled(interrupted) && (bool)Get(SwapController(interrupted),"Recovery")!,"Interrupted startup did not begin recovery OFF.");
-
-        var canceled = new ToolSwapFixture(headless:true); var cancelScript = SwapStart(type,canceled);
-        SwapFrame(cancelScript,"SetHome",false,0);
-        Check(((string)Get(cancelScript,"HomeFingerprint")!).Length>0,"Hostile GoHome fixture did not capture a matching Home.");
-        SwapFrame(cancelScript,"Tool 2",false,0);
-        SwapFrame(cancelScript,"SwapCancel; GoHome",false,0); SwapFrame(cancelScript);
-        Check(!Enabled(cancelScript) && !(bool)Get(cancelScript,"GoingHome")! && (bool)Get(SwapController(cancelScript),"Recovery")!,"SwapCancel;GoHome bypassed tool recovery/batch lock.");
-        SwapFrame(cancelScript,"GoHome",false,0); SwapFrame(cancelScript);
-        Check(!Enabled(cancelScript) && !(bool)Get(cancelScript,"GoingHome")! && !canceled.AnyDrive,"Separate GoHome resumed canceled tool motion.");
-
-        foreach(bool known in new[]{false,true})
+        Check(!Enabled(script) && fresh.Mutations.Count==0 && fresh.Rig.Log.Any(s=>s.Contains("installation",StringComparison.OrdinalIgnoreCase) && s.Contains("attached",StringComparison.OrdinalIgnoreCase)),"Fresh bare installation without tip frame did not refuse with initial attached-tool setup status.");
+        var f=new ToolSwapFixture(); var learned=SwapStart(type,f); SwapFrame(learned,"Park",false,0); SwapPlant(learned,f,"Idle"); string storage=((TestHost)learned).Storage;
+        foreach(string fault in new[]{"PB","Arm","Marker","Axes"})
         {
-            var f = new ToolSwapFixture(ports:false,headless:true); var script = SwapStart(type,f);
-            SwapFrame(script,"On",false,0);
-            var cockpit = f.Rig.Blocks.OfType<IMyShipController>().Single();
-            RecordProxy.Of(cockpit).Values["MoveIndicator"] = new Vector3(0,0,-1);
-            for(int i=0;i<6;i++) SwapFrame(script);
-            Check(Enabled(script) && f.AnyDrive,"External attachment fixture did not first exercise bare manual movement.");
-            var top = known ? f.Tops[0] : RecordProxy.Make<IMyMotorRotor>();
-            if(!known)
-            {
-                RecordProxy.Of(top).Values["EntityId"] = 8999L;
-                RecordProxy.Of(top).Values["CubeGrid"] = f.Rig.Grid();
-                RecordProxy.Of(top).Values["WorldMatrix"] = MatrixD.Identity;
-            }
-            RecordProxy.Of(top).Values["Base"] = f.Mount;
-            var mount = RecordProxy.Of(f.Mount).Values;
-            mount["Top"] = top; mount["TopGrid"] = top.CubeGrid; mount["IsAttached"] = true;
-            SwapFrame(script);
-            Check(!Enabled(script) && !f.AnyDrive,"External "+(known?"known":"unknown")+" attachment left stale bare endpoint manual control active.");
-            Check(f.Mutations.Count==0,"External attachment fault requested a mechanical mutation.");
-            SwapUnchangedMerges(f,"External attachment");
+            var ini=new MyIni(); ini.TryParse(storage); const string section="AutoArm Arm Tip"; string key="E"+f.ArmRef.EntityId;
+            if(fault=="PB") ini.Set(section,"PB",f.Rig.PB.EntityId+1);
+            else if(fault=="Arm") ini.Set(section,"Arm","Other arm");
+            else if(fault=="Marker") ini.Delete(section,key);
+            else { var cells=ini.Get(section,key).ToString().Split('|'); cells[5]="2"; ini.Set(section,key,string.Join("|",cells)); }
+            f.Rig.Storage=ini.ToString(); int mutations=f.Mutations.Count; var refused=Tests.Create(type,f.Rig);
+            for(int i=0;i<160 && SwapPhase(refused)!="Idle";i++) SwapFrame(refused);
+            SwapFrame(refused,"Tool 2",false,0); for(int i=0;i<160 && SwapPhase(refused)!="Idle";i++) SwapFrame(refused);
+            Check(SwapPhase(refused)=="Idle" && !Enabled(refused) && !f.AnyDrive && f.Mutations.Count==mutations,"Invalid arm-tip cache "+fault+" authorized automatic movement/attachment.");
         }
     }
-    static void ToolStrictFormat(Type type)
+    static void ReverseStartupStop(Type type)
     {
-        var f = new ToolSwapFixture();
-        string invalid = f.Rig.PB.CustomData.Replace("Format=3","Format=2").Replace("Format = 3","Format = 2");
-        Check(invalid!=f.Rig.PB.CustomData,"Fixture did not replace Format.");
-        RecordProxy.Of(f.Rig.PB).Values["CustomData"] = invalid;
-        var script = Tests.Create(type,f.Rig); SwapFrame(script,"On",false,0); SwapFrame(script);
-        Check(!Enabled(script) && f.Rig.PB.CustomData==invalid,"Invalid tool Format enabled or rewrote source configuration.");
-        Check(f.Rig.Log.Any(s=>s.Contains("Format must be 3")),"Invalid tool Format omitted actionable format error.");
-        Check(f.Mutations.Count==0,"Invalid tool configuration made mechanical mutations.");
-    }
-    static void ToolFinalAttachGuards(Type type)
-    {
-        var f = new ToolSwapFixture(headless:true);
-        var ini = new MyIni(); ini.TryParse(f.Rig.PB.CustomData);
-        ini.Set("Tools","PositionTolerance",.05); ini.Set("Tools","AngleTolerance",2);
-        RecordProxy.Of(f.Rig.PB).Values["CustomData"] = ini.ToString();
-        var script = SwapStart(type,f); SwapFrame(script,"Tool 2",false,0);
-        SwapMove(script,f,"ApproachTop","TopApproach",false);
-        SwapReach(script,f,"AlignTop");
-        var goal = SwapWorldGoal(script,"Attach"); var offset = goal; offset.Translation+=Vector3D.Up*.05;
-        RecordProxy.Of(f.Mount).Values["WorldMatrix"] = offset;
-        for(int i=0;i<120;i++) SwapFrame(script);
-        Check(SwapPhase(script)=="AlignTop" && f.Mutations.Count==0 && f.Heads[1].All(m=>m.Enabled),"Loose Tools position tolerance permitted Attach with Mount 5cm off actual shaft alignment.");
-        Check(Math.Abs(Convert.ToDouble(Get(script,"LastPositionError"))-.05)<1e-8,"Loose-tolerance attach fixture did not maintain its 5cm physical pose error.");
-        RecordProxy.Of(f.Mount).Values["WorldMatrix"] = goal;
-        SwapReach(script,f,"Attach",300);
-        Check(f.Mutations.SequenceEqual(new[]{"Attach"}),"Correct final shaft alignment did not request one Attach.");
-        var shifted = goal; shifted.Translation+=Vector3D.Up*.02;
-        RecordProxy.Of(f.Mount).Values["WorldMatrix"] = shifted;
-        for(int i=0;i<10;i++) SwapFrame(script);
-        Check(SwapPhase(script)=="Attach" && f.Heads[1].All(m=>m.Enabled),"Correct top IDs released support despite actual attached Mount pose being 2cm off alignment.");
-        Check(f.Heads[1].All(m=>RecordProxy.Of(m).Writes.All(w=>w.Name!="Enabled" || !Equals(w.Value,false))),"Misaligned attached Mount caused a destination merge disable write.");
-        SwapFrame(script,"Off",false,0); SwapUnchangedMerges(f,"Final attach guard");
-
-        var pilot = new ToolSwapFixture(headless:true); var pilotScript = SwapStart(type,pilot);
-        SwapFrame(pilotScript,"Speed 0",false,0);
-        SwapFrame(pilotScript,"Tool 2",false,0); SwapReach(pilotScript,pilot,"ApproachTop");
-        var cockpit = pilot.Rig.Blocks.OfType<IMyShipController>().Single();
-        RecordProxy.Of(cockpit).Values["MoveIndicator"] = new Vector3(0,0,-1);
-        SwapFrame(pilotScript);
-        Check(SwapPhase(pilotScript)=="Idle" && !Enabled(pilotScript) && !pilot.AnyDrive && (bool)Get(SwapController(pilotScript),"Recovery")!,"Raw W at Speed zero failed to cancel automatic pickup into recovery OFF.");
-        Check(pilot.Mutations.Count==0 && pilot.Heads[1].All(m=>m.Enabled && m.IsConnected),"Pilot cancellation mutated attachment or released parked support.");
-        SwapUnchangedMerges(pilot,"Raw pilot cancellation");
-    }
-    static void ToolBareHomeAttachmentGuards(Type type)
-    {
-        foreach(bool known in new[]{false,true})
+        foreach(bool missing in new[]{false,true})
         {
-            var f = new ToolSwapFixture(ports:false,headless:true); var script = SwapStart(type,f);
-            SwapFrame(script,"SetHome",false,0);
-            RecordProxy.Of(f.Base).Values["Angle"] = .15f;
-            RecordProxy.Of(f.Piston).Values["CurrentPosition"] = 6f;
-            SwapFrame(script,"GoHome",false,0); SwapFrame(script);
-            Check(Enabled(script) && (bool)Get(script,"GoingHome")! && f.AnyDrive,"Bare Home attachment fixture did not first drive a valid Home return.");
-            var top = known ? f.Tops[0] : RecordProxy.Make<IMyMotorRotor>();
-            if(!known)
-            {
-                RecordProxy.Of(top).Values["EntityId"] = 8998L;
-                RecordProxy.Of(top).Values["CubeGrid"] = f.Rig.Grid();
-                RecordProxy.Of(top).Values["WorldMatrix"] = MatrixD.Identity;
-            }
-            RecordProxy.Of(top).Values["Base"] = f.Mount;
-            var mount = RecordProxy.Of(f.Mount).Values;
-            mount["Top"] = top; mount["TopGrid"] = top.CubeGrid; mount["IsAttached"] = true;
-            SwapFrame(script);
-            Check(!Enabled(script) && !(bool)Get(script,"GoingHome")! && !f.AnyDrive,"Home continued through external "+(known?"known":"unknown")+" attachment despite stale bare endpoint.");
-            Check(f.Mutations.Count==0,"External attachment Home fault requested a mechanical mutation.");
-            SwapUnchangedMerges(f,"External Home attachment");
+            var f=new ToolSwapFixture(); var other=f.Rig.Rotor("Unrelated ship rotor",f.Rig.Root,f.Rig.Grid()); var original=SwapStart(type,f); f.Rig.Storage=((TestHost)original).Storage;
+            var ini=new MyIni(); ini.TryParse(f.Rig.PB.CustomData); if(missing) f.Rig.Blocks.Remove(f.Markers[1]); else ini.Set("Config","HeadSpeed","NaN");
+            string bad=ini.ToString(); RecordProxy.Of(f.Rig.PB).Values["CustomData"]=bad;
+            RecordProxy.Of(f.Base).Values["TargetVelocityRad"]=.2f; RecordProxy.Of(f.Piston).Values["Velocity"]=.3f; foreach(var c in f.Couplers) RecordProxy.Of(c).Values["TargetVelocityRad"]=-.4f;
+            RecordProxy.Of(other).Values["TargetVelocityRad"]=.27f; RecordProxy.Of(other).Writes.Clear(); var refused=Tests.Create(type,f.Rig);
+            Check(!Enabled(refused) && !f.AnyDrive,"Rejected reversed startup left owned/configured actuator moving before timed scan.");
+            Check(other.TargetVelocityRad==.27f && RecordProxy.Of(other).Writes.Count==0 && f.Rig.PB.CustomData==bad,"Rejected reversed startup wrote unrelated drives or invalid configuration.");
         }
-    }
-    static void ToolRejectedStartupStopsOwned(Type type)
-    {
-        foreach(bool missingMarker in new[]{false,true})
-        {
-            var f = new ToolSwapFixture();
-            var unrelatedRotor = f.Rig.Rotor("Unrelated ship rotor",f.Rig.Root,f.Rig.Grid());
-            var unrelatedPiston = f.Rig.Piston("Unrelated ship piston",f.Rig.Root,f.Rig.Grid());
-            var original = SwapStart(type,f);
-            // Persist exactly what the real controller records for its owned
-            // corridor. The startup refusal occurs before fresh discovery.
-            f.Rig.Storage = ((TestHost)original).Storage;
-            var ini = new MyIni(); ini.TryParse(f.Rig.PB.CustomData);
-            if(missingMarker) f.Rig.Blocks.Remove(f.Markers[1]);
-            else ini.Set("Config","HeadSpeed","NaN");
-            string refused = ini.ToString(); RecordProxy.Of(f.Rig.PB).Values["CustomData"] = refused;
-            RecordProxy.Of(f.Base).Values["TargetVelocityRad"] = .19f;
-            RecordProxy.Of(f.Piston).Values["Velocity"] = .23f;
-            RecordProxy.Of(f.Mount).Values["TargetVelocityRad"] = -.31f;
-            RecordProxy.Of(unrelatedRotor).Values["TargetVelocityRad"] = .27f;
-            RecordProxy.Of(unrelatedPiston).Values["Velocity"] = .43f;
-            foreach(var b in new IMyTerminalBlock[]{f.Base,f.Piston,f.Mount,unrelatedRotor,unrelatedPiston}) RecordProxy.Of(b).Writes.Clear();
-            var restarted = Tests.Create(type,f.Rig);
-            string reason = missingMarker ? "missing configured tool marker" : "invalid scalar";
-            Check(!Enabled(restarted) && f.Base.TargetVelocityRad==0 && f.Piston.Velocity==0 && f.Mount.TargetVelocityRad==0,"Fresh startup with "+reason+" left a previously owned actuator moving before any timed update.");
-            Check(unrelatedRotor.TargetVelocityRad==.27f && unrelatedPiston.Velocity==.43f && RecordProxy.Of(unrelatedRotor).Writes.Count==0 && RecordProxy.Of(unrelatedPiston).Writes.Count==0,"Rejected startup with "+reason+" wrote unrelated ship actuators.");
-            Check(f.Rig.PB.CustomData==refused && f.Mutations.Count==0,"Rejected startup rewrote user configuration or mutated tool mechanics.");
-        }
-    }
-    static ToolSwapFixture LearnedHiddenParkedTool(Type type)
-    {
-        var f = new ToolSwapFixture(hideNonterminalCells:true); f.SelectOnlyProfile(0);
-        Check(f.Markers[0].CubeGrid.GetCubeBlock(f.Tops[0].Position)==null && f.Markers[0].CubeGrid.CubeExists(f.Tops[0].Position),"Faithful fixture must hide mounted nonterminal top while reporting its occupied cube.");
-        Check(f.Markers[0].CubeGrid.GetCubeBlock(new Vector3I(0,1,0))==null && f.Markers[0].CubeGrid.CubeExists(new Vector3I(0,1,0)),"Faithful fixture must traverse occupied nonterminal bridge through CubeExists.");
-        var script = SwapStart(type,f);
-        Check(Get(Get(script,"Topology")!,"Head")==f.Markers[0],"Live mounted top was not captured through Mount.Top and the marker region.");
-        SwapFrame(script,"Park",false,0);
-        bool drove = SwapMove(script,f,"ApproachDock","Approach",true);
-        drove |= SwapMove(script,f,"Dock","Dock",true); f.LockSource();
-        SwapReach(script,f,"Retreat"); SwapFrame(script); drove |= f.AnyDrive;
-        RecordProxy.Of(f.Mount).Values["WorldMatrix"] = SwapWorldGoal(script,"Retreat");
-        SwapReach(script,f,"Idle",300);
-        Check(drove && f.Mount.Top==null && !f.Mount.IsAttached && f.Heads[0].All(m=>m.IsConnected && m.Enabled),"Hidden learned tool did not physically park before becoming inaccessible.");
-        f.Rig.Storage = ((TestHost)script).Storage;
-        return f;
-    }
-    static void HiddenToolTopCases(Type type)
-    {
-        var unknown = new ToolSwapFixture(headless:true,hideNonterminalCells:true); unknown.SelectOnlyProfile(1);
-        var refused = SwapStart(type,unknown);
-        SwapFrame(refused,"Tool 1",false,0);
-        for(int i=0;i<160 && SwapPhase(refused)!="Idle";i++) SwapFrame(refused);
-        Check(!Enabled(refused) && unknown.Mutations.Count==0 && !unknown.AnyDrive,"Unknown hidden parked top moved or attached without a learned identity.");
-        Check(unknown.Rig.Log.Any(s=>s.ToLowerInvariant().Contains("mount") && (s.ToLowerInvariant().Contains("once") || s.ToLowerInvariant().Contains("learn"))),"Selecting an unknown hidden parked top omitted instructions to mount/learn it once.");
-        Check(unknown.Heads[1].All(m=>m.Enabled) && !unknown.Heads[1].Any(m=>RecordProxy.Of(m).Writes.Any(w=>w.Name=="Enabled" && Equals(w.Value,false))),"Unknown hidden parked top released support.");
-
-        foreach(bool wrongTop in new[]{false,true})
-        {
-            var f = LearnedHiddenParkedTool(type);
-            int mutations = f.Mutations.Count;
-            f.AttachResult = wrongTop ? f.Tops[1] : f.Tops[0];
-            var restarted = SwapStart(type,f);
-            Check(f.Mount.Top==null && f.Markers[0].CubeGrid.GetCubeBlock(f.Tops[0].Position)==null,"Restart fixture accidentally exposed learned parked top.");
-            SwapFrame(restarted,"Tool 1",false,0);
-            SwapMove(restarted,f,"ApproachTop","TopApproach",false);
-            SwapMove(restarted,f,"AlignTop","Attach",false);
-            SwapReach(restarted,f,"Attach");
-            Check(f.Mutations.Count==mutations+1 && f.Mutations.Last()=="Attach","Cached hidden pickup did not request exactly one Attach after restart.");
-            SwapFrame(restarted);
-            if(wrongTop)
-            {
-                Check(SwapPhase(restarted)=="Idle" && (bool)Get(SwapController(restarted),"Recovery")! && f.Heads[0].All(m=>m.Enabled),"Wrong attached entity ID released cached hidden-tool supports.");
-            }
-            else
-            {
-                Check(SwapPhase(restarted)=="Attach" && f.Heads[0].All(m=>m.Enabled),"One cached top identity observation released support.");
-                SwapFrame(restarted);
-                Check(SwapPhase(restarted)=="Release" && f.Heads[0].All(m=>!m.Enabled),"Known hidden top failed correct two-sample verification after restart.");
-                f.SplitRegion(0); SwapReach(restarted,f,"Idle");
-                Check(!Enabled(restarted) && Get(Get(restarted,"Topology")!,"Head")==f.Markers[0],"Cached hidden pickup did not complete split/full discovery OFF.");
-            }
-            SwapUnchangedMerges(f,"Hidden cached pickup");
-        }
-        var mounted = new ToolSwapFixture(hideNonterminalCells:true); var manual = SwapStart(type,mounted);
-        SwapFrame(manual,"On",false,0); SwapFrame(manual);
-        Check(Enabled(manual),"An unlearned parked profile prevented manual control of the known hidden mounted tool.");
-        SwapFrame(manual,"Off",false,0); SwapFrame(manual,"Tool 2",false,0);
-        for(int i=0;i<160 && SwapPhase(manual)!="Idle";i++) SwapFrame(manual);
-        Check(!Enabled(manual) && mounted.Mutations.Count==0 && mounted.Heads[0].All(m=>!m.Enabled),"Selecting unlearned parked profile moved/parked the current mounted tool before refusing.");
-        HiddenToolCacheScoping(type);
-        HiddenToolActualCouplingGuard(type);
-    }
-    static void HiddenToolActualCouplingGuard(Type type)
-    {
-        var f = LearnedHiddenParkedTool(type); var cache = new MyIni(); cache.TryParse(f.Rig.Storage);
-        string key="E"+f.Markers[0].EntityId; var record=cache.Get("AutoArm Couplers",key).ToString().Split('|');
-        // Structurally valid stale axes survive parsing and occupancy checks.
-        // The real top observed after Attach must invalidate this cached frame.
-        var rotation=MatrixD.CreateFromAxisAngle(Vector3D.Forward,2*Math.PI/180);
-        var culture=System.Globalization.CultureInfo.InvariantCulture;
-        var forward=Vector3D.TransformNormal(new Vector3D(double.Parse(record[5],culture),double.Parse(record[6],culture),double.Parse(record[7],culture)),rotation);
-        var up=Vector3D.TransformNormal(new Vector3D(double.Parse(record[8],culture),double.Parse(record[9],culture),double.Parse(record[10],culture)),rotation);
-        for(int i=0;i<3;i++) { record[5+i]=forward.GetDim(i).ToString("R",System.Globalization.CultureInfo.InvariantCulture); record[8+i]=up.GetDim(i).ToString("R",System.Globalization.CultureInfo.InvariantCulture); }
-        cache.Set("AutoArm Couplers",key,string.Join("|",record)); f.Rig.Storage=cache.ToString(); f.AttachResult=f.Tops[0];
-        var script=SwapStart(type,f); SwapFrame(script,"Tool 1",false,0);
-        SwapMove(script,f,"ApproachTop","TopApproach",false); SwapMove(script,f,"AlignTop","Attach",false);
-        SwapReach(script,f,"Attach");
-        for(int i=0;i<10;i++) SwapFrame(script);
-        Check((SwapPhase(script)=="Attach" || SwapPhase(script)=="Idle") && f.Heads[0].All(m=>m.Enabled),"Matching actual top ID released support using structurally valid cached axes that disagree with the actual coupler frame.");
-        Check(!f.Heads[0].Any(m=>RecordProxy.Of(m).Writes.Any(w=>w.Name=="Enabled" && Equals(w.Value,false))),"Actual coupling-frame mismatch produced a head merge disable write.");
-    }
-    static void HiddenToolCacheScoping(Type type)
-    {
-        var f = LearnedHiddenParkedTool(type); string original = f.Rig.Storage;
-        const string section = "AutoArm Couplers"; string key = "E"+f.Markers[0].EntityId;
-        var learned = new MyIni(); Check(learned.TryParse(original),"Learned coupler Storage was invalid INI.");
-        Check(learned.Get(section,"Format").ToInt32()==1 && learned.Get(section,"PB").ToInt64()==f.Rig.PB.EntityId && learned.Get(section,"Arm").ToString()=="Arm 1","Learned coupler record omitted controller/arm/format scope.");
-        string record = learned.Get(section,key).ToString(); var cells = record.Split('|');
-        Check(cells.Length==11 && long.Parse(cells[0])==f.Tops[0].EntityId && cells[1]=="LargeRotor","Mounted observation did not persist actual top identity and factory subtype.");
-        f.AddHiddenStationCell(0);
-        foreach(string fault in new[]{"PB","Arm","Format","Marker","Malformed","Nonfinite","Axes","OutsideRegion"})
-        {
-            var damaged = new MyIni(); damaged.TryParse(original);
-            if(fault=="PB") damaged.Set(section,"PB",f.Rig.PB.EntityId+1);
-            else if(fault=="Arm") damaged.Set(section,"Arm","Other arm");
-            else if(fault=="Format") damaged.Set(section,"Format",2);
-            else if(fault=="Marker") { damaged.Delete(section,key); damaged.Set(section,"E"+f.Markers[1].EntityId,record); }
-            else if(fault=="Malformed") damaged.Set(section,key,string.Join("|",cells.Take(10)));
-            else if(fault=="OutsideRegion") { var bad=(string[])cells.Clone(); bad[2]="7.5"; bad[3]="0"; bad[4]="0"; damaged.Set(section,key,string.Join("|",bad)); }
-            else { var bad=(string[])cells.Clone(); bad[fault=="Nonfinite"?2:5]=fault=="Nonfinite"?"NaN":"2"; damaged.Set(section,key,string.Join("|",bad)); }
-            f.Rig.Storage = damaged.ToString(); int mutations = f.Mutations.Count;
-            foreach(var b in f.Heads[0]) RecordProxy.Of(b).Writes.Clear();
-            var script = Tests.Create(type,f.Rig); f.Host=(TestHost)script;
-            for(int i=0;i<160 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
-            SwapFrame(script,"Tool 1",false,0);
-            for(int i=0;i<160 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
-            Check(SwapPhase(script)=="Idle" && !Enabled(script) && !f.AnyDrive && f.Mutations.Count==mutations,"Invalid "+fault+" coupler cache authorized headless tool motion/attachment.");
-            Check(f.Heads[0].All(m=>m.Enabled && RecordProxy.Of(m).Writes.All(w=>w.Name!="Enabled")),"Invalid "+fault+" coupler cache wrote support merges.");
-        }
-        f.Rig.Storage = original; f.RemoveTopCell(0);
-        var absent = Tests.Create(type,f.Rig);
-        for(int i=0;i<160 && SwapPhase(absent)!="Idle";i++) SwapFrame(absent);
-        SwapFrame(absent,"Tool 1",false,0);
-        for(int i=0;i<160 && SwapPhase(absent)!="Idle";i++) SwapFrame(absent);
-        Check(SwapPhase(absent)=="Idle" && !Enabled(absent) && !f.AnyDrive && f.Mount.Top==null,"Cached top identity authorized attachment after its occupied cube disappeared.");
-
-        var foreign = LearnedHiddenParkedTool(type);
-        var otherMount = foreign.Rig.Rotor("Foreign station mount",foreign.Rig.Root,foreign.Markers[0].CubeGrid);
-        RecordProxy.Of(otherMount).Values["Top"] = foreign.Tops[0];
-        RecordProxy.Of(foreign.Tops[0]).Values["Base"] = otherMount;
-        int previous = foreign.Mutations.Count;
-        var occupiedElsewhere = Tests.Create(type,foreign.Rig);
-        for(int i=0;i<160 && SwapPhase(occupiedElsewhere)!="Idle";i++) SwapFrame(occupiedElsewhere);
-        SwapFrame(occupiedElsewhere,"Tool 1",false,0);
-        for(int i=0;i<160 && SwapPhase(occupiedElsewhere)!="Idle";i++) SwapFrame(occupiedElsewhere);
-        Check(SwapPhase(occupiedElsewhere)=="Idle" && !Enabled(occupiedElsewhere) && !foreign.AnyDrive && foreign.Mutations.Count==previous,"Cached hidden top attached to another visible mechanical base was accepted for pickup.");
-        Check(foreign.Heads[0].All(m=>m.Enabled && m.IsConnected),"Foreign-base cache refusal released parked support.");
     }
 }

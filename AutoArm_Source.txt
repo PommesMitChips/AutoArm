@@ -4,7 +4,7 @@
 const string ArmName = "Arm 1";
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "2.5.1";
+const string ControllerBuildVersion = "2.6";
 
 
 // C# 6 programmable-block fragment. Paste inside Program.
@@ -374,7 +374,7 @@ class AutoTopology
         var p = m.B as IMyPistonBase; return p != null ? p.CurrentPosition : ((IMyMotorStator)m.B).Angle;
     }
 
-    double Wrap(double a) { return a - Math.Floor((a + Math.PI) / (2 * Math.PI)) * (2 * Math.PI); }
+
 
     public bool CheckSync(AutoGroup g, out string why)
     {
@@ -418,7 +418,7 @@ class AutoTopology
         }
         if (lo > hi) { why = "No common signed velocity remains in G" + (g.Index + 1) + "."; return Fail(why); }
         sl /= g.M.Count; sa /= g.M.Count;
-        g.Lin = ToFrame(sl, reference); g.Ang = ToFrame(sa, reference);
+        g.Lin = InFrame(sl, reference); g.Ang = InFrame(sa, reference);
         return true;
     }
 
@@ -444,10 +444,7 @@ class AutoTopology
         return true;
     }
 
-    Vector3D ToFrame(Vector3D v, MatrixD f)
-    {
-        return new Vector3D(Vector3D.Dot(v, f.Forward), Vector3D.Dot(v, f.Left), Vector3D.Dot(v, f.Up));
-    }
+
 
     public void Set(AutoGroup g, double velocity)
     {
@@ -674,7 +671,7 @@ sealed class AutoSettings
 
 static class AutoConfig
 {
-    public const int Format = 3;
+    public const int Format = 4;
     const string Identity = "AutoArm Config";
     const string Header = "Name | Kind | Translation | Orientation";
 
@@ -822,6 +819,7 @@ static class AutoConfig
     {
         ini.Set("Instructions", "Setup", "Edit Config, Reload, Check, On. Base: '" + ArmName + " - Base'; Head: '" + ArmName + " - Head'.\nWeights 0..10 are preferences. Edit only the two weights; blank Actuators resets them.\nDifferent Format: delete Custom Data. IDs: Info/Joints.");
         ini.Set("Instructions", "Commands", "On / Off / Stop / Toggle / Hold / Check / Rescan / Reload\nInfo / Help / Settings / Status / Joints / Bindings / Version\nSetHome / GoHome / HomeInfo\nForward / Back / Left / Right / Up / Down; Face <direction>\nPitchUp / PitchDown / YawLeft / YawRight / RollLeft / RollRight\nStep Yaw|Pitch|Roll <degrees>; Yaw / Pitch / Roll <degrees>\nMode HEAD|HRZ|VRT; ReadMouse / ReadKeyboard / ReadRoll On|Off|Toggle\nSpeed <m/s>; TurnSpeed <deg/s>; StepSize <deg>; JointSpeed <RPM>; PistonSpeed <m/s>\nHomeSpeed <RPM> <m/s>; OrientationTolerance <deg>\nTool <name/index>; Park [port number]; ToolScan / ToolInfo / SwapCancel\nPivotProbe Start <group>; PivotProbe End / Report / Reset\nSemicolons separate commands. Reload restores Config defaults.");
+        ini.Set("Instructions", "Pose", "MoveTo x y z; OrientTo fx fy fz ux uy uz; MoveToPosOri x y z fx fy fz ux uy uz.\nBase Forward/Left/Up coordinates; On required; pilot input remains active.");
         ini.Set("Instructions", "Bindings", "Toolbar Run: PitchUp Back PitchDown Left Down Right YawLeft Forward YawRight.\nHEAD=head axes; HRZ=cockpit axes; VRT=W/S screen Up/Down, C/Space into/out of view.\nTranslation holds orientation; Q/E Head roll; optional mouse view rotation.\nTool <name> swaps; Park uses ParkMerge; SwapCancel/Stop retains support.");
     }
 
@@ -840,7 +838,7 @@ static class AutoConfig
         }
         return true;
     }
-    static bool Valid(double v) { return !double.IsNaN(v) && !double.IsInfinity(v) && v >= 0 && v <= 10; }
+    static bool Valid(double v) => !double.IsNaN(v) && !double.IsInfinity(v) && v >= 0 && v <= 10;
     static bool Refuse(AutoTopology t, string text, out string why)
     { why = text + " Custom Data and saved state were left untouched."; if (t != null) { t.Ready = false; t.ZeroOwned(); } return false; }
 }
@@ -870,39 +868,24 @@ const string RollKey = "ReadRoll";
 // The topology/config fragment supplies AutoTopology, AutoGroup, AutoMember and
 // AutoConfig. This fragment owns commands, pose state, allocation and saved Home.
 
-const double DefaultMoveMps = 0.20;
-const double DefaultTurnDeg = 5.0;
-const double DefaultStepDeg = 5.0;
-const double DefaultJointRpm = 0.50;
-const double DefaultPistonMps = 0.20;
-const double DefaultHomeJointRpm = 0.50;
-const double DefaultHomePistonMps = 0.20;
 const double PositionKp = 1.50;
 double PositionKi = 0.50;
-const double PositionKd = 0.0;
 const double OrientationKp = 1.00;
 double OrientationKi = 0.25;
-const double OrientationKd = 0.0;
 double PositionCorrectionCap = 0.20;
 double OrientationCorrectionCapDeg = 5.0;
 const double PositionDeadbandM = 0.003;
-const double DefaultOrientationToleranceDeg = 3.0;
-const double MaximumOrientationToleranceDeg = 30.0;
 const double AimToleranceDeg = 0.15;
 const double ManualCounterCorrectionFraction = 0.50;
 double MaximumPilotTargetLeadM = 1.50;
 double PositionIntegralCap = 0.20;
 double OrientationIntegralCapDeg = 5.0;
-const double PositionIntegralCapture = 0.10;
-const double OrientationIntegralCaptureDeg = 10.0;
 const double IntegralUnwindSeconds = 2.0;
-const double VelocityFilterSeconds = 0.15;
 double JointAccelerationRpmPerSec = 1.0;
 double PistonAccelerationMps2 = 0.40;
 const double SolverDamping = 0.002;
 const double PositionTaskWeight = 1.0;
 const double OrientationTaskWeight = 5.0;
-const int SolverPassLimit = 64;
 const double StatusRefreshSeconds = 0.25;
 
 AutoTopology Topology;
@@ -918,10 +901,10 @@ bool ToolWeightsLoaded;
 PilotMode MovementMode = PilotMode.HEAD;
 double MouseSensitivity = .025;
 string Status = "Starting OFF", LastFault = "";
-double MoveMps = DefaultMoveMps, TurnDeg = DefaultTurnDeg, StepDeg = DefaultStepDeg;
-double OrientationToleranceDeg = DefaultOrientationToleranceDeg;
-double JointRpm = DefaultJointRpm, PistonMps = DefaultPistonMps;
-double HomeJointRpm = DefaultHomeJointRpm, HomePistonMps = DefaultHomePistonMps;
+double MoveMps = 0.20, TurnDeg = 5.0, StepDeg = 5.0;
+double OrientationToleranceDeg = 3.0;
+double JointRpm = 0.50, PistonMps = 0.20;
+double HomeJointRpm = 0.50, HomePistonMps = 0.20;
 
 void ApplySettings(AutoSettings s)
 {
@@ -1000,11 +983,18 @@ void ZeroSavedDrives()
         }
     var config = new MyIni(); MyIniParseResult error;
     string mount = config.TryParse(Me.CustomData, out error) && config.Get(ArmSection, "Arm").ToString() == ArmName && config.Get(ToolsSection, EnabledKey).ToBoolean(false) ? config.Get(ToolsSection, "Mount").ToString().Trim() : "";
+    var mounts = new List<string>();
+    if (mount.Length > 0) mounts.Add(mount);
+    if (config.Get(ArmSection, "Arm").ToString() == ArmName && config.Get(ToolsSection, EnabledKey).ToBoolean(false))
+        for (int i = 1; i <= 16; i++)
+        { string name = config.Get("Tool" + i.ToString("00"), "Mount").ToString().Trim(); if (name.Length > 0 && !mounts.Contains(name)) mounts.Add(name); }
     var blocks = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(blocks);
-    int matches = 0; foreach (var b in blocks) if (mount.Length > 0 && b.CustomName == mount) matches++;
+    var unique = new HashSet<long>();
+    foreach (string name in mounts)
+    { IMyTerminalBlock found = null; int count = 0; foreach (var b in blocks) if (b.CustomName == name) { found = b; count++; } if (count == 1) unique.Add(found.EntityId); }
     foreach (var b in blocks)
     {
-        if (b.Closed || !b.IsSameConstructAs(Me) || (!ids.Contains(b.EntityId) && !(matches == 1 && b.CustomName == mount))) continue;
+        if (b.Closed || !b.IsSameConstructAs(Me) || (!ids.Contains(b.EntityId) && !unique.Contains(b.EntityId))) continue;
         try { var piston = b as IMyPistonBase; var rotor = b as IMyMotorStator;
             if (piston != null) piston.Velocity = 0; else if (rotor != null && !(rotor is IMyMotorSuspension)) rotor.TargetVelocityRad = 0;
         } catch { }
@@ -1190,13 +1180,8 @@ void EnableControl()
     if (!Topology.Validate(out why, true)) { Fault("On refused: " + why); return; }
     Vector3D p, f, u;
     if (!ReadPose(out p, out f, out u)) { Fault("On refused: Base/Head markers unavailable."); return; }
-    TargetP = PreviousP = p;
-    TargetF = PreviousF = f;
-    TargetU = PreviousU = u;
-    TargetValid = ObservationValid = true;
-    AimingTarget = false;
+    CapturePose(p, f, u);
     PivotProbe = null;
-    FilteredV = FilteredW = PositionI = OrientationI = Vector3D.Zero;
     LastPilotLinear = LastPilotAngular = LastFeedbackLinear = LastFeedbackAngular = Vector3D.Zero;
     LastRequestedLinear = LastRequestedAngular = LastAchievedLinear = LastAchievedAngular = Vector3D.Zero;
     LastLinearAdvance = LastAngularAdvance = 1;
@@ -1268,7 +1253,7 @@ void UpdateControl(double dt, double observationDt)
     {
         measuredV = (p - PreviousP) / observationDt;
         measuredW = RotationError(PreviousF, PreviousU, f, u) / observationDt;
-        double blend = observationDt / (VelocityFilterSeconds + observationDt);
+        double blend = observationDt / (0.15 + observationDt);
         FilteredV += (measuredV - FilteredV) * blend;
         FilteredW += (measuredW - FilteredW) * blend;
     }
@@ -1294,8 +1279,8 @@ void UpdateControl(double dt, double observationDt)
         positionDemand = ClampLength(positionDemand, ToolDriveMoveCap);
         orientationDemand = ClampLength(orientationDemand, ToolDriveTurnCap);
     }
-    Vector3D rawPositionFeedback = positionDemand + PositionI - FilteredV * PositionKd;
-    Vector3D rawOrientationFeedback = orientationDemand + OrientationI - FilteredW * OrientationKd;
+    Vector3D rawPositionFeedback = positionDemand + PositionI - FilteredV * 0.0;
+    Vector3D rawOrientationFeedback = orientationDemand + OrientationI - FilteredW * 0.0;
     Vector3D boundedPositionFeedback = ClampLength(rawPositionFeedback, PositionCorrectionCap);
     LastFeedbackLinear = BlendManualCorrection(LastPilotLinear, boundedPositionFeedback,
         ManualCounterCorrectionFraction, out LastCounterCorrectionLimited);
@@ -1324,9 +1309,9 @@ void UpdateControl(double dt, double observationDt)
     Vector3D positionAllocationResidual = LastUnconstrainedLinear - LastAchievedLinear;
     Vector3D orientationAllocationResidual = LastUnconstrainedAngular - LastAchievedAngular;
     UpdateIntegral(ref PositionI, ToolDriving ? positionDemand - FilteredV : pe, ToolDriving ? 0 : PositionDeadbandM, positionClipResidual, positionAllocationResidual,
-        ToolDriving ? PositionKi / PositionKp : PositionKi, Math.Min(PositionIntegralCap, PositionCorrectionCap), ToolDriving ? double.MaxValue : PositionIntegralCapture, dt, LastSolverConverged && !LastSolverBudgetLimited);
+        ToolDriving ? PositionKi / PositionKp : PositionKi, Math.Min(PositionIntegralCap, PositionCorrectionCap), ToolDriving ? double.MaxValue : 0.10, dt, LastSolverConverged && !LastSolverBudgetLimited);
     UpdateIntegral(ref OrientationI, ToolDriving ? orientationDemand - FilteredW : oe, ToolDriving ? 0 : orientationBand, orientationClipResidual, orientationAllocationResidual, ToolDriving ? OrientationKi / OrientationKp : OrientationKi,
-        Math.Min(OrientationIntegralCapDeg, Math.Min(TurnDeg, OrientationCorrectionCapDeg)) * Math.PI / 180, ToolDriving ? double.MaxValue : OrientationIntegralCaptureDeg * Math.PI / 180,
+        Math.Min(OrientationIntegralCapDeg, Math.Min(TurnDeg, OrientationCorrectionCapDeg)) * Math.PI / 180, ToolDriving ? double.MaxValue : 10.0 * Math.PI / 180,
         dt, LastSolverConverged && !LastSolverBudgetLimited);
 
     LastLinearAdvance = PilotAdvance(LastPilotLinear, LastAchievedLinear - LastFeedbackLinear);
@@ -1412,7 +1397,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
             r == 3 ? angular.X : r == 4 ? angular.Y : angular.Z);
     }
     double ridge = SolverDamping * SolverDamping;
-    int maxPasses = Math.Min(SolverPassLimit, Math.Max(8, 2 * n + 4));
+    int maxPasses = Math.Min(64, Math.Max(8, 2 * n + 4));
     for (int pass = 0; pass < maxPasses; pass++)
     {
         if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.68)
@@ -1697,19 +1682,53 @@ void HoldCurrent()
     if (!Enabled) { EnableControl(); return; }
     Vector3D p, f, u;
     if (!ReadPose(out p, out f, out u)) { Fault("Hold failed: markers unavailable."); return; }
-    TargetP = p; TargetF = f; TargetU = u;
-    PreviousP = p; PreviousF = f; PreviousU = u;
-    TargetValid = ObservationValid = true;
-    GoingHome = AimingTarget = false;
+    CapturePose(p, f, u);
+    GoingHome = false;
     ControlElapsed = 0;
     StatusElapsed = StatusRefreshSeconds;
     DisplayPinned = false;
-    FilteredV = FilteredW = PositionI = OrientationI = Vector3D.Zero;
     Topology.ZeroOwned();
     if (LastQdot != null) Array.Clear(LastQdot, 0, LastQdot.Length);
     if (BoundState != null) Array.Clear(BoundState, 0, BoundState.Length);
     Status = "ON: holding recaptured Head pose";
     Say("Hold: pose recaptured; ON.");
+}
+
+void CapturePose(Vector3D p, Vector3D f, Vector3D u)
+{
+    SetPoseTarget(p, f, u, 3);
+    PreviousP = p; PreviousF = f; PreviousU = u;
+    ObservationValid = true; AimingTarget = false;
+    FilteredV = FilteredW = PositionI = OrientationI = Vector3D.Zero;
+}
+
+bool SetPoseTarget(Vector3D p, Vector3D f, Vector3D u, int parts)
+{
+    if ((parts & 1) != 0 && !Finite(p.LengthSquared()) || (parts & 2) != 0 && !Orthonormalise(ref f, ref u)) return false;
+    if ((parts & 1) != 0) TargetP = p;
+    if ((parts & 2) != 0) { TargetF = f; TargetU = u; }
+    TargetValid = true;
+    return true;
+}
+
+void PoseCommand(string[] w, int parts)
+{
+    if (!Enabled) throw new Exception("Run On before pose commands.");
+    string why;
+    if (SwapBatchLock || Tools != null && !Tools.AllowManual(out why)) throw new Exception("Pose command refused: tool lock.");
+    int n = parts == 3 ? 9 : parts == 1 ? 3 : 6;
+    if (w.Length != n + 1) throw new Exception("Pose command has wrong arity.");
+    var v = new double[n];
+    for (int i = 0; i < n; i++) v[i] = Parse(w[i + 1]);
+    Vector3D p = parts == 2 ? TargetP : new Vector3D(v[0], v[1], v[2]);
+    int j = parts == 3 ? 3 : 0;
+    Vector3D f = parts == 1 ? TargetF : new Vector3D(v[j], v[j + 1], v[j + 2]);
+    Vector3D u = parts == 1 ? TargetU : new Vector3D(v[j + 3], v[j + 4], v[j + 5]);
+    if ((parts & 1) != 0 && !Finite(p.LengthSquared()) || (parts & 2) != 0 && !Orthonormalise(ref f, ref u)) throw new Exception("Invalid pose target.");
+    if (GoingHome) HoldCurrent();
+    if (!Enabled) return;
+    SetPoseTarget(p, f, u, parts);
+    if ((parts & 2) != 0) AimingTarget = true;
 }
 
 void Face(string direction)
@@ -1730,9 +1749,8 @@ void Face(string direction)
     }
     if (GoingHome) HoldCurrent();
     if (!Enabled) return;
-    TargetF = targetForward; TargetU = targetUp;
+    SetPoseTarget(TargetP, targetForward, targetUp, 2);
     AimingTarget = true;
-    Orthonormalise(ref TargetF, ref TargetU);
 }
 
 void Step(string axis, double degrees)
@@ -1753,9 +1771,8 @@ void Step(string axis, double degrees)
         default: a = TargetF; break;
     }
     Vector3D step = Unit(a) * (degrees * Math.PI / 180);
-    TargetF = Rotate(TargetF, step); TargetU = Rotate(TargetU, step);
+    SetPoseTarget(TargetP, Rotate(TargetF, step), Rotate(TargetU, step), 2);
     AimingTarget = true;
-    Orthonormalise(ref TargetF, ref TargetU);
 }
 
 void RunCommands(string argument)
@@ -1812,7 +1829,7 @@ void RunCommand(string command)
             if (w.Length != 2) throw new Exception("MovementMode expects HEAD, HRZ or VRT.");
             SetMovementMode(w[1]); break;
         case "orientationtolerance":
-            double tolerance = Number(w, 1, 0, MaximumOrientationToleranceDeg, OrientationToleranceKey);
+            double tolerance = Number(w, 1, 0, 30.0, OrientationToleranceKey);
             StopMotion("Stopped: OrientationTolerance changed; run On to recapture.");
             OrientationToleranceDeg = tolerance;
             Say(Status);
@@ -1836,7 +1853,10 @@ void RunCommand(string command)
         case "rollright": Step("roll", StepDeg); break;
         case "dumptrace": PrintInfo(); Say("See Info; Custom Data unchanged."); break;
         case "traceclear": Say("No trace buffer."); break;
-        case "move": case "moveto": case "relmove": case "runfrompanel":
+        case "moveto": PoseCommand(w, 1); break;
+        case "orientto": PoseCommand(w, 2); break;
+        case "movetoposori": PoseCommand(w, 3); break;
+        case "move": case "relmove": case "runfrompanel":
             throw new Exception(c + " is not supported by AutoArm's discovered pose control.");
         default: throw new Exception("Unknown command '" + w[0] + "'. Use Info.");
     }
@@ -2053,7 +2073,7 @@ void UpdateHome(double dt)
         // may then select the equivalent circular error nearest that branch.
         if (g.Rotary) foreach (AutoMember m in g.M)
         {
-            IMyMotorStator r = (IMyMotorStator)m.B;
+            var r = (IMyMotorStator)m.B;
             if (r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000) continue;
             double e = m.Sign * MemberHomeError(m, true);
             if (!haveBranch) { branch = e; haveBranch = true; }
@@ -2065,7 +2085,7 @@ void UpdateHome(double dt)
             bool unlimited = false;
             if (g.Rotary)
             {
-                IMyMotorStator r = (IMyMotorStator)m.B;
+                var r = (IMyMotorStator)m.B;
                 unlimited = r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000;
             }
             if (!haveBranch) { branch = e; haveBranch = true; }
@@ -2099,14 +2119,14 @@ void UpdateHome(double dt)
 bool ResolveHome(AutoMember m, double requested, out double resolved)
 {
     resolved = requested;
-    IMyPistonBase p = m.B as IMyPistonBase;
+    var p = m.B as IMyPistonBase;
     if (p != null)
     {
         if (!Finite(resolved) || resolved < p.MinLimit - 0.005 || resolved > p.MaxLimit + 0.005) return false;
         resolved = Clamp(resolved, p.MinLimit, p.MaxLimit);
         return true;
     }
-    IMyMotorStator r = (IMyMotorStator)m.B;
+    var r = (IMyMotorStator)m.B;
     if (!Finite(resolved)) return false;
     double lo = r.LowerLimitRad, hi = r.UpperLimitRad, turn = 2 * Math.PI;
     double k = Math.Round((r.Angle - requested) / turn);
@@ -2123,15 +2143,15 @@ double MemberHomeError(AutoMember m, bool rotary)
 {
     double error = m.Home - MemberPosition(m);
     if (!rotary) return error;
-    IMyMotorStator r = (IMyMotorStator)m.B;
+    var r = (IMyMotorStator)m.B;
     return r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000 ? Wrap(error) : error;
 }
 
 double MemberPosition(AutoMember m)
 {
-    IMyMotorStator rotor = m.B as IMyMotorStator;
+    var rotor = m.B as IMyMotorStator;
     if (rotor != null) return rotor.Angle;
-    IMyPistonBase piston = m.B as IMyPistonBase;
+    var piston = m.B as IMyPistonBase;
     if (piston != null) return piston.CurrentPosition;
     throw new Exception("Unsupported owned actuator type.");
 }
@@ -2152,8 +2172,7 @@ double Parse(string text)
         throw new Exception("Expected a finite number with decimal point.");
     return value;
 }
-static bool ReadDouble(string text, out double value)
-{ return double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) && Finite(value); }
+static bool ReadDouble(string text, out double value) => double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) && Finite(value);
 
 static bool Cholesky(double[,] a, double[] b, double[,] l, double[] temp, double[] answer)
 {
@@ -2197,7 +2216,7 @@ static Vector3D RotationError(Vector3D f, Vector3D u, Vector3D tf, Vector3D tu)
     double d20 = tf.Z * f.X + tl.Z * l.X + tu.Z * u.X,
         d21 = tf.Z * f.Y + tl.Z * l.Y + tu.Z * u.Y,
         d22 = tf.Z * f.Z + tl.Z * l.Z + tu.Z * u.Z;
-    Vector3D skew = new Vector3D(d21 - d12, d02 - d20, d10 - d01) * 0.5;
+    var skew = new Vector3D(d21 - d12, d02 - d20, d10 - d01) * 0.5;
     double angle = Math.Acos(Clamp((d00 + d11 + d22 - 1) * 0.5, -1, 1));
     if (angle < 1e-7) return skew;
     if (Math.PI - angle > 1e-5) return skew * (angle / Math.Sin(angle));
@@ -2262,25 +2281,15 @@ static Vector3D ClampLength(Vector3D value, double cap)
     return n > cap && n > 1e-12 ? value * (cap / n) : value;
 }
 
-static Vector3D InFrame(Vector3D value, MatrixD frame)
-{
-    return new Vector3D(Vector3D.Dot(value, frame.Forward), Vector3D.Dot(value, frame.Left), Vector3D.Dot(value, frame.Up));
-}
+static Vector3D InFrame(Vector3D value, MatrixD frame) => new Vector3D(Vector3D.Dot(value, frame.Forward), Vector3D.Dot(value, frame.Left), Vector3D.Dot(value, frame.Up));
 
-static double Clamp(double value, double lo, double hi)
-{
-    return Math.Max(lo, Math.Min(hi, value));
-}
+static double Clamp(double value, double lo, double hi) => Math.Max(lo, Math.Min(hi, value));
 
-static double Wrap(double angle)
-{
-    return angle - Math.Floor((angle + Math.PI) / (2 * Math.PI)) * (2 * Math.PI);
-}
+static double Wrap(double angle) => angle - Math.Floor((angle + Math.PI) / (2 * Math.PI)) * (2 * Math.PI);
 
-static bool Finite(double value)
-{
-    return !double.IsNaN(value) && !double.IsInfinity(value);
-}
+static bool Finite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+
+static bool Finite(Vector3D value) => Finite(value.X) && Finite(value.Y) && Finite(value.Z);
 
 
 // Passive RAM-only pivot probe. The player supplies all motion. Configuration
@@ -2297,7 +2306,7 @@ class PivotProbeTool
         public int Group; public double Delta,Travel,Orientation;
         public readonly double[] Error=new double[3],Spread=new double[3]; public string Verdict;
     }
-    public IList<Result> Trials { get { return R.AsReadOnly(); } }
+    public IList<Result> Trials => R.AsReadOnly();
     public PivotProbeTool(Program owner,AutoTopology topology){P=owner;T=topology;}
 
     public void Run(string[] w)
@@ -2336,22 +2345,22 @@ class PivotProbeTool
     bool Capture(int selected,out Shot s,out string why)
     {
         s=new Shot();why="";MatrixD f=T.Base.WorldMatrix;Vector3D o=T.Base.GetPosition();
-        s.P=Point(T.Head.GetPosition(),o,f);s.F=Vec(T.Head.WorldMatrix.Forward,f);s.U=Vec(T.Head.WorldMatrix.Up,f);
-        if(!Good(s.P)||!Unit(ref s.F)||!Unit(ref s.U)){why="invalid Base/Head pose.";return false;}
+        s.P=Point(T.Head.GetPosition(),o,f);s.F=InFrame(T.Head.WorldMatrix.Forward,f);s.U=InFrame(T.Head.WorldMatrix.Up,f);
+        if(!Finite(s.P)||!Unit(ref s.F)||!Unit(ref s.U)){why="invalid Base/Head pose.";return false;}
         s.Q=new double[T.Groups.Count][];
         for(int i=0;i<T.Groups.Count;i++){s.Q[i]=new double[T.Groups[i].M.Count];for(int j=0;j<s.Q[i].Length;j++){s.Q[i][j]=T.Position(T.Groups[i].M[j]);if(!Finite(s.Q[i][j])){why="non-finite joint position.";return false;}}}
         AutoGroup g=T.Groups[selected];int count=g.M.Count;s.Axis=new Vector3D[count];s.Base=new Vector3D[count];s.Top=new Vector3D[count];
         for(int i=0;i<count;i++)
         {
-            AutoMember m=g.M[i];IMyMotorStator r=m.B as IMyMotorStator;
+            AutoMember m=g.M[i];var r=m.B as IMyMotorStator;
             if(r==null||r.RotorLock||m.B.Top==null){why="selected member unavailable/locked.";return false;}
             double q=s.Q[selected][i],margin=.25*Math.PI/180;
             if(!Finite(r.LowerLimitRad)||!Finite(r.UpperLimitRad)||r.LowerLimitRad>r.UpperLimitRad){why="selected limits are invalid.";return false;}
             if((r.LowerLimitRad>-1e6&&q<=r.LowerLimitRad+margin)||(r.UpperLimitRad<1e6&&q>=r.UpperLimitRad-margin)){why="selected member near limit: "+m.B.CustomName;return false;}
             int dir=m.B.CubeGrid.EntityId==m.U&&m.B.TopGrid.EntityId==m.V?1:m.B.CubeGrid.EntityId==m.V&&m.B.TopGrid.EntityId==m.U?-1:0;
             if(dir==0){why="selected endpoints changed.";return false;}
-            s.Axis[i]=Vec(m.B.WorldMatrix.Up*(-dir*m.Sign),f);s.Base[i]=Point(m.B.GetPosition(),o,f);s.Top[i]=Point(m.B.Top.GetPosition(),o,f);
-            if(!Unit(ref s.Axis[i])||!Good(s.Base[i])||!Good(s.Top[i])){why="invalid axis/pivot candidate.";return false;}
+            s.Axis[i]=InFrame(m.B.WorldMatrix.Up*(-dir*m.Sign),f);s.Base[i]=Point(m.B.GetPosition(),o,f);s.Top[i]=Point(m.B.Top.GetPosition(),o,f);
+            if(!Unit(ref s.Axis[i])||!Finite(s.Base[i])||!Finite(s.Top[i])){why="invalid axis/pivot candidate.";return false;}
         }return true;
     }
     bool Analyse(Shot a,Shot b,int group,out Result result,out string why)
@@ -2392,11 +2401,11 @@ class PivotProbeTool
     Vector3D Candidate(Shot s,int i,int k){return k==0?s.Base[i]:k==1?s.Top[i]:(s.Base[i]+s.Top[i])*.5;}
     string Name(int k){return k==0?"Base center":k==1?"Top center":"Midpoint";}
     void Clear(){A=null;G=-1;Fingerprint="";}void Help(){Say("PivotProbe Start <group> | End | Report | Reset");}void Say(string s){P.Say(s);}
-    static double Wrap(double a){return a-Math.Floor((a+Math.PI)/(2*Math.PI))*(2*Math.PI);}static double Deg(double a){return a*180/Math.PI;}
-    static bool Good(Vector3D v){return Finite(v.X)&&Finite(v.Y)&&Finite(v.Z);}
-    static bool Unit(ref Vector3D v){double n=v.Length();if(!Good(v)||!Finite(n)||n<1e-10)return false;v/=n;return true;}
-    static Vector3D Point(Vector3D p,Vector3D o,MatrixD f){return Vec(p-o,f);}static Vector3D Vec(Vector3D v,MatrixD f){return new Vector3D(Vector3D.Dot(v,f.Forward),Vector3D.Dot(v,f.Left),Vector3D.Dot(v,f.Up));}
-    static Vector3D Rot(Vector3D v,Vector3D a,double x){return v*Math.Cos(x)+Vector3D.Cross(a,v)*Math.Sin(x)+a*Vector3D.Dot(a,v)*(1-Math.Cos(x));}
+    static double Deg(double a) => a*180/Math.PI;
+
+    static bool Unit(ref Vector3D v){double n=v.Length();if(!Finite(v)||!Finite(n)||n<1e-10)return false;v/=n;return true;}
+    static Vector3D Point(Vector3D p,Vector3D o,MatrixD f) => InFrame(p-o,f);
+    static Vector3D Rot(Vector3D v,Vector3D a,double x) => v*Math.Cos(x)+Vector3D.Cross(a,v)*Math.Sin(x)+a*Vector3D.Dot(a,v)*(1-Math.Cos(x));
     static double Angle(Vector3D a,Vector3D b){double n=a.Length()*b.Length();return n>1e-12&&Finite(n)?Math.Acos(Math.Max(-1,Math.Min(1,Vector3D.Dot(a,b)/n)))*180/Math.PI:double.NaN;}
 }
 
@@ -2404,21 +2413,21 @@ class PivotProbeTool
 // Tool components are occupied-cell regions. Opposed merge faces are cuts even
 // while disabled; adjacent parallel merge blocks are ordinary component edges.
 class ToolPortPair { public IMyShipMergeBlock Head, Stand; }
-// PB GetCubeBlock hides non-terminal tops. Learn only real mounted couplers;
-// parked poses are reconstructed in the tool marker frame and verified on attach.
+// The unnamed arm top is captured from an attached tool base. Saved geometry
+// is relative to the fixed arm reference; every other tool has a visible base.
 class ToolTopInfo
 {
-    const string Section = "AutoArm Couplers";
+    const string Section = "AutoArm Arm Tip";
     public IMyTerminalBlock Marker;
     public IMyMotorRotor Live;
     public long EntityId;
     public string Subtype;
     public MatrixD Local;
     public List<IMyTerminalBlock> Inventory;
-    public bool Closed { get { return Marker.Closed || (Live != null && Live.Closed); } }
-    public IMyCubeGrid CubeGrid { get { return Live == null ? Marker.CubeGrid : Live.CubeGrid; } }
-    public MatrixD WorldMatrix { get { return Live == null ? Local * Marker.WorldMatrix : Live.WorldMatrix; } }
-    public Vector3I Position { get { return Live == null ? CubeGrid.WorldToGridInteger(WorldMatrix.Translation) : Live.Position; } }
+    public bool Closed => Marker.Closed || (Live != null && Live.Closed);
+    public IMyCubeGrid CubeGrid => Live == null ? Marker.CubeGrid : Live.CubeGrid;
+    public MatrixD WorldMatrix => Live == null ? Local * Marker.WorldMatrix : Live.WorldMatrix;
+    public Vector3I Position => Live == null ? CubeGrid.WorldToGridInteger(WorldMatrix.Translation) : Live.Position;
     public IMyMechanicalConnectionBlock Base
     {
         get
@@ -2440,7 +2449,7 @@ class ToolTopInfo
         if (ini.Get(Section, "PB").ToInt64() != p.Me.EntityId || ini.Get(Section, "Arm").ToString() != ArmName) return null;
         string text = ini.Get(Section, "E" + marker.EntityId).ToString(); if (text.Length == 0) return null;
         var row = text.Split('|'); long id; var v = new double[9];
-        if (ini.Get(Section, "Format").ToInt32() != 1 || row.Length != 11 || !long.TryParse(row[0], out id) || id <= 0 || row[1].Length == 0) throw new Exception("Invalid coupler cache; clear AutoArm Couplers in Storage.");
+        if (ini.Get(Section, "Format").ToInt32() != 1 || row.Length != 11 || !long.TryParse(row[0], out id) || id <= 0 || row[1].Length == 0) throw new Exception("Invalid coupler cache; clear AutoArm Arm Tip in Storage.");
         for (int i = 0; i < 9; i++) if (!ReadDouble(row[i + 2], out v[i])) throw new Exception("Invalid coupler geometry.");
         var forward = new Vector3D(v[3], v[4], v[5]); var up = new Vector3D(v[6], v[7], v[8]);
         if (Math.Abs(forward.LengthSquared() - 1) > 1e-6 || Math.Abs(up.LengthSquared() - 1) > 1e-6 || Math.Abs(Vector3D.Dot(forward, up)) > 1e-6) throw new Exception("Invalid coupler axes.");
@@ -2458,25 +2467,18 @@ class ToolTopInfo
 }
 class ToolRegionScan
 {
-    Program P; IMyTerminalBlock Marker; IMyMotorStator Mount; IMyCubeGrid Grid;
-    long GridId; int Limit; string Axis, Fault, OtherBase;
+    Program P; IMyTerminalBlock Marker; IMyCubeGrid Grid;
+    long GridId; int Limit; string Axis, Fault;
     Queue<Vector3I> Pending = new Queue<Vector3I>();
-    HashSet<Vector3I> Cells = new HashSet<Vector3I>();
+    public HashSet<Vector3I> Cells = new HashSet<Vector3I>();
     public HashSet<long> Blocks = new HashSet<long>();
     public List<IMyShipMergeBlock> Merges = new List<IMyShipMergeBlock>();
-    public ToolTopInfo Top;
-    ToolTopInfo Known;
-    IMyMotorRotor Mounted;
-    List<IMyTerminalBlock> Inventory;
     static Vector3I[] Dirs = { Vector3I.UnitX, -Vector3I.UnitX, Vector3I.UnitY, -Vector3I.UnitY, Vector3I.UnitZ, -Vector3I.UnitZ };
-    public ToolRegionScan(Program p, IMyTerminalBlock marker, IMyMotorStator mount, int cellLimit, string mergeAxis, ToolTopInfo known, List<IMyTerminalBlock> inventory)
+    public ToolRegionScan(Program p, IMyTerminalBlock marker, IMyMotorStator mount, int cellLimit, string mergeAxis)
     {
-        P = p; Marker = marker; Mount = mount; Limit = Math.Min(4096, Math.Max(1, cellLimit)); Axis = mergeAxis;
+        P = p; Marker = marker; Limit = Math.Min(4096, Math.Max(1, cellLimit)); Axis = mergeAxis;
         if (marker == null || mount == null) { Fault = "Missing Head/Mount."; return; }
         Grid = marker.CubeGrid; GridId = Grid.EntityId;
-        Known = known; Inventory = inventory;
-        Mounted = mount.Top as IMyMotorRotor;
-        if (Mounted != null && Mounted.CubeGrid.EntityId != GridId) Mounted = null;
         if (Grid.GetCubeBlock(marker.Position) == null) { Fault = "Head cell missing."; return; }
         Cells.Add(marker.Position); Pending.Enqueue(marker.Position);
     }
@@ -2495,17 +2497,6 @@ class ToolRegionScan
             {
                 var merge = fat as IMyShipMergeBlock;
                 if (merge != null) { Vector3I d; if (!ToolGeometry.MergeDirection(merge, Axis, out d, out why)) { Fault = why; return false; } Merges.Add(merge); }
-                var top = fat as IMyMotorRotor;
-                if (top != null)
-                {
-                    var owner = top.Base;
-                    if (owner != null && owner.EntityId != Mount.EntityId) OtherBase = owner.CustomName;
-                    else
-                    {
-                        if (Top != null) return ToolGeometry.Fail(out why, Fault = "Multiple eligible tops.");
-                        Top = ToolTopInfo.Capture(Marker, top, Inventory);
-                    }
-                }
             }
             foreach (var d in Dirs)
             {
@@ -2522,26 +2513,13 @@ class ToolRegionScan
                 Cells.Add(next); Pending.Enqueue(next);
             }
         }
-        done = Pending.Count == 0;
-        if (done)
-        {
-            if (Mounted != null && Cells.Contains(Mounted.Position))
-            { if (Top != null && Top.EntityId != Mounted.EntityId) return ToolGeometry.Fail(out why, Fault = "Multiple eligible tops."); Top = ToolTopInfo.Capture(Marker, Mounted, Inventory); }
-            if (Top == null && Known != null)
-            {
-                if (Known.Closed || Known.CubeGrid.EntityId != GridId || !Cells.Contains(Known.Position) || !Grid.CubeExists(Known.Position)) return ToolGeometry.Fail(out why, Fault = "Cached top outside tool; mount again.");
-                if (Known.Base != null && Known.Base.EntityId != Mount.EntityId) return ToolGeometry.Fail(out why, Fault = "Top attached to " + Known.Base.CustomName);
-                Top = Known;
-            }
-            if (Top == null && OtherBase != null) return ToolGeometry.Fail(out why, Fault = "Top attached to " + OtherBase);
-        }
-        return true;
+        done = Pending.Count == 0; return true;
     }
 }
 static class ToolGeometry
 {
     public static Program Owner;
-    static bool Budget() { return Owner == null || Owner.Runtime.MaxInstructionCount <= 0 || Owner.Runtime.CurrentInstructionCount < Owner.Runtime.MaxInstructionCount * .6; }
+    static bool Budget() => Owner == null || Owner.Runtime.MaxInstructionCount <= 0 || Owner.Runtime.CurrentInstructionCount < Owner.Runtime.MaxInstructionCount * .6;
     public static bool Fail(out string why, string message) { why = message; return false; }
     static string[] Axes = { "right", "left", "up", "down", "forward", "backward" };
     static Vector3D[] Normals = { Vector3D.Right, Vector3D.Left, Vector3D.Up, Vector3D.Down, Vector3D.Forward, Vector3D.Backward };
@@ -2552,8 +2530,8 @@ static class ToolGeometry
     {
         public Vector3D Center, Normal, U, V; public double HalfU, HalfV;
     }
-    static bool Finite(double x) { return !double.IsNaN(x) && !double.IsInfinity(x); }
-    static bool Finite(Vector3D v) { return Finite(v.X) && Finite(v.Y) && Finite(v.Z); }
+
+
     public static bool MergeDirection(IMyShipMergeBlock b, string axis, out Vector3I d, out string why)
     {
         d = Vector3I.Zero; why = null; Vector3D n;
@@ -2574,10 +2552,7 @@ static class ToolGeometry
         if (Math.Abs(d.X) + Math.Abs(d.Y) + Math.Abs(d.Z) != 1) return Fail(out why, "Bad merge axis.");
         return true;
     }
-    public static bool OnFace(IMyShipMergeBlock b, Vector3I c, Vector3I d)
-    {
-        return d.X > 0 ? c.X == b.Max.X : d.X < 0 ? c.X == b.Min.X : d.Y > 0 ? c.Y == b.Max.Y : d.Y < 0 ? c.Y == b.Min.Y : d.Z > 0 ? c.Z == b.Max.Z : c.Z == b.Min.Z;
-    }
+    public static bool OnFace(IMyShipMergeBlock b, Vector3I c, Vector3I d) => d.X > 0 ? c.X == b.Max.X : d.X < 0 ? c.X == b.Min.X : d.Y > 0 ? c.Y == b.Max.Y : d.Y < 0 ? c.Y == b.Min.Y : d.Z > 0 ? c.Z == b.Max.Z : c.Z == b.Min.Z;
     static bool GetFace(IMyShipMergeBlock b, string axis, out Face f, out string why)
     {
         f = null; Vector3I d; if (!Budget()) return Fail(out why, GeometryBudgetMessage); if (!MergeDirection(b, axis, out d, out why)) return false;
@@ -2639,10 +2614,7 @@ static class ToolGeometry
         if (other == null || !PairLocked(new ToolPortPair { Head = a, Stand = other }, axis)) return false;
         partner = other; return true;
     }
-    public static bool TryDockPose(IMyTerminalBlock marker, List<IMyShipMergeBlock> own, List<IMyShipMergeBlock> rack, string axis, double clearance, out MatrixD pose, out List<ToolPortPair> pairs, out string why)
-    {
-        return TryDockPoseAt(marker, own, rack, axis, clearance, 0, out pose, out pairs, out why);
-    }
+    public static bool TryDockPose(IMyTerminalBlock marker, List<IMyShipMergeBlock> own, List<IMyShipMergeBlock> rack, string axis, double clearance, out MatrixD pose, out List<ToolPortPair> pairs, out string why) => TryDockPoseAt(marker, own, rack, axis, clearance, 0, out pose, out pairs, out why);
     public static bool TryDockPoseAt(IMyTerminalBlock marker, List<IMyShipMergeBlock> own, List<IMyShipMergeBlock> rack, string axis, double clearance, long primaryStandID, out MatrixD pose, out List<ToolPortPair> pairs, out string why)
     {
         pose = MatrixD.Identity; pairs = null; why = null;
@@ -2690,6 +2662,17 @@ static class ToolGeometry
         if (pairs == null) return Fail(out why, "No unique merge layout; check ports/mergeAxis.");
         return true;
     }
+    public static bool TryTopPose(IMyMotorStator mount, ToolTopInfo top, out MatrixD pose, out string why)
+    {
+        pose = MatrixD.Identity; MatrixD desiredBase;
+        if (!TryAttachPose(mount, top, out desiredBase, out why)) return false;
+        var delta = MatrixD.Invert(desiredBase) * mount.WorldMatrix;
+        var desiredTop = top.WorldMatrix * delta;
+        desiredTop.Translation = Vector3D.Transform(top.CubeGrid.GridIntegerToWorld(top.Position), delta);
+        pose = MatrixD.Invert(top.Local) * desiredTop;
+        if (!Finite(pose.Translation) || !Finite(pose.Up) || !Finite(pose.Forward)) return Fail(out why, "Bad arm coupling frame.");
+        return true;
+    }
     public static bool TryAttachPose(IMyMotorStator mount, ToolTopInfo top, out MatrixD pose, out string why)
     {
         pose = MatrixD.Identity; why = null;
@@ -2705,8 +2688,6 @@ static class ToolGeometry
         if ((index == 0 || index == 2) && top.CubeGrid.GridSizeEnum == MyCubeSize.Large) { lo = -.4; hi = .2; }
         double displacement = mount.Displacement;
         if (!Finite(displacement) || displacement < lo - .000001 || displacement > hi + .000001) return Fail(out why, "Attach would clamp displacement; use " + lo + " .. " + hi + ".");
-        if (top.Base != null && top.Base.EntityId != mount.EntityId) return Fail(out why, "Top belongs to another mount.");
-        if (top.Base != null && Vector3D.Dot(mount.WorldMatrix.Up, top.WorldMatrix.Up) < -.95) return Fail(out why, "Flipped coupling unsupported.");
         // Attach retains Angle and lock state. Preserve that phase for either
         // factory joint type instead of imposing a zero-angle head frame.
         double q = mount.Angle;
@@ -2737,10 +2718,11 @@ sealed class ToolSwapController
 {
     sealed class Profile
     {
-        public string Name, Prefix, MarkerName;
+        public string Name, Prefix, MarkerName, CouplerName;
         public readonly List<string> HeadNames = new List<string>(), StandNames = new List<string>();
         public IMyTerminalBlock Marker;
-        public ToolTopInfo Top;
+        public IMyMotorStator Coupler;
+        public double Angle;
         public readonly List<IMyShipMergeBlock> Heads = new List<IMyShipMergeBlock>(), Stands = new List<IMyShipMergeBlock>(), SafetyMerges = new List<IMyShipMergeBlock>();
     }
     readonly Program P;
@@ -2751,11 +2733,15 @@ sealed class ToolSwapController
     readonly List<IMyShipMergeBlock> Parks = new List<IMyShipMergeBlock>();
     readonly List<IMyMechanicalConnectionBlock> Upstream = new List<IMyMechanicalConnectionBlock>();
     readonly List<long> UpstreamTops = new List<long>();
-    IMyMotorStator Mount;
+    readonly List<IMyMotorStator> Clearing = new List<IMyMotorStator>();
+    IMyTerminalBlock Mount;
+    ToolTopInfo Tip;
+    bool Scanned;
     string MountName = "", Axis = "Auto", Phase = "Idle", Last = "Tools disabled";
     bool EnabledTools, ScanHead = true, ScanStand = true, ScanPark = true, ParkOnly, DockMoved, PassiveScan;
-    double Clearance = .5, Move = .05, Turn = 2, PosTol = .005, AngleTol = .2, Timeout = 30, Elapsed, RetainedAngle;
+    double Clearance = .5, Move = .05, Turn = 2, PosTol = .005, AngleTol = .2, Timeout = 30, Elapsed;
     int CellLimit = 4096, ScanIndex, Stable, ParkIndex;
+    double PhaseBudget;
     ToolRegionScan Scan;
     Profile Source, Destination;
     Profile Supported;
@@ -2764,20 +2750,23 @@ sealed class ToolSwapController
     List<ToolPortPair> Pairs = new List<ToolPortPair>();
     List<ToolPortPair> ParkedPairs;
     public bool Recovery { get; private set; }
-    public bool Busy { get { return Phase != "Idle"; } }
-    public bool Automatic { get { return Busy && Last == "Change"; } }
-    public bool Configured { get { return EnabledTools; } }
+    public bool Busy => Phase != "Idle";
+    public bool Automatic => Busy && Last == "Change";
+    public bool Configured => EnabledTools;
     public IMyTerminalBlock Endpoint
     {
         get
         {
             if (!EnabledTools || Mount == null || Mount.Closed) return null;
-            foreach (var h in Profiles)
+            if (Scanned) foreach (var h in Profiles)
                 if (Mounted(h) && !Connected(h.SafetyMerges) && h.Marker != null && !h.Marker.Closed) return h.Marker;
             return Mount;
         }
     }
-    public long IgnoredMount { get { return Endpoint == Mount && Mount != null ? Mount.EntityId : 0; } }
+    public long IgnoredMount
+    {
+        get { if (Endpoint == Mount) foreach (var h in Profiles) if (Mounted(h)) return h.Coupler.EntityId; return 0; }
+    }
     public ToolSwapController(Program p)
     {
         P = p;
@@ -2828,7 +2817,7 @@ sealed class ToolSwapController
             string section = "Tool" + (n + 1).ToString("00");
             string name = ini.Get(section, "Name").ToString(heads[n]).Trim();
             if (name.Length == 0 || !seen.Add(heads[n])) { why = "Empty or duplicate tool marker."; return false; }
-            var h = new Profile { Name = name, MarkerName = heads[n], Prefix = ini.Get(section, "StandPrefix").ToString("") };
+            var h = new Profile { Name = name, MarkerName = heads[n], CouplerName = ini.Get(section, "Mount").ToString().Trim(), Prefix = ini.Get(section, "StandPrefix").ToString("") };
             h.Marker = null;
             h.HeadNames.AddRange(Names(ini.Get(section, "HeadMerges").ToString()));
             h.StandNames.AddRange(Names(ini.Get(section, "StandMerges").ToString()));
@@ -2837,34 +2826,43 @@ sealed class ToolSwapController
         string mountName = ini.Get(ToolsSection, "Mount").ToString("").Trim();
         if (enabled && (mountName.Length == 0 || heads.Count == 0)) { why = "Tools require Mount and Heads."; return false; }
         Inventory.Clear(); P.GridTerminalSystem.GetBlocks(Inventory);
-        IMyMotorStator mount = null;
+        IMyTerminalBlock mount = null;
         if (mountName.Length > 0)
         {
             IMyTerminalBlock b;
             if (!Exact(mountName, out b, out why)) return false;
-            mount = b as IMyMotorStator;
-            if (mount == null || mount is IMyMotorSuspension) { why = "Mount requires rotor/hinge base."; return false; }
+            mount = b;
         }
         for (int n = 0; n < heads.Count; n++)
         {
             IMyTerminalBlock marker;
             if (!Exact(heads[n], out marker, out why)) return false;
             profiles[n].Marker = marker;
-            profiles[n].Top = ToolTopInfo.Load(P, marker, Inventory);
+            if (profiles[n].CouplerName.Length > 0 || enabled)
+            {
+                IMyTerminalBlock block;
+                if (!Exact(profiles[n].CouplerName, out block, out why)) return false;
+                var coupler = block as IMyMotorStator;
+                if (coupler == null || coupler is IMyMotorSuspension || coupler.CubeGrid.EntityId != marker.CubeGrid.EntityId || block == mount || (mount != null && coupler.CubeGrid.EntityId == mount.CubeGrid.EntityId))
+                { why = "Tool Mount must be its rotor/hinge base."; return false; }
+                for (int j = 0; j < n; j++) if (profiles[j].Coupler == coupler) { why = "Duplicate tool Mount."; return false; }
+                profiles[n].Coupler = coupler;
+            }
             string shortName = heads[n].StartsWith(ArmName + " - ", StringComparison.Ordinal) ? heads[n].Substring(ArmName.Length + 3) : heads[n];
             if (profiles[n].Prefix.Length == 0) profiles[n].Prefix = ArmName + " - " + shortName + " - StandMerge ";
         }
         EnabledTools = enabled; ScanHead = sh; ScanStand = ss; ScanPark = sp; Mount = mount; MountName = mountName; Axis = axis;
-        ZeroMount();
         Clearance = values[0]; Move = values[1]; Turn = values[2]; PosTol = values[3]; AngleTol = values[4]; Timeout = values[5]; CellLimit = limit;
         Profiles.Clear(); Profiles.AddRange(profiles); ParkNames.Clear(); ParkNames.AddRange(Names(ini.Get(ToolsSection, "ParkMerges").ToString()));
+        ZeroMount(); Scanned = false; Tip = null;
+        if (!RefreshTip(out why)) return false;
         Last = "Tools disabled";
         if (enabled)
         {
             PassiveScan = true;
             ScanIndex = 0; Scan = null; Source = Destination = Supported = null;
-            Parks.Clear(); Upstream.Clear(); UpstreamTops.Clear(); ParkedPairs = null; Last = "Scan";
-            Phase = "Scan"; Stable = 0; Elapsed = 0;
+            Parks.Clear(); Upstream.Clear(); UpstreamTops.Clear(); Clearing.Clear(); ParkedPairs = null; Last = "Scan";
+            Phase = "Scan"; Stable = 0; Elapsed = 0; PhaseBudget = Timeout;
         }
         else { Phase = "Idle"; PassiveScan = false; }
         why = ""; return true;
@@ -2885,21 +2883,37 @@ sealed class ToolSwapController
         ini.Set(ToolsSection, "ParkMerges", string.Join("\n", ParkNames)); ini.Set(ToolsSection, "MergeNormal", Axis);
         var values = new double[] { Clearance, Move, Turn, PosTol, AngleTol, Timeout };
         for (int n = 0; n < values.Length; n++) ini.Set(ToolsSection, NumberKeys[n], AutoSettings.Number(values[n])); ini.Set(ToolsSection, "CellLimit", CellLimit);
-        ini.SetComment(ToolsSection, "Heads", "Exact markers, one per line; ToolNN order. Tool <name/index>; Park [number]; ToolScan; SwapCancel. Finish OFF.");
+        ini.SetComment(ToolsSection, "Heads", "Exact markers, one per line; ToolNN order. Tool <name/index>; Park [number]; ToolScan; SwapCancel.");
+        ini.SetComment(ToolsSection, "Mount", "Arm-end reference; ToolNN.Mount = exact tool base name.");
         for (int n = 0; n < Profiles.Count; n++)
         {
             var h = Profiles[n]; string s = "Tool" + (n + 1).ToString("00");
-            ini.Set(s, "Name", h.Name); ini.Set(s, "HeadMerges", string.Join("\n", h.HeadNames)); ini.Set(s, "StandMerges", string.Join("\n", h.StandNames)); ini.Set(s, "StandPrefix", h.Prefix);
+            ini.Set(s, "Name", h.Name); ini.Set(s, "Mount", h.CouplerName); ini.Set(s, "HeadMerges", string.Join("\n", h.HeadNames)); ini.Set(s, "StandMerges", string.Join("\n", h.StandNames)); ini.Set(s, "StandPrefix", h.Prefix);
         }
     }
     bool Mounted(Profile h)
     {
-        if (h == null || Mount == null || Mount.Closed || !Mount.IsAttached || Mount.Top == null || h.Top == null || h.Top.Closed || Mount.Top.EntityId != h.Top.EntityId) return false;
-        var top = Mount.Top as IMyMotorRotor;
-        if (top == null || top.Base == null || top.Base.EntityId != Mount.EntityId || top.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId) return false;
-        h.Top.Live = top;
-        h.Top.Subtype = top.BlockDefinition.SubtypeName;
+        if (h == null || h.Coupler == null || h.Coupler.Closed || !h.Coupler.IsAttached || Tip == null || Tip.Closed) return false;
+        var top = h.Coupler.Top as IMyMotorRotor;
+        if (top == null || top.EntityId != Tip.EntityId || top.Base == null || top.Base.EntityId != h.Coupler.EntityId || top.CubeGrid.EntityId != Mount.CubeGrid.EntityId) return false;
+        Tip.Live = top; Tip.Subtype = top.BlockDefinition.SubtypeName;
         return true;
+    }
+    bool RefreshTip(out string why)
+    {
+        why = ""; if (Mount == null) return true;
+        ToolTopInfo found = null;
+        foreach (var h in Profiles)
+        {
+            var actual = h.Coupler == null ? null : h.Coupler.Top as IMyMotorRotor;
+            if (actual == null || actual.Base == null || actual.Base.EntityId != h.Coupler.EntityId || actual.CubeGrid.EntityId != Mount.CubeGrid.EntityId) continue;
+            if (found != null && found.EntityId != actual.EntityId) { why = "Multiple attached arm tips."; return false; }
+            found = ToolTopInfo.Capture(Mount, actual, Inventory);
+        }
+        if (found != null) Tip = found;
+        if (Tip == null) Tip = ToolTopInfo.Load(P, Mount, Inventory);
+        if (Tip == null || (!Tip.Closed && Tip.CubeGrid.EntityId == Mount.CubeGrid.EntityId && Mount.CubeGrid.CubeExists(Tip.Position))) return true;
+        why = "Arm tip outside reference grid."; return false;
     }
     static bool Connected(List<IMyShipMergeBlock> merges)
     { foreach (var b in merges) if (b != null && !b.Closed && b.IsConnected) return true; return false; }
@@ -2909,15 +2923,17 @@ sealed class ToolSwapController
         if (Busy || Recovery) { why = "ToolScan required before On."; return false; }
         if (EnabledTools)
         {
-            bool known = !Mount.IsAttached && Mount.Top == null;
-            foreach (var h in Profiles) if (Mounted(h)) known = true;
-            if (!known || Mount.PendingAttachment || P.Topology.Head != Endpoint) { why = "Mount changed; ToolScan."; return false; }
+            if (!TipOwned(out why)) return false;
+            foreach (var h in Profiles) if (h.Coupler.Closed || h.Marker.Closed || h.Coupler.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId || h.Coupler.CubeGrid.EntityId == Mount.CubeGrid.EntityId)
+            { why = "Tool body split."; return false; }
+            foreach (var h in Profiles) if (h.Coupler.PendingAttachment || (h.Coupler.IsAttached && !Mounted(h))) { why = "Tool Mount changed; ToolScan."; return false; }
+            if (!Scanned || P.Topology.Head != Endpoint) { why = "Mount changed; ToolScan."; return false; }
         }
         foreach (var h in Profiles) if (Mounted(h) && Connected(h.SafetyMerges)) { why = "Mounted tool still merged."; return false; }
         return true;
     }
     public void ZeroMount()
-    { if (EnabledTools && Mount != null && !Mount.Closed) Mount.TargetVelocityRad = 0; }
+    { if (EnabledTools) foreach (var h in Profiles) if (h.Coupler != null && !h.Coupler.Closed) h.Coupler.TargetVelocityRad = 0; }
     public bool Handle(string command)
     {
         string text = command.Trim(); int split = text.IndexOf(' '); string verb = (split < 0 ? text : text.Substring(0, split)).ToLowerInvariant(); string arg = split < 0 ? "" : text.Substring(split + 1).Trim();
@@ -2939,8 +2955,10 @@ sealed class ToolSwapController
         if (ParkOnly && arg.Length > 0 && (!int.TryParse(arg, out ParkIndex) || ParkIndex < 1))
         { P.Say("Park [positive number]."); return true; }
         P.StopMotion("Inspecting tools OFF"); Inventory.Clear(); P.GridTerminalSystem.GetBlocks(Inventory);
+        string why; if (!RefreshTip(out why)) { P.Say(why); return true; }
         PassiveScan = false;
-        ScanIndex = 0; Scan = null; Parks.Clear(); Upstream.Clear(); UpstreamTops.Clear();
+        Scanned = false;
+        ScanIndex = 0; Scan = null; Parks.Clear(); Upstream.Clear(); UpstreamTops.Clear(); Clearing.Clear();
         foreach (var h in Profiles) { h.Heads.Clear(); h.Stands.Clear(); h.SafetyMerges.Clear(); }
         Last = verb == "toolscan" ? "Scan" : "Change";
         Go("Scan"); P.Runtime.UpdateFrequency = UpdateFrequency.Update1; return true;
@@ -2969,10 +2987,10 @@ sealed class ToolSwapController
             var h = Profiles[ScanIndex];
             IMyTerminalBlock current;
             if (!Exact(h.MarkerName, out current, out why) || current.EntityId != h.Marker.EntityId) { why = "Marker changed; Reload."; return false; }
-            if (Scan == null) Scan = new ToolRegionScan(P, h.Marker, Mount, CellLimit, Axis, h.Top, Inventory);
+            if (Scan == null) Scan = new ToolRegionScan(P, h.Marker, h.Coupler, CellLimit, Axis);
             bool finished; if (!Scan.Step(out finished, out why)) { why = h.MarkerName + ": " + why; return false; }
             if (!finished) return true;
-            h.Top = Scan.Top;
+            if (!Scan.Blocks.Contains(h.Coupler.EntityId)) { why = "Tool Mount outside marker region."; return false; }
             foreach (var other in Profiles) if (other != h && Scan.Blocks.Contains(other.Marker.EntityId)) { why = "Tool regions overlap."; return false; }
             h.SafetyMerges.AddRange(Scan.Merges);
             if (ScanHead) h.Heads.AddRange(Scan.Merges);
@@ -2980,16 +2998,26 @@ sealed class ToolSwapController
             foreach (var merge in h.Heads) if (!Scan.Blocks.Contains(merge.EntityId)) { why = "Foreign head merge: " + merge.CustomName; return false; }
             if (ScanStand) Prefix(h.Prefix, h.Stands);
             foreach (var merge in h.Stands) if (h.Heads.Contains(merge)) { why = "Stand is on head: " + merge.CustomName; return false; }
-            for (int n = 0; n < ScanIndex; n++) if (h.Top != null && Profiles[n].Top != null && Profiles[n].Top.EntityId == h.Top.EntityId) { why = "Duplicate tool top."; return false; }
-            if (h.Top != null && h.Top.Live != null && h.Top.Live.Base != null && h.Top.Live.Base.EntityId == Mount.EntityId) h.Top.Save(P);
             ScanIndex++; Scan = null; return true;
         }
         if (!MergeNames(ParkNames, Parks, out why)) return false;
         if (ScanPark) Prefix(ArmName + " - ParkMerge ", Parks);
         foreach (var h in Profiles) foreach (var m in Parks) if (h.Heads.Contains(m)) { why = "Park is on head."; return false; }
-        done = true; return true;
+        Scanned = true; done = true; return true;
     }
-    void Go(string phase) { Phase = phase; Elapsed = 0; Stable = 0; if (phase != "Idle") P.Say("Tools " + phase + " OFF"); }
+    void Go(string phase)
+    {
+        Phase = phase; Elapsed = 0; Stable = 0; PhaseBudget = Timeout;
+        if (phase == ApproachDockPhase || phase == "Dock" || phase == RetreatPhase || phase == ApproachTopPhase || phase == AlignTopPhase)
+        {
+            MatrixD target = phase == ApproachDockPhase ? Approach : phase == "Dock" ? Dock : phase == RetreatPhase ? Retreat : phase == ApproachTopPhase ? TopApproach : Attach;
+            var anchor = phase == ApproachDockPhase || phase == "Dock" ? DockAnchor : phase == RetreatPhase ? RetreatAnchor : AttachAnchor;
+            target *= anchor.WorldMatrix; var current = Endpoint;
+            double trace = Vector3D.Dot(target.Right, current.WorldMatrix.Right) + Vector3D.Dot(target.Up, current.WorldMatrix.Up) + Vector3D.Dot(target.Forward, current.WorldMatrix.Forward);
+            PhaseBudget += Vector3D.Distance(target.Translation, current.GetPosition()) / Move + Math.Acos(Math.Max(-1, Math.Min(1, (trace - 1) * .5))) * 180 / Math.PI / Turn;
+        }
+        if (phase != "Idle") P.Say("Tools " + phase + " OFF");
+    }
     void Journal(string phase)
     {
         var s = AutoConfig.Saved(P.Storage); s.Set(SwapSection, "PB", P.Me.EntityId); s.Set(SwapSection, "Mount", Mount == null ? 0 : Mount.EntityId);
@@ -3008,6 +3036,13 @@ sealed class ToolSwapController
         Last = message; P.Say(message + " On required.");
     }
     bool Observe(bool condition) { if (!condition) { Stable = 0; return false; } return ++Stable >= 2; }
+    bool TipOwned(out string why)
+    {
+        why = ""; var owner = Tip == null ? null : Tip.Base;
+        if (owner == null) return true;
+        foreach (var h in Profiles) if (h.Coupler.EntityId == owner.EntityId && (Mounted(h) || (h == Source && Phase == "Detach") || (h == Destination && Phase == "Attach"))) return true;
+        why = "Unknown arm-tip owner."; return false;
+    }
     bool Guard(out string why)
     {
         why = "";
@@ -3016,40 +3051,49 @@ sealed class ToolSwapController
         {
             var b = Upstream[n]; if (b.Closed || !b.IsAttached || b.Top == null || b.Top.EntityId != UpstreamTops[n]) { why = "Upstream attachment changed."; return false; }
         }
-        if (Phase != "Scan" && Phase != "ScanSettle" && !Mount.IsAttached && Math.Abs(Mount.Angle - RetainedAngle) > .002)
-        { why = "Bare mount angle changed."; return false; }
-        foreach (var h in Profiles) if (h.Marker == null || h.Marker.Closed || h.Marker.CustomName != h.MarkerName || (h.Top != null && h.Top.Closed))
+        foreach (var h in Profiles) if (h.Marker == null || h.Marker.Closed || h.Marker.CustomName != h.MarkerName || h.Coupler == null || h.Coupler.Closed || !h.Coupler.IsFunctional || h.Coupler.CustomName != h.CouplerName || h.Coupler.CubeGrid.EntityId == Mount.CubeGrid.EntityId || h.Coupler.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId)
         { why = "Tool block changed."; return false; }
-        foreach (var h in Profiles) if (h.Top != null && h.Top.Base != null && h.Top.Base.EntityId != Mount.EntityId)
-        { why = "Tool attached elsewhere."; return false; }
+        foreach (var h in Profiles)
+        {
+            foreach (var merge in h.SafetyMerges) if (merge.Closed || merge.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId) { why = "Tool support body split."; return false; }
+            if (h.Coupler.IsAttached && !Mounted(h)) { why = "Tool attached elsewhere."; return false; }
+            if (Last == "Change" && Phase != "Scan" && Phase != "ScanSettle" && !(h == Source && Phase == "Detach") && !h.Coupler.IsAttached && Math.Abs(h.Coupler.Angle - h.Angle) > .002)
+            { why = "Tool Mount angle changed."; return false; }
+        }
+        if (Tip != null && (Tip.Closed || Tip.CubeGrid.EntityId != Mount.CubeGrid.EntityId || !Mount.CubeGrid.CubeExists(Tip.Position)))
+        { why = "Arm tip changed."; return false; }
+        if (!TipOwned(out why)) return false;
         if (ParkedPairs != null)
-            foreach (var pair in ParkedPairs) if (!ToolGeometry.PairLocked(pair, Axis)) { why = "Parked support lost."; return false; }
+            foreach (var pair in ParkedPairs) if (pair.Head.CubeGrid.EntityId != Source.Marker.CubeGrid.EntityId || !ToolGeometry.PairLocked(pair, Axis)) { why = "Parked support lost."; return false; }
         return true;
     }
     bool BeginChange(out string why)
     {
         why = "";
         foreach (var h in Profiles) if (Mounted(h)) Source = h;
-        if (Destination != null && Destination.Top == null) { why = "Mount " + Destination.Name + " once; ToolScan."; return false; }
-        if (Mount.IsAttached && Source == null) { why = "Unknown mounted top."; return false; }
-        if (Mount.PendingAttachment) { why = "Attachment pending."; return false; }
+        if (Tip == null) { why = "Fresh installation requires a tool attached."; return false; }
+        if (!TipOwned(out why)) return false;
+        foreach (var h in Profiles)
+        {
+            h.Angle = h.Coupler.Angle;
+            if (h.Coupler.PendingAttachment || (h.Coupler.IsAttached && h != Source)) { why = "Other tool Mount attached/pending."; return false; }
+        }
         if (Source == Destination && !ParkOnly) { Complete("Selected tool already mounted; OFF."); return true; }
         if (Source == null && ParkOnly) { Complete("Mount already bare; OFF."); return true; }
         int mountIndex = P.Topology.Groups.Count;
-        for (int n = 0; n < P.Topology.Groups.Count; n++) foreach (var member in P.Topology.Groups[n].M) if (member.B.EntityId == Mount.EntityId) mountIndex = n;
+        for (int n = 0; n < P.Topology.Groups.Count; n++) foreach (var member in P.Topology.Groups[n].M) if (Source != null && member.B.EntityId == Source.Coupler.EntityId) mountIndex = n;
         for (int n = 0; n < mountIndex; n++) foreach (var member in P.Topology.Groups[n].M)
-            if (member.B.EntityId != Mount.EntityId && !Upstream.Contains(member.B)) { Upstream.Add(member.B); UpstreamTops.Add(member.B.Top == null ? 0 : member.B.Top.EntityId); }
-        RetainedAngle = Mount.Angle;
-        if (Destination != null && Destination != Source && (Destination.Top.Base != null || !Connected(Destination.Heads))) { why = "Incoming tool must be parked/detached."; return false; }
+            if ((Source == null || member.B.EntityId != Source.Coupler.EntityId) && !Upstream.Contains(member.B)) { Upstream.Add(member.B); UpstreamTops.Add(member.B.Top == null ? 0 : member.B.Top.EntityId); }
+        if (Destination != null && Destination != Source && !Connected(Destination.Heads)) { why = "Incoming tool must be parked/detached."; return false; }
         if (Destination != null && Destination != Source)
         {
             var before = Pairs; var previous = Supported; MatrixD pose;
-            bool valid = FindSupport(Destination, out why) && ToolGeometry.TryAttachPose(Mount, Destination.Top, out pose, out why);
+            bool valid = FindSupport(Destination, out why) && ToolGeometry.TryTopPose(Destination.Coupler, Tip, out pose, out why);
             Pairs = before; Supported = previous;
             if (!valid) return false;
         }
         if (Source == null) return BeginIncoming(out why);
-        if (Vector3D.Dot(Mount.WorldMatrix.Up, Source.Top.WorldMatrix.Up) < -.95)
+        if (Vector3D.Dot(Source.Coupler.WorldMatrix.Up, Tip.WorldMatrix.Up) < -.95)
         { why = "Flipped mount; detach refused."; return false; }
         long anchor = 0;
         if (ParkOnly && ParkIndex > 0)
@@ -3074,6 +3118,7 @@ sealed class ToolSwapController
         Vector3D outward = Vector3D.TransformNormal((Vector3D)direction, Pairs[0].Stand.CubeGrid.WorldMatrix);
         foreach (var pair in Pairs)
         {
+            if (pair.Stand.CubeGrid.EntityId == Mount.CubeGrid.EntityId) { why = "Stand is on arm."; return false; }
             Vector3I other; if (!ToolGeometry.MergeDirection(pair.Stand, Axis, out other, out why)) return false;
             if (Vector3D.Dot(outward, Vector3D.TransformNormal((Vector3D)other, pair.Stand.CubeGrid.WorldMatrix)) < .99999)
             { why = "Parking faces must be parallel."; return false; }
@@ -3086,8 +3131,8 @@ sealed class ToolSwapController
     }
     bool AllLocked()
     {
-        if (Supported == null || Pairs.Count == 0 || Pairs.Count != Supported.Heads.Count) return false;
-        foreach (var pair in Pairs) if (!ToolGeometry.PairLocked(pair, Axis)) return false;
+        if (Supported == null || Pairs.Count == 0 || Pairs.Count != Supported.Heads.Count || Supported.Coupler.CubeGrid.EntityId != Supported.Marker.CubeGrid.EntityId) return false;
+        foreach (var pair in Pairs) if (pair.Head.CubeGrid.EntityId != Supported.Marker.CubeGrid.EntityId || pair.Stand.CubeGrid.EntityId == Mount.CubeGrid.EntityId || !ToolGeometry.PairLocked(pair, Axis)) return false;
         foreach (var m in Supported.SafetyMerges) if (m.IsConnected)
         { bool covered = false; foreach (var pair in Pairs) if (pair.Head.EntityId == m.EntityId) covered = true; if (!covered) return false; }
         return true;
@@ -3111,8 +3156,13 @@ sealed class ToolSwapController
         if (Destination == null) { Complete("Tool parked; bare mount OFF."); return true; }
         if (!FindSupport(Destination, out why))
         return false;
-        if (!ToolGeometry.TryAttachPose(Mount, Destination.Top, out Attach, out why)) return false;
-        TopApproach = Attach; TopApproach.Translation -= Attach.Up * Clearance;
+        return TargetTop(out why);
+    }
+    bool TargetTop(out string why)
+    {
+        why = "";
+        if (!ToolGeometry.TryTopPose(Destination.Coupler, Tip, out Attach, out why)) return false;
+        TopApproach = Attach; TopApproach.Translation += Destination.Coupler.WorldMatrix.Up * Clearance;
         AttachAnchor = Destination.Marker;
         var inverse = MatrixD.Invert(AttachAnchor.WorldMatrix); Attach *= inverse; TopApproach *= inverse;
         Go(ApproachTopPhase); return true;
@@ -3120,16 +3170,16 @@ sealed class ToolSwapController
     void SetRetreat()
     {
         RetreatAnchor = Source.Marker;
-        Retreat = Mount.WorldMatrix; Retreat.Translation -= Retreat.Up * Clearance;
+        Retreat = Mount.WorldMatrix; Retreat.Translation += Source.Coupler.WorldMatrix.Up * Clearance;
         Retreat *= MatrixD.Invert(RetreatAnchor.WorldMatrix);
     }
     bool MovePose(MatrixD pose, double dt, double obs, out bool settled, out string why)
     {
         settled = false; why = "";
-        if (Mount.PendingAttachment) { why = "Pending attachment; motion refused."; return false; }
+        foreach (var h in Profiles) if (h.Coupler.PendingAttachment) { why = "Pending attachment; motion refused."; return false; }
         if (Source != null && Mounted(Source) && Connected(Source.SafetyMerges)) { why = "Mounted support; motion refused."; return false; }
-        if ((Phase == RetreatPhase || Phase == ApproachTopPhase || Phase == AlignTopPhase) && (Mount.IsAttached || Mount.Top != null))
-        { why = "Unexpected attachment."; return false; }
+        if (Phase == RetreatPhase || Phase == ApproachTopPhase || Phase == AlignTopPhase)
+            foreach (var h in Profiles) if (h.Coupler.IsAttached || h.Coupler.Top != null) { why = "Unexpected attachment."; return false; }
         if ((Phase == ApproachDockPhase || Phase == "Dock") && !Mounted(Source)) { why = "Source attachment changed."; return false; }
         return P.ToolPoseStep(pose, dt, obs, Move, Turn, Phase == AlignTopPhase ? Math.Min(PosTol, .003) : PosTol,
             Phase == AlignTopPhase ? Math.Min(AngleTol, .2) : AngleTol, out settled, out why);
@@ -3141,8 +3191,8 @@ sealed class ToolSwapController
         {
             if (dt > 1 || observationDt > 1) { Cancel("Tool observation gap."); return; }
             Elapsed += observationDt; string why;
-            if (Elapsed > Timeout) { Cancel("Tool phase timeout: " + Phase); return; }
             if (!Guard(out why)) { Cancel(why); return; }
+            if (Elapsed > PhaseBudget) { Cancel("Tool phase timeout: " + Phase); return; }
             bool done, settled;
             if (Phase == ApproachDockPhase || Phase == "Dock" || Phase == RetreatPhase || Phase == ApproachTopPhase || Phase == AlignTopPhase)
             {
@@ -3159,10 +3209,27 @@ sealed class ToolSwapController
                 case "Scan":
                     if (!ScanStep(out done, out why)) { Cancel(why); return; }
                     if (!done) return;
-                    if (Mount.IsAttached) { bool known = false; foreach (var h in Profiles) if (Mounted(h)) known = true; if (!known) { Cancel("Unknown attached tool top."); return; } }
-                    if (Mount.PendingAttachment) { Cancel("Attachment pending."); return; }
+                    if (Tip != null) Tip.Save(P);
+                    foreach (var h in Profiles) if (h.Coupler.PendingAttachment)
+                    {
+                        if (h.Coupler.IsAttached || h.Coupler.Top != null || Last != "Scan" || PassiveScan) { Cancel("Explicit ToolScan required for pending Mount."); return; }
+                        Clearing.Add(h.Coupler);
+                    }
+                    if (Clearing.Count > 0)
+                    {
+                        Journal("ScanPending"); foreach (var coupler in Clearing) coupler.Detach(); Go("ScanPending"); return;
+                    }
                     if (!P.RebuildToolTopology(out why)) { Cancel(why); return; }
                     Go("ScanSettle"); return;
+                case "ScanPending":
+                    P.StopMotion("Clear pending OFF"); bool clear = true;
+                    foreach (var coupler in Clearing)
+                    {
+                        if (coupler.IsAttached || coupler.Top != null) { Cancel("Pending cancellation changed."); return; }
+                        if (coupler.PendingAttachment) clear = false;
+                    }
+                    if (!Observe(clear)) return;
+                    if (!P.RebuildToolTopology(out why)) { Cancel(why); return; } Go("ScanSettle"); return;
                 case "ScanSettle":
                     if (!P.SettleToolTopology(out why)) return;
                     if (Last == "Scan") Complete("Scanned; OFF.");
@@ -3180,11 +3247,12 @@ sealed class ToolSwapController
                     if (!Observe(AllLocked())) return;
                     if (DockMoved) SetRetreat();
                     ParkedPairs = new List<ToolPortPair>(Pairs);
-                    RetainedAngle = Mount.Angle; Journal("Detach"); Mount.Detach(); Go("Detach"); return;
+                    Source.Angle = Source.Coupler.Angle; Journal("Detach"); Source.Coupler.Detach(); Go("Detach"); return;
                 case "Detach":
                     P.StopMotion("Detach wait OFF");
                     if (!AllLocked()) { Cancel("Support lost."); return; }
-                    if (!Observe(!Mount.IsAttached && !Mount.PendingAttachment && Mount.Top == null)) return;
+                    if (!Observe(!Source.Coupler.IsAttached && !Source.Coupler.PendingAttachment && Source.Coupler.Top == null && Tip.Base == null)) return;
+                    Source.Angle = Source.Coupler.Angle;
                     if (!P.RebuildToolTopology(out why)) { Cancel(why); return; } Go("BareSettle"); return;
                 case "BareSettle":
                     if (P.SettleToolTopology(out why)) Go(RetreatPhase); return;
@@ -3193,17 +3261,18 @@ sealed class ToolSwapController
                 case ApproachTopPhase:
                     Go(AlignTopPhase); return;
                 case AlignTopPhase:
-                    if (Mount.IsAttached || Mount.PendingAttachment || Mount.Top != null) { Cancel("Mount no longer bare."); return; }
-                    P.StopMotion("Attaching OFF"); Journal("Attach"); Mount.Attach(); Go("Attach"); return;
+                    foreach (var h in Profiles) if (h.Coupler.IsAttached || h.Coupler.PendingAttachment || h.Coupler.Top != null) { Cancel("Arm tip no longer bare."); return; }
+                    P.StopMotion("Attaching OFF"); Journal("Attach"); Destination.Coupler.Attach(); Go("Attach"); return;
                 case "Attach":
                     P.StopMotion("Attach wait OFF");
                     if (!AllLocked()) { Cancel("Support lost."); return; }
-                    if (Mount.IsAttached && !Mounted(Destination)) { Cancel("Wrong top attached."); return; }
+                    if (Destination.Coupler.IsAttached && !Mounted(Destination)) { Cancel("Wrong arm tip attached."); return; }
                     MatrixD expected;
-                    if (!ToolGeometry.TryAttachPose(Mount, Destination.Top, out expected, out why)) { Cancel(why); return; }
+                    if (!ToolGeometry.TryTopPose(Destination.Coupler, Tip, out expected, out why)) { Cancel(why); return; }
                     bool aligned = Vector3D.DistanceSquared(Mount.GetPosition(), expected.Translation) < .000025 &&
                         Vector3D.Dot(Mount.WorldMatrix.Up, expected.Up) > .9999939 && Vector3D.Dot(Mount.WorldMatrix.Forward, expected.Forward) > .9999939;
-                    if (!Observe(Mounted(Destination) && !Mount.PendingAttachment && aligned)) return;
+                    if (!Observe(Mounted(Destination) && !Destination.Coupler.PendingAttachment && aligned)) return;
+                    Tip.Save(P);
                     Journal("ReleaseSupport"); foreach (var pair in Pairs) pair.Head.Enabled = false; Go("Release"); return;
                 case "Release":
                     P.StopMotion("Split wait OFF");
@@ -3222,7 +3291,8 @@ sealed class ToolSwapController
     string Info()
     {
         var b = new System.Text.StringBuilder("Tools " + (EnabledTools ? EnabledKey : "disabled") + "; " + Phase + (Recovery ? "; recovery OFF" : "") + "\n" + Last);
-        for (int n = 0; n < Profiles.Count; n++) { var h = Profiles[n]; b.Append("\n").Append(n + 1).Append(" ").Append(h.Name).Append(Mounted(h) ? " mounted" : h.Top == null ? " unlearned; mount once" : " detached").Append("; merges ").Append(h.Heads.Count).Append('/').Append(h.Stands.Count); }
+        b.Append(Tip == null ? "\nFresh install: attach one tool." : "\nArm tip recorded.");
+        for (int n = 0; n < Profiles.Count; n++) { var h = Profiles[n]; b.Append("\n").Append(n + 1).Append(" ").Append(h.Name).Append(Mounted(h) ? " mounted" : " detached").Append("; Mount ").Append(h.CouplerName).Append("; merges ").Append(h.Heads.Count).Append('/').Append(h.Stands.Count); }
         return b.ToString();
     }
 }
@@ -3306,11 +3376,10 @@ bool ToolPoseStep(MatrixD world, double dt, double observationDt, double moveCap
         !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0)
     { why = "Invalid tool movement interval or cap."; return false; }
     MatrixD basis = Topology.Base.WorldMatrix;
-    TargetP = InFrame(world.Translation - Topology.Base.GetPosition(), basis);
-    TargetF = InFrame(world.Forward, basis); TargetU = InFrame(world.Up, basis);
-    if (!Finite(TargetP.LengthSquared()) || !Orthonormalise(ref TargetF, ref TargetU))
+    if (!SetPoseTarget(InFrame(world.Translation - Topology.Base.GetPosition(), basis),
+        InFrame(world.Forward, basis), InFrame(world.Up, basis), 3))
     { why = "Invalid tool target frame."; return false; }
-    TargetValid = true; ToolDriveMoveCap = moveCap; ToolDriveTurnCap = turnCap * Math.PI / 180;
+    ToolDriveMoveCap = moveCap; ToolDriveTurnCap = turnCap * Math.PI / 180;
     ToolDriving = true;
     try { UpdateControl(Math.Min(dt, .1), observationDt); }
     finally { ToolDriving = false; }
