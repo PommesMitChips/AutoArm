@@ -27,11 +27,14 @@ examples/ToolSwap.ini is a complete starter with two profiles and explicit names
 Rename the example mount and markers to actual blocks, or rename those blocks
 to match. Its empty actuator table regenerates current physical groups.
 
-Default stand names are:
+With markers named exactly Arm 1 - Head 1 / Arm 1 - Head 2, automatic stand
+names are:
   Arm 1 - Head 1 - StandMerge 1
   Arm 1 - Head 1 - StandMerge 2
   Arm 1 - Head 2 - StandMerge 1
 Optional generic park ports are Arm 1 - ParkMerge 1, Arm 1 - ParkMerge 2, etc.
+The current ToolSwap.ini instead uses full drill/welder marker names and explicit
+unnumbered merge lists. Those lists avoid automatic stand-prefix inference.
 Head-side merges are found inside each tool's occupied-cell region. You can
 instead set HeadMerges and StandMerges to exact names in each ToolNN section,
 and ParkMerges in Tools. These lists use the same one-name-per-line syntax.
