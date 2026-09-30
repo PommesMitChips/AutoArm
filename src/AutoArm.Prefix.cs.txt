@@ -1,0 +1,7 @@
+// AutoArm: auto-discovered mixed mechanical arm controller.
+// Change only this value in code. All detected group participation settings are
+// generated in this programmable block's Custom Data.
+const string ArmName = "Arm 1";
+
+// ===== IMPLEMENTATION =====
+const string ControllerBuildVersion = "2.5";

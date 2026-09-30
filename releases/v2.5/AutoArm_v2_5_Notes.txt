@@ -1,0 +1,103 @@
+AutoArm 2.5 — Tool Head Swap
+
+DELIVERY
+Paste the entire AutoArm_v2_5_Compact.txt into the game's programmable block.
+Only ArmName needs editing in code. The compact script is 99,883 characters:
+117 characters remain under the 100,000 limit. Longer arm names consume that
+space. AutoArm_v2_5_Source.txt is the readable development source.
+
+UPGRADE
+Stop the arm before replacing the script. Custom Data requires Format=3.
+An older, missing or invalid format is rejected: delete Custom Data, then Reload
+to generate the current configuration. There is no Custom Data migration.
+Record any settings you want to re-enter before deleting the old data.
+Saved Home and unrelated PB Storage are preserved; Home still requires a
+matching arm fingerprint. Never paste another PB's populated actuator table:
+its identities belong to that PB. Clear Actuators to generate fresh defaults.
+
+TOOLS SETUP
+Tools are disabled by default. Enable them in [Tools], set Mount to the exact
+unique name of the detachable rotor/hinge BASE, and list exact head-marker
+names in Heads, one per INI continuation line. The detachable mount must be
+the last coupler between the upstream arm and the tool assembly. A tool has
+one unambiguous eligible rotor/hinge top. Settings in Tool01, Tool02, etc.
+correspond to the order of Heads. Name is a convenient toolbar alias.
+
+AutoArm_v2_5_ToolSwap_Config_Example.ini is a complete starter with two profiles.
+Rename the example mount and markers to actual blocks, or rename those blocks
+to match. Its empty actuator table regenerates current physical groups.
+
+Default stand names are:
+  Arm 1 - Head 1 - StandMerge 1
+  Arm 1 - Head 1 - StandMerge 2
+  Arm 1 - Head 2 - StandMerge 1
+Optional generic park ports are Arm 1 - ParkMerge 1, Arm 1 - ParkMerge 2, etc.
+Head-side merges are found inside each tool's occupied-cell region. You can
+instead set HeadMerges and StandMerges to exact names in each ToolNN section,
+and ParkMerges in Tools. These lists use the same one-name-per-line syntax.
+ScanHeadMerges, ScanStandMerges and ScanParkMerges disable automatic adoption;
+explicit lists still work. Facing-merge inspection remains necessary to prove
+the tool boundary and to detect connected support.
+
+The scan walks occupied cube cells from the marker. Only adjacent opposed
+merge faces cut the walk: tool merge >< stand merge. Parallel or non-facing
+merges do not create a barrier. An armor connection around the merge interface
+defeats that boundary and may prevent the grids separating; AutoArm refuses
+ambiguous tools or waits for a real split rather than declaring success.
+CellLimit bounds the region (4096 maximum). Modded merge normals can use the
+MergeNormal direction override; coupler geometry still has to be supported.
+
+COMMANDS
+Reload: validate config and scan; remains OFF.
+ToolInfo: report profiles, support and current operation/recovery state.
+Tool Head 1 / Tool Head 2: select the configured alias.
+Tool 1 / Tool 2: select the profile index.
+Tool <exact marker name>: select the exact marker.
+Park: park the current tool using generic ParkMerge ports.
+Park 2: require the primary generic port with suffix 2.
+ToolScan: explicitly rescan and reconcile a stopped/recovered setup.
+SwapCancel / Stop / Off: stop and retain existing mechanical/support state.
+
+Swapping first aligns the current tool's merge ports with its stand, verifies
+all selected ports are locked, and detaches the configured mount. The bare arm
+then approaches the incoming tool's exact rotor/hinge top, attaches, verifies
+the reciprocal identities and coupling pose, and disables only that selected
+tool's head-side merges. Stand, park and unrelated merges are not switched off.
+It waits for actual separation, rebuilds the endpoint/groups and finishes OFF.
+Run On when you want manual control again. There is no automatic pilot resume.
+
+Head, stand and park merge sets are optional for ordinary manual use. Automatic
+parking/pickup needs proven compatible support: it refuses to release a tool
+without that proof. Pilot input cancels automatic motion, including when manual
+Speed is zero. A cancelled/interrupted operation requires explicit ToolScan;
+a passive startup scan does not clear the recovery interlock.
+
+CONTROL RETAINED
+HEAD uses live head axes. HRZ uses the active cockpit's Forward/Left/Up.
+VRT uses cockpit Up/Left/Backward: W/S are screen Up/Down; C/Space are depth.
+Config.MovementMode chooses the default; Mode HEAD|HRZ|VRT changes it at runtime.
+Translation retains the orientation target; Q/E rolls about the head. Optional
+mouse pitch/yaw uses the view frame. Toolbar actions use their text names.
+Bounded load bias counters constant drift; opposing feedback is limited to
+half the live pilot demand. Physical limits, synchronization and acceleration
+caps still apply. Actuator preferences survive expected tool grid-ID changes.
+
+LIMITS AND VALIDATION
+Automatic pickup supports the installed vanilla rotor/hinge families with
+known attachment geometry. Unknown/modded couplers, incompatible families,
+flipped couplers or displacement that would clamp are refused. No teaching
+mount is required for supported vanilla geometry. General closed linkages and
+variable-ratio parallel branches remain unsupported.
+
+ApproachDistance provides approach clearance, not obstacle avoidance. There
+is no collision checking or path planning. Test with clear routes and low
+speeds; volumetric restrictions are still a later feature.
+
+Installed SE API/C# 6 compatibility passes. The packed script preserves the
+source token stream under renaming and has identical method IL. Simulated PB
+regressions pass 174,262 assertions, including facing-merge boundaries, complete
+swap/park sequences, partial support, wrong tops, cancellation/restart, actual
+coupling-pose gates, Home external-attachment stop, startup persisted-drive
+stop, gravity bias, manual input priority and HEAD/HRZ/VRT controls. Geometry
+and actuator models were checked locally. Live SE physics, merge timing under
+load and real-world clearance have not been tested in-game.

@@ -1,0 +1,239 @@
+// Human-facing configuration; physical row identities live in PB Storage.
+enum PilotMode { HEAD, HRZ, VRT }
+
+sealed class AutoSettings
+{
+    public static readonly string[] Keys = { "HeadSpeed", "HeadTurnSpeed", "StepAngle", "JointSpeed", "PistonSpeed", "HomeJointSpeed", "HomePistonSpeed", OrientationToleranceKey, "JointAcceleration", "PistonAcceleration", "PositionCorrectionCap", "OrientationCorrectionCap", "TargetLead", "PositionIntegralGain", "OrientationIntegralGain", "PositionIntegralCap", "OrientationIntegralCap", "MouseSensitivity" };
+    public static readonly double[] Defaults = { .20, 5, 5, .50, .20, .50, .20, 3, 1, .40, .20, 5, 1.50, .50, .25, .20, 5, .025 };
+    static readonly double[] Min = { 0, .01, .01, .01, .01, .01, .01, 0, .01, .01, 0, 0, .01, 0, 0, 0, 0, 0 };
+    static readonly double[] Max = { 5, 30, 180, 5, 2, 5, 2, 30, 20, 10, 5, 30, 10, 5, 5, 5, 30, 10 };
+    static readonly string[] Units = { "Head translation m/s", "Head rotation deg/s", "Toolbar step deg", "Rotor/hinge RPM cap", "Piston m/s cap", "Home RPM cap", "Home m/s cap", "Idle orientation band deg", "Rotor RPM/s cap", "Piston m/s^2 cap", "Correction m/s cap", "Correction deg/s cap", "Target lead m", "Bias gain 1/s^2; 0=off", "Angular bias gain 1/s^2; 0=off", "Bias m/s cap", "Bias deg/s cap", "Mouse scale; total rotation capped" };
+    public static readonly string[] DefaultBindings = { "PitchUp", "Back", "PitchDown", "Left", "Down", "Right", "YawLeft", ForwardName, "YawRight" };
+    public readonly double[] V = (double[])Defaults.Clone();
+    public bool Keyboard = true, Roll = true, Mouse;
+    public PilotMode Mode = PilotMode.HEAD;
+
+    public bool Read(MyIni ini, out string why)
+    {
+        why = "";
+        if (ini.ContainsKey(ConfigSection, MovementModeKey) && !ReadMode(ini.Get(ConfigSection, MovementModeKey).ToString(), out Mode))
+        { why = "MovementMode must be HEAD, HRZ or VRT."; return false; }
+        for (int i = 0; i < Keys.Length; i++)
+        {
+            double v;
+            if (!ini.ContainsKey(ConfigSection, Keys[i])) continue;
+            if (!ini.Get(ConfigSection, Keys[i]).TryGetDouble(out v) || !Finite(v) || v < Min[i] || v > Max[i])
+            { why = Keys[i] + " must be finite and in " + Min[i] + ".." + Max[i] + " (" + Units[i] + ")."; return false; }
+            V[i] = v;
+        }
+        if (ini.ContainsKey(ConfigSection, KeyboardKey) && !ini.Get(ConfigSection, KeyboardKey).TryGetBoolean(out Keyboard))
+        { why = "ReadKeyboard must be true or false."; return false; }
+        if (ini.ContainsKey(ConfigSection, RollKey) && !ini.Get(ConfigSection, RollKey).TryGetBoolean(out Roll))
+        { why = "ReadRoll must be true or false."; return false; }
+        if (ini.ContainsKey(ConfigSection, MouseKey) && !ini.Get(ConfigSection, MouseKey).TryGetBoolean(out Mouse))
+        { why = "ReadMouse must be true or false."; return false; }
+        return true;
+    }
+
+    public void Write(MyIni ini)
+    {
+        ini.Set(ConfigSection, MovementModeKey, Mode.ToString());
+        ini.SetComment(ConfigSection, MovementModeKey, "HEAD=head, HRZ=cockpit side, VRT=cockpit top/bottom. Reload applies defaults.");
+        for (int i = 0; i < Keys.Length; i++)
+        {
+            ini.Set(ConfigSection, Keys[i], Number(V[i]));
+            ini.SetComment(ConfigSection, Keys[i], Units[i] + "; " + Min[i] + ".." + Max[i]);
+        }
+        ini.Set(ConfigSection, KeyboardKey, Keyboard); ini.Set(ConfigSection, RollKey, Roll);
+        ini.Set(ConfigSection, MouseKey, Mouse);
+        ini.SetComment(ConfigSection, KeyboardKey, "Game movement input.");
+        ini.SetComment(ConfigSection, RollKey, "Q/E: Head roll.");
+        ini.SetComment(ConfigSection, MouseKey, "Optional view pitch/yaw.");
+        for (int i = 1; i <= 9; i++) ini.Delete(ConfigSection, "Bind" + i);
+    }
+    public static bool ReadMode(string text, out PilotMode mode)
+    {
+        mode = PilotMode.HEAD;
+        switch (text.Trim().ToUpperInvariant())
+        {
+            case "HEAD": return true;
+            case "HRZ": mode = PilotMode.HRZ; return true;
+            case "VRT": mode = PilotMode.VRT; return true;
+            default: return false;
+        }
+    }
+    public static string Number(double v) { return v.ToString("R", System.Globalization.CultureInfo.InvariantCulture); }
+}
+
+static class AutoConfig
+{
+    public const int Format = 3;
+    const string Identity = "AutoArm Config";
+    const string Header = "Name | Kind | Translation | Orientation";
+
+    public static bool ReadCurrent(string text, out MyIni ini, out string why)
+    {
+        ini = new MyIni(); why = ""; MyIniParseResult error;
+        if (!ini.TryParse(text ?? "", out error))
+        { why = "Custom Data is not valid INI (" + error + "). Fix it or delete Custom Data."; return false; }
+        if (string.IsNullOrWhiteSpace(text))
+        { ini.Set(ArmSection, "Arm", ArmName); ini.Set(ArmSection, "Format", Format); return true; }
+        int format;
+        if (!int.TryParse(ini.Get(ArmSection, "Format").ToString(), out format) || format != Format)
+        { why = "Custom Data Format must be " + Format + ". Delete Custom Data."; return false; }
+        if (ini.Get(ArmSection, "Arm").ToString() != ArmName)
+        { why = "Custom Data belongs to a different arm. Delete Custom Data and regenerate it for " + ArmName + "."; return false; }
+        return true;
+    }
+
+    public static MyIni Saved(string text)
+    {
+        var ini = new MyIni(); MyIniParseResult error;
+        if (!ini.TryParse(text ?? "", out error)) { ini.Clear(); ini.EndContent = text ?? ""; }
+        return ini;
+    }
+
+    public static void EnsureDefaults(Program p)
+    {
+        if (!string.IsNullOrWhiteSpace(p.Me.CustomData)) return;
+        MyIni ini; string why;
+        if (!ReadCurrent("", out ini, out why)) throw new Exception(why);
+        new AutoSettings().Write(ini); Instructions(ini);
+        if (p.Tools != null) p.Tools.WriteConfig(ini);
+        ini.Set(ConfigSection, "Actuators", "");
+        p.Me.CustomData = ini.ToString();
+    }
+
+    public static bool LoadOrGenerate(Program p, AutoTopology t, string customData,
+        out string updated, out bool changed, out string why, bool captureToolWeights = false)
+    {
+        updated = customData ?? ""; changed = false; why = "";
+        MyIni ini;
+        if (!ReadCurrent(updated, out ini, out why)) throw new Exception(why);
+        if (t == null || t.Groups.Count == 0 || t.Fingerprint.Length == 0)
+            return Refuse(t, "Discover a valid arm before loading actuator settings.", out why);
+        var settings = new AutoSettings();
+        if (!settings.Read(ini, out why)) return Refuse(t, why, out why);
+        var move = new Dictionary<string, double>(); var turn = new Dictionary<string, double>();
+        var current = new HashSet<string>(); foreach (var g in t.Groups) current.Add(g.Sig);
+        var saved = Saved(p.Storage);
+        string table = ini.Get(ConfigSection, "Actuators").ToString("").Trim();
+        if (table.Length > 0)
+        {
+            var map = new Dictionary<string, string>(); var signatures = new HashSet<string>();
+            if (saved.Get(Identity, "Arm").ToString() != t.Arm || saved.Get(Identity, "PB").ToInt64() != p.Me.EntityId || saved.Get(Identity, "Format").ToInt32() != 1)
+                return Refuse(t, "Actuator identity cache is missing. Clear Actuators and Reload to regenerate defaults.", out why);
+            foreach (string raw in saved.Get(Identity, "Rows").ToString().Split('\n'))
+            {
+                string[] row = raw.Trim().Split('|');
+                if (row.Length != 2 || row[0].Trim().Length == 0 || map.ContainsKey(row[0]) || !Signature(row[1]) || !signatures.Add(row[1]))
+                    return Refuse(t, "Actuator identity cache is corrupt. Clear Actuators and Reload.", out why);
+                map.Add(row[0], row[1]);
+            }
+            var seen = new HashSet<string>(); bool header = false;
+            foreach (string raw in table.Split('\n'))
+            {
+                string line = raw.Trim(); if (line.Length == 0) continue;
+                if (!header) { if (line != Header) return Refuse(t, "Actuators needs its four-column header.", out why); header = true; continue; }
+                string[] row = line.Split('|'); string sig; double m, r;
+                for (int i = 0; i < row.Length; i++) row[i] = row[i].Trim();
+                if (row.Length != 4 || !map.TryGetValue(row[0], out sig) || !seen.Add(row[0]))
+                    return Refuse(t, "Unknown, duplicate or malformed actuator row. Edit only the two weights.", out why);
+                if (row[1] != Kind(sig) || !ReadDouble(row[2], out m) ||
+                    !ReadDouble(row[3], out r) || !Valid(m) || !Valid(r))
+                    return Refuse(t, "Actuator " + row[0] + " needs finite Translation/Orientation in 0..10 and its generated Kind.", out why);
+                move.Add(sig, m); turn.Add(sig, r);
+            }
+            foreach (var pair in map) if (current.Contains(pair.Value) && !seen.Contains(pair.Key))
+                return Refuse(t, "Missing actuator row: " + pair.Key + ". Restore it or clear Actuators.", out why);
+        }
+        if (captureToolWeights)
+        {
+            p.RememberToolWeights(false);
+            if (table.Length == 0) p.ToolWeights.Clear();
+            foreach (var item in move)
+            {
+                string[] parts = item.Key.Split(':'); string key = parts[0];
+                for (int i = 1; i < parts.Length; i++) key += ":" + parts[i].Substring(0, parts[i].IndexOf('@'));
+                p.ToolWeights[key] = new double[] { item.Value, turn[item.Key] };
+            }
+            return true;
+        }
+        settings.Write(ini); Instructions(ini);
+        if (p.Tools != null) p.Tools.WriteConfig(ini);
+        var values = new List<double[]>();
+        foreach (var g in t.Groups)
+        {
+            double m, r; double[] old;
+            if (p.Tools != null && p.Tools.Configured && p.ToolWeights.TryGetValue(p.ToolGroupKey(g), out old)) { m = old[0]; r = old[1]; }
+            else { if (!move.TryGetValue(g.Sig, out m)) m = 1; if (!turn.TryGetValue(g.Sig, out r)) r = 1; }
+            values.Add(new double[] { m, r });
+        }
+        string state; string text = Render(p, t, ini, saved, values, out state);
+        if (text != updated) p.Me.CustomData = text;
+        if (state != p.Storage) p.Storage = state;
+        for (int i = 0; i < t.Groups.Count; i++) { t.Groups[i].MoveW = values[i][0]; t.Groups[i].TurnW = values[i][1]; }
+        p.ApplySettings(settings); changed = text != updated; updated = text;
+        t.Ready = false; t.ZeroOwned(); why = "Configuration loaded; arm remains Off until On."; return true;
+    }
+
+    // Expected swap boundaries already validated the physical groups and copied
+    // their preferences. Rewrite identity rows without reloading runtime defaults.
+    public static void UpdateGroups(Program p)
+    {
+        MyIni ini; string why;
+        if (!ReadCurrent(p.Me.CustomData, out ini, out why)) throw new Exception(why);
+        var values = new List<double[]>();
+        foreach (var g in p.Topology.Groups) values.Add(new double[] { g.MoveW, g.TurnW });
+        string state; string text = Render(p, p.Topology, ini, Saved(p.Storage), values, out state);
+        if (text != p.Me.CustomData) p.Me.CustomData = text;
+        if (state != p.Storage) p.Storage = state;
+    }
+
+    static string Render(Program p, AutoTopology t, MyIni ini, MyIni saved, List<double[]> values, out string state)
+    {
+        ini.Set(ArmSection, "Arm", t.Arm); ini.Set(ArmSection, "Format", Format);
+        var table = new System.Text.StringBuilder(Header); var identities = new System.Text.StringBuilder();
+        for (int i = 0; i < t.Groups.Count; i++)
+        {
+            var g = t.Groups[i]; string name = (i + 1).ToString("00") + ". ";
+            for (int j = 0; j < g.M.Count; j++)
+            {
+                if (j > 0) name += " + ";
+                name += g.M[j].B.CustomName.Replace('|', '/').Replace('\r', ' ').Replace('\n', ' ').Trim();
+            }
+            name = name.TrimEnd();
+            table.Append('\n').Append(name).Append(" | ").Append(Kind(g.Sig)).Append(" | ").Append(AutoSettings.Number(values[i][0])).Append(" | ").Append(AutoSettings.Number(values[i][1]));
+            if (i > 0) identities.Append('\n'); identities.Append(name).Append('|').Append(g.Sig);
+        }
+        ini.Set(ConfigSection, "Actuators", table.ToString()); ini.SetComment(ConfigSection, "Actuators", "Edit only the two weights (0..10), then Reload.");
+        saved.DeleteSection(Identity); saved.Set(Identity, "Format", 1); saved.Set(Identity, "Arm", t.Arm); saved.Set(Identity, "PB", p.Me.EntityId); saved.Set(Identity, "Rows", identities.ToString());
+        state = saved.ToString(); return ini.ToString();
+    }
+
+    static void Instructions(MyIni ini)
+    {
+        ini.Set("Instructions", "Setup", "Edit Config, Reload, Check, On. Base: '" + ArmName + " - Base'; Head: '" + ArmName + " - Head'.\nWeights 0..10 are preferences. Edit only the two weights; blank Actuators resets them.\nDifferent Format: delete Custom Data. IDs: Info/Joints.");
+        ini.Set("Instructions", "Commands", "On / Off / Stop / Toggle / Hold / Check / Rescan / Reload\nInfo / Help / Settings / Status / Joints / Bindings / Version\nSetHome / GoHome / HomeInfo\nForward / Back / Left / Right / Up / Down; Face <direction>\nPitchUp / PitchDown / YawLeft / YawRight / RollLeft / RollRight\nStep Yaw|Pitch|Roll <degrees>; Yaw / Pitch / Roll <degrees>\nMode HEAD|HRZ|VRT; ReadMouse / ReadKeyboard / ReadRoll On|Off|Toggle\nSpeed <m/s>; TurnSpeed <deg/s>; StepSize <deg>; JointSpeed <RPM>; PistonSpeed <m/s>\nHomeSpeed <RPM> <m/s>; OrientationTolerance <deg>\nTool <name/index>; Park [port number]; ToolScan / ToolInfo / SwapCancel\nPivotProbe Start <group>; PivotProbe End / Report / Reset\nSemicolons separate commands. Reload restores Config defaults.");
+        ini.Set("Instructions", "Bindings", "Toolbar Run: PitchUp Back PitchDown Left Down Right YawLeft Forward YawRight.\nHEAD=head axes; HRZ=cockpit axes; VRT=W/S screen Up/Down, C/Space into/out of view.\nTranslation holds orientation; Q/E Head roll; optional mouse view rotation.\nTool <name> swaps; Park uses ParkMerge; SwapCancel/Stop retains support.");
+    }
+
+    static string Kind(string sig) { return sig.StartsWith("R", StringComparison.Ordinal) ? "Rotor/Hinge" : "Piston"; }
+    static bool Signature(string sig)
+    {
+        string[] parts = sig.Split(':');
+        if (parts.Length < 2 || (parts[0] != "R" && parts[0] != "P")) return false;
+        var ids = new HashSet<long>();
+        for (int i = 1; i < parts.Length; i++)
+        {
+            string part = parts[i]; int at = part.IndexOf('@'), to = part.IndexOf('>'); long id, a, b;
+            if (at < 2 || to <= at + 1 || (part[at - 1] != '+' && part[at - 1] != '-') ||
+                !long.TryParse(part.Substring(0, at - 1), out id) || !long.TryParse(part.Substring(at + 1, to - at - 1), out a) ||
+                !long.TryParse(part.Substring(to + 1), out b) || id == 0 || a == 0 || b == 0 || a == b || !ids.Add(id)) return false;
+        }
+        return true;
+    }
+    static bool Valid(double v) { return !double.IsNaN(v) && !double.IsInfinity(v) && v >= 0 && v <= 10; }
+    static bool Refuse(AutoTopology t, string text, out string why)
+    { why = text + " Custom Data and saved state were left untouched."; if (t != null) { t.Ready = false; t.ZeroOwned(); } return false; }
+}

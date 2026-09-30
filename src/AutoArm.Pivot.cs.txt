@@ -1,0 +1,116 @@
+// Passive RAM-only pivot probe. The player supplies all motion. Configuration
+// and Storage are untouched; existing topology-fault handling can stop drives.
+class PivotProbeTool
+{
+    const double MinA=Math.PI/180,MaxA=15*Math.PI/180,OtherA=.1*Math.PI/180;
+    const double PairA=.1*Math.PI/180,OtherP=.001,MinTravel=.01,AxisCos=.999993908;
+    readonly Program P; readonly AutoTopology T; readonly List<Result> R=new List<Result>();
+    Shot A; int G=-1; string Fingerprint="";
+    class Shot { public Vector3D P,F,U; public double[][] Q; public Vector3D[] Axis,Base,Top; }
+    public class Result
+    {
+        public int Group; public double Delta,Travel,Orientation;
+        public readonly double[] Error=new double[3],Spread=new double[3]; public string Verdict;
+    }
+    public IList<Result> Trials { get { return R.AsReadOnly(); } }
+    public PivotProbeTool(Program owner,AutoTopology topology){P=owner;T=topology;}
+
+    public void Run(string[] w)
+    {
+        int n=w.Length>0&&w[0].Equals("pivotprobe",StringComparison.OrdinalIgnoreCase)?1:0;
+        if(w.Length<=n){Help();return;} string c=w[n].ToLowerInvariant();
+        if(c=="start"&&w.Length==n+2){int g;if(!int.TryParse(w[n+1],out g)){Say("Group must be an integer.");return;}Start(g-1);return;}
+        if(c=="end"&&w.Length==n+1){End();return;} if(c=="report"&&w.Length==n+1){Report();return;}
+        if(c=="reset"&&w.Length==n+1){Clear();R.Clear();Say("PivotProbe RAM cleared; no blocks changed.");return;} Help();
+    }
+    void Start(int g)
+    {
+        string why;if(!Ready(out why)){Say("PivotProbe refused: "+why);return;}
+        if(A!=null){Say("A Start snapshot exists; run End or Reset.");return;}
+        if(g<0||g>=T.Groups.Count){Say("Group must be 1.."+T.Groups.Count+".");return;}
+        if(!T.Groups[g].Rotary){Say("Only rotary/hinge groups have a pivot.");return;}
+        Shot s;if(!Capture(g,out s,out why)){Say("PivotProbe refused: "+why);return;}
+        A=s;G=g;Fingerprint=T.Fingerprint;Say("Captured G"+(g+1)+". Manually jog ONLY this group 1..15 deg, zero all targets, settle, then run PivotProbe End. Parallel members must follow discovered signs.");
+    }
+    void End()
+    {
+        if(A==null){Say("Run PivotProbe Start first.");return;}string why;
+        if(!Ready(out why)){Say("End refused: "+why);return;}
+        if(Fingerprint!=T.Fingerprint){Clear();Say("Inconclusive: topology changed.");return;}
+        Shot b;if(!Capture(G,out b,out why)){Clear();Say("Inconclusive: "+why);return;}
+        Result r;if(!Analyse(A,b,G,out r,out why)){Clear();Say("Inconclusive: "+why);return;}
+        if(R.Count==12)R.RemoveAt(0);R.Add(r);Clear();Say(Format(r));
+    }
+    bool Ready(out string why)
+    {
+        why="";if(P.Enabled||P.GoingHome){why="Controller must be Off.";return false;}
+        if(!T.Ready){why="topology is not ready.";return false;}if(!T.Validate(out why,true))return false;
+        foreach(AutoGroup g in T.Groups)foreach(AutoMember m in g.M){var p=m.B as IMyPistonBase;double v=p!=null?p.Velocity:((IMyMotorStator)m.B).TargetVelocityRad;if(!Finite(v)||Math.Abs(v)>1e-4){why="owned target not zero: "+m.B.CustomName;return false;}}
+        return true;
+    }
+    bool Capture(int selected,out Shot s,out string why)
+    {
+        s=new Shot();why="";MatrixD f=T.Base.WorldMatrix;Vector3D o=T.Base.GetPosition();
+        s.P=Point(T.Head.GetPosition(),o,f);s.F=Vec(T.Head.WorldMatrix.Forward,f);s.U=Vec(T.Head.WorldMatrix.Up,f);
+        if(!Good(s.P)||!Unit(ref s.F)||!Unit(ref s.U)){why="invalid Base/Head pose.";return false;}
+        s.Q=new double[T.Groups.Count][];
+        for(int i=0;i<T.Groups.Count;i++){s.Q[i]=new double[T.Groups[i].M.Count];for(int j=0;j<s.Q[i].Length;j++){s.Q[i][j]=T.Position(T.Groups[i].M[j]);if(!Finite(s.Q[i][j])){why="non-finite joint position.";return false;}}}
+        AutoGroup g=T.Groups[selected];int count=g.M.Count;s.Axis=new Vector3D[count];s.Base=new Vector3D[count];s.Top=new Vector3D[count];
+        for(int i=0;i<count;i++)
+        {
+            AutoMember m=g.M[i];IMyMotorStator r=m.B as IMyMotorStator;
+            if(r==null||r.RotorLock||m.B.Top==null){why="selected member unavailable/locked.";return false;}
+            double q=s.Q[selected][i],margin=.25*Math.PI/180;
+            if(!Finite(r.LowerLimitRad)||!Finite(r.UpperLimitRad)||r.LowerLimitRad>r.UpperLimitRad){why="selected limits are invalid.";return false;}
+            if((r.LowerLimitRad>-1e6&&q<=r.LowerLimitRad+margin)||(r.UpperLimitRad<1e6&&q>=r.UpperLimitRad-margin)){why="selected member near limit: "+m.B.CustomName;return false;}
+            int dir=m.B.CubeGrid.EntityId==m.U&&m.B.TopGrid.EntityId==m.V?1:m.B.CubeGrid.EntityId==m.V&&m.B.TopGrid.EntityId==m.U?-1:0;
+            if(dir==0){why="selected endpoints changed.";return false;}
+            s.Axis[i]=Vec(m.B.WorldMatrix.Up*(-dir*m.Sign),f);s.Base[i]=Point(m.B.GetPosition(),o,f);s.Top[i]=Point(m.B.Top.GetPosition(),o,f);
+            if(!Unit(ref s.Axis[i])||!Good(s.Base[i])||!Good(s.Top[i])){why="invalid axis/pivot candidate.";return false;}
+        }return true;
+    }
+    bool Analyse(Shot a,Shot b,int group,out Result result,out string why)
+    {
+        result=null;why="";
+        for(int i=0;i<T.Groups.Count;i++)if(i!=group)for(int j=0;j<T.Groups[i].M.Count;j++){double d=b.Q[i][j]-a.Q[i][j];if(T.Groups[i].Rotary)d=Wrap(d);if(Math.Abs(d)>(T.Groups[i].Rotary?OtherA:OtherP)){why="another group moved: G"+(i+1);return false;}}
+        AutoGroup g=T.Groups[group];double first=0,total=0,pair=0;
+        for(int i=0;i<g.M.Count;i++)
+        {
+            double d=Wrap(b.Q[group][i]-a.Q[group][i])*g.M[i].Sign;if(i==0)first=d;else{d=first+Wrap(d-first);pair=Math.Max(pair,Math.Abs(d-first));}total+=d;
+            if(Vector3D.Dot(a.Axis[0],a.Axis[i])<AxisCos||Vector3D.Dot(a.Axis[i],b.Axis[i])<AxisCos){why="Axis drift >0.2 deg.";return false;}
+        }
+        double delta=total/g.M.Count;if(pair>PairA){why="Pair delta >0.1 deg.";return false;}
+        if(Math.Abs(delta)<MinA||Math.Abs(delta)>MaxA){why="motion must be 1..15 deg; measured "+Deg(delta).ToString(ThreeDecimals);return false;}
+        double travel=(b.P-a.P).Length();if(travel<MinTravel){why="Head travel below 0.01 m.";return false;}
+        double ori=Math.Max(Angle(Rot(a.F,a.Axis[0],delta),b.F),Angle(Rot(a.U,a.Axis[0],delta),b.U));
+        if(!Finite(ori)||ori>1){why="orientation residual "+ori.ToString(ThreeDecimals)+" deg: slip/other motion.";return false;}
+        result=new Result{Group=group,Delta=delta,Travel=travel,Orientation=ori};
+        for(int k=0;k<3;k++)
+        {
+            Vector3D mean=Vector3D.Zero;var predicted=new Vector3D[g.M.Count];
+            for(int i=0;i<g.M.Count;i++){Vector3D c=Candidate(a,i,k);predicted[i]=c+Rot(a.P-c,a.Axis[i],delta);mean+=predicted[i];}mean/=g.M.Count;
+            for(int i=0;i<predicted.Length;i++)result.Spread[k]=Math.Max(result.Spread[k],(predicted[i]-mean).Length());
+            result.Error[k]=(b.P-mean).Length();if(!Finite(result.Error[k])||!Finite(result.Spread[k])){why="non-finite residual.";return false;}
+        }
+        int best=0;for(int k=1;k<3;k++)if(result.Error[k]<result.Error[best])best=k;double next=double.PositiveInfinity;
+        for(int k=0;k<3;k++)if(k!=best)next=Math.Min(next,result.Error[k]);
+        result.Verdict=result.Spread[best]>.01?"inconclusive: pair mismatch":next-result.Error[best]<.001?"axis-equivalent/inconclusive":Name(best)+" smallest (not a calibration)";return true;
+    }
+    void Report()
+    {
+        if(R.Count==0){Say("No accepted trials. Capture positive and negative manual motions.");return;}
+        var s=new System.Text.StringBuilder("PIVOT PROBE RAM REPORT - no pivot changed\n");for(int i=0;i<R.Count;i++)s.Append('#').Append(i+1).Append(' ').Append(Format(R[i])).Append('\n');
+        s.Append("Collect both directions; residuals are evidence, not proof. Flex/load/slip can dominate.");Say(s.ToString());
+    }
+    string Format(Result r){return "G"+(r.Group+1)+" d="+Deg(r.Delta).ToString(ThreeDecimals)+"deg travel="+r.Travel.ToString("0.0000")+"m ori="+r.Orientation.ToString(ThreeDecimals)+"deg\n Base e/spread="+Row(r,0)+" Top="+Row(r,1)+" Mid="+Row(r,2)+" RESULT="+r.Verdict;}
+    string Row(Result r,int k){return r.Error[k].ToString("0.0000")+"/"+r.Spread[k].ToString("0.0000")+"m";}
+    Vector3D Candidate(Shot s,int i,int k){return k==0?s.Base[i]:k==1?s.Top[i]:(s.Base[i]+s.Top[i])*.5;}
+    string Name(int k){return k==0?"Base center":k==1?"Top center":"Midpoint";}
+    void Clear(){A=null;G=-1;Fingerprint="";}void Help(){Say("PivotProbe Start <group> | End | Report | Reset");}void Say(string s){P.Say(s);}
+    static double Wrap(double a){return a-Math.Floor((a+Math.PI)/(2*Math.PI))*(2*Math.PI);}static double Deg(double a){return a*180/Math.PI;}
+    static bool Good(Vector3D v){return Finite(v.X)&&Finite(v.Y)&&Finite(v.Z);}
+    static bool Unit(ref Vector3D v){double n=v.Length();if(!Good(v)||!Finite(n)||n<1e-10)return false;v/=n;return true;}
+    static Vector3D Point(Vector3D p,Vector3D o,MatrixD f){return Vec(p-o,f);}static Vector3D Vec(Vector3D v,MatrixD f){return new Vector3D(Vector3D.Dot(v,f.Forward),Vector3D.Dot(v,f.Left),Vector3D.Dot(v,f.Up));}
+    static Vector3D Rot(Vector3D v,Vector3D a,double x){return v*Math.Cos(x)+Vector3D.Cross(a,v)*Math.Sin(x)+a*Vector3D.Dot(a,v)*(1-Math.Cos(x));}
+    static double Angle(Vector3D a,Vector3D b){double n=a.Length()*b.Length();return n>1e-12&&Finite(n)?Math.Acos(Math.Max(-1,Math.Min(1,Vector3D.Dot(a,b)/n)))*180/Math.PI:double.NaN;}
+}
