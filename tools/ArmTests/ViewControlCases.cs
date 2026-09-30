@@ -8,7 +8,11 @@ internal static partial class Scenarios
     static Vector3D VCVector(object script,string field)=>(Vector3D)Get(script,field)!;
     static Vector3D VCInFrame(Vector3D world,MatrixD basis)=>new Vector3D(Vector3D.Dot(world,basis.Forward),Vector3D.Dot(world,basis.Left),Vector3D.Dot(world,basis.Up));
     static void VCNear(Vector3D actual,Vector3D expected,string label,double tolerance=1e-9)=>Check((actual-expected).Length()<tolerance,label+": actual "+actual+", expected "+expected);
-    static void VCCommand(object script,Rig rig,string command)=>InvokeFrame(script,rig,command,UpdateType.Terminal,0);
+    static void VCCommand(object script,Rig rig,string command)
+    {
+        InvokeFrame(script,rig,command,UpdateType.Terminal,0);
+        RecordProxy.Of(rig.Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(1d/60); WaitForOn(script);
+    }
     static void VCTick(object script,Rig rig)=>InvokeFrame(script,rig,"",UpdateType.Update1,1d/60);
     static void VCInput(IMyShipController cockpit,Vector3 move,Vector2 mouse,float roll=0)
     {

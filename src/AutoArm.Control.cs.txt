@@ -354,6 +354,15 @@ void EnableControl()
     Say(Banner() + "\n" + Status);
 }
 
+void StartControl()
+{
+    if (SwapBatchLock) { Say("Tool busy; Stop first."); return; }
+    Discover(false);
+    if (!ConfigValid) { Say(Status); return; }
+    if (Tools != null && Tools.Busy) Tools.StartOn();
+    else EnableControl();
+}
+
 void StopMotion(string reason)
 {
     if (Topology != null) Topology.ZeroOwned();
@@ -926,7 +935,7 @@ void Step(string axis, double degrees)
 
 void RunCommands(string argument)
 {
-    SwapBatchLock = Tools != null && Tools.Busy;
+    SwapBatchLock = Tools != null && Tools.Automatic;
     string[] commands = argument.Replace("\r", "").Split(new char[] { ';', '\n' }, StringSplitOptions.RemoveEmptyEntries);
     try { foreach (string raw in commands) RunCommand(raw.Trim()); }
     finally { SwapBatchLock = false; }
@@ -940,15 +949,15 @@ void RunCommand(string command)
     string c = w[0].ToLowerInvariant();
     ToolGeometry.Owner = this;
     if (Tools != null && Tools.Handle(command)) { SwapBatchLock = true; return; }
-    if (Tools != null && Tools.Busy && c != "off" && c != "stop" && c != "info" && c != "status" && c != "version")
+    if (Tools != null && Tools.Busy && c != "on" && c != "toggle" && c != "onoff" && c != "-oo" && c != "off" && c != "stop" && c != "info" && c != "status" && c != "version")
         throw new Exception("Tool busy; SwapCancel/Stop first.");
     if (c.Length == 1 && c[0] >= '1' && c[0] <= '9') { NumericAction(c[0] - '0'); return; }
     switch (c)
     {
         case "version": Say(Banner()); break;
-        case "on": EnableControl(); break;
+        case "on": StartControl(); break;
         case "off": case "stop": if (Tools != null && Tools.Busy) Tools.Cancel(c); StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
-        case "toggle": if (Enabled) { StopMotion("Toggle OFF."); Say(Status); } else EnableControl(); break;
+        case "toggle": if (Enabled) { StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
         case "onoff": case "-oo":
             c = w.Length < 2 ? "" : w[1].ToLowerInvariant();
             if (c != "on" && c != "off" && c != "toggle") throw new Exception("OnOff expects On, Off or Toggle.");

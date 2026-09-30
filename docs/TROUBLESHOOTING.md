@@ -4,7 +4,7 @@
 
 With tools disabled, exactly one terminal block must start with the arm's head prefix. For `Arm 1`, names such as `Arm 1 - Head 1 - Drill` and `Arm 1 - Head 1 - HeadMerge` both match `Arm 1 - Head`. Keep that prefix on only the reference block for a simple arm.
 
-For a tool setup, enable `[Tools]`, configure each tool-side rotor base in `[ToolNN] Mount`, and complete marker names in `Heads`. Run `Reload`; `Check` does not load configuration edits.
+For a tool setup, enable `[Tools]`, configure each tool-side rotor base in `[ToolNN] Mount`, and complete marker names in `Heads`. Run `On` to load the edits, scan and enable control. `Check` alone does not load configuration edits.
 
 ## Missing or ambiguous names
 
@@ -16,7 +16,7 @@ The rotor base belongs on the tool; one unnamed rotor part stays on the moving a
 
 `No loose arm rotor part` means no candidate was found on reachable moving arm grids. Check the Base attachment and the part's rigid connection to the arm. Multiple loose parts or a part surrounded on several possible mounting faces are ambiguous; remove spare parts or make the mounting arrangement clear.
 
-First automatic acquisition needs unlimited lower/upper angle limits on the selected tool rotor. Rotor Lock is supported and restored after verification. If cancelled while pending, keep support and use ToolScan; it cancels a confirmed bare pending request before restoring the lock. No tool merge is released for an unverified actual part.
+First automatic acquisition needs unlimited lower/upper angle limits on the selected tool rotor. Rotor Lock is supported and restored after verification. If cancelled while pending, keep support, inspect the equipment and run `On`; its scan cancels a confirmed bare pending request before restoring the lock. Use `ToolScan` instead to check while remaining OFF. No tool merge is released for an unverified actual part.
 
 `Tool attached elsewhere` means a configured tool base is attached to a different top. Keep that tool supported and remove its unintended attachment before scanning. Do not move an arm still attached to a merged tool.
 
@@ -28,8 +28,8 @@ Automatic generic parking uses numbered names such as `Arm 1 - ParkMerge 1`. An 
 
 ## Configuration format
 
-Current configuration uses Format 5. If the loader reports the wrong format, save the preferences you want to retain, delete Custom Data and run `Reload`. When installing into another PB, clear a copied `Actuators` table so the new PB can generate its own rows.
+Current configuration uses Format 5. If the loader reports the wrong format, save the preferences you want to retain, delete Custom Data and run `On`. When installing into another PB, clear a copied `Actuators` table so the new PB can generate its own rows.
 
 ## Interrupted swaps
 
-`Stop`, `Off`, `SwapCancel` or pilot input stops automatic movement while retaining support. Inspect the connections and run `ToolScan` before continuing. An explicit scan clears a pending failed attachment only when that base is actually bare. Automatic completion stays OFF; run `On` for manual control afterward.
+`Stop`, `Off`, `SwapCancel` or pilot input stops automatic movement while retaining support. Inspect the connections and run `On` to scan and resume. An explicit scan clears a pending failed attachment only when that base is actually bare. Successful tool pickup/swap resumes manual control automatically; parking and canceled or failed operations stay OFF. `Stop` also cancels startup requested by `On`.

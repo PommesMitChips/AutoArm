@@ -1,3 +1,18 @@
+AutoArm 2.8.1 — One-shot startup and automatic tool-control resume
+
+On now reloads current configuration, discovers the arm, scans configured tools
+and enables manual control after stopped setup succeeds. It works during the
+initial scan and on fresh bare arms. Toggle/OnOff follow the same startup path.
+Successful tool pickup/swapping resumes manual control at the mounted tool's
+current pose. Selecting an already mounted tool also enables control. Parking,
+diagnostic scans, failed operations and cancellations remain OFF. Stop cancels
+deferred startup; On cannot interrupt an active automatic swap.
+
+Custom Data remains Format 5. Existing v2.8 settings need no format changes.
+AutoArm_Compact.txt: 99,777 UTF-16 characters; 223 free under 100,000.
+C#6/installed SE API compilation, exact token reversal, identical method IL and
+178,062 simulated assertions pass. Live game physics remains unverified.
+
 AutoArm 2.8 — Automatic bare endpoint discovery
 
 Name the arm Base and configure the tools' markers, rotor bases and merges.

@@ -20,7 +20,7 @@ internal static partial class Scenarios
             Check(!config.ContainsKey("Tools","Mount") && !config.ContainsKey("Tools","ArmTip") && !config.ContainsSection("Instructions"),"Auto setup generated redundant mount/offset/instructions configuration.");
             Check(Groups(script).Sum(g=>Members(g).Length)==(hinge?3:2),"Auto bare corridor omitted final unnamed hinge or included tool coupler.");
             if(hinge) Check(Members(Groups(script).Last()).Any(m=>Get(m,"B")==f.LastHinge),"Unmarked final hinge was not acquired for control/stop.");
-            SwapFrame(script,"On",false,0); var cockpit=f.Rig.Blocks.OfType<IMyShipController>().Single(); RecordProxy.Of(cockpit).Values["MoveIndicator"]=new Vector3(0,0,-1); SwapFrame(script);
+            SwapOn(script); var cockpit=f.Rig.Blocks.OfType<IMyShipController>().Single(); RecordProxy.Of(cockpit).Values["MoveIndicator"]=new Vector3(0,0,-1); SwapFrame(script);
             Check(Enabled(script) && f.AnyDrive,"Cold headless auto arm failed manual movement without reference/offset.");
             RecordProxy.Of(cockpit).Values["MoveIndicator"]=Vector3.Zero; SwapFrame(script,"Stop",false,0);
             SwapFrame(script,"Tool 2",false,0); bool drove=SwapPlant(script,f,"Release");
@@ -29,7 +29,7 @@ internal static partial class Scenarios
             tip=Get(SwapController(script),"Tip")!;
             Check((long)Get(tip,"EntityId")! ==f.ArmTip.EntityId && f.Couplers[1].Top==f.ArmTip && f.ArmTip.Base==f.Couplers[1],"Auto pickup failed reciprocal actual rotor ID adoption.");
             f.SplitTool(1); SwapPlant(script,f,"Idle");
-            Check(!Enabled(script) && Get(Get(script,"Topology")!,"Head")==f.Markers[1],"Auto cold pickup failed mounted OFF completion.");
+            Check(Enabled(script) && Get(Get(script,"Topology")!,"Head")==f.Markers[1],"Auto cold pickup failed active mounted completion.");
             Check(f.Couplers[1].RotorLock==locked,"First pickup did not restore requested rotor lock state."); SwapStationUntouched(f);
         }
         foreach(bool flipped in new[]{false,true})
@@ -37,7 +37,7 @@ internal static partial class Scenarios
             var f=new ToolSwapFixture(headless:true); f.NoNamedArmReference(); f.LargeSmallGridPart(flipped);
             var script=SwapStart(type,f); VCNear((Vector3D)Get(Get(script,"Topology")!,"EndPosition")!,f.ArmTip.CubeGrid.GridIntegerToWorld(f.ArmTip.Position),"Multi-cell advanced small-grid part pivot inference");
             SwapFrame(script,"Tool 2",false,0); SwapPlant(script,f,"Idle");
-            Check(f.Couplers[1].Top==f.ArmTip && !Enabled(script),"Multi-cell advanced rotor automatic pickup failed on signed mounting face.");
+            Check(f.Couplers[1].Top==f.ArmTip && Enabled(script),"Multi-cell advanced rotor automatic pickup/resume failed on signed mounting face.");
         }
         var timed=new ToolSwapFixture(headless:true); timed.NoNamedArmReference(); var running=SwapStart(type,timed);
         var gt=RecordProxy.Of(timed.Rig.GTS); int calls=0; var original=gt.Call;
@@ -46,14 +46,14 @@ internal static partial class Scenarios
         Check(calls==0 && timed.Mutations.Count==0 && !timed.AnyDrive,"Low-budget scan enumerated before reserve check or changed equipment.");
         RecordProxy.Of(timed.Rig.Runtime).Values["CurrentInstructionCount"]=0;
         var detached=new ToolSwapFixture(headless:true); detached.NoNamedArmReference(); detached.HingeEnd(); var controlling=SwapStart(type,detached);
-        SwapFrame(controlling,"On",false,0); RecordProxy.Of(detached.LastHinge!).Values["IsAttached"]=false; RecordProxy.Of(detached.LastHinge!).Values["Top"]=null; RecordProxy.Of(detached.LastHinge!).Values["TopGrid"]=null; SwapFrame(controlling);
+        SwapOn(controlling); RecordProxy.Of(detached.LastHinge!).Values["IsAttached"]=false; RecordProxy.Of(detached.LastHinge!).Values["Top"]=null; RecordProxy.Of(detached.LastHinge!).Values["TopGrid"]=null; SwapFrame(controlling);
         Check(!Enabled(controlling) && !detached.AnyDrive,"Detached automatically found end hinge kept control active.");
         foreach(string fault in new[]{"None","Multiple","Face"})
         {
             var f=new ToolSwapFixture(headless:true); f.NoNamedArmReference();
             if(fault=="None") f.NoPart(); else if(fault=="Multiple") f.WrongArmPart(); else f.ExtraFace();
             var script=Tests.Create(type,f.Rig); for(int i=0;i<200 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
-            SwapFrame(script,"On",false,0); SwapFrame(script,"Tool 2",false,0); for(int i=0;i<200 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
+            SwapOn(script); SwapFrame(script,"Tool 2",false,0); for(int i=0;i<200 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
             Check(!Enabled(script) && !f.AnyDrive && f.Mutations.Count==0,"Ambiguous/missing loose part authorized motion/attachment: "+fault); SwapStationUntouched(f);
         }
         foreach(string mismatch in new[]{"Cell","Axis","Type","NaN"})

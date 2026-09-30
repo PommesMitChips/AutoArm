@@ -34,11 +34,12 @@ internal static partial class Scenarios
         InvokeFrame(script,rig,"Check",UpdateType.Terminal,0);
         Check(rig.Log.Last().Contains("CHECK PASS"),"Reported arm did not pass Check.");
         InvokeFrame(script,rig,"On",UpdateType.Terminal,0);
-        Check(Enabled(script),"Zero-time On reproduced the in-game startup failure.");
+        Check(!Enabled(script) && (bool)Get(script,"PendingOn")!,"Zero-time On must request stopped setup without fabricating observations.");
         Check(Convert.ToInt32(Get(script,"LastSolverPasses"))==0,"A command-only invocation ran a motion solve.");NoVelocity(rig);
         InvokeFrame(script,rig,"",UpdateType.Update1,0);
-        Check(Enabled(script)&&Convert.ToInt32(Get(script,"LastSolverPasses"))==0,"Same-frame periodic callback faulted or fabricated elapsed time.");
+        Check(!Enabled(script)&&(bool)Get(script,"PendingOn")!&&Convert.ToInt32(Get(script,"LastSolverPasses"))==0,"Same-frame periodic callback faulted or fabricated elapsed time.");
         InvokeFrame(script,rig,"",UpdateType.Update1,1d/60);
+        WaitForOn(script); InvokeFrame(script,rig,"",UpdateType.Update1,1d/60);
         Check(Enabled(script)&&Convert.ToInt32(Get(script,"LastSolverPasses"))>0,"Next positive periodic tick failed to control reported arm.");
         InvokeFrame(script,rig,"Hold",UpdateType.Terminal|UpdateType.Update1,1d/60);NoVelocity(rig);
         Check(Enabled(script)&&Convert.ToDouble(Get(script,"ControlElapsed"))==0,"Combined flags did not reset the recaptured timing baseline.");
@@ -56,11 +57,13 @@ internal static partial class Scenarios
 
         var observerRig=Fixtures.Serial(out _,out _,out var head,out _);var observer=Start(type,observerRig);
         InvokeFrame(observer,observerRig,"On",UpdateType.Terminal,0);
+        RecordProxy.Of(observerRig.Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(1d/60); WaitForOn(observer);
         InvokeFrame(observer,observerRig,"Info",UpdateType.Terminal,.02);
         var matrix=head.WorldMatrix;matrix.Translation+=Vector3D.Forward*.01;RecordProxy.Of(head).Values["WorldMatrix"]=matrix;
         InvokeFrame(observer,observerRig,"",UpdateType.Update1,.03);
         Check(Math.Abs(((Vector3D)Get(observer,"FilteredV")!).Length()-.05)<1e-9,"Manual command time was omitted from the measured velocity interval.");
         InvokeFrame(observer,observerRig,"On",UpdateType.Terminal,0);
+        RecordProxy.Of(observerRig.Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(1d/60); WaitForOn(observer);
         matrix.Translation+=Vector3D.Forward*.02;RecordProxy.Of(head).Values["WorldMatrix"]=matrix;
         InvokeFrame(observer,observerRig,"",UpdateType.Update1,.2);
         Check(Math.Abs(((Vector3D)Get(observer,"FilteredV")!).Length()-(.1*.2/.35))<1e-9,"Observed velocity used the capped integration step instead of actual observation time.");
@@ -69,6 +72,7 @@ internal static partial class Scenarios
         Check(!Enabled(observer),"Frequent manual calls masked a stale control interval.");NoVelocity(observerRig);
 
         var displayRig=Fixtures.Serial(out _,out _,out _,out _);var display=Start(type,displayRig);InvokeFrame(display,displayRig,"On",UpdateType.Terminal,0);
+        RecordProxy.Of(displayRig.Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(1d/60); WaitForOn(display);
         int inventory=displayRig.InventoryCalls,builds=Convert.ToInt32(Get(display,"RoutineStatusBuilds")),echoes=displayRig.Log.Count;
         for(int i=0;i<60;i++)InvokeFrame(display,displayRig,"",UpdateType.Update1,1d/60);
         int addedScans=displayRig.InventoryCalls-inventory,addedBuilds=Convert.ToInt32(Get(display,"RoutineStatusBuilds"))-builds;
@@ -83,12 +87,14 @@ internal static partial class Scenarios
         InvokeFrame(display,displayRig,"OnOff Toggle",UpdateType.Terminal,0);
         Check(!Enabled(display)&&displayRig.Log.Last().Contains("Toggle OFF"),"Cached display falsely reported On after OnOff Toggle.");
         InvokeFrame(display,displayRig,"On",UpdateType.Terminal,0);
+        RecordProxy.Of(displayRig.Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(1d/60); WaitForOn(display);
         InvokeFrame(display,displayRig,"OrientationTolerance 4",UpdateType.Terminal,0);
         Check(!Enabled(display)&&displayRig.Log.Last().Contains("Stopped:"),"Tolerance command hid its stopped state behind a cached value message.");
         InvokeFrame(display,displayRig,"SetHome",UpdateType.Terminal,0);
         InvokeFrame(display,displayRig,"GoHome",UpdateType.Terminal,0);
         Check(Enabled(display)&&displayRig.Log.Last().Contains("GoHome in progress"),"Homing began with stale Off text still displayed.");
         InvokeFrame(display,displayRig,"Stop",UpdateType.Terminal,0);InvokeFrame(display,displayRig,"On",UpdateType.Terminal,0);
+        RecordProxy.Of(displayRig.Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(1d/60); WaitForOn(display);
         InvokeFrame(display,displayRig,"",UpdateType.Update1,-.01);Check(!Enabled(display),"A negative periodic interval failed to stop control.");NoVelocity(displayRig);
         Console.WriteLine("Startup/performance: reported 10-joint fingerprint; zero-time commands, accumulated timing, mixed flags, 30-pass scans and cached 4 Hz status formatting.");
     }

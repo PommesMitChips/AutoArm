@@ -25,7 +25,7 @@ sealed class ToolSwapController
     readonly List<long> ArmOrder = new List<long>();
     int ArmIndex; ToolTopInfo Found;
     ToolTopInfo Tip;
-    bool Scanned, AxialPickup;
+    bool Scanned, AxialPickup, StartAfterScan;
     string MountName = "", Axis = "Auto", Phase = "Idle", Last = "Tools disabled";
     bool EnabledTools, ScanHead = true, ScanStand = true, ScanPark = true, ParkOnly, DockMoved, PassiveScan;
     double Clearance = .5, Move = .05, Turn = 2, PosTol = .005, AngleTol = .2, Timeout = 30, Elapsed;
@@ -64,7 +64,7 @@ sealed class ToolSwapController
         ToolGeometry.Owner = p;
         var s = AutoConfig.Saved(p.Storage);
         if (s.ContainsSection(SwapSection) && s.Get(SwapSection, "Phase").ToString() != "Idle")
-        { Recovery = true; Last = "Interrupted; ToolScan, then On."; }
+        { Recovery = true; Last = "Interrupted; inspect, then On."; }
     }
     static List<string> Names(string value)
     {
@@ -87,6 +87,7 @@ sealed class ToolSwapController
     }
     public bool Load(out string why)
     {
+        StartAfterScan = false;
         MyIni ini;
         if (!AutoConfig.ReadCurrent(P.Me.CustomData, out ini, out why)) return false;
         bool enabled = false, sh = true, ss = true, sp = true;
@@ -278,7 +279,7 @@ sealed class ToolSwapController
         if (verb == "swapcancel") { Cancel("Canceled; ToolScan required."); return true; }
         if (Busy) { P.Say("Tool change busy: " + Phase); return true; }
         if (!EnabledTools || Mount == null) { P.Say("Configure Tools; Reload."); return true; }
-        if (verb != "toolscan" && Recovery) { P.Say("Inspect equipment; ToolScan."); return true; }
+        if (verb != "toolscan" && Recovery) { P.Say("Inspect equipment; On."); return true; }
         Destination = null; Source = null; Supported = null; ParkedPairs = null; DockMoved = false; ParkOnly = verb == "park"; ParkIndex = 0;
         if (verb == "tool" || verb == "toolswap")
         {
@@ -377,16 +378,20 @@ sealed class ToolSwapController
     }
     public void Cancel(string why)
     {
+        StartAfterScan = false;
         bool changing = Busy || Recovery; P.StopMotion(why); if (changing) { Recovery = true; Journal("Recovery:" + Phase); }
         Phase = "Idle"; Last = why; P.Say(why);
     }
-    void Complete(string message)
+    void Complete(string message, bool start = false)
     {
+        start |= StartAfterScan; StartAfterScan = false;
         P.StopMotion(message); Go("Idle");
         if (Recovery && PassiveScan) message = "Recovery: explicit ToolScan required.";
         else { Recovery = false; Journal("Idle"); }
-        Last = message; P.Say(message + " On required.");
+        Last = message;
+        if (start) P.EnableControl(); else P.Say(message + " On required.");
     }
+    public void StartOn() { PassiveScan = false; StartAfterScan = true; P.Say("On: scanning tools."); }
     bool Observe(bool condition) { if (!condition) { Stable = 0; return false; } return ++Stable >= 2; }
     bool TipOwned(out string why)
     {
@@ -433,7 +438,7 @@ sealed class ToolSwapController
             h.Angle = h.Coupler.Angle;
             if (h.Coupler.PendingAttachment || (h.Coupler.IsAttached && h != Source)) { why = "Other tool Mount attached/pending."; return false; }
         }
-        if (Source == Destination && !ParkOnly) { Complete("Selected tool already mounted; OFF."); return true; }
+        if (Source == Destination && !ParkOnly) { Complete("Selected tool already mounted.", true); return true; }
         if (Source == null && ParkOnly) { Complete("Mount already bare; OFF."); return true; }
         int mountIndex = P.Topology.Groups.Count;
         for (int n = 0; n < P.Topology.Groups.Count; n++) foreach (var member in P.Topology.Groups[n].M) if (Source != null && member.B.EntityId == Source.Coupler.EntityId) mountIndex = n;
@@ -649,7 +654,7 @@ sealed class ToolSwapController
                     if (!P.RebuildToolTopology(out why)) { Cancel(why); return; } Go("FullSettle"); return;
                 case "FullSettle":
                     if (!Mounted(Destination) || Connected(Destination.SafetyMerges)) { Cancel("Attachment/support changed."); return; }
-                    if (P.SettleToolTopology(out why)) Complete("Tool " + Destination.Name + " mounted; OFF."); return;
+                    if (P.SettleToolTopology(out why)) Complete("Tool " + Destination.Name + " mounted.", true); return;
             }
         }
         catch (Exception e) { Cancel("Tools: " + e.Message); }

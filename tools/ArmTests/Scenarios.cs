@@ -27,6 +27,15 @@ internal static partial class Scenarios
         }
         finally{runtime.Values["TimeSinceLastRun"]=interval;}
         main.Invoke(script,new object[]{"",UpdateType.Update1});
+        WaitForOn(script);
+    }
+    static void WaitForOn(object script)
+    {
+        bool waiting = (bool)Get(script,"PendingOn")! || (bool)Get(Get(script,"Tools")!,"StartAfterScan")!;
+        if(waiting) RecordProxy.Of(((TestHost)script).Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(1d/60);
+        for(int i=0;i<200 && ((bool)Get(script,"PendingOn")! || (bool)Get(Get(script,"Tools")!,"StartAfterScan")!);i++)
+            script.GetType().GetMethod("Main")!.Invoke(script,new object[]{"",UpdateType.Update1});
+        if(waiting && Enabled(script)) script.GetType().GetMethod("Main")!.Invoke(script,new object[]{"",UpdateType.Update1});
     }
     static object Start(Type type,Rig rig)
     {
@@ -61,6 +70,7 @@ internal static partial class Scenarios
         ViewControlCases(type);
         PoseCommandsCases(type);
         ToolSwapCases(type);
+        OneShotOnCases(type);
         Console.WriteLine($"Automatic arm integration: PASS ({Tests.Assertions} assertions).");
     }
     static void Discovery(Type type)

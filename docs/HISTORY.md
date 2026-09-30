@@ -15,6 +15,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v2.6` | Named tool-side bases without per-tool teaching, shared pose commands, Unicode compaction and strengthened support/ownership guards | 99,238 |
 | `v2.7` | Rotor-only tool couplers, fresh headless pickup from declared arm-tip pose, shared control logic and inferred declarations | 99,846 |
 | `v2.8` | Automatic arm-end/rotor-part discovery, bare rotor focus, no arm Mount/offset/Instructions, bounded scans and field packing | 99,505 |
+| `v2.8.1` | One-shot On setup and automatic manual-control resume after tool mounting | 99,777 |
 
 Read a previous script without changing your working tree:
 

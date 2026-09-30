@@ -24,6 +24,7 @@ internal static class ToolSwapFocusRunner
 internal static partial class Scenarios
 {
     static object SwapController(object script)=>Get(script,"Tools")!;
+    static void SwapOn(object script) { SwapFrame(script,"On",false,0); RecordProxy.Of(((TestHost)script).Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(1d/60); WaitForOn(script); }
     static string SwapPhase(object script)=>(string)Get(SwapController(script),"Phase")!;
     static void SwapFrame(object script,string command="",bool timed=true,double dt=1d/60)
     {
@@ -93,7 +94,7 @@ internal static partial class Scenarios
     static void ReverseOptionalAndConfiguration(Type type)
     {
         var f=new ToolSwapFixture(ports:false); var script=SwapStart(type,f); SwapReverseMember(script,f.Couplers[0]);
-        SwapFrame(script,"On",false,0); SwapFrame(script); Check(Enabled(script),"Optional absent merge ports blocked reverse-layout manual On.");
+        SwapOn(script); SwapFrame(script); Check(Enabled(script),"Optional absent merge ports blocked reverse-layout manual On.");
         SwapFrame(script,"Off",false,0); SwapFrame(script,"Tool 2;On",false,0);
         for(int i=0;i<160 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
         Check(!Enabled(script) && f.Mutations.Count==0,"Missing optional ports/semicolon On permitted mechanical change or resumed motion."); SwapStationUntouched(f);
@@ -134,9 +135,9 @@ internal static partial class Scenarios
         for(int i=0;i<8;i++) SwapFrame(script);
         Check(SwapPhase(script)=="Release","Connected tool/stand overlap permitted premature full rediscovery.");
         long oldGrid=f.Markers[1].CubeGrid.EntityId; f.SplitTool(1); SwapPlant(script,f,"Idle");
-        Check(!Enabled(script) && !(bool)Get(SwapController(script),"Recovery")! && f.Markers[1].CubeGrid.EntityId!=oldGrid,"Successful reverse swap did not finish healthy OFF after tool-grid split.");
+        Check(Enabled(script) && !(bool)Get(SwapController(script),"Recovery")! && f.Markers[1].CubeGrid.EntityId!=oldGrid,"Successful reverse swap did not resume active control after tool-grid split.");
         Check(Get(Get(script,"Topology")!,"Head")==f.Markers[1] && Groups(script).Sum(g=>Members(g).Length)==3,"Reverse incoming full topology/marker endpoint was not restored.");
-        SwapReverseMember(script,f.Couplers[1]); SwapFrame(script,"On",false,0); SwapFrame(script);
+        SwapReverseMember(script,f.Couplers[1]); SwapOn(script); SwapFrame(script);
         Check(Enabled(script),"Completed reverse swap failed fresh explicit manual On."); SwapStationUntouched(f);
     }
     static void ReverseParkRestart(Type type)
@@ -146,7 +147,7 @@ internal static partial class Scenarios
         Check(drove && !Enabled(script) && f.ArmTip.Base==null && f.Couplers[0].Top==null && Get(Get(script,"Topology")!,"End")==f.MotionReference,"Generic Park did not drive, detach tool base, and finish bare-reference OFF.");
         f.Rig.Storage=((TestHost)script).Storage; int before=f.Mutations.Count;
         var restarted=SwapStart(type,f); SwapFrame(restarted,"Tool 2",false,0); SwapPlant(restarted,f,"Idle");
-        Check(!Enabled(restarted) && f.Couplers[1].Top?.EntityId==f.ArmTip.EntityId && f.Mutations.Count==before+1,"Saved bare-arm restart required per-tool learning or failed automatic incoming attachment."); SwapStationUntouched(f);
+        Check(Enabled(restarted) && f.Couplers[1].Top?.EntityId==f.ArmTip.EntityId && f.Mutations.Count==before+1,"Saved bare-arm restart required per-tool learning or failed automatic incoming attachment/resume."); SwapStationUntouched(f);
     }
     static void ReverseWeightRetention(Type type)
     {
@@ -174,7 +175,7 @@ internal static partial class Scenarios
         {
             var f=new ToolSwapFixture(); foreach(var c in f.Couplers) RecordProxy.Of(c).Values["BlockDefinition"]=ToolSwapFixture.Definition(subtype);
             string original=f.Rig.PB.CustomData; var script=Tests.Create(type,f.Rig);
-            SwapFrame(script,"On",false,0); SwapFrame(script,"Tool 2",false,0); SwapFrame(script);
+            SwapOn(script); SwapFrame(script,"Tool 2",false,0); SwapFrame(script);
             Check(!Enabled(script) && !f.AnyDrive && f.Mutations.Count==0 && f.Rig.PB.CustomData==original,"Hinge tool coupler must refuse before drive/config or connection mutations.");
         }
     }
@@ -257,7 +258,7 @@ internal static partial class Scenarios
     }
     static void ReverseRuntimeGuards(Type type)
     {
-        var split=new ToolSwapFixture(ports:false); var manual=SwapStart(type,split); SwapFrame(manual,"On",false,0); SwapFrame(manual);
+        var split=new ToolSwapFixture(ports:false); var manual=SwapStart(type,split); SwapOn(manual); SwapFrame(manual);
         split.SplitCouplerFromMarker(0); SwapFrame(manual);
         Check(!Enabled(manual) && !split.AnyDrive,"Coupler/marker split kept stale reverse manual topology active.");
         foreach(bool partition in new[]{false,true})
@@ -273,7 +274,7 @@ internal static partial class Scenarios
         {
             var f=new ToolSwapFixture(); var owner=f.OtherOwner(); var script=SwapStart(type,f); SwapFrame(script,"Park",false,0); SwapPlant(script,f,"Idle");
             if(home) { SwapFrame(script,"SetHome",false,0); RecordProxy.Of(f.Piston).Values["CurrentPosition"]=6f; SwapFrame(script,"GoHome",false,0); }
-            else { SwapFrame(script,"On",false,0); RecordProxy.Of(f.Rig.Blocks.OfType<IMyShipController>().Single()).Values["MoveIndicator"]=new Vector3(0,0,-1); }
+            else { SwapOn(script); RecordProxy.Of(f.Rig.Blocks.OfType<IMyShipController>().Single()).Values["MoveIndicator"]=new Vector3(0,0,-1); }
             SwapFrame(script); Check(Enabled(script) && f.AnyDrive,"Foreign-owner fixture did not first drive the bare arm.");
             var v=RecordProxy.Of(owner).Values; v["IsAttached"]=true; v["Top"]=f.ArmTip; v["TopGrid"]=f.ArmGrid; RecordProxy.Of(f.ArmTip).Values["Base"]=owner;
             SwapFrame(script);
