@@ -33,7 +33,7 @@ internal static partial class Scenarios
     {
         var tools = SwapController(script);
         string anchorField = poseField=="Dock" || poseField=="Approach" ? "DockAnchor" : poseField=="Retreat" ? "RetreatAnchor" : "AttachAnchor";
-        return (MatrixD)Get(tools,poseField)! * ((VRage.Game.ModAPI.Ingame.IMyCubeBlock)Get(tools,anchorField)!).WorldMatrix;
+        return (MatrixD)Get(tools,poseField)! * (MatrixD)Get(Get(tools,anchorField)!,"WorldMatrix")!;
     }
     static void SwapFrame(object script, string command = "", bool timed = true, double dt = 1d/60)
     {
@@ -91,6 +91,7 @@ internal static partial class Scenarios
         ToolFinalAttachGuards(type);
         ToolBareHomeAttachmentGuards(type);
         ToolRejectedStartupStopsOwned(type);
+        HiddenToolTopCases(type);
         Console.WriteLine("Tool changes: occupied cell cuts, optional ports, explicit scan overrides, timed pickup/release, wrong-top refusal, partial support, cancellation/restart, full swap OFF and strict Format.");
     }
     static void OptionalToolPorts(Type type)
@@ -427,5 +428,134 @@ internal static partial class Scenarios
             Check(unrelatedRotor.TargetVelocityRad==.27f && unrelatedPiston.Velocity==.43f && RecordProxy.Of(unrelatedRotor).Writes.Count==0 && RecordProxy.Of(unrelatedPiston).Writes.Count==0,"Rejected startup with "+reason+" wrote unrelated ship actuators.");
             Check(f.Rig.PB.CustomData==refused && f.Mutations.Count==0,"Rejected startup rewrote user configuration or mutated tool mechanics.");
         }
+    }
+    static ToolSwapFixture LearnedHiddenParkedTool(Type type)
+    {
+        var f = new ToolSwapFixture(hideNonterminalCells:true); f.SelectOnlyProfile(0);
+        Check(f.Markers[0].CubeGrid.GetCubeBlock(f.Tops[0].Position)==null && f.Markers[0].CubeGrid.CubeExists(f.Tops[0].Position),"Faithful fixture must hide mounted nonterminal top while reporting its occupied cube.");
+        Check(f.Markers[0].CubeGrid.GetCubeBlock(new Vector3I(0,1,0))==null && f.Markers[0].CubeGrid.CubeExists(new Vector3I(0,1,0)),"Faithful fixture must traverse occupied nonterminal bridge through CubeExists.");
+        var script = SwapStart(type,f);
+        Check(Get(Get(script,"Topology")!,"Head")==f.Markers[0],"Live mounted top was not captured through Mount.Top and the marker region.");
+        SwapFrame(script,"Park",false,0);
+        bool drove = SwapMove(script,f,"ApproachDock","Approach",true);
+        drove |= SwapMove(script,f,"Dock","Dock",true); f.LockSource();
+        SwapReach(script,f,"Retreat"); SwapFrame(script); drove |= f.AnyDrive;
+        RecordProxy.Of(f.Mount).Values["WorldMatrix"] = SwapWorldGoal(script,"Retreat");
+        SwapReach(script,f,"Idle",300);
+        Check(drove && f.Mount.Top==null && !f.Mount.IsAttached && f.Heads[0].All(m=>m.IsConnected && m.Enabled),"Hidden learned tool did not physically park before becoming inaccessible.");
+        f.Rig.Storage = ((TestHost)script).Storage;
+        return f;
+    }
+    static void HiddenToolTopCases(Type type)
+    {
+        var unknown = new ToolSwapFixture(headless:true,hideNonterminalCells:true); unknown.SelectOnlyProfile(1);
+        var refused = SwapStart(type,unknown);
+        SwapFrame(refused,"Tool 1",false,0);
+        for(int i=0;i<160 && SwapPhase(refused)!="Idle";i++) SwapFrame(refused);
+        Check(!Enabled(refused) && unknown.Mutations.Count==0 && !unknown.AnyDrive,"Unknown hidden parked top moved or attached without a learned identity.");
+        Check(unknown.Rig.Log.Any(s=>s.ToLowerInvariant().Contains("mount") && (s.ToLowerInvariant().Contains("once") || s.ToLowerInvariant().Contains("learn"))),"Selecting an unknown hidden parked top omitted instructions to mount/learn it once.");
+        Check(unknown.Heads[1].All(m=>m.Enabled) && !unknown.Heads[1].Any(m=>RecordProxy.Of(m).Writes.Any(w=>w.Name=="Enabled" && Equals(w.Value,false))),"Unknown hidden parked top released support.");
+
+        foreach(bool wrongTop in new[]{false,true})
+        {
+            var f = LearnedHiddenParkedTool(type);
+            int mutations = f.Mutations.Count;
+            f.AttachResult = wrongTop ? f.Tops[1] : f.Tops[0];
+            var restarted = SwapStart(type,f);
+            Check(f.Mount.Top==null && f.Markers[0].CubeGrid.GetCubeBlock(f.Tops[0].Position)==null,"Restart fixture accidentally exposed learned parked top.");
+            SwapFrame(restarted,"Tool 1",false,0);
+            SwapMove(restarted,f,"ApproachTop","TopApproach",false);
+            SwapMove(restarted,f,"AlignTop","Attach",false);
+            SwapReach(restarted,f,"Attach");
+            Check(f.Mutations.Count==mutations+1 && f.Mutations.Last()=="Attach","Cached hidden pickup did not request exactly one Attach after restart.");
+            SwapFrame(restarted);
+            if(wrongTop)
+            {
+                Check(SwapPhase(restarted)=="Idle" && (bool)Get(SwapController(restarted),"Recovery")! && f.Heads[0].All(m=>m.Enabled),"Wrong attached entity ID released cached hidden-tool supports.");
+            }
+            else
+            {
+                Check(SwapPhase(restarted)=="Attach" && f.Heads[0].All(m=>m.Enabled),"One cached top identity observation released support.");
+                SwapFrame(restarted);
+                Check(SwapPhase(restarted)=="Release" && f.Heads[0].All(m=>!m.Enabled),"Known hidden top failed correct two-sample verification after restart.");
+                f.SplitRegion(0); SwapReach(restarted,f,"Idle");
+                Check(!Enabled(restarted) && Get(Get(restarted,"Topology")!,"Head")==f.Markers[0],"Cached hidden pickup did not complete split/full discovery OFF.");
+            }
+            SwapUnchangedMerges(f,"Hidden cached pickup");
+        }
+        var mounted = new ToolSwapFixture(hideNonterminalCells:true); var manual = SwapStart(type,mounted);
+        SwapFrame(manual,"On",false,0); SwapFrame(manual);
+        Check(Enabled(manual),"An unlearned parked profile prevented manual control of the known hidden mounted tool.");
+        SwapFrame(manual,"Off",false,0); SwapFrame(manual,"Tool 2",false,0);
+        for(int i=0;i<160 && SwapPhase(manual)!="Idle";i++) SwapFrame(manual);
+        Check(!Enabled(manual) && mounted.Mutations.Count==0 && mounted.Heads[0].All(m=>!m.Enabled),"Selecting unlearned parked profile moved/parked the current mounted tool before refusing.");
+        HiddenToolCacheScoping(type);
+        HiddenToolActualCouplingGuard(type);
+    }
+    static void HiddenToolActualCouplingGuard(Type type)
+    {
+        var f = LearnedHiddenParkedTool(type); var cache = new MyIni(); cache.TryParse(f.Rig.Storage);
+        string key="E"+f.Markers[0].EntityId; var record=cache.Get("AutoArm Couplers",key).ToString().Split('|');
+        // Structurally valid stale axes survive parsing and occupancy checks.
+        // The real top observed after Attach must invalidate this cached frame.
+        var rotation=MatrixD.CreateFromAxisAngle(Vector3D.Forward,2*Math.PI/180);
+        var culture=System.Globalization.CultureInfo.InvariantCulture;
+        var forward=Vector3D.TransformNormal(new Vector3D(double.Parse(record[5],culture),double.Parse(record[6],culture),double.Parse(record[7],culture)),rotation);
+        var up=Vector3D.TransformNormal(new Vector3D(double.Parse(record[8],culture),double.Parse(record[9],culture),double.Parse(record[10],culture)),rotation);
+        for(int i=0;i<3;i++) { record[5+i]=forward.GetDim(i).ToString("R",System.Globalization.CultureInfo.InvariantCulture); record[8+i]=up.GetDim(i).ToString("R",System.Globalization.CultureInfo.InvariantCulture); }
+        cache.Set("AutoArm Couplers",key,string.Join("|",record)); f.Rig.Storage=cache.ToString(); f.AttachResult=f.Tops[0];
+        var script=SwapStart(type,f); SwapFrame(script,"Tool 1",false,0);
+        SwapMove(script,f,"ApproachTop","TopApproach",false); SwapMove(script,f,"AlignTop","Attach",false);
+        SwapReach(script,f,"Attach");
+        for(int i=0;i<10;i++) SwapFrame(script);
+        Check((SwapPhase(script)=="Attach" || SwapPhase(script)=="Idle") && f.Heads[0].All(m=>m.Enabled),"Matching actual top ID released support using structurally valid cached axes that disagree with the actual coupler frame.");
+        Check(!f.Heads[0].Any(m=>RecordProxy.Of(m).Writes.Any(w=>w.Name=="Enabled" && Equals(w.Value,false))),"Actual coupling-frame mismatch produced a head merge disable write.");
+    }
+    static void HiddenToolCacheScoping(Type type)
+    {
+        var f = LearnedHiddenParkedTool(type); string original = f.Rig.Storage;
+        const string section = "AutoArm Couplers"; string key = "E"+f.Markers[0].EntityId;
+        var learned = new MyIni(); Check(learned.TryParse(original),"Learned coupler Storage was invalid INI.");
+        Check(learned.Get(section,"Format").ToInt32()==1 && learned.Get(section,"PB").ToInt64()==f.Rig.PB.EntityId && learned.Get(section,"Arm").ToString()=="Arm 1","Learned coupler record omitted controller/arm/format scope.");
+        string record = learned.Get(section,key).ToString(); var cells = record.Split('|');
+        Check(cells.Length==11 && long.Parse(cells[0])==f.Tops[0].EntityId && cells[1]=="LargeRotor","Mounted observation did not persist actual top identity and factory subtype.");
+        f.AddHiddenStationCell(0);
+        foreach(string fault in new[]{"PB","Arm","Format","Marker","Malformed","Nonfinite","Axes","OutsideRegion"})
+        {
+            var damaged = new MyIni(); damaged.TryParse(original);
+            if(fault=="PB") damaged.Set(section,"PB",f.Rig.PB.EntityId+1);
+            else if(fault=="Arm") damaged.Set(section,"Arm","Other arm");
+            else if(fault=="Format") damaged.Set(section,"Format",2);
+            else if(fault=="Marker") { damaged.Delete(section,key); damaged.Set(section,"E"+f.Markers[1].EntityId,record); }
+            else if(fault=="Malformed") damaged.Set(section,key,string.Join("|",cells.Take(10)));
+            else if(fault=="OutsideRegion") { var bad=(string[])cells.Clone(); bad[2]="7.5"; bad[3]="0"; bad[4]="0"; damaged.Set(section,key,string.Join("|",bad)); }
+            else { var bad=(string[])cells.Clone(); bad[fault=="Nonfinite"?2:5]=fault=="Nonfinite"?"NaN":"2"; damaged.Set(section,key,string.Join("|",bad)); }
+            f.Rig.Storage = damaged.ToString(); int mutations = f.Mutations.Count;
+            foreach(var b in f.Heads[0]) RecordProxy.Of(b).Writes.Clear();
+            var script = Tests.Create(type,f.Rig); f.Host=(TestHost)script;
+            for(int i=0;i<160 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
+            SwapFrame(script,"Tool 1",false,0);
+            for(int i=0;i<160 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
+            Check(SwapPhase(script)=="Idle" && !Enabled(script) && !f.AnyDrive && f.Mutations.Count==mutations,"Invalid "+fault+" coupler cache authorized headless tool motion/attachment.");
+            Check(f.Heads[0].All(m=>m.Enabled && RecordProxy.Of(m).Writes.All(w=>w.Name!="Enabled")),"Invalid "+fault+" coupler cache wrote support merges.");
+        }
+        f.Rig.Storage = original; f.RemoveTopCell(0);
+        var absent = Tests.Create(type,f.Rig);
+        for(int i=0;i<160 && SwapPhase(absent)!="Idle";i++) SwapFrame(absent);
+        SwapFrame(absent,"Tool 1",false,0);
+        for(int i=0;i<160 && SwapPhase(absent)!="Idle";i++) SwapFrame(absent);
+        Check(SwapPhase(absent)=="Idle" && !Enabled(absent) && !f.AnyDrive && f.Mount.Top==null,"Cached top identity authorized attachment after its occupied cube disappeared.");
+
+        var foreign = LearnedHiddenParkedTool(type);
+        var otherMount = foreign.Rig.Rotor("Foreign station mount",foreign.Rig.Root,foreign.Markers[0].CubeGrid);
+        RecordProxy.Of(otherMount).Values["Top"] = foreign.Tops[0];
+        RecordProxy.Of(foreign.Tops[0]).Values["Base"] = otherMount;
+        int previous = foreign.Mutations.Count;
+        var occupiedElsewhere = Tests.Create(type,foreign.Rig);
+        for(int i=0;i<160 && SwapPhase(occupiedElsewhere)!="Idle";i++) SwapFrame(occupiedElsewhere);
+        SwapFrame(occupiedElsewhere,"Tool 1",false,0);
+        for(int i=0;i<160 && SwapPhase(occupiedElsewhere)!="Idle";i++) SwapFrame(occupiedElsewhere);
+        Check(SwapPhase(occupiedElsewhere)=="Idle" && !Enabled(occupiedElsewhere) && !foreign.AnyDrive && foreign.Mutations.Count==previous,"Cached hidden top attached to another visible mechanical base was accepted for pickup.");
+        Check(foreign.Heads[0].All(m=>m.Enabled && m.IsConnected),"Foreign-base cache refusal released parked support.");
     }
 }

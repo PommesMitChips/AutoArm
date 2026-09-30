@@ -112,6 +112,8 @@ internal static class ScriptPack
                 CatchDeclarationSyntax n when n.Identifier == t => model.GetDeclaredSymbol(n),
                 _ => null
             };
+            if (s is IParameterSymbol parameter && parameter.ContainingSymbol is IMethodSymbol { AssociatedSymbol: IPropertySymbol indexer } &&
+                parameter.Ordinal < indexer.Parameters.Length) s = indexer.Parameters[parameter.Ordinal];
             if (s is IMethodSymbol { MethodKind: MethodKind.Constructor } ctor) s = ctor.ContainingType;
             if (s is IMethodSymbol method)
             {
@@ -128,7 +130,8 @@ internal static class ScriptPack
         foreach (var token in program.DescendantTokens().Where(t => t.IsKind(SyntaxKind.IdentifierToken)))
         {
             var symbol = SymbolFor(token);
-            if (symbol == null || symbol.IsImplicitlyDeclared || protectedNames.Contains(symbol.Name) || symbol.Name.Length <= 2 ||
+            bool local = symbol is ILocalSymbol or IParameterSymbol;
+            if (symbol == null || symbol.IsImplicitlyDeclared || protectedNames.Contains(symbol.Name) || symbol.Name.Length <= (local ? 1 : 2) ||
                 !symbol.Locations.Any(l => l.IsInSource) || symbol is INamedTypeSymbol { TypeKind: TypeKind.Enum } ||
                 symbol is IFieldSymbol { ContainingType.TypeKind: TypeKind.Enum }) continue;
             if (symbol is not (IFieldSymbol or IMethodSymbol or IPropertySymbol or INamedTypeSymbol or ILocalSymbol or IParameterSymbol)) continue;
@@ -136,7 +139,8 @@ internal static class ScriptPack
         }
         var taken = root.DescendantTokens().Where(t => t.IsKind(SyntaxKind.IdentifierToken)).Select(t => t.ValueText).ToHashSet(StringComparer.Ordinal);
         int next = 0;
-        foreach (var group in byToken.Values.GroupBy(s => s, SymbolEqualityComparer.Default).OrderByDescending(g => g.Count() * (g.Key!.Name.Length - 2)))
+        foreach (var group in byToken.Values.Where(s => s is not (ILocalSymbol or IParameterSymbol))
+            .GroupBy(s => s, SymbolEqualityComparer.Default).OrderByDescending(g => g.Count() * (g.Key!.Name.Length - 2)))
         {
             string name;
             do { name = ShortName(next++); } while (taken.Contains(name) || SyntaxFacts.GetKeywordKind(name) != SyntaxKind.None || SyntaxFacts.GetContextualKeywordKind(name) != SyntaxKind.None);
@@ -144,8 +148,51 @@ internal static class ScriptPack
             taken.Add(name);
             symbols[group.Key] = name;
         }
+        // A local alias can be reused in separate methods, but never in sibling
+        // or nested lambdas belonging to the same outer method. Reserve every
+        // original identifier and every member alias to prevent new capture or
+        // shadowing, including references to unqualified fields and methods.
+        ISymbol LocalScope(ISymbol symbol)
+        {
+            ISymbol scope = symbol.ContainingSymbol;
+            for (var owner = scope; owner != null && owner is not INamedTypeSymbol; owner = owner.ContainingSymbol)
+                if (owner is IMethodSymbol) scope = owner;
+            return scope;
+        }
+        foreach (var scope in byToken.Values.Where(s => s is ILocalSymbol or IParameterSymbol)
+            .Distinct(SymbolEqualityComparer.Default).GroupBy(s => LocalScope(s), SymbolEqualityComparer.Default)
+            .OrderBy(g => g.Key is IPropertySymbol ? 0 : 1))
+        {
+            var localTaken = new HashSet<string>(taken, StringComparer.Ordinal);
+            // Indexer parameters belong to the property symbol, but are in
+            // scope in both accessors. Allocate those first, then reserve their
+            // aliases in each accessor's independent method scope.
+            if (scope.Key is IMethodSymbol { AssociatedSymbol: IPropertySymbol property })
+                foreach (var parameter in property.Parameters)
+                    if (symbols.TryGetValue(parameter, out var alias)) localTaken.Add(alias);
+            int localNext = 0;
+            foreach (var group in byToken.Values.Where(s => s is ILocalSymbol or IParameterSymbol &&
+                SymbolEqualityComparer.Default.Equals(LocalScope(s), scope.Key))
+                .GroupBy(s => s, SymbolEqualityComparer.Default).OrderByDescending(g => g.Count() * (g.Key!.Name.Length - 1)))
+            {
+                string name;
+                do { name = LocalName(localNext++); } while (localTaken.Contains(name) ||
+                    SyntaxFacts.GetKeywordKind(name) != SyntaxKind.None || SyntaxFacts.GetContextualKeywordKind(name) != SyntaxKind.None);
+                if (name.Length >= group.Key!.Name.Length) continue;
+                localTaken.Add(name);
+                symbols[group.Key] = name;
+            }
+        }
         var tokens = program.DescendantTokens().Where(t => t.SpanStart >= boundary && t != program.CloseBraceToken && t.Span.Length > 0).ToArray();
-        var renamed = tokens.Select(t => byToken.TryGetValue(t.SpanStart, out var s) && symbols.TryGetValue(s, out var n) ? SyntaxFactory.Identifier(n) : t.WithoutTrivia()).ToArray();
+        var numbers = new Dictionary<int, string>();
+        var renamed = tokens.Select(t =>
+        {
+            if (byToken.TryGetValue(t.SpanStart, out var s) && symbols.TryGetValue(s, out var n)) return SyntaxFactory.Identifier(n);
+            var number = ShortNumber(t);
+            if (number == null) return t.WithoutTrivia();
+            numbers.Add(t.SpanStart, number);
+            return SyntaxFactory.ParseTokens(number, options: ParseOptions).First();
+        }).ToArray();
         var compact = Compact(renamed);
         // Full token round-trip, not a delimiter-count approximation.
         var reparsed = SyntaxFactory.ParseTokens(compact, options: ParseOptions).Where(t => !t.IsKind(SyntaxKind.EndOfFileToken)).ToArray();
@@ -172,8 +219,15 @@ internal static class ScriptPack
         // Reverse the exact token substitutions and compare to the complete source token stream.
         for (int i = 0; i < tokens.Length; i++)
         {
-            var expected = byToken.TryGetValue(tokens[i].SpanStart, out var s) && symbols.TryGetValue(s, out var n) ? n : tokens[i].Text;
-            if (reparsed[i].Text != expected) throw new Exception("Identifier round-trip failed.");
+            var restored = reparsed[i].Text;
+            string? replacement = byToken.TryGetValue(tokens[i].SpanStart, out var s) && symbols.TryGetValue(s, out var n) ? n :
+                numbers.GetValueOrDefault(tokens[i].SpanStart);
+            if (replacement != null)
+            {
+                if (restored != replacement) throw new Exception("Substitution round-trip failed.");
+                restored = tokens[i].Text;
+            }
+            if (restored != tokens[i].Text) throw new Exception("Source token round-trip failed.");
         }
         if (packed.Length > 100000) throw new Exception($"Packed script still exceeds 100,000 characters: {packed.Length}.");
         File.WriteAllText(output, packed, new UTF8Encoding(false));
@@ -226,11 +280,48 @@ internal static class ScriptPack
         return name;
     }
 
+    static string LocalName(int index)
+    {
+        const string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZαβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ";
+        var name = "";
+        do { name = alphabet[index % alphabet.Length] + name; index = index / alphabet.Length - 1; } while (index >= 0);
+        return name;
+    }
+
+    static string? ShortNumber(SyntaxToken token)
+    {
+        if (!token.IsKind(SyntaxKind.NumericLiteralToken)) return null;
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        string[] candidates;
+        string suffix;
+        if (token.Value is double number) { candidates = new[] { number.ToString("R", culture), number.ToString("E16", culture) }; suffix = "d"; }
+        else if (token.Value is float single) { candidates = new[] { single.ToString("R", culture), single.ToString("E8", culture) }; suffix = "f"; }
+        else return null; // Integer and decimal literal types are unchanged.
+        string best = token.Text;
+        foreach (var text in candidates)
+        {
+            int exponentAt = text.IndexOfAny(new[] { 'E', 'e' });
+            string mantissa = exponentAt < 0 ? text : text[..exponentAt];
+            if (mantissa.Contains('.')) mantissa = mantissa.TrimEnd('0').TrimEnd('.');
+            if (mantissa.StartsWith("0.", StringComparison.Ordinal)) mantissa = mantissa[1..];
+            string candidate = mantissa;
+            if (exponentAt >= 0)
+            {
+                int exponent = int.Parse(text[(exponentAt + 1)..], culture);
+                if (exponent != 0) candidate += "e" + exponent.ToString(culture);
+            }
+            if (suffix == "f" || !candidate.Contains('.') && !candidate.Contains('e')) candidate += suffix;
+            if (candidate.Length >= best.Length) continue;
+            var parsed = SyntaxFactory.ParseTokens(candidate, options: ParseOptions).First();
+            if (parsed.IsKind(SyntaxKind.NumericLiteralToken) && parsed.Value?.GetType() == token.Value?.GetType() && Equals(parsed.Value, token.Value)) best = candidate;
+        }
+        return best == token.Text ? null : best;
+    }
+
     static string Compact(SyntaxToken[] tokens)
     {
         var b = new StringBuilder();
         string previous = "";
-        int lineStart = 0;
         foreach (var token in tokens)
         {
             string text = token.Text;
@@ -240,9 +331,9 @@ internal static class ScriptPack
                 if (pair.Length != 2 || pair[0].Text != previous || pair[1].Text != text) b.Append(' ');
             }
             b.Append(text);
-            if (b.Length - lineStart >= 180 && (text == ";" || text == "}")) { b.Append('\n'); lineStart = b.Length; }
             previous = text;
         }
         return b.ToString();
     }
 }
+

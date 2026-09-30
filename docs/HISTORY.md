@@ -11,6 +11,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v2.3` | Readable configuration and retained load compensation for gravity hold | 66,629 |
 | `v2.4` | HEAD/HRZ/VRT frames, active cockpit selection, optional mouse input and named toolbar actions | 69,408 |
 | `v2.5` | Tool swaps, facing-merge region discovery, strict Format 3, support/attachment interlocks and startup/Home regression fixes | 99,883 |
+| `v2.5.1` | PB-safe hidden-top occupancy, mounted coupling learning, persistent identity/pose checks and tighter compaction | 99,772 |
 
 Read a previous script without changing your working tree:
 

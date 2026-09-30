@@ -1,21 +1,79 @@
 // Tool components are occupied-cell regions. Opposed merge faces are cuts even
 // while disabled; adjacent parallel merge blocks are ordinary component edges.
 class ToolPortPair { public IMyShipMergeBlock Head, Stand; }
+// PB GetCubeBlock hides non-terminal tops. Learn only real mounted couplers;
+// parked poses are reconstructed in the tool marker frame and verified on attach.
+class ToolTopInfo
+{
+    const string Section = "AutoArm Couplers";
+    public IMyTerminalBlock Marker;
+    public IMyMotorRotor Live;
+    public long EntityId;
+    public string Subtype;
+    public MatrixD Local;
+    public List<IMyTerminalBlock> Inventory;
+    public bool Closed { get { return Marker.Closed || (Live != null && Live.Closed); } }
+    public IMyCubeGrid CubeGrid { get { return Live == null ? Marker.CubeGrid : Live.CubeGrid; } }
+    public MatrixD WorldMatrix { get { return Live == null ? Local * Marker.WorldMatrix : Live.WorldMatrix; } }
+    public Vector3I Position { get { return Live == null ? CubeGrid.WorldToGridInteger(WorldMatrix.Translation) : Live.Position; } }
+    public IMyMechanicalConnectionBlock Base
+    {
+        get
+        {
+            if (Live != null) return Live.Base;
+            foreach (var b in Inventory)
+            { var m = b as IMyMechanicalConnectionBlock; if (m != null && m.Top != null && m.Top.EntityId == EntityId) return m; }
+            return null;
+        }
+    }
+    public static ToolTopInfo Capture(IMyTerminalBlock marker, IMyMotorRotor top, List<IMyTerminalBlock> inventory)
+    {
+        var pose = top.WorldMatrix; pose.Translation = top.CubeGrid.GridIntegerToWorld(top.Position);
+        return new ToolTopInfo { Marker = marker, Live = top, EntityId = top.EntityId, Subtype = top.BlockDefinition.SubtypeName, Local = pose * MatrixD.Invert(marker.WorldMatrix), Inventory = inventory };
+    }
+    public static ToolTopInfo Load(Program p, IMyTerminalBlock marker, List<IMyTerminalBlock> inventory)
+    {
+        var ini = AutoConfig.Saved(p.Storage);
+        if (ini.Get(Section, "PB").ToInt64() != p.Me.EntityId || ini.Get(Section, "Arm").ToString() != ArmName) return null;
+        string text = ini.Get(Section, "E" + marker.EntityId).ToString(); if (text.Length == 0) return null;
+        var row = text.Split('|'); long id; var v = new double[9];
+        if (ini.Get(Section, "Format").ToInt32() != 1 || row.Length != 11 || !long.TryParse(row[0], out id) || id <= 0 || row[1].Length == 0) throw new Exception("Invalid coupler cache; clear AutoArm Couplers in Storage.");
+        for (int i = 0; i < 9; i++) if (!ReadDouble(row[i + 2], out v[i])) throw new Exception("Invalid coupler geometry.");
+        var forward = new Vector3D(v[3], v[4], v[5]); var up = new Vector3D(v[6], v[7], v[8]);
+        if (Math.Abs(forward.LengthSquared() - 1) > 1e-6 || Math.Abs(up.LengthSquared() - 1) > 1e-6 || Math.Abs(Vector3D.Dot(forward, up)) > 1e-6) throw new Exception("Invalid coupler axes.");
+        return new ToolTopInfo { Marker = marker, EntityId = id, Subtype = row[1], Local = MatrixD.CreateWorld(new Vector3D(v[0], v[1], v[2]), forward, up), Inventory = inventory };
+    }
+    public void Save(Program p)
+    {
+        var ini = AutoConfig.Saved(p.Storage);
+        if (ini.Get(Section, "PB").ToInt64() != p.Me.EntityId || ini.Get(Section, "Arm").ToString() != ArmName) ini.DeleteSection(Section);
+        ini.Set(Section, "PB", p.Me.EntityId); ini.Set(Section, "Arm", ArmName); ini.Set(Section, "Format", 1);
+        var s = new System.Text.StringBuilder(EntityId + "|" + Subtype);
+        foreach (double n in new double[] { Local.Translation.X, Local.Translation.Y, Local.Translation.Z, Local.Forward.X, Local.Forward.Y, Local.Forward.Z, Local.Up.X, Local.Up.Y, Local.Up.Z }) s.Append('|').Append(AutoSettings.Number(n));
+        ini.Set(Section, "E" + Marker.EntityId, s.ToString()); p.Storage = ini.ToString();
+    }
+}
 class ToolRegionScan
 {
     Program P; IMyTerminalBlock Marker; IMyMotorStator Mount; IMyCubeGrid Grid;
-    long GridId; int Limit; string Axis, Fault;
+    long GridId; int Limit; string Axis, Fault, OtherBase;
     Queue<Vector3I> Pending = new Queue<Vector3I>();
     HashSet<Vector3I> Cells = new HashSet<Vector3I>();
     public HashSet<long> Blocks = new HashSet<long>();
     public List<IMyShipMergeBlock> Merges = new List<IMyShipMergeBlock>();
-    public IMyMotorRotor Top;
+    public ToolTopInfo Top;
+    ToolTopInfo Known;
+    IMyMotorRotor Mounted;
+    List<IMyTerminalBlock> Inventory;
     static Vector3I[] Dirs = { Vector3I.UnitX, -Vector3I.UnitX, Vector3I.UnitY, -Vector3I.UnitY, Vector3I.UnitZ, -Vector3I.UnitZ };
-    public ToolRegionScan(Program p, IMyTerminalBlock marker, IMyMotorStator mount, int cellLimit, string mergeAxis)
+    public ToolRegionScan(Program p, IMyTerminalBlock marker, IMyMotorStator mount, int cellLimit, string mergeAxis, ToolTopInfo known, List<IMyTerminalBlock> inventory)
     {
         P = p; Marker = marker; Mount = mount; Limit = Math.Min(4096, Math.Max(1, cellLimit)); Axis = mergeAxis;
         if (marker == null || mount == null) { Fault = "Missing Head/Mount."; return; }
         Grid = marker.CubeGrid; GridId = Grid.EntityId;
+        Known = known; Inventory = inventory;
+        Mounted = mount.Top as IMyMotorRotor;
+        if (Mounted != null && Mounted.CubeGrid.EntityId != GridId) Mounted = null;
         if (Grid.GetCubeBlock(marker.Position) == null) { Fault = "Head cell missing."; return; }
         Cells.Add(marker.Position); Pending.Enqueue(marker.Position);
     }
@@ -28,24 +86,29 @@ class ToolRegionScan
         {
             if (P.Runtime.MaxInstructionCount > 0 && P.Runtime.CurrentInstructionCount >= P.Runtime.MaxInstructionCount * .5) return true;
             Vector3I cell = Pending.Dequeue(); var slim = Grid.GetCubeBlock(cell);
-            if (slim == null) return ToolGeometry.Fail(out why, Fault = "Head cells changed; retry.");
-            var fat = slim.FatBlock;
+            if (slim == null && !Grid.CubeExists(cell)) return ToolGeometry.Fail(out why, Fault = "Head cells changed; retry.");
+            var fat = slim == null ? null : slim.FatBlock;
             if (fat != null && Blocks.Add(fat.EntityId))
             {
                 var merge = fat as IMyShipMergeBlock;
                 if (merge != null) { Vector3I d; if (!ToolGeometry.MergeDirection(merge, Axis, out d, out why)) { Fault = why; return false; } Merges.Add(merge); }
                 var top = fat as IMyMotorRotor;
-                if (top != null && (top.Base == null || top.Base.EntityId == Mount.EntityId))
+                if (top != null)
                 {
-                    if (Top != null) return ToolGeometry.Fail(out why, Fault = "Multiple eligible tops.");
-                    Top = top;
+                    var owner = top.Base;
+                    if (owner != null && owner.EntityId != Mount.EntityId) OtherBase = owner.CustomName;
+                    else
+                    {
+                        if (Top != null) return ToolGeometry.Fail(out why, Fault = "Multiple eligible tops.");
+                        Top = ToolTopInfo.Capture(Marker, top, Inventory);
+                    }
                 }
             }
             foreach (var d in Dirs)
             {
                 Vector3I next = cell + d; if (Cells.Contains(next)) continue;
-                var neighbor = Grid.GetCubeBlock(next); if (neighbor == null) continue;
-                var a = fat as IMyShipMergeBlock; var b = neighbor.FatBlock as IMyShipMergeBlock;
+                var neighbor = Grid.GetCubeBlock(next); if (neighbor == null && !Grid.CubeExists(next)) continue;
+                var a = fat as IMyShipMergeBlock; var b = neighbor == null ? null : neighbor.FatBlock as IMyShipMergeBlock;
                 if (a != null && b != null && a.EntityId != b.EntityId)
                 {
                     Vector3I ad, bd;
@@ -57,7 +120,18 @@ class ToolRegionScan
             }
         }
         done = Pending.Count == 0;
-        if (done && Top == null) return ToolGeometry.Fail(out why, Fault = "No eligible top.");
+        if (done)
+        {
+            if (Mounted != null && Cells.Contains(Mounted.Position))
+            { if (Top != null && Top.EntityId != Mounted.EntityId) return ToolGeometry.Fail(out why, Fault = "Multiple eligible tops."); Top = ToolTopInfo.Capture(Marker, Mounted, Inventory); }
+            if (Top == null && Known != null)
+            {
+                if (Known.Closed || Known.CubeGrid.EntityId != GridId || !Cells.Contains(Known.Position) || !Grid.CubeExists(Known.Position)) return ToolGeometry.Fail(out why, Fault = "Cached top outside tool; mount again.");
+                if (Known.Base != null && Known.Base.EntityId != Mount.EntityId) return ToolGeometry.Fail(out why, Fault = "Top attached to " + Known.Base.CustomName);
+                Top = Known;
+            }
+            if (Top == null && OtherBase != null) return ToolGeometry.Fail(out why, Fault = "Top attached to " + OtherBase);
+        }
         return true;
     }
 }
@@ -213,11 +287,11 @@ static class ToolGeometry
         if (pairs == null) return Fail(out why, "No unique merge layout; check ports/mergeAxis.");
         return true;
     }
-    public static bool TryAttachPose(IMyMotorStator mount, IMyMotorRotor top, out MatrixD pose, out string why)
+    public static bool TryAttachPose(IMyMotorStator mount, ToolTopInfo top, out MatrixD pose, out string why)
     {
         pose = MatrixD.Identity; why = null;
         if (mount == null || top == null) return Fail(out why, "Missing Mount/top.");
-        string s = mount.BlockDefinition.SubtypeName, t = top.BlockDefinition.SubtypeName;
+        string s = mount.BlockDefinition.SubtypeName, t = top.Subtype;
         int index = Array.IndexOf(Bases, s), headIndex = Array.IndexOf(Heads, t);
         if (index < 0) return Fail(out why, "Unsupported mount: " + s);
         bool hinge = index >= 5;

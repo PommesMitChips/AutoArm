@@ -24,9 +24,11 @@ internal sealed class ToolSwapFixture
     readonly Dictionary<IMyCubeGrid, Dictionary<Vector3I, IMySlimBlock>> Cells = new();
     internal IMyMotorRotor? AttachResult;
     internal bool AutoDetach = true, AutoAttach = true;
+    internal bool HideNonterminalCells;
 
-    internal ToolSwapFixture(bool ports = true, bool explicitOnly = false, bool headless = false)
+    internal ToolSwapFixture(bool ports = true, bool explicitOnly = false, bool headless = false, bool hideNonterminalCells = false)
     {
+        HideNonterminalCells = hideNonterminalCells;
         var shoulder = Rig.Grid(); Arm = Rig.Grid();
         Base = Rig.Rotor("Arm 1 - Base - Rotor", Rig.Root, shoulder);
         Piston = Rig.Piston("Reach piston", shoulder, Arm, new Vector3D(0,0,-2), Vector3D.Forward);
@@ -127,12 +129,34 @@ internal sealed class ToolSwapFixture
         Cells[grid] = new();
         proxy.Call = (m,a) => m.Name switch
         {
-            "GetCubeBlock" => Cells[grid].GetValueOrDefault((Vector3I)a![0]!),
+            "GetCubeBlock" => VisibleCell(grid,(Vector3I)a![0]!),
+            "CubeExists" => Cells[grid].ContainsKey((Vector3I)a![0]!),
             "GridIntegerToWorld" => Vector3D.Transform((Vector3D)(Vector3I)a![0]! * 2.5, (MatrixD)proxy.Values["WorldMatrix"]!),
             "WorldToGridInteger" => Vector3I.Round(Vector3D.Transform((Vector3D)a![0]!,MatrixD.Invert((MatrixD)proxy.Values["WorldMatrix"]!))/2.5),
             _ => m.ReturnType == typeof(void) || !m.ReturnType.IsValueType ? null : Activator.CreateInstance(m.ReturnType)
         };
         return grid;
+    }
+    IMySlimBlock? VisibleCell(IMyCubeGrid grid,Vector3I cell)
+    {
+        var slim = Cells[grid].GetValueOrDefault(cell);
+        return HideNonterminalCells && slim?.FatBlock != null && slim.FatBlock is not IMyTerminalBlock ? null : slim;
+    }
+    internal void RemoveTopCell(int region) => Cells[Markers[region].CubeGrid].Remove(Tops[region].Position);
+    internal void AddHiddenStationCell(int region)
+    {
+        var top = RecordProxy.Make<IMyMotorRotor>();
+        RecordProxy.Of(top).Values["EntityId"] = 8300L+region;
+        Put(top,Markers[region].CubeGrid,new Vector3I(3,0,0));
+    }
+    internal void SelectOnlyProfile(int region)
+    {
+        var ini = new MyIni(); ini.TryParse(Rig.PB.CustomData);
+        ini.Set("Tools","Heads",Markers[region].CustomName);
+        ini.Set("Tool01","StandPrefix",$"Arm 1 - Tool {(region==0?"A":"B")} - StandMerge ");
+        ini.Set("Tool01","HeadMerges",string.Join("\n",Heads[region].Select(m=>m.CustomName)));
+        ini.Set("Tool01","StandMerges",string.Join("\n",Stands[region].Select(m=>m.CustomName)));
+        RecordProxy.Of(Rig.PB).Values["CustomData"] = ini.ToString();
     }
     void Put(IMyCubeBlock block, IMyCubeGrid grid, Vector3I cell, bool reversed = false)
     {
@@ -140,6 +164,11 @@ internal sealed class ToolSwapFixture
         values["CubeGrid"] = grid; values["Position"] = cell; values["Min"] = cell; values["Max"] = cell;
         values["Orientation"] = new MyBlockOrientation(reversed ? Base6Directions.Direction.Backward : Base6Directions.Direction.Forward, Base6Directions.Direction.Up);
         values["WorldMatrix"] = MatrixD.CreateWorld(grid.GridIntegerToWorld(cell), reversed ? Vector3D.Backward : Vector3D.Forward, Vector3D.Up);
+        if(block is not IMyTerminalBlock)
+        {
+            RecordProxy.Of(block).Call = (m,a) => m.Name=="GetPosition" ? ((MatrixD)values["WorldMatrix"]!).Translation :
+                m.ReturnType == typeof(void) || !m.ReturnType.IsValueType ? null : Activator.CreateInstance(m.ReturnType);
+        }
         var slim = RecordProxy.Make<IMySlimBlock>(); RecordProxy.Of(slim).Values["FatBlock"] = block;
         Cells[grid][cell] = slim;
     }
@@ -158,12 +187,16 @@ internal sealed class ToolSwapFixture
         for(int n=0;n<Heads[0].Length;n++) { RecordProxy.Of(Heads[0][n]).Values["IsConnected"] = n < pairCount; RecordProxy.Of(Stands[0][n]).Values["IsConnected"] = n < pairCount; }
         RecordProxy.Of(Mount).Values["TopGrid"] = grid;
     }
-    internal void SplitDestination()
+    internal void SplitDestination() => SplitRegion(1);
+    internal void SplitRegion(int region)
     {
-        var origin = Markers[1].WorldMatrix.Translation;
+        var origin = Markers[region].WorldMatrix.Translation;
+        var oldGrid = Markers[region].CubeGrid;
+        var bridge = Cells[oldGrid].GetValueOrDefault(new Vector3I(0,1,0))?.FatBlock;
         var grid = Grid(origin);
-        foreach(var b in new IMyCubeBlock[]{Markers[1],Tops[1]}.Concat(Heads[1])) Put(b,grid,b.Position);
-        foreach(var b in Heads[1].Concat(Stands[1])) RecordProxy.Of(b).Values["IsConnected"] = false;
+        foreach(var b in new IMyCubeBlock[]{Markers[region],Tops[region]}.Concat(Heads[region])) Put(b,grid,b.Position);
+        if(bridge!=null) Put(bridge,grid,bridge.Position);
+        foreach(var b in Heads[region].Concat(Stands[region])) RecordProxy.Of(b).Values["IsConnected"] = false;
         RecordProxy.Of(Mount).Values["TopGrid"] = grid;
     }
     internal void ShiftRegion(int region,Vector3D delta)

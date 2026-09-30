@@ -1,9 +1,9 @@
-AutoArm 2.5 — Tool Head Swap
+AutoArm 2.5.1 — Tool Head Swap / hidden-top discovery fix
 
 DELIVERY
 Paste the entire AutoArm_Compact.txt into the game's programmable block.
-Only ArmName needs editing in code. The compact script is 99,883 characters:
-117 characters remain under the 100,000 limit. Longer arm names consume that
+Only ArmName needs editing in code. The compact script is 99,772 UTF-16 characters:
+228 characters remain under the 100,000 limit. Longer arm names consume that
 space. AutoArm_Source.txt is the readable development source.
 
 UPGRADE
@@ -14,6 +14,10 @@ Record any settings you want to re-enter before deleting the old data.
 Saved Home and unrelated PB Storage are preserved; Home still requires a
 matching arm fingerprint. Never paste another PB's populated actuator table:
 its identities belong to that PB. Clear Actuators to generate fresh defaults.
+When updating from 2.5 to 2.5.1, keep valid Format 3 Custom Data and PB Storage.
+Version should report 2.5.1. Unseen parked tools now report unlearned: mount each
+one once and run ToolScan to record its real top. Unlearned parked profiles do
+not block manual control of a learned mounted tool.
 
 TOOLS SETUP
 Tools are disabled by default. Enable them in [Tools], set Mount to the exact
@@ -88,8 +92,12 @@ caps still apply. Actuator preferences survive expected tool grid-ID changes.
 LIMITS AND VALIDATION
 Automatic pickup supports the installed vanilla rotor/hinge families with
 known attachment geometry. Unknown/modded couplers, incompatible families,
-flipped couplers or displacement that would clamp are refused. No teaching
-mount is required for supported vanilla geometry. General closed linkages and
+flipped couplers or displacement that would clamp are refused. One setup
+mount is required for each new tool. The PB cell API hides unnamed tops,
+so ToolScan records the real mounted top's identity and marker-relative pose.
+Learned parked tools use that saved pose and occupied-region checks, but actual
+attachment identity and coupling pose must pass before support is released.
+General closed linkages and
 variable-ratio parallel branches remain unsupported.
 
 ApproachDistance provides approach clearance, not obstacle avoidance. There
@@ -98,9 +106,10 @@ speeds; volumetric restrictions are still a later feature.
 
 Installed SE API/C# 6 compatibility passes. The packed script preserves the
 source token stream under renaming and has identical method IL. Simulated PB
-regressions pass 174,262 assertions, including facing-merge boundaries, complete
+regressions pass 174,768 assertions, including facing-merge boundaries, complete
 swap/park sequences, partial support, wrong tops, cancellation/restart, actual
 coupling-pose gates, Home external-attachment stop, startup persisted-drive
-stop, gravity bias, manual input priority and HEAD/HRZ/VRT controls. Geometry
+stop, hidden-top API behavior, learned/cache restart and wrong-identity/actual
+coupling-pose refusal, gravity bias, manual input priority and HEAD/HRZ/VRT controls. Geometry
 and actuator models were checked locally. Live SE physics, merge timing under
 load and real-world clearance have not been tested in-game.

@@ -6,7 +6,7 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 
 1. Run `Stop` on the previous controller. Copy the **entire** [AutoArm_Compact.txt](AutoArm_Compact.txt) into the programmable block's script editor.
 2. Set the code value `const string ArmName = "Arm 1";` to your arm's name, then check/compile the script in the PB editor. No local build tools are needed to play.
-3. Run the PB with `Version` and confirm `AutoArm 2.5`. It starts OFF; a first discovery error is expected if the parts or tool profiles are not configured yet.
+3. Run the PB with `Version` and confirm `AutoArm 2.5.1`. This patch fixes hidden-top discovery in the original 2.5 build. It starts OFF; a first discovery error is expected if the parts or tool profiles are not configured yet.
 4. Choose a setup below, name the parts, and edit the **programmable block's Custom Data**. Do not put these settings in the drills, rotors or merge blocks' Custom Data.
 5. Run `Reload`, let discovery/scanning finish OFF, then run `Check`. For parking or swapping, also inspect `ToolInfo`. Run `On` when setup is ready and the mounted tool is clear of its merge support.
 
@@ -66,7 +66,7 @@ Parking support: ship/stand -> Arm 1 - ParkMerge 1 >< tool head-side merge
 | Drill used as the marker | `Arm 1 - Head 1 - Drill` |
 | Merge carried by the tool | `Arm 1 - Head 1 - HeadMerge` |
 | Merge fixed to the parking support | `Arm 1 - ParkMerge 1` |
-| Detachable rotor/hinge **top**, carried by the tool | No special name required; discovered from the tool's occupied cells |
+| Detachable rotor/hinge **top**, carried by the tool | No name required; learned while mounted, then located using saved geometry |
 
 The marker, selected head-side merges and coupler top must belong to the same connected tool region. `ToolMount` is the actuated base remaining on the arm, not the detachable top. It must not also be the `Arm 1 - Base` marker: the script needs an upstream moving arm when the mount is bare. Use compatible supported vanilla rotor/hinge parts.
 
@@ -91,7 +91,7 @@ HeadMerges=
 StandMerges=
 ```
 
-Run `Reload`, wait until the scan finishes OFF, then inspect `ToolInfo`. For initial manual movement, the tool is attached to its mount and its head merge is not connected to the stand. `Check` and `On` enable manual operation. `Park` or `Park 1` performs automatic parking and leaves a bare mount OFF. `Tool Head 1` picks the same supported tool up again; it also finishes OFF. Run `On` to resume manual use.
+For first setup, have the tool attached to `ToolMount`. Run `Reload` or `ToolScan`, wait until the scan finishes OFF, then inspect `ToolInfo`. The scan learns the actual unnamed top's identity and coupling pose. For manual movement its head merge must not remain connected to the stand. `Check` and `On` enable manual operation. `Park` or `Park 1` performs automatic parking and leaves a bare mount OFF. `Tool Head 1` picks the learned supported tool up again; it also finishes OFF. Run `On` to resume manual use.
 
 If the head uses multiple support merges, enumerate and list every required head merge and matching park merge. They must form a compatible pattern, and all selected head ports must be supported before detachment. `Park 2` selects the **primary merge named `Arm 1 - ParkMerge 2`**, not a tool index or an arbitrary named bay. Without a configured generic park port, use tool selection for a swap to a per-tool stand; naming something `StandMerge` does not by itself make it a `Park` destination.
 
@@ -110,7 +110,7 @@ This example uses a drill tool and a welder tool. The merge blocks can share the
 | Tool 2 merge | `Arm 1 - Head 2 - HeadMerge` | On welder tool |
 | Tool 2 stand merge | `Arm 1 - Head 2 - StandMerge` | On fixed welder stand |
 
-Each tool carries its compatible detachable rotor/hinge top. A parked tool's top is detached, and its own merge is locked face-to-face with its stand merge. For the first scan, either have the drill mounted and free of merge support while the welder is parked, or have both tools parked and the arm mount bare. All configured markers/merges must be visible to the PB. A marker name in `Heads` is the **complete terminal block name**, not an alias or a prefix.
+Each tool carries its compatible detachable rotor/hinge top. A parked tool's top is detached, and its own merge is locked face-to-face with its stand merge. **Each new tool needs one setup mount on the configured `ToolMount` and a completed scan.** An already learned tool can be scanned while parked after restarting the PB. All configured markers/merges must be visible to the PB. A marker name in `Heads` is the **complete terminal block name**, not an alias or a prefix.
 
 Use [examples/ToolSwap.ini](examples/ToolSwap.ini). The naming-related sections are:
 
@@ -143,7 +143,16 @@ StandMerges=
 
 `Name=Head 1` is only a convenient command alias. It does not rename the marker or change automatic stand prefixes. The explicit merge lists above accept your unnumbered `StandMerge` names and avoid prefix inference altogether. `Scan...=false` disables automatic adoption; explicit names still work, and physical facing-merge inspection still identifies the tool region.
 
-Run `Reload`, let scanning finish OFF, then `ToolInfo`. It should show both aliases, their mounted/detached state, and `merges 1/1` for each one-port tool/stand profile. It does not print marker/top identities; those are checked internally. Use `Tool Head 2` (or `Tool 2`) to park the drill on its own stand and pick up the welder. `Tool Head 1` reverses the swap. Successful changes finish OFF; run `On` for manual control. Generic `Park` is optional: add `Arm 1 - ParkMerge 1` to `[Tools] ParkMerges` if you want a separate common parking support.
+For initial learning:
+
+1. With the drill attached to `ToolMount`, run `Reload` or `ToolScan` and let it finish OFF. `ToolInfo` should show `Head 1 mounted` and `Head 2 unlearned; mount once`. The unlearned welder does not prevent manual control of the drill; selecting it refuses before parking the drill.
+2. Keep the script OFF. Support the drill with its merge blocks before manually detaching it. Attach the arm's `ToolMount` to the welder's existing unnamed top while the welder remains supported on its stand, then run `ToolScan` to learn it. A configured generic `Park` destination can be used to park the already learned drill; otherwise position/support it manually for this first setup.
+3. Confirm the real mount is attached before disabling **only the currently mounted tool's head-side merges**. Wait for separation from its stand and run `ToolScan` again. Never remove support from a tool whose top is still detached.
+4. Check `ToolInfo`: both profiles should now be learned, with mounted/detached state and `merges 1/1` for each one-port tool/stand profile. Use `Tool Head 1` or `Tool Head 2` for subsequent automatic swaps.
+
+Coupler identity and marker-relative geometry are saved in this PB's Storage; keep that Storage when recompiling or replacing the script. Moving to a different PB, replacing a top/marker, or changing the coupling layout may require another setup mount. The tool's top remains unnamed throughout.
+
+After learning, `Tool Head 2` (or `Tool 2`) parks the drill on its own stand and picks up the welder; `Tool Head 1` reverses it. Successful changes finish OFF; run `On` for manual control. Generic `Park` is optional: add `Arm 1 - ParkMerge 1` to `[Tools] ParkMerges` if you want a separate common parking support.
 
 If you prefer automatic merge adoption, set the corresponding scans to `true`. Head-side merges are adopted from the physically scanned tool region, irrespective of their names. Stand auto-adoption uses `StandPrefix`; when it is blank, it is derived from the **full marker name**. With marker `Arm 1 - Head 1 - Drill`, the default is `Arm 1 - Head 1 - Drill - StandMerge `, not `Arm 1 - Head 1 - StandMerge `. For the simpler automatic naming convention, name the marker exactly `Arm 1 - Head 1` and its stand merges `Arm 1 - Head 1 - StandMerge 1`, etc. Number automatic stand and park merges, starting with `1`.
 
@@ -152,10 +161,18 @@ If you prefer automatic merge adoption, set the corresponding scans to `true`. H
 This message means discovery is using the simple-arm head-prefix rule and sees six matches. `Arm 1 - Head 1 - HeadMerge` and `Arm 1 - Head 1 - StandMerge` count just as much as the drill. It does not mean the arm contains six selected tool markers.
 
 - **For a simple arm:** keep only one reference block beginning `Arm 1 - Head`; rename all other matching parts so they do not use that prefix.
-- **For a tool setup:** set `[Tools] Enabled=true`, specify the end-coupler base in `Mount`, and list the full marker names and merges as shown above. Run `Reload` after editing; `Check` alone does not load tool configuration. If `Version` does not report 2.5, install the current compact script first.
+- **For a tool setup:** set `[Tools] Enabled=true`, specify the end-coupler base in `Mount`, and list the full marker names and merges as shown above. Run `Reload` after editing; `Check` alone does not load tool configuration. If `Version` does not report 2.5.1, install the current compact script first.
 - **For missing-name errors:** match spelling, spaces and capitalization exactly. `Arm 1 - Head 1` is not the full name `Arm 1 - Head 1 - Drill`. Do not leave a profile for an absent tool; remove its `Heads` entry and keep `ToolNN` sections in list order.
 
 For a fresh setup, the linked INI examples include `[AutoArm] Arm=Arm 1` and `Format=3` and intentionally leave `Actuators` blank. When editing an existing valid setup, retain your current `[Config]` settings and actuator table rather than replacing them unnecessarily.
+
+### “No eligible top” and unlearned tools
+
+An earlier v2.5 build tried to discover unnamed tops through `GetCubeBlock()`. The game's PB implementation hides non-terminal blocks from that call, including rotor/hinge tops. Having a real top directly attached to the welder was therefore insufficient for that scanner. This was a script bug, not a requirement to name the top or rebuild the tool.
+
+The current build walks occupancy through `CubeExists`, learns the actual `ToolMount.Top` only when it lies inside the marker's tool region, and stores its exact identity and pose. A previously unseen parked tool appears as **unlearned** in `ToolInfo`; mount it once and run `ToolScan`. A hidden top's occupancy alone cannot establish its identity or orientation. The support merges remain locked until automatic pickup verifies the actual attached top and coupling pose.
+
+If the current scan reports a marker name followed by `Cached top outside tool`, check that its marker, top and merges are on the same connected rigid tool region. If it reports `Top attached to ...` or `Tool attached elsewhere`, the top is still attached to another base. `[Tools] Mount` must name the exact actuated base on this arm. Tops themselves need no name.
 
 ## Hardware and control
 
@@ -175,7 +192,7 @@ Useful toolbar Run arguments include `On`, `Stop`, `Hold`, `Check`, `Reload`, `I
 
 ## Tool operations and recovery
 
-The parked-tool scan walks occupied cells from the marker and stops only across adjacent opposed merge faces: head merge **><** stand merge. Parallel/non-facing merges are not barriers. This identifies the tool's exact rotor/hinge top even when it shares the stand grid. Supported vanilla couplers do not require a teaching mount.
+The parked-tool scan walks occupied cells from the marker and stops only across adjacent opposed merge faces: head merge **><** stand merge. Parallel/non-facing merges are not barriers. After one setup mount, this region and the saved coupling pose locate the learned top even when the parked tool shares the stand grid. Pickup must still verify its exact identity through the real attached top before releasing support.
 
 `Tool Head 2` or `Tool 2` parks the current tool on its stand, verifies all selected support ports, detaches the configured mount, approaches and attaches the selected incoming top, then disables only that tool's head-side merges. It verifies exact reciprocal attachment, coupling pose and actual grid separation before rebuilding. `Park` uses generic park ports; `Park 2` selects a primary enumerated port. `ToolInfo` reports state.
 
@@ -203,9 +220,9 @@ For a nondefault game location:
 
 Edit the fragments in `src/`. The build regenerates `AutoArm_Source.txt` and `AutoArm_Compact.txt`, checks C# 6 against installed SE APIs, verifies token round-trip and identical method IL, and runs the simulated PB harness. Tests also regenerate `examples/CustomData.ini`. [`src/AutoArm.Seam.md`](src/AutoArm.Seam.md) describes the implementation boundaries.
 
-The current compact script has 99,883 characters, leaving 117 under the PB's 100,000-character limit; a longer `ArmName` consumes some of that allowance. Configured velocity and acceleration caps are not physical momentum measurements. Available torque/force, travel limits and game physics determine achievable motion.
+The current compact script has 99,772 UTF-16 characters, leaving 228 under the PB's 100,000-character limit; a longer `ArmName` consumes some of that allowance. UTF-8 file bytes are not the PB's character count. The generated implementation uses short identifiers and keeps the editable `ArmName` header readable. Configured velocity and acceleration caps are not physical momentum measurements. Available torque/force, travel limits and game physics determine achievable motion.
 
-The relocated v2.5 suite passes **174,262 assertions**. Coverage includes topology discovery, signed parallel groups, additive/manual-priority input, gravity bias, movement frames, facing-merge boundaries, swap/park sequences, partial support, wrong tops, pose gates, cancellation/restart, startup drive stopping and Home attachment faults. Live SE physics, actual instruction costs and loaded merge timing remain unverified.
+The v2.5 suite passes **174,768 assertions**. Coverage includes topology discovery, signed parallel groups, additive/manual-priority input, gravity bias, movement frames, facing-merge boundaries, swap/park sequences, hidden non-terminal tops, learned couplers across restart, cache scope/geometry, wrong tops, actual coupling-pose gates, cancellation/restart, startup drive stopping and Home attachment faults. Live SE physics, actual instruction costs and loaded merge timing remain unverified.
 
 ## Acknowledgements
 
