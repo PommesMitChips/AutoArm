@@ -156,9 +156,9 @@ After learning, `Tool Head 2` (or `Tool 2`) parks the drill on its own stand and
 
 If you prefer automatic merge adoption, set the corresponding scans to `true`. Head-side merges are adopted from the physically scanned tool region, irrespective of their names. Stand auto-adoption uses `StandPrefix`; when it is blank, it is derived from the **full marker name**. With marker `Arm 1 - Head 1 - Drill`, the default is `Arm 1 - Head 1 - Drill - StandMerge `, not `Arm 1 - Head 1 - StandMerge `. For the simpler automatic naming convention, name the marker exactly `Arm 1 - Head 1` and its stand merges `Arm 1 - Head 1 - StandMerge 1`, etc. Number automatic stand and park merges, starting with `1`.
 
-### Fixing “Head*; found 6”
+### Fixing “Head*; found X”
 
-This message means discovery is using the simple-arm head-prefix rule and sees six matches. `Arm 1 - Head 1 - HeadMerge` and `Arm 1 - Head 1 - StandMerge` count just as much as the drill. It does not mean the arm contains six selected tool markers.
+This message means discovery is using the simple-arm head-prefix rule; `X` is the number of matching blocks. `Arm 1 - Head 1 - HeadMerge` and `Arm 1 - Head 1 - StandMerge` count just as much as the drill. The count does not represent selected tool markers.
 
 - **For a simple arm:** keep only one reference block beginning `Arm 1 - Head`; rename all other matching parts so they do not use that prefix.
 - **For a tool setup:** set `[Tools] Enabled=true`, specify the end-coupler base in `Mount`, and list the full marker names and merges as shown above. Run `Reload` after editing; `Check` alone does not load tool configuration. If `Version` does not report 2.5.1, install the current compact script first.
@@ -198,7 +198,7 @@ The parked-tool scan walks occupied cells from the marker and stops only across 
 
 Completion stays **OFF**; run `On` to resume manual control. Pilot input, `SwapCancel`, `Stop` or `Off` cancels automatic motion and retains the existing mechanical/support state. After cancellation or interruption, explicitly run `ToolScan` to reconcile the stopped setup. Passive startup scanning does not clear recovery.
 
-Automatic operations require proven compatible support. Unknown/modded or flipped couplers and incompatible attachment geometry are refused. **There is no collision checking or path planning**; approach clearance does not guarantee a clear route. Volumetric restrictions remain future work.
+Automatic operations require proven compatible support. Unknown/modded or flipped couplers and incompatible attachment geometry are refused. **There is no collision checking or path planning**; approach clearance does not guarantee a clear route.
 
 See [docs/RELEASE_NOTES.txt](docs/RELEASE_NOTES.txt) for v2.5 details and [docs/HISTORY.md](docs/HISTORY.md) for retrieving older versions from Git tags. [examples/CustomData.ini](examples/CustomData.ini) shows a generated ten-joint configuration; generate your own identity table rather than copying its populated actuator rows.
 
