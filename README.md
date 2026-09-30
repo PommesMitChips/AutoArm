@@ -1,8 +1,6 @@
 # AutoArm
 
-Automatic mechanical-arm control for the Space Engineers programmable block.
-
-This snapshot is **v2.4**, covering HEAD, HRZ and VRT cockpit control. Paste the whole [AutoArm_Compact.txt](AutoArm_Compact.txt) into the programmable block; build tools are for development only.
+AutoArm is a mechanical-arm control program for the Space Engineers programmable block. It simplifies setup of robotic arms to configuring the start and endpoint of an arm, while allowing later fine tuning of parameters via CustomData within the programmable block.
 
 **For automatic parking and tool swapping, use v2.5 from [PR #1](https://github.com/PommesMitChips/AutoArm/pull/1).** Those features are not in this v2.4 `main` script. The [v2.5 setup README](https://github.com/PommesMitChips/AutoArm/blob/release/v2.5-tool-head-swap/README.md#install-and-choose-a-setup) explains exact block names and PB Custom Data for simple arms, one-tool parking, and drill/welder swapping. Run `Version` in-game to check which script you installed.
 
@@ -12,8 +10,6 @@ For ordinary discovery there must be **exactly one** mechanical name beginning `
 
 Pistons, rotors and hinges can appear throughout a serial arm, including spatially offset or differently oriented stages. Compatible equal-stage parallel branches are synchronized; opposite-facing coaxial rotary pairs receive signed commands. General closed linkages are unsupported. There is no collision avoidance or collision-free homing guarantee.
 
-## Imported history
+## Acknowledgements
 
-This Git history was reconstructed from preserved script files. Each import represents a saved snapshot, not an original development commit. Commit dates record the import; no historical timestamps have been invented. Original release files, names and notes are retained under `releases/`.
-
-Development began with a mining-arm adaptation inspired by [Philippe117's MArmOS](https://github.com/Philippe117/MArmOS). AutoArm uses its own automatic discovery and task-space control architecture. It is not an official MArmOS release or a drop-in fork.
+Development began with a mining-arm adaptation inspired by [Philippe117's MArmOS](https://github.com/Philippe117/MArmOS). Since then, AutoArm has developed its own automatic discovery and task-space control architecture.
