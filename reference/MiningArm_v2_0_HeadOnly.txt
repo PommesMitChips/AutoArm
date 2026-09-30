@@ -1,0 +1,2425 @@
+// MiningArm v2.0 - HEAD ONLY; blended pilot + PID task-space control.
+// Derived from the supplied v1.9; original MArmOS lineage: Timotei~.
+// Paste the ENTIRE file. Starts OFF. Stop, replace, Check, then On.
+// No collision avoidance. Same calibrated 15-actuator / 12-coordinate arm.
+
+// ======================= USER SETTINGS =======================
+
+// A. STARTUP SPEEDS AND COMMAND CEILINGS
+static double DefaultMoveSpeedMps = 0.2;
+static double DefaultTurnSpeedDegPerSec = 5.0;
+static double DefaultStepAngleDeg = 5.0;
+static double DefaultJointCapRPM = 0.50;
+static double DefaultPistonCapMps = 0.20;
+static double DefaultHomeJointCapRPM = 0.50;
+static double DefaultHomePistonCapMps = 0.20;
+static double MaximumMoveSpeedMps = 5.0;
+static double MaximumTurnSpeedDegPerSec = 15.0;
+static double MaximumStepAngleDeg = 45.0;
+static double MaximumJointCapRPM = 5.0;
+static double MaximumPistonCapMps = 2.0;
+static double MaximumHomeJointCapRPM = 5.0;
+static double MaximumHomePistonCapMps = 2.0;
+static readonly bool DefaultReadKeyboard = true;
+static readonly bool DefaultReadRoll = true;
+
+// B. ORIENTATION FREEDOM / FEEDBACK (not geometry-calibration tolerances)
+static double DefaultOrientationToleranceDeg = 3.0;
+static double MaximumOrientationToleranceDeg = 30.0;
+static double HeadAimToleranceDeg = 0.15;
+static double HeadOrientationPauseMarginDeg = 3.0;
+static double HeadOrientationStopMarginDeg = 9.0;
+static double HeadOrientationRampStartFraction = 0.50;
+static double HeadOrientationWeightInsideBand = 6.0;
+static double HeadOrientationHoldWeight = 6.0;
+static double HeadOrientationTurnWeight = 5.0;
+static double HeadPositionTranslationWeight = 1.0;
+static double HeadPositionRotationWeight = 6.0;
+static double HeadPositionGain = 1.5; // position Kp, 1/s
+static double HeadOrientationGain = 1.0; // orientation Kp, 1/s
+static double HeadPresetGain = 1.5;
+static double HeadMinimumRecoverySpeedMps = 0.05;
+static readonly bool HeadStopOnPositionError = true;
+static double HeadPosStopM = 2.0; // significant error: requires persistence below
+static double HeadPositionFaultDelaySeconds = 1.0;
+static double HeadPositionImmediateStopM = 5.0; // gross error: no persistence delay
+static readonly bool HeadStopOnRecoveryTimeout = false;
+static double HeadPositionDeadbandM = 0.003;
+static double HeadDamping = 0.002;
+static int HeadSolverMaxPasses = 32; // active-bound iterations; feasible partial results retained
+static double HeadJointAccelerationRPMPerSec = 1.0;
+static double HeadPistonAccelerationMps2 = 0.40;
+// B2. OUTER POSE PID. Outputs are velocity corrections, not torque commands.
+static double HeadPositionIntegralGain = 0.05;
+static double HeadPositionDerivativeGain = 0.0;
+static double HeadOrientationIntegralGain = 0.0;
+static double HeadOrientationDerivativeGain = 0.0;
+static double HeadPositionCorrectionMaxMps = 0.20;
+static double HeadOrientationCorrectionMaxDegPerSec = 5.0;
+static double HeadPositionIntegralMaxMps = 0.03;
+static double HeadOrientationIntegralMaxDegPerSec = 0.50;
+static double HeadPositionIntegralCaptureM = 0.10;
+static double HeadOrientationIntegralCaptureDeg = 10.0;
+static double HeadIntegralUnwindSeconds = 2.0;
+static double HeadVelocityFilterSeconds = 0.15;
+// B3. DEVIATION WARNINGS. These do not suppress pilot input.
+static double HeadPositionRecoveryM = 0.15;
+static double HeadRecoveryResumeM = 0.02;
+static double HeadRecoveryProgressM = 0.005;
+static double HeadRecoveryNoProgressSeconds = 5.0; // warning; see HeadStopOnRecoveryTimeout
+static double HeadRecoveryMaximumSeconds = 15.0; // warning; see HeadStopOnRecoveryTimeout
+static double HeadTraceIntervalSeconds = 0.10;
+static double HeadBudgetPauseTimeoutSeconds = 1.0;
+
+// C. CONTINUOUS INPUT MAPPING
+static readonly PilotAction InputW = PilotAction.Forward;
+static readonly PilotAction InputS = PilotAction.Backward;
+static readonly PilotAction InputA = PilotAction.Left;
+static readonly PilotAction InputD = PilotAction.Right;
+static readonly PilotAction InputSpace = PilotAction.Up;
+static readonly PilotAction InputC = PilotAction.Down;
+static readonly PilotAction InputQ = PilotAction.RollLeft;
+static readonly PilotAction InputE = PilotAction.RollRight;
+
+// D. TOOLBAR / NUMPAD RUN-ARGUMENT MAPPING
+static readonly ToolbarBinding[] HeadBindings = new ToolbarBinding[] {
+  new ToolbarBinding("1", HeadAction.PitchUp),
+  new ToolbarBinding("2", HeadAction.FaceBack),
+  new ToolbarBinding("3", HeadAction.PitchDown),
+  new ToolbarBinding("4", HeadAction.FaceLeft),
+  new ToolbarBinding("5", HeadAction.FaceDown),
+  new ToolbarBinding("6", HeadAction.FaceRight),
+  new ToolbarBinding("7", HeadAction.YawLeft),
+  new ToolbarBinding("8", HeadAction.FaceForward),
+  new ToolbarBinding("9", HeadAction.YawRight)
+};
+
+// E. JOINT PARTICIPATION IN HEAD MODE
+static readonly double[,] HeadJointParticipation = new double[,] {
+  {   1.00, 0.25 }, //  0 Base rotor
+  {   1.00, 0.40 }, //  1 BOTH base hinges
+  {   1.00, 0.50 }, //  2 L2 + R2 pistons
+  {   1.00, 0.50 }, //  3 L1 + R1 pistons
+  {   0.80, 0.70 }, //  4 Elbow 1 rotor
+  {   1.00, 0.70 }, //  5 Elbow 1 hinge
+  {   1.00, 0.65 }, //  6 Segment 2 piston
+  {   0.70, 0.85 }, //  7 Elbow 2 rotor
+  {   0.70, 0.85 }, //  8 Elbow 2 hinge
+  {   0.40, 1.00 }, //  9 Wrist rotor
+  {   0.40, 1.00 }, // 10 Wrist hinge 1
+  {   0.40, 1.00 }  // 11 Wrist hinge 2
+};
+
+const string MiningReferenceName = "Arm Controller";
+const string HeadToolName = "Drill";
+enum PilotAction
+{
+  None,
+  Forward,
+  Backward,
+  Left,
+  Right,
+  Up,
+  Down,
+  YawLeft,
+  YawRight,
+  PitchUp,
+  PitchDown,
+  RollLeft,
+  RollRight
+}
+
+enum HeadAction
+{
+  None,
+  FaceForward,
+  FaceBack,
+  FaceLeft,
+  FaceRight,
+  FaceDown,
+  YawLeft,
+  YawRight,
+  PitchUp,
+  PitchDown,
+  RollLeft,
+  RollRight,
+  Hold,
+  Stop
+}
+
+class ToolbarBinding
+{
+  public readonly string Argument;
+  public readonly HeadAction Action;
+  public ToolbarBinding(string argument, HeadAction action)
+  {
+    Argument = argument;
+    Action = action;
+  }
+}
+
+// F. BLENDING. Ordinary position errors do NOT gate pilot input.
+// Forward/sideways pilot velocity and position PID are added in the SAME solve.
+// Only excessive target lead ALONG the requested direction slows new target travel.
+static double HeadInputLeadSlowM = 0.50;
+static double HeadInputLeadMaxM = 1.50;
+// Limit the PID component opposing active translation to this fraction of feed.
+// 0.5 retains at least half the feed component in the requested task velocity.
+// Joint feasibility/limits and the separate orientation guard still take precedence.
+static double HeadManualCounterCorrectionFraction = 0.50;
+// Existing panel names are retained for compatibility; exact matches only.
+static string StatusPanelName = "MArmOS Echo";
+static string LogPanelName = "MArmOS Log";
+static double StatusRefreshSeconds = 0.25;
+
+
+const int MiningDrillCount = 9;
+const double MiningPositionToleranceM = 0.10;
+const double MiningAxisToleranceDeg = 0.5;
+const double MiningPairAngleToleranceRad = 0.25 * Math.PI / 180;
+const double MiningPairPositionToleranceM = 0.02;
+const string MiningCalibrationId = "MixedArm-20260929-061929-v14";
+static Program MiningOwner;
+static IMyProgrammableBlock MiningProgrammableBlock;
+static MixedDrive[] MiningDrives;
+static string MiningBindingError = "";
+static readonly string[][] MiningMemberNames = new string[][]
+{
+  new string[]
+  {
+    "Arm - Base - Rotor"
+  },
+  new string[]
+  {
+    "Arm - Base - Hinge 1",
+    "Arm - Base - Hinge 2"
+  },
+  new string[]
+  {
+    "Arm - Seg 1 - Piston L2",
+    "Arm - Seg 1 - Piston R2"
+  },
+  new string[]
+  {
+    "Arm - Seg 1 - Piston L1",
+    "Arm - Seg 1 - Piston R1"
+  },
+  new string[]
+  {
+    "Arm - Elbow 1 - Rotor"
+  },
+  new string[]
+  {
+    "Arm - Elbow 1 - Hinge"
+  },
+  new string[]
+  {
+    "Arm - Seg 2 - Piston"
+  },
+  new string[]
+  {
+    "Arm - Elbow 2 - Rotor"
+  },
+  new string[]
+  {
+    "Arm - Elbow 2 - Hinge"
+  },
+  new string[]
+  {
+    "Arm - Wrist - Rotor"
+  },
+  new string[]
+  {
+    "Arm - Wrist - Hinge 1"
+  },
+  new string[]
+  {
+    "Arm - Wrist - Hinge 2"
+  }
+};
+static readonly bool[] MiningIsRotary = new bool[]
+{
+  true,
+  true,
+  false,
+  false,
+  true,
+  true,
+  false,
+  true,
+  true,
+  true,
+  true,
+  true
+};
+static readonly string[] MiningAxes = new string[]
+{
+  "-Z",
+  "Y",
+  "X",
+  "X",
+  "-Z",
+  "Y",
+  "-X",
+  "-X",
+  "Y",
+  "-X",
+  "-Z",
+  "-Y"
+};
+static readonly double[] MiningOffsetsDeg = new double[]
+{
+  0,
+  90,
+  0,
+  0,
+  0,
+  - 90,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0
+};
+static readonly Vector3D[] MiningLinkM = new Vector3D[]
+{
+  new Vector3D(0, 0, - 5),
+  new Vector3D(3.75, 0, 0),
+  new Vector3D(5.15965, 0, 0),
+  new Vector3D(3.909727, 0, 0),
+  new Vector3D(0, 0, - 2.5),
+  new Vector3D(- 3.75, 0, 0),
+  new Vector3D(- 8.910298, 0, 0),
+  new Vector3D(- 2.6, 0, 0),
+  new Vector3D(- 15, 0, 0),
+  new Vector3D(- 2.6, 0, 0),
+  new Vector3D(- 2.5, 0, 0),
+  new Vector3D(- 5, 0, 0)
+};
+static readonly Vector3D[] MiningBaseForward = new Vector3D[]
+{
+  new Vector3D(1, 0, 0),
+  new Vector3D(1, 0, 0),
+  new Vector3D(0, 0, 1),
+  new Vector3D(0, 0, 1),
+  new Vector3D(- 1, 0, 0),
+  new Vector3D(1, 0, 0),
+  new Vector3D(0, 0, - 1),
+  new Vector3D(0, 0, - 1),
+  new Vector3D(0, 0, - 1),
+  new Vector3D(0, - 1, 0),
+  new Vector3D(0, - 1, 0),
+  new Vector3D(0, 0, 1)
+};
+static readonly double[] MiningDisplacementM = new double[]
+{
+  - 0.2,
+  0,
+  0,
+  0,
+  - 0.2,
+  0,
+  0,
+  - 0.1,
+  0,
+  - 0.1,
+  0,
+  0
+};
+
+static Vector3D HeadUnit(Vector3D v)
+{
+  double n = v.Length();
+  if (! MiningFinite(n) || n < 1e-10) throw new Exception("Invalid head/axis vector.");
+  return v / n;
+}
+
+static Vector3D HeadClampVector(Vector3D v, double limit)
+{
+  double n = v.Length();
+  if (! MiningFinite(n) || ! MiningFinite(limit) || limit < 0) throw new Exception("Invalid head velocity/error.");
+  return n > limit && n > 1e-12 ? v *(limit / n): v;
+}
+
+static double HeadComponent(Vector3D v, int i)
+{
+  return i == 0 ? v.X:(i == 1 ? v.Y: v.Z);
+}
+
+static Vector3D HeadRotateVector(Vector3D v, Vector3D rotation)
+{
+  double a = rotation.Length();
+  if (a < 1e-12) return v;
+  var axis = rotation / a;
+  double c = Math.Cos(a),
+  s = Math.Sin(a);
+  return v * c + Vector3D.Cross(axis, v) * s + axis * Vector3D.Dot(axis, v) *(1 - c);
+}
+
+static void HeadOrthonormalise(ref Vector3D f, ref Vector3D u)
+{
+  f = HeadUnit(f);
+  u = HeadUnit(u - f * Vector3D.Dot(u, f));
+}
+
+static Vector3D HeadRotationError(Vector3D f, Vector3D u, Vector3D tf, Vector3D tu)
+{
+  HeadOrthonormalise(ref f, ref u);
+  HeadOrthonormalise(ref tf, ref tu);
+  var l = Vector3D.Cross(u, f);
+  var tl = Vector3D.Cross(tu, tf);
+  double d00 = tf.X * f.X + tl.X * l.X + tu.X * u.X,
+  d01 = tf.X * f.Y + tl.X * l.Y + tu.X * u.Y,
+  d02 = tf.X * f.Z + tl.X * l.Z + tu.X * u.Z;
+  double d10 = tf.Y * f.X + tl.Y * l.X + tu.Y * u.X,
+  d11 = tf.Y * f.Y + tl.Y * l.Y + tu.Y * u.Y,
+  d12 = tf.Y * f.Z + tl.Y * l.Z + tu.Y * u.Z;
+  double d20 = tf.Z * f.X + tl.Z * l.X + tu.Z * u.X,
+  d21 = tf.Z * f.Y + tl.Z * l.Y + tu.Z * u.Y,
+  d22 = tf.Z * f.Z + tl.Z * l.Z + tu.Z * u.Z;
+  double cosine = Clamp((d00 + d11 + d22 - 1) * 0.5, - 1, 1),
+  a = Math.Acos(cosine);
+  var skew = new Vector3D(d21 - d12, d02 - d20, d10 - d01) * 0.5;
+  if (a < 1e-7) return skew;
+  if (Math.PI - a > 1e-5) return skew *(a / Math.Sin(a));
+  double x,
+  y,
+  z;
+  if (d00 >= d11 && d00 >= d22)
+  {
+    x = Math.Sqrt(Math.Max(0,(d00 + 1) * 0.5));
+    y =(d01 + d10) /(4 * Math.Max(x, 1e-10));
+    z =(d02 + d20) /(4 * Math.Max(x, 1e-10));
+  } else if (d11 >= d22)
+  {
+    y = Math.Sqrt(Math.Max(0,(d11 + 1) * 0.5));
+    x =(d01 + d10) /(4 * Math.Max(y, 1e-10));
+    z =(d12 + d21) /(4 * Math.Max(y, 1e-10));
+  } else
+  {
+    z = Math.Sqrt(Math.Max(0,(d22 + 1) * 0.5));
+    x =(d02 + d20) /(4 * Math.Max(z, 1e-10));
+    y =(d12 + d21) /(4 * Math.Max(z, 1e-10));
+  }
+
+  var axis = HeadUnit(new Vector3D(x, y, z));
+  if (skew.LengthSquared() > 1e-16 && Vector3D.Dot(axis, skew) < 0) axis = - axis;
+  return axis * a;
+}
+
+static bool HeadCholesky(double[,] a, double[] b, double[,] l, double[] temp, double[] answer)
+{
+  for (int i = 0; i < 6; i++) for (int j = 0; j < 6; j++) l[i, j] = 0;
+  for (int i = 0; i < 6; i++) for (int j = 0; j <= i; j++)
+  {
+    double v = a[i, j];
+    for (int k = 0; k < j; k++) v -= l[i, k] * l[j, k];
+    if (i == j)
+    {
+      if (! MiningFinite(v) || v <= 1e-15) return false;
+      l[i, j] = Math.Sqrt(v);
+    } else l[i, j] = v / l[j, j];
+  }
+
+  for (int i = 0; i < 6; i++)
+  {
+    double v = b[i];
+    for (int j = 0; j < i; j++) v -= l[i, j] * temp[j];
+    temp[i] = v / l[i, i];
+  }
+
+  for (int i = 5; i >= 0; i--)
+  {
+    double v = temp[i];
+    for (int j = i + 1; j < 6; j++) v -= l[j, i] * answer[j];
+    answer[i] = v / l[i, i];
+    if (! MiningFinite(answer[i])) return false;
+  }
+
+  return true;
+}
+
+void BindMixedDrives()
+{
+  MiningBindingError = "";
+  var available = new List < IMyMechanicalConnectionBlock >();
+  MyGTS.GetBlocksOfType < IMyMechanicalConnectionBlock >(available, b => b.IsSameConstructAs(Me));
+  foreach (var d in MiningDrives)
+  {
+    for (int j = 0; j < d.Names.Length; j++)
+    {
+      int found = 0;
+      IMyMechanicalConnectionBlock chosen = null;
+      foreach (var b in available) if (b.CustomName == d.Names[j])
+      {
+        chosen = b;
+        found++;
+      }
+      if (found != 1)
+      {
+        MiningBindingError += "Need one '" + d.Names[j] + "'; found " + found + ".\n";
+        continue;
+      }
+      if (d.Rotary ? !(chosen is IMyMotorStator): !(chosen is IMyPistonBase))
+      {
+        MiningBindingError += "Wrong drive type: " + d.Names[j] + ".\n";
+        continue;
+      }
+      d.Blocks[j] = chosen;
+    }
+  }
+}
+
+static Vector3D MiningToReference(Vector3D v, MatrixD r)
+{
+  return new Vector3D(Vector3D.Dot(v, r.Forward), Vector3D.Dot(v, r.Left), Vector3D.Dot(v, r.Up));
+}
+
+static Vector3D MiningRotate(Vector3D v, MatrixD m)
+{
+  return new Vector3D(v.X * m.M11 + v.Y * m.M21 + v.Z * m.M31, v.X * m.M12 + v.Y * m.M22 + v.Z * m.M32, v.X * m.M13 + v.Y * m.M23 + v.Z * m.M33);
+}
+
+static Vector3D MiningAxisVector(string a)
+{
+  switch (a)
+  {
+    case "X":
+    return new Vector3D(1, 0, 0);
+    case "-X":
+    return new Vector3D(- 1, 0, 0);
+    case "Y":
+    return new Vector3D(0, 1, 0);
+    case "-Y":
+    return new Vector3D(0, - 1, 0);
+    case "Z":
+    return new Vector3D(0, 0, 1);
+    case "-Z":
+    return new Vector3D(0, 0, - 1);
+  }
+
+  return Vector3D.Zero;
+}
+
+static bool MiningFinite(double v)
+{
+  return ! double.IsNaN(v) && ! double.IsInfinity(v);
+}
+
+static double MiningAngleDeg(Vector3D a, Vector3D b)
+{
+  double n = a.Length() * b.Length();
+  if (! MiningFinite(n) || n < 1e-9) return double.PositiveInfinity;
+  return Math.Acos(Clamp(Vector3D.Dot(a, b) / n, - 1, 1)) * 180 / Math.PI;
+}
+
+static double MixedWrap(double a)
+{
+  return a - Math.Floor((a + Math.PI) /(2 * Math.PI)) *(2 * Math.PI);
+}
+
+static string MixedNumber(double v)
+{
+  return v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+static double MixedParse(string s)
+{
+  double v;
+  if (! double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out v) || ! MiningFinite(v)) throw new Exception("Expected a finite number using a decimal point.");
+  return v;
+}
+
+static double Clamp(double value, double Min, double Max)
+{
+  return Math.Max(Min, Math.Min(Max, value));
+}
+
+static void AddPilotAction(PilotAction action, double strength, ref Vector3D move, ref Vector3D rotation)
+{
+  if (strength <= 0) return;
+  switch (action)
+  {
+    case PilotAction.Forward:
+    move.X += strength;
+    break;
+    case PilotAction.Backward:
+    move.X -= strength;
+    break;
+    case PilotAction.Left:
+    move.Y += strength;
+    break;
+    case PilotAction.Right:
+    move.Y -= strength;
+    break;
+    case PilotAction.Up:
+    move.Z += strength;
+    break;
+    case PilotAction.Down:
+    move.Z -= strength;
+    break;
+    case PilotAction.YawLeft:
+    rotation.X += strength;
+    break;
+    case PilotAction.YawRight:
+    rotation.X -= strength;
+    break;
+    case PilotAction.PitchUp:
+    rotation.Y += strength;
+    break;
+    case PilotAction.PitchDown:
+    rotation.Y -= strength;
+    break;
+    case PilotAction.RollLeft:
+    rotation.Z -= strength;
+    break;
+    case PilotAction.RollRight:
+    rotation.Z += strength;
+    break;
+  }
+}
+
+static void MapPilotInputs(Vector3D input, double roll, bool readKeyboard, bool readRoll, out Vector3D move, out Vector3D rotation)
+{
+  move = rotation = Vector3D.Zero;
+  double x = Clamp(input.X, - 1, 1),
+  y = Clamp(input.Y, - 1, 1),
+  z = Clamp(input.Z, - 1, 1),
+  r = Clamp(roll, - 1, 1);
+  if (readKeyboard)
+  {
+    AddPilotAction(InputW, Math.Max(0, - z), ref move, ref rotation);
+    AddPilotAction(InputS, Math.Max(0, z), ref move, ref rotation);
+    AddPilotAction(InputA, Math.Max(0, - x), ref move, ref rotation);
+    AddPilotAction(InputD, Math.Max(0, x), ref move, ref rotation);
+    AddPilotAction(InputSpace, Math.Max(0, y), ref move, ref rotation);
+    AddPilotAction(InputC, Math.Max(0, - y), ref move, ref rotation);
+  }
+
+  if (readRoll)
+  {
+    AddPilotAction(InputQ, Math.Max(0, - r), ref move, ref rotation);
+    AddPilotAction(InputE, Math.Max(0, r), ref move, ref rotation);
+  }
+}
+
+static double HeadOrientationWeight(double errorDeg, double toleranceDeg, bool aiming)
+{
+  if (aiming) return HeadOrientationTurnWeight;
+  if (toleranceDeg <= 0) return HeadOrientationHoldWeight;
+  double start = toleranceDeg * HeadOrientationRampStartFraction;
+  double t = Clamp((errorDeg - start) /(toleranceDeg - start), 0, 1);
+  t = t * t *(3 - 2 * t);
+  return HeadOrientationWeightInsideBand +(HeadOrientationHoldWeight - HeadOrientationWeightInsideBand) * t;
+}
+
+static double HeadAngularAdvanceScale(double errorDeg, double toleranceDeg)
+{
+  return Clamp((toleranceDeg + HeadOrientationPauseMarginDeg - errorDeg) / HeadOrientationPauseMarginDeg, 0, 1);
+}
+
+class MixedDrive
+{
+  public readonly int Index;
+  public readonly string[] Names;
+  public readonly bool Rotary;
+  public readonly IMyMechanicalConnectionBlock[] Blocks;
+  public double PlannedVelocity;
+  public double ManualCap;
+  public MixedDrive(int i)
+  {
+    Index = i;
+    Names = MiningMemberNames[i];
+    Rotary = MiningIsRotary[i];
+    Blocks = new IMyMechanicalConnectionBlock[Names.Length];
+    ManualCap = Rotary ? DefaultJointCapRPM * Math.PI / 30: DefaultPistonCapMps;
+  }
+
+  public double Read(int j)
+  {
+    var b = Blocks[j];
+    if (b == null) return 0;
+    return Rotary ?((IMyMotorStator) b).Angle:((IMyPistonBase) b).CurrentPosition;
+  }
+
+  public double Position()
+  {
+    double first = Read(0),
+    sum = first;
+    for (int j = 1; j < Blocks.Length; j++) sum += Rotary ? first + MixedWrap(Read(j) - first): Read(j);
+    return sum / Blocks.Length;
+  }
+
+  public double Low(int j)
+  {
+    return Rotary ?((IMyMotorStator) Blocks[j]).LowerLimitRad:((IMyPistonBase) Blocks[j]).MinLimit;
+  }
+
+  public double High(int j)
+  {
+    return Rotary ?((IMyMotorStator) Blocks[j]).UpperLimitRad:((IMyPistonBase) Blocks[j]).MaxLimit;
+  }
+
+  public bool CheckPair(out string why)
+  {
+    why = "";
+    if (Blocks.Length < 2) return true;
+    double spread = Rotary ? Math.Abs(MixedWrap(Read(1) - Read(0))): Math.Abs(Read(1) - Read(0));
+    double allowed = Rotary ? MiningPairAngleToleranceRad: MiningPairPositionToleranceM;
+    if (! MiningFinite(spread) || spread > allowed)
+    {
+      why = "Coupled-drive disagreement: " + Names[0] + " / " + Names[1] + " = " +(Rotary ? spread * 180 / Math.PI: spread).ToString("0.0000") +(Rotary ? " deg": " m") +
+      ". Stop and inspect; do not force resynchronisation.";
+      return false;
+    }
+    return true;
+  }
+
+  public bool Ready(out string why)
+  {
+    why = "";
+    for (int j = 0; j < Blocks.Length; j++)
+    {
+      var b = Blocks[j];
+      if (b == null || b.Closed || ! b.IsAttached || b.Top == null || b.TopGrid == null || b.CustomName != Names[j] || ! b.Enabled || ! b.IsWorking)
+      {
+        why = "Motion refused: " + Names[j] + "\n";
+        if (b == null) why += "Cause: named drive was not bound. Check exact name/type, then recompile.";
+        else if (b.Closed) why += "Cause: cached block was removed/closed. Check construction, then recompile.";
+        else
+        {
+          if (b.CustomName != Names[j]) why += "Cause: name changed. Actual name: [" + b.CustomName + "].";
+          else if (! b.IsAttached || b.Top == null || b.TopGrid == null) why += "Cause: attached top connection is not available.";
+          else if (! b.Enabled) why += "Cause: this drive is switched OFF (Enabled=False).";
+          else if (! b.IsFunctional) why += "Cause: block integrity is below its functional threshold.";
+          else why += "Cause: game reports IsWorking=False although enabled and functional. Inspect block power/status.";
+          why += "\nAttached=" + b.IsAttached + "; Top=" +(b.Top != null) + "; TopGrid=" +(b.TopGrid != null) + "\nNameMatch=" +(b.CustomName == Names[j]) +
+          "; Enabled=" + b.Enabled + "\nFunctional=" + b.IsFunctional + "; Working=" + b.IsWorking;
+        }
+        return false;
+      }
+      if (Rotary &&((IMyMotorStator) b).RotorLock)
+      {
+        why = "Motion refused: rotor lock at " + Names[j];
+        return false;
+      }
+      double lo = Low(j),
+      hi = High(j),
+      q = Read(j);
+      if (! MiningFinite(q) || ! MiningFinite(lo) || ! MiningFinite(hi) || lo > hi)
+      {
+        why = "Invalid drive state: " + Names[j];
+        return false;
+      }
+      if (! Rotary &&(q < lo - 0.02 || q > hi + 0.02))
+      {
+        why = "Piston outside configured limits: " + Names[j];
+        return false;
+      }
+    }
+    return CheckPair(out why);
+  }
+
+  public void Plan(double velocity, double cap, bool soften)
+  {
+    PlannedVelocity = 0;
+    if (! MiningFinite(velocity) || ! MiningFinite(cap) || cap <= 0) throw new Exception("Invalid velocity request at " + Names[0]);
+    velocity = Clamp(velocity, - cap, cap);
+    for (int j = 0; j < Blocks.Length; j++)
+    {
+      if (Blocks[j] == null) return;
+      double q = Read(j),
+      lo = Low(j),
+      hi = High(j);
+      if (Rotary &&((IMyMotorStator) Blocks[j]).RotorLock) return;
+      if (hi - lo < 1e-7) return;
+      if (! Rotary) velocity = Clamp(velocity, -((IMyPistonBase) Blocks[j]).MaxVelocity,((IMyPistonBase) Blocks[j]).MaxVelocity);
+      double distance = velocity >= 0 ? hi - q: q - lo;
+      if (distance <= 0) return;
+      if (soften)
+      {
+        double zone = Rotary ? 0.05: 0.10;
+        double bound = cap * Math.Min(1, distance / zone);
+        velocity = Clamp(velocity, - bound, bound);
+      }
+    }
+    PlannedVelocity = velocity;
+  }
+
+  public void Commit()
+  {
+    foreach (var b in Blocks)
+    {
+      if (b == null || b.Closed) continue;
+      if (Rotary)((IMyMotorStator) b).TargetVelocityRad =(float) PlannedVelocity;
+      else((IMyPistonBase) b).Velocity =(float) PlannedVelocity;
+    }
+  }
+
+  public void Zero()
+  {
+    PlannedVelocity = 0;
+    foreach (var b in Blocks) try
+    {
+      if (b == null || b.Closed) continue;
+      if (Rotary)((IMyMotorStator) b).TargetVelocityRad = 0f;
+      else((IMyPistonBase) b).Velocity = 0f;
+    } catch (Exception)
+    {
+    }
+  }
+
+  public bool ResolveHome(double requested, out double result)
+  {
+    result = requested;
+    if (! MiningFinite(result)) return false;
+    double lo = double.NegativeInfinity,
+    hi = double.PositiveInfinity;
+    for (int j = 0; j < Blocks.Length; j++)
+    {
+      if (Blocks[j] == null) return false;
+      lo = Math.Max(lo, Low(j));
+      hi = Math.Min(hi, High(j));
+    }
+    double tol = Rotary ? 0.25 * Math.PI / 180: 0.005;
+    if (Rotary)
+    {
+      double turn = 2 * Math.PI,
+      k = Math.Round((Position() - requested) / turn);
+      double kMin = lo < - 1000000 ? double.NegativeInfinity: Math.Ceiling((lo - requested - tol) / turn);
+      double kMax = hi > 1000000 ? double.PositiveInfinity: Math.Floor((hi - requested + tol) / turn);
+      if (kMin > kMax) return false;
+      result = requested + Clamp(k, kMin, kMax) * turn;
+    }
+    if (result < lo - tol || result > hi + tol) return false;
+    result = Clamp(result, lo, hi);
+    return MiningFinite(result);
+  }
+
+  public double HomeError(double target)
+  {
+    bool unlimited = Rotary;
+    for (int j = 0; j < Blocks.Length; j++) unlimited = unlimited && Low(j) < - 1000000 && High(j) > 1000000;
+    return unlimited ? MixedWrap(target - Position()): target - Position();
+  }
+}
+
+class PosePid
+{
+  public Vector3D Integral,
+  Proportional,
+  Derivative,
+  Raw;
+  public void Reset()
+  {
+    Integral = Proportional = Derivative = Raw = Vector3D.Zero;
+  }
+
+  static Vector3D Outside(Vector3D e, double band)
+  {
+    double n = e.Length();
+    return n > band && n > 1e-12 ? e *((n - band) / n): Vector3D.Zero;
+  }
+
+  public Vector3D Evaluate(Vector3D error, Vector3D measured, double band, double kp, double kd, double cap)
+  {
+    Proportional = Outside(error, band) * kp;
+    Derivative = - measured * kd;
+    Raw = Proportional + Integral + Derivative;
+    return HeadClampVector(Raw, cap);
+  }
+
+  public void Advance(Vector3D error, Vector3D unmet, double band, double ki, double maxI, double capture, double elapsed, bool permit)
+  {
+    if (ki <= 0)
+    {
+      Integral = Vector3D.Zero;
+      return;
+    }
+    double n = error.Length();
+    if (! permit || n > capture || n <= band)
+    {
+      Integral *= 1.0 /(1.0 + elapsed / HeadIntegralUnwindSeconds);
+      return;
+    }
+    var delta = Outside(error, band) *(ki * elapsed);
+    // Conditional integration: do not add effort in a direction the bounded IK
+    // could not supply. Allow an increment which unwinds an existing integral.
+    if (Vector3D.Dot(delta, unmet) > 1e-12 && Vector3D.Dot(delta, Integral) >= 0) return;
+    Integral = HeadClampVector(Integral + delta, maxI);
+  }
+}
+
+public bool HeadReadRoll = DefaultReadRoll;
+bool HeadTargetValid = false,
+HeadGoalPending = false;
+IMyShipController HeadReference;
+IMyShipDrill HeadTool;
+Vector3D HeadTargetP,
+HeadTargetF,
+HeadTargetU,
+HeadGoalF,
+HeadGoalU;
+double HeadTurnDeg = DefaultTurnSpeedDegPerSec,
+HeadStepDeg = DefaultStepAngleDeg,
+HeadProgress = 1;
+double OrientationToleranceDeg = DefaultOrientationToleranceDeg;
+double HeadPositionErrorM = 0,
+HeadOrientationErrorDeg = 0,
+HeadGoalRemainingDeg = 0;
+string HeadStatus = "Head targets not captured; run On.";
+readonly double[,] HeadJ = new double[6, 12],
+HeadB = new double[6, 12],
+HeadGram = new double[6, 6],
+HeadChol = new double[6, 6];
+readonly double[] HeadRhs = new double[6],
+HeadTemp = new double[6],
+HeadSolution = new double[6],
+HeadWeights = new double[6];
+readonly double[] HeadV = new double[12],
+HeadMobilityScale = new double[12],
+HeadLo = new double[12],
+HeadHi = new double[12];
+readonly double[] HeadX = new double[12],
+HeadTrial = new double[12],
+HeadTask = new double[6],
+HeadResidual = new double[6];
+readonly int[] HeadState = new int[12];
+int HeadSolverPassesUsed = 0,
+HeadActiveBounds = 0;
+bool HeadSolverConverged = false,
+HeadSolverBudgetLimited = false;
+public string LastStopReason = "";
+double HeadBudgetPauseSeconds = 0;
+int HeadPassInstructionReserve = 6000;
+double HeadPredictedMps = 0,
+HeadPredictedDegPerSec = 0,
+HeadSolveLinearResidual = 0,
+HeadSolveAngularResidual = 0;
+double HeadObservedMps = 0,
+HeadObservedDegPerSec = 0,
+HeadPositionGate = 1;
+Vector3D HeadPreviousP,
+HeadPreviousF,
+HeadPreviousU;
+bool HeadObservationValid = false;
+Vector3D HeadPreviousReferenceVelocity,
+HeadFilteredVelocity,
+HeadPreviousPredictedVelocity;
+Vector3D HeadFilteredAngularVelocity;
+readonly PosePid HeadPositionPid = new PosePid(),
+HeadOrientationPid = new PosePid();
+bool HeadPositionRecovering = false;
+double HeadRecoveryElapsedSeconds = 0,
+HeadRecoveryStalledSeconds = 0,
+HeadRecoveryBestErrorM = 0;
+double HeadPositionFaultSeconds = 0.0;
+string HeadRecoveryWarning = "";
+
+bool OnOff = false;
+bool GoingHome = false;
+bool ReadKeyboard = DefaultReadKeyboard;
+double Speed = DefaultMoveSpeedMps;
+static double HeadElapsedSeconds = 1.0 / 60.0;
+static uint GlobStep = 0;
+static IMyGridTerminalSystem MyGTS;
+string MiningTuningError = "";
+public string LastMiningCheck = "";
+uint LastMixedGeometryStep = 0;
+bool MixedHomeSet = false;
+double[] MixedHome = new double[12];
+double[] ActiveMixedHome = new double[12];
+double MixedHomeRPM = DefaultHomeJointCapRPM;
+double MixedHomeMPS = DefaultHomePistonCapMps;
+Vector3D HeadRawRequestedVelocity, HeadTracePilot;
+Vector3D HeadAppliedCorrection, HeadBlendedRequest, HeadAcceptedFeed;
+double HeadDirectionalLeadM = 0;
+bool HeadCounterCorrectionLimited = false;
+readonly Queue<string> HeadTrace = new Queue<string>();
+readonly double[] HeadTracePreviousPositions = new double[12];
+double HeadTraceElapsedSeconds = 0, HeadTraceLastSampleSeconds = -1;
+bool HeadTraceFrozen = false;
+readonly System.Text.StringBuilder TraceBuilder = new System.Text.StringBuilder();
+readonly List<string> RecentMessages = new List<string>();
+readonly List<IMyTextPanel> StatusPanels = new List<IMyTextPanel>();
+readonly List<IMyTextPanel> LogPanels = new List<IMyTextPanel>();
+string LastDiagnostic = "";
+double StatusElapsed = 0;
+const string ControllerVersion = "MiningArm v2.0";
+
+void ResetPoseFeedback()
+{
+  HeadPositionPid.Reset();
+  HeadOrientationPid.Reset();
+  HeadFilteredAngularVelocity = Vector3D.Zero;
+  HeadPositionRecovering = false;
+  HeadRecoveryElapsedSeconds = HeadRecoveryStalledSeconds = HeadRecoveryBestErrorM = 0.0;
+  HeadPositionFaultSeconds = 0.0;
+  HeadRecoveryWarning = "";
+}
+
+string CheckPositionEmergency(double elapsed)
+{
+  if (! MiningFinite(HeadPositionErrorM) || HeadPositionErrorM < 0 || ! MiningFinite(elapsed) || elapsed < 0) return "Invalid/non-finite position feedback or control interval.";
+  if (! HeadStopOnPositionError)
+  {
+    HeadPositionFaultSeconds = 0.0;
+    return "";
+  }
+  if (HeadPositionErrorM >= HeadPositionImmediateStopM) return "Gross position error: " + HeadPositionErrorM.ToString("0.000") + " m / immediate limit " +
+  HeadPositionImmediateStopM + " m. DumpTrace; inspect arm.";
+  if (HeadPositionErrorM <= HeadPosStopM)
+  {
+    HeadPositionFaultSeconds = 0.0;
+    return "";
+  }
+  HeadPositionFaultSeconds += elapsed;
+  if (HeadPositionFaultSeconds + 1e-9 >= HeadPositionFaultDelaySeconds) return "Persistent significant position error: " + HeadPositionErrorM.ToString("0.000") +
+  " m > " + HeadPosStopM + " m for " + HeadPositionFaultSeconds.ToString("0.00") + " s. DumpTrace; inspect arm.";
+  return "";
+}
+
+string UpdatePositionRecovery(double elapsed)
+{
+  HeadRecoveryWarning = "";
+  if (! HeadPositionRecovering)
+  {
+    if (HeadPositionErrorM <= HeadPositionRecoveryM) return "";
+    HeadPositionRecovering = true;
+    HeadRecoveryElapsedSeconds = HeadRecoveryStalledSeconds = 0.0;
+    HeadRecoveryBestErrorM = HeadPositionErrorM;
+  }
+  if (HeadPositionErrorM <= HeadRecoveryResumeM)
+  {
+    HeadPositionRecovering = false;
+    HeadRecoveryElapsedSeconds = HeadRecoveryStalledSeconds = 0.0;
+    return "";
+  }
+  HeadRecoveryElapsedSeconds += elapsed;
+  HeadRecoveryStalledSeconds += elapsed;
+  if (HeadPositionErrorM <= HeadRecoveryBestErrorM - HeadRecoveryProgressM)
+  {
+    HeadRecoveryBestErrorM = HeadPositionErrorM;
+    HeadRecoveryStalledSeconds = 0.0;
+  }
+  if (HeadRecoveryStalledSeconds >= HeadRecoveryNoProgressSeconds) HeadRecoveryWarning = "Recovery has not improved by " + HeadRecoveryProgressM + " m in " +
+  HeadRecoveryNoProgressSeconds + " s. Inspect contact/limits; DumpTrace.";
+  else if (HeadRecoveryElapsedSeconds >= HeadRecoveryMaximumSeconds) HeadRecoveryWarning = "Recovery has lasted " + HeadRecoveryElapsedSeconds.ToString("0.0") +
+  " s. Inspect arm; DumpTrace.";
+  // Deviation flag is diagnostic and integral anti-windup only; pilot input remains blended.
+  // The independent significant/gross-error limits still apply on every tick.
+  return HeadStopOnRecoveryTimeout ? HeadRecoveryWarning: "";
+}
+
+void ResetHeadState()
+{
+  ResetPoseFeedback();
+  HeadAcceptedFeed = HeadAppliedCorrection = HeadBlendedRequest = Vector3D.Zero;
+  HeadTargetValid = false;
+  HeadGoalPending = false;
+  HeadProgress = 0;
+  HeadGoalRemainingDeg = 0;
+  HeadObservationValid = false;
+  HeadPreviousReferenceVelocity = Vector3D.Zero;
+  HeadFilteredVelocity = Vector3D.Zero;
+}
+
+bool BindHeadReference(out string why)
+{
+  why = "";
+  var refs = new List < IMyShipController >();
+  MyGTS.GetBlocksOfType < IMyShipController >(refs, b => b.CustomName == MiningReferenceName && b.IsSameConstructAs(MiningProgrammableBlock));
+  if (refs.Count != 1 || ! SameGrid(refs[0].CubeGrid, MB(0).CubeGrid))
+  {
+    why = "Need one Arm Controller on the ship/base grid.";
+    return false;
+  }
+  var ds = new List < IMyShipDrill >();
+  MyGTS.GetBlocksOfType < IMyShipDrill >(ds, b => SameGrid(b.CubeGrid, MB(11).TopGrid));
+  IMyShipDrill selected = null;
+  int matches = 0;
+  Vector3D centre = Vector3D.Zero;
+  foreach (var d in ds)
+  {
+    centre += d.GetPosition();
+    if (d.CustomName == HeadToolName)
+    {
+      selected = d;
+      matches++;
+    }
+  }
+  if (ds.Count != MiningDrillCount || matches != 1)
+  {
+    why = "Head mode needs one central drill named '" + HeadToolName + "' among the 9 drills on the wrist grid.";
+    return false;
+  }
+  if ((selected.GetPosition() - centre / ds.Count).Length() > 0.02)
+  {
+    why = "The drill named '" + HeadToolName + "' is not at the calibrated cluster centre.";
+    return false;
+  }
+  HeadReference = refs[0];
+  HeadTool = selected;
+  return true;
+}
+
+bool ReadHeadPose(out Vector3D p, out Vector3D f, out Vector3D u)
+{
+  p = f = u = Vector3D.Zero;
+  if (HeadTool == null || HeadTool.Closed || HeadTool.CustomName != HeadToolName || ! HeadTool.IsFunctional || HeadReference == null || HeadReference.Closed ||
+  HeadReference.CustomName != MiningReferenceName || ! SameGrid(HeadTool.CubeGrid, MB(11).TopGrid) || ! SameGrid(HeadReference.CubeGrid, MB(0).CubeGrid)) return false;
+  var frame = HeadReference.WorldMatrix;
+  p = MiningToReference(HeadTool.GetPosition() - MB(0).GetPosition(), frame);
+  f = MiningToReference(HeadTool.WorldMatrix.Forward, frame);
+  u = MiningToReference(HeadTool.WorldMatrix.Up, frame);
+  if (! MiningFinite(p.LengthSquared())) return false;
+  HeadOrthonormalise(ref f, ref u);
+  return true;
+}
+
+bool CaptureHeadTarget()
+{
+  ResetPoseFeedback();
+  string why;
+  if (! BindHeadReference(out why))
+  {
+    MyLog("Head mode refused: " + why);
+    return false;
+  }
+  Vector3D p,
+  f,
+  u;
+  if (! ReadHeadPose(out p, out f, out u))
+  {
+    MyLog("Head mode refused: central drill/reference unavailable.");
+    return false;
+  }
+  HeadTargetP = p;
+  HeadTargetF = HeadGoalF = f;
+  HeadTargetU = HeadGoalU = u;
+  HeadTargetValid = true;
+  HeadGoalPending = false;
+  HeadPositionErrorM = HeadOrientationErrorDeg = 0;
+  HeadPreviousP = p;
+  HeadPreviousF = f;
+  HeadPreviousU = u;
+  HeadObservationValid = true;
+  for (int i = 0; i < HeadState.Length; i++) HeadState[i] = 0;
+  HeadObservedMps = HeadObservedDegPerSec = 0;
+  HeadPreviousReferenceVelocity = HeadFilteredVelocity = HeadPreviousPredictedVelocity = Vector3D.Zero;
+  HeadStatus = "Head pose captured. Blended pilot + PID enabled.";
+  return true;
+}
+
+void SetHeadGoal(Vector3D f, Vector3D u)
+{
+  HeadOrthonormalise(ref f, ref u);
+  HeadGoalF = f;
+  HeadGoalU = u;
+  HeadGoalPending = true;
+}
+
+void FaceHead(string direction)
+{
+  RequireHeadControl();
+  direction = direction.ToLowerInvariant();
+  var f = new Vector3D(1, 0, 0);
+  var u = new Vector3D(0, 0, 1);
+  switch (direction)
+  {
+    case "forward":
+    case "front":
+    break;
+    case "back":
+    case "backward":
+    f = - f;
+    break;
+    case "left":
+    f = new Vector3D(0, 1, 0);
+    break;
+    case "right":
+    f = new Vector3D(0, - 1, 0);
+    break;
+    case "down":
+    f = new Vector3D(0, 0, - 1);
+    u = new Vector3D(1, 0, 0);
+    break;
+    default :
+    throw new Exception("Face: Forward, Back, Left, Right or Down.");
+  }
+  SetHeadGoal(f, u);
+  MyLog("Face " + direction + ": speed-limited turn about the central drill; no collision avoidance.");
+}
+
+void StepHead(string axis, double degrees)
+{
+  RequireHeadControl();
+  if (! MiningFinite(degrees) || Math.Abs(degrees) > MaximumStepAngleDeg) throw new Exception("Step exceeds MaximumStepAngleDeg: " + MaximumStepAngleDeg);
+  Vector3D p,
+  f,
+  u;
+  if (! ReadHeadPose(out p, out f, out u)) throw new Exception("Head reference unavailable.");
+  Vector3D a;
+  switch (axis)
+  {
+    case "yaw":
+    a = new Vector3D(0, 0, 1);
+    break;
+    case "pitch":
+    a = - Vector3D.Cross(u, f);
+    break;
+    case "roll":
+    a = f;
+    break;
+    default :
+    throw new Exception("Step axis must be Yaw, Pitch or Roll.");
+  }
+  var basisF = HeadGoalPending ? HeadGoalF: HeadTargetF;
+  var basisU = HeadGoalPending ? HeadGoalU: HeadTargetU;
+  var r = a *(degrees * Math.PI / 180);
+  SetHeadGoal(HeadRotateVector(basisF, r), HeadRotateVector(basisU, r));
+  MyLog(axis + " step " + degrees.ToString("0.##") + " deg. Central position target unchanged.");
+}
+
+void ExecuteBoundHeadAction(HeadAction action)
+{
+  switch (action)
+  {
+    case HeadAction.None:
+    return;
+    case HeadAction.Stop:
+    StopNow("Toolbar Stop command.");
+    MyLog("Stop: all named drives zeroed.");
+    return;
+    case HeadAction.Hold:
+    RequireHeadControl();
+    SetMixedEnabled(true);
+    return;
+    case HeadAction.FaceForward:
+    FaceHead("forward");
+    return;
+    case HeadAction.FaceBack:
+    FaceHead("back");
+    return;
+    case HeadAction.FaceLeft:
+    FaceHead("left");
+    return;
+    case HeadAction.FaceRight:
+    FaceHead("right");
+    return;
+    case HeadAction.FaceDown:
+    FaceHead("down");
+    return;
+    case HeadAction.YawLeft:
+    StepHead("yaw", HeadStepDeg);
+    return;
+    case HeadAction.YawRight:
+    StepHead("yaw", - HeadStepDeg);
+    return;
+    case HeadAction.PitchUp:
+    StepHead("pitch", HeadStepDeg);
+    return;
+    case HeadAction.PitchDown:
+    StepHead("pitch", - HeadStepDeg);
+    return;
+    case HeadAction.RollLeft:
+    StepHead("roll", - HeadStepDeg);
+    return;
+    case HeadAction.RollRight:
+    StepHead("roll", HeadStepDeg);
+    return;
+  }
+  throw new Exception("Unknown configured head action.");
+}
+
+void PrintHeadBindings()
+{
+  string text = "INPUT CHANNELS (default game-key labels; not raw keyboard access)" + "\nW=" + InputW + "; S=" + InputS + "; A=" + InputA + "; D=" +
+  InputD + "\nSpace=" + InputSpace + "; C=" + InputC + "; Q=" + InputQ + "; E=" + InputE + "\nTOOLBAR RUN ARGUMENTS";
+  foreach (var binding in HeadBindings) text += "\n" + binding.Argument + " -> " + binding.Action;
+  MyLog(text + "\nGame Controls assigns physical keys; this script only maps their supplied actions.");
+}
+
+void ReadHeadPilot(out Vector3D translation, out Vector3D rotation)
+{
+  translation = rotation = Vector3D.Zero;
+  if (HeadReference == null || ! HeadReference.IsUnderControl) return;
+  MapPilotInputs(HeadReference.MoveIndicator, HeadReference.RollIndicator, ReadKeyboard, HeadReadRoll, out translation, out rotation);
+}
+
+string HeadTraceVector(Vector3D v)
+{
+  return v.X.ToString("0.00000", System.Globalization.CultureInfo.InvariantCulture) + "," + v.Y.ToString("0.00000", System.Globalization.CultureInfo.InvariantCulture) +
+  "," + v.Z.ToString("0.00000", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+void RecordHeadTrackingTrace(Vector3D p, Vector3D e, bool force)
+{
+  if (HeadTraceFrozen) return;
+  double span = HeadTraceLastSampleSeconds < 0 ? 0: HeadTraceElapsedSeconds - HeadTraceLastSampleSeconds;
+  if (! force && HeadTraceLastSampleSeconds >= 0 && span < HeadTraceIntervalSeconds) return;
+  var b = TraceBuilder;
+  b.Clear();
+  b.Append(HeadTraceElapsedSeconds.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture));
+  b.Append(" | e=").Append(HeadTraceVector(e)).Append(" | angle=").Append(HeadOrientationErrorDeg.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture));
+  b.Append(" | pilot=").Append(HeadTraceVector(HeadTracePilot)).Append(" | p=").Append(HeadTraceVector(p)).Append(" | target=").Append(HeadTraceVector(HeadTargetP));
+  b.Append(" | raw=").Append(HeadTraceVector(HeadRawRequestedVelocity)).Append(" | ref_prev=").Append(HeadTraceVector(HeadPreviousReferenceVelocity));
+  b.Append(" | predicted_prev=").Append(HeadTraceVector(HeadPreviousPredictedVelocity)).Append(" | measured_filtered=").Append(HeadTraceVector(HeadFilteredVelocity));
+  b.Append(" | accepted_feed_prev=").Append(HeadTraceVector(HeadAcceptedFeed));
+  b.Append(" | applied_pid_prev=").Append(HeadTraceVector(HeadAppliedCorrection));
+  b.Append(" | blended_request_prev=").Append(HeadTraceVector(HeadBlendedRequest));
+  b.Append(" | directional_lead_prev=").Append(MixedNumber(HeadDirectionalLeadM));
+  b.Append(" | feed_scale_prev=").Append(MixedNumber(HeadPositionGate));
+  b.Append(" | opposition_limited_prev=").Append(HeadCounterCorrectionLimited);
+  b.Append(" | above_significant_s=").Append(MixedNumber(HeadPositionFaultSeconds));
+  b.Append(" | recovery_warning=").Append(HeadRecoveryWarning);
+  b.Append(" | recovery=").Append(HeadPositionRecovering).Append(" | PID_P_prev=").Append(HeadTraceVector(HeadPositionPid.Proportional)).Append(" | PID_I_prev=").Append(HeadTraceVector(HeadPositionPid.Integral)).Append(" | PID_D_prev=").Append(HeadTraceVector(HeadPositionPid.Derivative));
+  b.Append(" | groups=q,measured_dq,command_prev (rad,m,seconds):");
+  for (int i = 0; i < MiningDrives.Length; i++)
+  {
+    var d = MiningDrives[i];
+    double q = d.Position();
+    double delta = q - HeadTracePreviousPositions[i];
+    if (d.Rotary) delta = MixedWrap(delta);
+    b.Append(i == 0 ? " ": "; ").Append(i).Append(":").Append(MixedNumber(q)).Append(",").Append(span > 0.00001 ? MixedNumber(delta / span): "NA").Append(",").Append(MixedNumber(d.PlannedVelocity));
+    HeadTracePreviousPositions[i] = q;
+  }
+  HeadTraceLastSampleSeconds = HeadTraceElapsedSeconds;
+  HeadTrace.Enqueue(b.ToString());
+  while (HeadTrace.Count > 40) HeadTrace.Dequeue();
+}
+
+void DumpHeadTrackingTrace()
+{
+  var b = new System.Text.StringBuilder();
+  b.AppendLine(MiningOwner.DescribeControllerBuild());
+  b.AppendLine("Tracking-policy trace; not a physics diagnosis.");
+  b.AppendLine("LAST STOP: " + LastStopReason);
+  b.AppendLine("Frame: cockpit Forward/Left/Up. Error = target minus actual. Previous commands precede this sample.");
+  b.AppendLine("Sampled group velocities are finite differences, not guaranteed physics velocities. rad/s for rotary; m/s for piston.");
+  b.AppendLine("Speed=" + MixedNumber(Speed) + "; significantPosition=" + MixedNumber(HeadPosStopM) + "; significantDelay=" + MixedNumber(HeadPositionFaultDelaySeconds) +
+  "; immediatePosition=" + MixedNumber(HeadPositionImmediateStopM) + "; distanceStopEnabled=" + HeadStopOnPositionError + "; timeoutStopEnabled=" + HeadStopOnRecoveryTimeout +
+  "; recovery=" + MixedNumber(HeadPositionRecoveryM) + "; positionPID=" + HeadPositionGain + "," + HeadPositionIntegralGain + "," + HeadPositionDerivativeGain);
+  for (int i = 0; i < MiningDrives.Length; i++)
+  {
+    var d = MiningDrives[i];
+    b.AppendLine("GROUP " + i + " | " + d.Names[0] + " | cap=" + MixedNumber(d.ManualCap));
+    for (int j = 0; j < d.Blocks.Length; j++)
+    {
+      var block = d.Blocks[j];
+      if (block == null || block.Closed)
+      {
+        b.AppendLine("member unavailable");
+        continue;
+      }
+      b.AppendLine("  " + d.Names[j] + " | limits=" + MixedNumber(d.Low(j)) + " .. " + MixedNumber(d.High(j)));
+      if (d.Rotary)
+      {
+        var motor =(IMyMotorStator) block;
+        b.AppendLine("  torque=" + MixedNumber(motor.Torque) + "; brake=" + MixedNumber(motor.BrakingTorque));
+      }
+    }
+  }
+  foreach (string row in HeadTrace) b.AppendLine(row);
+  MiningProgrammableBlock.CustomData = b.ToString();
+  MyLog("DumpTrace wrote " + HeadTrace.Count + " samples to THIS PB's Custom Data (replaced its previous text). TraceClear starts a fresh recording.");
+}
+
+bool SolveHeadVelocity(Vector3D p, Vector3D lin, Vector3D angular, double posWeight, double angWeight, double rotationShare, out Vector3D achievedLin,
+out Vector3D achievedAngular)
+{
+  achievedLin = achievedAngular = Vector3D.Zero;
+  HeadSolverConverged = false;
+  HeadSolverBudgetLimited = false;
+  HeadSolverPassesUsed = 0;
+  HeadActiveBounds = 0;
+  var frame = HeadReference.WorldMatrix;
+  var origin = MB(0).GetPosition();
+  double h = Math.Min(Math.Max(HeadElapsedSeconds, 0.00001), 0.10);
+  for (int r = 0; r < 6; r++)
+  {
+    HeadWeights[r] = r < 3 ? posWeight: angWeight;
+    HeadTask[r] = HeadWeights[r] *(r < 3 ? HeadComponent(lin, r): HeadComponent(angular, r - 3));
+  }
+  for (int i = 0; i < 12; i++)
+  {
+    var d = MiningDrives[i];
+    double previous = d.PlannedVelocity;
+    Vector3D pivot = Vector3D.Zero,
+    axis = Vector3D.Zero;
+    foreach (var b in d.Blocks)
+    {
+      pivot += b.GetPosition() - origin;
+      axis += b.WorldMatrix.Up;
+    }
+    pivot = MiningToReference(pivot / d.Blocks.Length, frame);
+    axis = HeadUnit(MiningToReference(axis, frame));
+    var w = d.Rotary ? - axis: Vector3D.Zero;
+    var t = d.Rotary ? Vector3D.Cross(w, p - pivot): axis;
+    for (int r = 0; r < 3; r++)
+    {
+      HeadJ[r, i] = HeadComponent(t, r);
+      HeadJ[r + 3, i] = HeadComponent(w, r);
+    }
+    double participation =(1 - rotationShare) * HeadJointParticipation[i, 0] + rotationShare * HeadJointParticipation[i, 1];
+    double s = HeadMobilityScale[i] = d.ManualCap * Math.Sqrt(participation);
+    d.Plan(- d.ManualCap, d.ManualCap, true);
+    double lo = d.PlannedVelocity;
+    d.Plan(d.ManualCap, d.ManualCap, true);
+    double hi = d.PlannedVelocity;
+    d.PlannedVelocity = 0;
+    double acceleration = d.Rotary ? HeadJointAccelerationRPMPerSec * Math.PI / 30: HeadPistonAccelerationMps2;
+    if (acceleration > 0)
+    {
+      double centre = Clamp(previous, lo, hi),
+      change = acceleration * h;
+      lo = Math.Max(lo, centre - change);
+      hi = Math.Min(hi, centre + change);
+    }
+    HeadLo[i] = s > 1e-12 ? lo / s: 0;
+    HeadHi[i] = s > 1e-12 ? hi / s: 0;
+    HeadX[i] = s > 1e-12 ? Clamp(previous / s, HeadLo[i], HeadHi[i]): 0;
+    int oldState = HeadState[i];
+    HeadState[i] = HeadHi[i] - HeadLo[i] <= 1e-12 ? 2:(oldState == - 1 && Math.Abs(HeadX[i] - HeadLo[i]) <= 1e-10 ? - 1:(oldState == 1 && Math.Abs(HeadX[i] - HeadHi[i]) <= 1e-10 ? 1: 0));
+    for (int r = 0; r < 6; r++) HeadB[r, i] = HeadWeights[r] * HeadJ[r, i] * s;
+  }
+  double ridge = HeadDamping * HeadDamping;
+  int previousPassStart = - 1;
+  for (int pass = 0; pass < HeadSolverMaxPasses; pass++)
+  {
+    int used = MiningOwner.Runtime.CurrentInstructionCount;
+    if (previousPassStart >= 0) HeadPassInstructionReserve =(int) Math.Min(MiningOwner.Runtime.MaxInstructionCount * 0.30, Math.Max(6000,(used - previousPassStart) * 2 +
+    512));
+    if (used + HeadPassInstructionReserve > MiningOwner.Runtime.MaxInstructionCount * 0.65)
+    {
+      HeadSolverBudgetLimited = true;
+      break;
+    }
+    previousPassStart = used;
+    HeadSolverPassesUsed = pass + 1;
+    for (int r = 0; r < 6; r++)
+    {
+      double value = HeadTask[r];
+      for (int i = 0; i < 12; i++) if (HeadState[i] != 0) value -= HeadB[r, i] * HeadX[i];
+      HeadRhs[r] = value;
+      for (int c = 0; c <= r; c++)
+      {
+        double total = r == c ? ridge: 0;
+        for (int i = 0; i < 12; i++) if (HeadState[i] == 0) total += HeadB[r, i] * HeadB[c, i];
+        HeadGram[r, c] = HeadGram[c, r] = total;
+      }
+    }
+    if (! HeadCholesky(HeadGram, HeadRhs, HeadChol, HeadTemp, HeadSolution)) return false;
+    double alpha = 1;
+    int hit = - 1,
+    side = 0;
+    for (int i = 0; i < 12; i++)
+    {
+      HeadTrial[i] = HeadX[i];
+      if (HeadState[i] != 0) continue;
+      double value = 0;
+      for (int r = 0; r < 6; r++) value += HeadB[r, i] * HeadSolution[r];
+      HeadTrial[i] = value;
+      double delta = value - HeadX[i],
+      step;
+      if (delta < - 1e-14 && value < HeadLo[i] - 1e-12)
+      {
+        step = Math.Max(0,(HeadLo[i] - HeadX[i]) / delta);
+        if (step < alpha)
+        {
+          alpha = step;
+          hit = i;
+          side = - 1;
+        }
+      } else if (delta > 1e-14 && value > HeadHi[i] + 1e-12)
+      {
+        step = Math.Max(0,(HeadHi[i] - HeadX[i]) / delta);
+        if (step < alpha)
+        {
+          alpha = step;
+          hit = i;
+          side = 1;
+        }
+      }
+    }
+    for (int i = 0; i < 12; i++) if (HeadState[i] == 0) HeadX[i] = Clamp(HeadX[i] + alpha *(HeadTrial[i] - HeadX[i]), HeadLo[i], HeadHi[i]);
+    if (hit >= 0)
+    {
+      HeadX[hit] = side < 0 ? HeadLo[hit]: HeadHi[hit];
+      HeadState[hit] = side;
+      continue;
+    }
+    for (int r = 0; r < 6; r++)
+    {
+      double value = - HeadTask[r];
+      for (int i = 0; i < 12; i++) value += HeadB[r, i] * HeadX[i];
+      HeadResidual[r] = value;
+    }
+    int release = - 1;
+    double worst = 1e-9;
+    for (int i = 0; i < 12; i++)
+    {
+      if (HeadState[i] == 0 || HeadState[i] == 2) continue;
+      double gradient = ridge * HeadX[i];
+      for (int r = 0; r < 6; r++) gradient += HeadB[r, i] * HeadResidual[r];
+      double violation = HeadState[i] < 0 ? - gradient: gradient;
+      if (violation > worst)
+      {
+        worst = violation;
+        release = i;
+      }
+    }
+    if (release >= 0)
+    {
+      HeadState[release] = 0;
+      continue;
+    }
+    HeadSolverConverged = true;
+    break;
+  }
+  if (HeadSolverBudgetLimited && HeadSolverPassesUsed == 0) return true;
+  for (int i = 0; i < 12; i++)
+  {
+    double v = HeadX[i] * HeadMobilityScale[i];
+    if (! MiningFinite(v)) return false;
+    MiningDrives[i].Plan(v, MiningDrives[i].ManualCap, true);
+    HeadV[i] = MiningDrives[i].PlannedVelocity;
+    if (HeadState[i] != 0) HeadActiveBounds++;
+    achievedLin += new Vector3D(HeadJ[0, i], HeadJ[1, i], HeadJ[2, i]) * HeadV[i];
+    achievedAngular += new Vector3D(HeadJ[3, i], HeadJ[4, i], HeadJ[5, i]) * HeadV[i];
+  }
+  HeadPredictedMps = achievedLin.Length();
+  HeadPredictedDegPerSec = achievedAngular.Length() * 180 / Math.PI;
+  HeadSolveLinearResidual =(achievedLin - lin).Length();
+  HeadSolveAngularResidual =(achievedAngular - angular).Length() * 180 / Math.PI;
+  return MiningFinite(HeadPredictedMps) && MiningFinite(HeadPredictedDegPerSec);
+}
+
+bool MiningCheckFailure(string text)
+{
+  LastMiningCheck = text;
+  MyLog(text);
+  return false;
+}
+
+IMyMechanicalConnectionBlock MB(int drive, int member = 0)
+{
+  return MiningDrives[drive].Blocks[member];
+}
+
+bool SameGrid(IMyCubeGrid a, IMyCubeGrid b)
+{
+  return a != null && b != null && a.EntityId == b.EntityId;
+}
+
+bool TopToBase(int a, int am, int b, int bm)
+{
+  return SameGrid(MB(a, am).TopGrid, MB(b, bm).CubeGrid);
+}
+
+bool MixedTopology(out string why)
+{
+  why = "";
+  if (MiningBindingError != "")
+  {
+    why = MiningBindingError;
+    return false;
+  }
+  foreach (var d in MiningDrives) for (int j = 0; j < d.Blocks.Length; j++)
+  {
+    var b = d.Blocks[j];
+    if (b == null || b.Closed || b.CustomName != d.Names[j] || ! b.IsAttached || b.Top == null || b.TopGrid == null)
+    {
+      why = "Missing/renamed/detached drive: " + d.Names[j] + ". Stop and recompile after repairs.";
+      return false;
+    }
+  }
+  if (! TopToBase(0, 0, 1, 0) || ! TopToBase(0, 0, 1, 1) || ! SameGrid(MB(1).TopGrid, MB(1, 1).TopGrid))
+  {
+    why = "Base hinge pair no longer shares the expected two grids.";
+    return false;
+  }
+  if (! TopToBase(1, 0, 2, 0) || ! TopToBase(1, 1, 2, 1) || ! TopToBase(2, 0, 3, 0) || ! TopToBase(2, 1, 3, 1) || ! TopToBase(3, 0, 4, 0) || ! TopToBase(3,
+  1, 4, 0))
+  {
+    why = "First piston section differs from L2->L1 in parallel with R2->R1.";
+    return false;
+  }
+  for (int i = 4; i < 11; i++) if (! TopToBase(i, 0, i + 1, 0))
+  {
+    why = "Serial connection changed after " + MiningDrives[i].Names[0];
+    return false;
+  }
+  var roles = new HashSet < long >();
+  IMyCubeGrid[] grids = new IMyCubeGrid[]
+  {
+    MB(0).CubeGrid,
+    MB(0).TopGrid,
+    MB(1).TopGrid,
+    MB(2, 0).TopGrid,
+    MB(2, 1).TopGrid,
+    MB(3).TopGrid,
+    MB(4).TopGrid,
+    MB(5).TopGrid,
+    MB(6).TopGrid,
+    MB(7).TopGrid,
+    MB(8).TopGrid,
+    MB(9).TopGrid,
+    MB(10).TopGrid,
+    MB(11).TopGrid
+  };
+  foreach (var g in grids) if (! roles.Add(g.EntityId))
+  {
+    why = "Unexpected merged/repeated grid role in the mixed arm.";
+    return false;
+  }
+  foreach (var d in MiningDrives) if (! d.CheckPair(out why)) return false;
+  double railError = Math.Abs(MiningDrives[2].Read(0) + MiningDrives[3].Read(0) - MiningDrives[2].Read(1) - MiningDrives[3].Read(1));
+  if (! MiningFinite(railError) || railError > 0.03)
+  {
+    why = "First-section total left/right extension differs by " + railError.ToString("0.0000") + " m.";
+    return false;
+  }
+  return true;
+}
+
+string MixedHomeKey()
+{
+  string key = MiningCalibrationId;
+  foreach (var d in MiningDrives) foreach (var b in d.Blocks) key += "|" +(b == null ? "missing": b.EntityId.ToString());
+  return key;
+}
+
+public void LoadMixedHome()
+{
+  MixedHomeSet = false;
+  string stored = MiningOwner.ReadMixedStorage();
+  if (string.IsNullOrWhiteSpace(stored))
+  {
+    MyLog("Home not set. Use SetHome at your chosen pose.");
+    return;
+  }
+  try
+  {
+    var lines = stored.Replace("\r", "").Split('\n');
+    if (lines.Length < 2 || lines[0] != MixedHomeKey()) throw new Exception("different calibration or blocks");
+    var values = lines[1].Split('|');
+    if (values.Length != MiningDrives.Length) throw new Exception("wrong home length");
+    for (int i = 0; i < values.Length; i++) MixedHome[i] = MixedParse(values[i]);
+    MixedHomeSet = true;
+    MyLog("Loaded explicit Home from PB Storage. No movement started.");
+  } catch (Exception)
+  {
+    MyLog("Stored Home does not match this mixed arm. Use SetHome to record a new one.");
+  }
+}
+
+public void CaptureMixedHome()
+{
+  StopNow("SetHome command.");
+  if (! CheckMiningGeometry(true)) return;
+  var captured = new double[MiningDrives.Length];
+  for (int i = 0; i < MiningDrives.Length; i++)
+  {
+    double v = MiningDrives[i].Position(),
+    resolved;
+    if (! MiningDrives[i].ResolveHome(v, out resolved))
+    {
+      MyLog("SetHome refused: invalid current limits at " + MiningDrives[i].Names[0]);
+      return;
+    }
+    captured[i] = resolved;
+  }
+  MixedHome = captured;
+  string values = "";
+  for (int i = 0; i < MixedHome.Length; i++) values +=(i == 0 ? "": "|") + MixedNumber(MixedHome[i]);
+  MiningOwner.WriteMixedStorage(MixedHomeKey() + "\n" + values);
+  MixedHomeSet = true;
+  MyLog("Home saved explicitly to PB Storage (rotary angles AND piston extensions). Controller stopped.");
+}
+
+public void PrintMixedHome()
+{
+  if (! MixedHomeSet)
+  {
+    MyLog("Home NOT SET. Move to your chosen folded pose, Stop, settle, SetHome.");
+    return;
+  }
+  string msg = "SAVED HOME - destination only, no collision avoidance";
+  for (int i = 0; i < MixedHome.Length; i++) msg += "\n" + MiningDrives[i].Names[0] +(MiningDrives[i].Blocks.Length == 2 ? " [paired]": "") + ": " +
+  (MiningIsRotary[i] ? MixedHome[i] * 180 / Math.PI: MixedHome[i]).ToString("0.000") +(MiningIsRotary[i] ? " deg": " m");
+  MyLog(msg);
+}
+
+public void BeginJointHome()
+{
+  StopNow();
+  if (! MixedHomeSet)
+  {
+    MyLog("GoHome refused: no chosen Home saved. Use SetHome at the pose you actually want.");
+    return;
+  }
+  if (! CheckMiningGeometry(true) || ! MiningActuatorsReady()) return;
+  for (int i = 0; i < MiningDrives.Length; i++) if (! MiningDrives[i].ResolveHome(MixedHome[i], out ActiveMixedHome[i]))
+  {
+    MyLog("GoHome refused: target outside current limits at " + MiningDrives[i].Names[0]);
+    return;
+  }
+  LastStopReason = "";
+  OnOff = true;
+  GoingHome = true;
+  Runtime.UpdateFrequency = UpdateFrequency.Update1;
+  MyLog("GoHome: grouped simultaneous return, up to " + MixedHomeRPM.ToString("0.00") + " RPM / " + MixedHomeMPS.ToString("0.00") + " m/s. No collision avoidance.");
+}
+
+void SetMixedManualCap(bool rotary, double value)
+{
+  if (value <= 0 || value >(rotary ? MaximumJointCapRPM: MaximumPistonCapMps)) throw new Exception("Cap must be >0 and <= " +(rotary ? MaximumJointCapRPM: MaximumPistonCapMps) +
+  (rotary ? " RPM": " m/s"));
+  StopNow(rotary ? "JointSpeed changed.": "PistonSpeed changed.");
+  for (int i = 0; i < MiningDrives.Length; i++) if (MiningIsRotary[i] == rotary)
+  {
+    MiningDrives[i].ManualCap = rotary ? value * Math.PI / 30: value;
+  }
+  MyLog((rotary ? "JointSpeed = ": "PistonSpeed = ") + value + ". Remains stopped; run On to resume.");
+}
+
+public bool CheckMiningGeometry(bool log)
+{
+  if (MiningTuningError != "") return MiningCheckFailure("CONFIGURATION ERROR: " + MiningTuningError);
+  string why = "";
+  if (MiningDrives == null || MiningDrives.Length != 12 || ! MixedTopology(out why))
+  {
+    return MiningCheckFailure("MIXED-ARM check failed: " +(MiningDrives == null ? "not initialised": why));
+  }
+  var references = new List < IMyShipController >();
+  MyGTS.GetBlocksOfType < IMyShipController >(references, b => b.CustomName == MiningReferenceName && b.IsSameConstructAs(MiningProgrammableBlock));
+  if (references.Count != 1 || ! SameGrid(references[0].CubeGrid, MB(0).CubeGrid)) return MiningCheckFailure("Check failed: need exactly one Arm Controller on the base rotor's BASE grid.");
+  var reference = references[0];
+  var root = MB(0);
+  var frame = reference.WorldMatrix;
+  var origin = root.GetPosition();
+  var all = new List < IMyMechanicalConnectionBlock >();
+  MyGTS.GetBlocksOfType < IMyMechanicalConnectionBlock >(all, b => b.IsSameConstructAs(MiningProgrammableBlock));
+  var known = new HashSet < long >();
+  var armGrids = new HashSet < long >();
+  int disabled = 0,
+  fixedAxes = 0,
+  zeroBrakes = 0;
+  foreach (var d in MiningDrives) for (int j = 0; j < d.Blocks.Length; j++)
+  {
+    var b = d.Blocks[j];
+    int named = 0;
+    foreach (var other in all) if (other.CustomName == d.Names[j]) named++;
+    if (named != 1) return MiningCheckFailure("Check failed: duplicate/missing name: " + d.Names[j]);
+    known.Add(b.EntityId);
+    armGrids.Add(b.CubeGrid.EntityId);
+    armGrids.Add(b.TopGrid.EntityId);
+    string expected = d.Rotary ? "MyObjectBuilder_MotorAdvancedStator/" +(d.Names[j].Contains("Hinge") ? "LargeHinge": "LargeAdvancedStator"): "MyObjectBuilder_ExtendedPistonBase/LargePistonBase";
+    if (b.BlockDefinition.ToString() != expected) return MiningCheckFailure("Check failed: block type changed: " + d.Names[j]);
+    if (d.Rotary)
+    {
+      var r =(IMyMotorStator) b;
+      if (! MiningFinite(r.Displacement) || Math.Abs(r.Displacement - MiningDisplacementM[d.Index]) > 0.005) return MiningCheckFailure("Check failed: displacement at " +
+      d.Names[j] + " expected " + MiningDisplacementM[d.Index].ToString("0.000000") + " m; actual " + r.Displacement.ToString("0.000000") + " m.");
+      if (r.BrakingTorque <= 0) zeroBrakes++;
+    }
+    if (! b.Enabled || ! b.IsWorking) disabled++;
+    if (d.High(j) - d.Low(j) < 1e-7) fixedAxes++;
+    if (! MiningFinite(d.Read(j))) return MiningCheckFailure("Check failed: invalid position at " + d.Names[j]);
+  }
+  foreach (var b in all)
+  {
+    if (known.Contains(b.EntityId)) continue;
+    bool touches =(b.CubeGrid.EntityId != root.CubeGrid.EntityId && armGrids.Contains(b.CubeGrid.EntityId)) ||(b.TopGrid != null && b.TopGrid.EntityId != root.CubeGrid.EntityId &&
+    armGrids.Contains(b.TopGrid.EntityId));
+    if (touches) return MiningCheckFailure("Check failed: unmodelled connection touches the arm: " + b.CustomName);
+  }
+  var prefix = MatrixD.Identity;
+  double maxPosition = 0,
+  maxAxis = 0;
+  for (int i = 0; i < MiningDrives.Length; i++)
+  {
+    var d = MiningDrives[i];
+    for (int j = 0; j < d.Blocks.Length; j++)
+    {
+      var b = d.Blocks[j];
+      Vector3D localOffset = d.Blocks.Length == 2 ? new Vector3D(0, j == 0 ? 2.5: - 2.5, 0): Vector3D.Zero;
+      Vector3D predicted = prefix.Translation + MiningRotate(localOffset, prefix);
+      Vector3D actual = MiningToReference(b.GetPosition() - origin, frame);
+      double pe =(actual - predicted).Length();
+      double ae = Math.Max(MiningAngleDeg(MiningRotate(MiningAxisVector(MiningAxes[i]), prefix), MiningToReference(b.WorldMatrix.Up, frame)), MiningAngleDeg(MiningRotate(MiningBaseForward[i],
+      prefix), MiningToReference(b.WorldMatrix.Forward, frame)));
+      if (! MiningFinite(pe) || ! MiningFinite(ae) || pe > MiningPositionToleranceM || ae > MiningAxisToleranceDeg) return MiningCheckFailure("Check failed at " +
+      d.Names[j] + ": origin error " + pe.ToString("0.0000") + " m; frame error " + ae.ToString("0.0000") + " deg.");
+      maxPosition = Math.Max(maxPosition, pe);
+      maxAxis = Math.Max(maxAxis, ae);
+    }
+    prefix = AdvanceModelFrame(prefix, i);
+  }
+  var drills = new List < IMyShipDrill >();
+  MyGTS.GetBlocksOfType < IMyShipDrill >(drills, b => SameGrid(b.CubeGrid, MB(11).TopGrid));
+  if (drills.Count != MiningDrillCount) return MiningCheckFailure("Check failed: expected 9 drills on final wrist grid; found " + drills.Count);
+  Vector3D centre = Vector3D.Zero;
+  double toolAxis = 0;
+  Vector3D predictedF = MiningRotate(new Vector3D(- 1, 0, 0), prefix),
+  predictedU = MiningRotate(new Vector3D(0, 0, 1), prefix);
+  foreach (var drill in drills)
+  {
+    centre += drill.GetPosition() - origin;
+    toolAxis = Math.Max(toolAxis, MiningAngleDeg(predictedF, MiningToReference(drill.WorldMatrix.Forward, frame)));
+    toolAxis = Math.Max(toolAxis, MiningAngleDeg(predictedU, MiningToReference(drill.WorldMatrix.Up, frame)));
+  }
+  var tool = MiningToReference(centre / drills.Count, frame);
+  var model = prefix.Translation;
+  double tipError = (tool - model).Length();
+  bool pass = MiningFinite(tipError) && MiningFinite(toolAxis) && tipError <= MiningPositionToleranceM && toolAxis <= MiningAxisToleranceDeg;
+  LastMiningCheck = "MIXED-ARM geometry " +(pass ? "PASS": "FAILED") + " (15 actuators / 12 grouped coordinates)" + "\nMODEL drill centre, m: " + model.ToString("0.000") +
+  "\nACTUAL drill centre, m: " + tool.ToString("0.000") + "\nTip error: " + tipError.ToString("0.0000") + " m; max drive-origin error: " + maxPosition.ToString("0.0000") +
+  " m" + "\nMax drive-frame error: " + maxAxis.ToString("0.0000") + " deg; tool-frame error: " + toolAxis.ToString("0.0000") + " deg" + "\nDisabled/unpowered: " +
+  disabled + "; zero-range actuators: " + fixedAxes + "; zero-brake rotaries: " + zeroBrakes + "\nHome: " +(MixedHomeSet ? "explicit saved pose": "NOT SET - use SetHome at your chosen pose") +
+  "\nGeometry only: no collision, anchoring or force validation.";
+  LastMixedGeometryStep = GlobStep;
+  if (log || ! pass) MyLog(LastMiningCheck);
+  return pass;
+}
+
+// ======================= NATIVE HEAD-ONLY RUNTIME =======================
+public Program()
+{
+  MiningOwner = this;
+  MiningProgrammableBlock = Me;
+  MyGTS = GridTerminalSystem;
+  Runtime.UpdateFrequency = UpdateFrequency.Update10;
+  MiningDrives = new MixedDrive[MiningMemberNames.Length];
+  for (int i = 0; i < MiningDrives.Length; i++) MiningDrives[i] = new MixedDrive(i);
+  BindMixedDrives();
+  StopNow();
+  MiningTuningError = ValidateSettings();
+  RefreshPanels();
+  LoadMixedHome();
+  if (MiningTuningError != "") MyLog("CONFIGURATION ERROR: " + MiningTuningError);
+  if (MiningBindingError != "") MyLog(MiningBindingError);
+  Echo(DescribeControllerBuild());
+}
+
+public void Main(string argument)
+{
+  GlobStep++;
+  double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
+  HeadElapsedSeconds = elapsed;
+  StatusElapsed += MiningFinite(elapsed) && elapsed > 0 ? elapsed : 0;
+  try
+  {
+    if (!string.IsNullOrWhiteSpace(argument))
+    {
+      foreach (string line in argument.Split('\n'))
+      foreach (string item in line.Split(';'))
+      {
+        string command = item.Trim();
+        if (command.StartsWith("MiningArm ", StringComparison.OrdinalIgnoreCase))
+          command = command.Substring(10).Trim();
+        if (command != "") ExecuteCommand(command);
+      }
+    }
+    if (OnOff)
+    {
+      if (!MiningFinite(elapsed) || elapsed < 0)
+        StopNow("Invalid control interval.");
+      else if (elapsed > 0.5)
+        StopNow("Control update gap >0.5 s; inspect arm before On.");
+      else if (elapsed > 0.00001)
+      {
+        if (!MiningActuatorsReady()) StopNow(LastMiningCheck);
+        else if (GoingHome) UpdateJointHome();
+        else UpdateHeadControl();
+      }
+    }
+    else
+    {
+      foreach (MixedDrive drive in MiningDrives) drive.Zero();
+    }
+  }
+  catch (Exception error)
+  {
+    StopNow("CONTROL EXCEPTION: " + error.Message);
+    MyLog(LastStopReason);
+  }
+  Runtime.UpdateFrequency = OnOff ? UpdateFrequency.Update1 : UpdateFrequency.Update10;
+  RenderStatus();
+}
+
+string ValidateSettings()
+{
+  double[] positive = new double[] {
+    DefaultTurnSpeedDegPerSec, DefaultStepAngleDeg, DefaultJointCapRPM,
+    DefaultPistonCapMps, DefaultHomeJointCapRPM, DefaultHomePistonCapMps,
+    MaximumMoveSpeedMps, MaximumTurnSpeedDegPerSec, MaximumStepAngleDeg,
+    MaximumJointCapRPM, MaximumPistonCapMps, MaximumHomeJointCapRPM,
+    MaximumHomePistonCapMps, HeadAimToleranceDeg, HeadOrientationPauseMarginDeg,
+    HeadOrientationStopMarginDeg, HeadOrientationHoldWeight, HeadOrientationTurnWeight,
+    HeadPositionTranslationWeight, HeadPositionRotationWeight, HeadPositionGain,
+    HeadOrientationGain, HeadPresetGain, HeadMinimumRecoverySpeedMps, HeadDamping,
+    HeadPosStopM, HeadPositionFaultDelaySeconds, HeadPositionImmediateStopM,
+    HeadPositionCorrectionMaxMps, HeadOrientationCorrectionMaxDegPerSec,
+    HeadPositionIntegralMaxMps, HeadOrientationIntegralMaxDegPerSec,
+    HeadPositionIntegralCaptureM, HeadOrientationIntegralCaptureDeg,
+    HeadIntegralUnwindSeconds, HeadVelocityFilterSeconds, HeadPositionRecoveryM,
+    HeadRecoveryResumeM, HeadRecoveryProgressM, HeadRecoveryNoProgressSeconds,
+    HeadRecoveryMaximumSeconds, HeadTraceIntervalSeconds, HeadBudgetPauseTimeoutSeconds,
+    HeadInputLeadSlowM, HeadInputLeadMaxM, StatusRefreshSeconds
+  };
+  foreach (double value in positive)
+    if (!MiningFinite(value) || value <= 0) return "Positive settings must be finite and greater than zero.";
+  double[] nonnegative = new double[] {
+    DefaultMoveSpeedMps, DefaultOrientationToleranceDeg, MaximumOrientationToleranceDeg,
+    HeadOrientationWeightInsideBand, HeadPositionDeadbandM, HeadPositionIntegralGain,
+    HeadPositionDerivativeGain, HeadOrientationIntegralGain, HeadOrientationDerivativeGain,
+    HeadJointAccelerationRPMPerSec, HeadPistonAccelerationMps2,
+    HeadOrientationRampStartFraction, HeadManualCounterCorrectionFraction
+  };
+  foreach (double value in nonnegative)
+    if (!MiningFinite(value) || value < 0) return "Nonnegative settings must be finite.";
+  if (DefaultMoveSpeedMps > MaximumMoveSpeedMps || DefaultTurnSpeedDegPerSec > MaximumTurnSpeedDegPerSec ||
+    DefaultStepAngleDeg > MaximumStepAngleDeg || DefaultJointCapRPM > MaximumJointCapRPM ||
+    DefaultPistonCapMps > MaximumPistonCapMps || DefaultHomeJointCapRPM > MaximumHomeJointCapRPM ||
+    DefaultHomePistonCapMps > MaximumHomePistonCapMps) return "A default exceeds its command ceiling.";
+  if (DefaultOrientationToleranceDeg > MaximumOrientationToleranceDeg || MaximumOrientationToleranceDeg > 90 ||
+    MaximumStepAngleDeg > 180) return "Invalid angle tolerance/step ceiling.";
+  if (HeadOrientationRampStartFraction >= 1 || HeadOrientationWeightInsideBand > HeadOrientationHoldWeight ||
+    HeadOrientationStopMarginDeg <= HeadOrientationPauseMarginDeg) return "Invalid orientation weighting/guard.";
+  if (HeadPositionDeadbandM >= HeadRecoveryResumeM || HeadRecoveryResumeM >= HeadPositionRecoveryM ||
+    HeadPositionRecoveryM >= HeadPosStopM || HeadPosStopM >= HeadPositionImmediateStopM ||
+    HeadInputLeadSlowM >= HeadInputLeadMaxM || HeadInputLeadMaxM >= HeadPosStopM ||
+    HeadManualCounterCorrectionFraction > 1) return "Require deadband < resume < warning < significant < immediate, and leadSlow < leadMax < significant; counter correction 0..1.";
+  if (HeadPositionIntegralMaxMps > HeadPositionCorrectionMaxMps ||
+    HeadOrientationIntegralMaxDegPerSec > HeadOrientationCorrectionMaxDegPerSec ||
+    HeadPositionIntegralCaptureM >= HeadPositionRecoveryM ||
+    HeadRecoveryProgressM >= HeadPositionRecoveryM - HeadRecoveryResumeM ||
+    HeadRecoveryNoProgressSeconds > HeadRecoveryMaximumSeconds) return "Invalid integral/recovery settings.";
+  if (HeadSolverMaxPasses < 1 || HeadSolverMaxPasses > 64) return "Solver passes must be 1..64.";
+  if (HeadJointParticipation == null || HeadJointParticipation.GetLength(0) != 12 ||
+    HeadJointParticipation.GetLength(1) != 2) return "Need 12 joint participation rows, each with 2 columns.";
+  double move = 0, turn = 0;
+  for (int i = 0; i < 12; i++) for (int j = 0; j < 2; j++)
+  {
+    double value = HeadJointParticipation[i, j];
+    if (!MiningFinite(value) || value < 0 || value > 10) return "Participation values must be 0..10.";
+    if (j == 0) move += value; else turn += value;
+  }
+  if (move <= 0 || turn <= 0) return "Each task needs at least one participating group.";
+  PilotAction[] inputs = new PilotAction[] { InputW, InputS, InputA, InputD, InputSpace, InputC, InputQ, InputE };
+  foreach (PilotAction action in inputs)
+    if ((int)action < 0 || (int)action > (int)PilotAction.RollRight) return "Invalid pilot mapping.";
+  if (HeadBindings == null) return "HeadBindings is null.";
+  var used = new HashSet<string>();
+  string reserved = "|version|on|off|toggle|stop|onoff|-oo|check|hold|face|yaw|pitch|roll|speed|-s|turnspeed|stepangle|" +
+    "jointspeed|pistonspeed|homespeed|orientationtolerance|readkeyboard|-rk|readroll|sethome|-sh|gohome|-gh|homeinfo|" +
+    "headinfo|settings|bindings|dumptrace|traceclear|help|";
+  foreach (ToolbarBinding binding in HeadBindings)
+  {
+    if (binding == null || string.IsNullOrWhiteSpace(binding.Argument)) return "Empty toolbar binding.";
+    string name = binding.Argument.ToLowerInvariant();
+    foreach (char letter in name)
+      if (char.IsWhiteSpace(letter) || letter == ';' || letter == '|') return "Toolbar arguments must be one token.";
+    if (!used.Add(name) || reserved.Contains("|" + name + "|")) return "Duplicate/reserved toolbar argument: " + name;
+    if ((int)binding.Action < 0 || (int)binding.Action > (int)HeadAction.Stop) return "Invalid toolbar action.";
+  }
+  return "";
+}
+
+MatrixD AdvanceModelFrame(MatrixD prefix, int index)
+{
+  double position = MiningDrives[index].Position();
+  MatrixD joint;
+  if (MiningIsRotary[index])
+  {
+    double angle = MiningOffsetsDeg[index] * Math.PI / 180 - position;
+    switch (MiningAxes[index])
+    {
+      case "X": joint = MatrixD.CreateRotationX(angle); break;
+      case "-X": joint = MatrixD.CreateRotationX(-angle); break;
+      case "Y": joint = MatrixD.CreateRotationY(angle); break;
+      case "-Y": joint = MatrixD.CreateRotationY(-angle); break;
+      case "Z": joint = MatrixD.CreateRotationZ(angle); break;
+      case "-Z": joint = MatrixD.CreateRotationZ(-angle); break;
+      default: throw new Exception("Invalid calibrated rotary axis.");
+    }
+  }
+  else joint = MatrixD.CreateTranslation(MiningAxisVector(MiningAxes[index]) * position);
+  return MatrixD.CreateTranslation(MiningLinkM[index]) * joint * prefix;
+}
+
+public void StopNow(string reason = "")
+{
+  if (reason != "" && (OnOff || LastStopReason == "")) LastStopReason = reason;
+  OnOff = false;
+  GoingHome = false;
+  HeadBudgetPauseSeconds = 0;
+  ResetHeadState();
+  if (MiningDrives != null) foreach (MixedDrive drive in MiningDrives) if (drive != null) drive.Zero();
+  HeadStatus = "OFF: actuator velocity targets are zero.";
+}
+
+public void SetMixedEnabled(bool enabled)
+{
+  if (!enabled) { StopNow("Off command."); return; }
+  StopNow();
+  if (!CheckMiningGeometry(true) || !MiningActuatorsReady() || !CaptureHeadTarget()) return;
+  LastStopReason = "";
+  OnOff = true;
+  Runtime.UpdateFrequency = UpdateFrequency.Update1;
+  LastDiagnostic = "";
+}
+
+void RequireHeadControl()
+{
+  if (!OnOff || GoingHome || !HeadTargetValid)
+    throw new Exception("Enable with On/Toggle first; head commands are unavailable during homing.");
+}
+
+bool AnyHeadPilotInput()
+{
+  Vector3D translation, rotation;
+  ReadHeadPilot(out translation, out rotation);
+  return translation.LengthSquared() > 0.0001 || rotation.LengthSquared() > 0.0001;
+}
+
+public bool MiningActuatorsReady()
+{
+  if (MiningTuningError != "") return MiningCheckFailure("CONFIGURATION ERROR: " + MiningTuningError);
+  string reason;
+  if (!MixedTopology(out reason)) return MiningCheckFailure("Motion stopped: " + reason);
+  foreach (MixedDrive drive in MiningDrives)
+    if (!drive.Ready(out reason)) return MiningCheckFailure(reason);
+  if (GlobStep - LastMixedGeometryStep >= 30 && !CheckMiningGeometry(false)) return false;
+  return true;
+}
+
+void PauseHeadForBudget()
+{
+  HeadPreviousReferenceVelocity = HeadPreviousPredictedVelocity = Vector3D.Zero;
+  HeadAcceptedFeed = HeadAppliedCorrection = HeadBlendedRequest = Vector3D.Zero;
+  for (int i = 0; i < MiningDrives.Length; i++)
+  {
+    MiningDrives[i].Zero();
+    HeadV[i] = 0;
+    HeadState[i] = 0;
+  }
+  HeadPredictedMps = HeadPredictedDegPerSec = 0;
+  HeadBudgetPauseSeconds += Math.Max(0, HeadElapsedSeconds);
+  HeadProgress = 0;
+  HeadSolverBudgetLimited = true;
+  HeadStatus = "Calculation deferred; ON, target fixed, actuator targets zero.";
+  if (HeadBudgetPauseSeconds >= HeadBudgetPauseTimeoutSeconds)
+    StopNow("Sustained calculation-budget shortage; HeadInfo / DumpTrace.");
+}
+
+public bool CommitMixed()
+{
+  if (!OnOff) return false;
+  if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.85)
+  {
+    if (!GoingHome) PauseHeadForBudget();
+    else StopNow("Insufficient calculation budget before homing output.");
+    return false;
+  }
+  if (!MiningActuatorsReady()) { StopNow(LastMiningCheck); return false; }
+  foreach (MixedDrive drive in MiningDrives) drive.Commit();
+  HeadBudgetPauseSeconds = 0;
+  return true;
+}
+
+public void UpdateJointHome()
+{
+  if (AnyHeadPilotInput()) { StopNow("GoHome cancelled by movement input."); return; }
+  bool complete = true;
+  double rotaryError = 0, pistonError = 0;
+  for (int i = 0; i < MiningDrives.Length; i++)
+  {
+    MixedDrive drive = MiningDrives[i];
+    double resolved;
+    if (!drive.ResolveHome(ActiveMixedHome[i], out resolved))
+    { StopNow("GoHome target outside current limits: " + drive.Names[0]); return; }
+    double error = drive.HomeError(ActiveMixedHome[i]);
+    double tolerance = drive.Rotary ? 0.25 * Math.PI / 180 : 0.005;
+    if (drive.Rotary) rotaryError = Math.Max(rotaryError, Math.Abs(error) * 180 / Math.PI);
+    else pistonError = Math.Max(pistonError, Math.Abs(error));
+    if (Math.Abs(error) > tolerance) complete = false;
+    double cap = drive.Rotary ? MixedHomeRPM * Math.PI / 30 : MixedHomeMPS;
+    drive.Plan(Math.Abs(error) <= tolerance ? 0 : Clamp(error * 0.5, -cap, cap), cap, false);
+  }
+  if (complete) { StopNow("GoHome complete."); return; }
+  if (!CommitMixed()) return;
+  HeadStatus = "HOMING: max error " + rotaryError.ToString("0.00") + " deg / " + pistonError.ToString("0.000") + " m.";
+}
+
+string ReadMixedStorage() { return Storage; }
+void WriteMixedStorage(string value) { Storage = value; }
+
+public string DescribeControllerBuild()
+{
+  return ControllerVersion + " | PB " + Me.EntityId + "\nHead-only blended pilot + PID | no Legacy mode" +
+    "\nPosition stops: " + (HeadStopOnPositionError ? ">" + HeadPosStopM + " m for " + HeadPositionFaultDelaySeconds +
+    " s; >=" + HeadPositionImmediateStopM + " m immediate" : "distance checks disabled") +
+    "\nRecovery timeouts: " + (HeadStopOnRecoveryTimeout ? "STOP" : "warning only");
+}
+
+void RefreshPanels()
+{
+  StatusPanels.Clear();
+  LogPanels.Clear();
+  MyGTS.GetBlocksOfType<IMyTextPanel>(StatusPanels, panel => panel.CustomName == StatusPanelName && panel.IsSameConstructAs(Me));
+  MyGTS.GetBlocksOfType<IMyTextPanel>(LogPanels, panel => panel.CustomName == LogPanelName && panel.IsSameConstructAs(Me));
+}
+
+static void MyLog(string message)
+{
+  if (MiningOwner == null) return;
+  MiningOwner.LastDiagnostic = message;
+  MiningOwner.RecentMessages.Add(message);
+  while (MiningOwner.RecentMessages.Count > 20) MiningOwner.RecentMessages.RemoveAt(0);
+  string text = string.Join("\n", MiningOwner.RecentMessages);
+  foreach (IMyTextPanel panel in MiningOwner.LogPanels)
+    if (panel != null && !panel.Closed) panel.WriteText(text, false);
+}
+
+static void MyEcho(string message)
+{
+  if (MiningOwner != null) MiningOwner.LastDiagnostic = message;
+}
+
+void RenderStatus()
+{
+  string text = ControllerVersion + " | PB " + Me.EntityId + " | " + (OnOff ? "ON" : "OFF") + "\n" + HeadStatus;
+  if (!OnOff && LastStopReason != "") text += "\nLAST STOP: " + LastStopReason;
+  text += "\nCentre error " + HeadPositionErrorM.ToString("0.000") + " m; orientation " + HeadOrientationErrorDeg.ToString("0.00") + " deg" +
+    "\nPilot feed " + HeadAcceptedFeed.Length().ToString("0.000") + " + correction " + HeadAppliedCorrection.Length().ToString("0.000") + " m/s" +
+    "\nBlend request " + HeadBlendedRequest.Length().ToString("0.000") + "; predicted " + HeadPredictedMps.ToString("0.000") + " m/s" +
+    "\nInput scale " + (100 * HeadProgress).ToString("0") + "%; lead " + HeadDirectionalLeadM.ToString("0.000") + " m. Toggle / Stop / HeadInfo.";
+  if (LastDiagnostic != "") text += "\n\n" + LastDiagnostic;
+  Echo(text);
+  if (StatusElapsed < StatusRefreshSeconds) return;
+  StatusElapsed = 0;
+  foreach (IMyTextPanel panel in StatusPanels)
+    if (panel != null && !panel.Closed) panel.WriteText(text, false);
+}
+
+// ======================= BLENDED HEAD CONTROL =======================
+// Target lead is directional: a transverse error must not stop forward input.
+static double DirectionalLeadScale(Vector3D error, Vector3D pilotVelocity,
+  double fullSpeedLead, double maximumLead, out double lead)
+{
+  double speed = pilotVelocity.Length();
+  lead = speed > 1e-12 ? Math.Max(0, Vector3D.Dot(error, pilotVelocity) / speed) : 0;
+  if (speed <= 1e-12) return 1;
+  double amount = Clamp((lead - fullSpeedLead) / (maximumLead - fullSpeedLead), 0, 1);
+  return 1 - amount * amount * (3 - 2 * amount);
+}
+
+// Keep the cross-track correction. Limit ONLY its component opposing pilot travel.
+// This is a deliberate manual-steering priority, not a kinematic guarantee.
+static Vector3D BlendManualCorrection(Vector3D pilotVelocity, Vector3D correction,
+  double maximumOppositionFraction, out bool limited)
+{
+  limited = false;
+  double speed = pilotVelocity.Length();
+  if (speed <= 1e-12) return correction;
+  Vector3D direction = pilotVelocity / speed;
+  double component = Vector3D.Dot(correction, direction);
+  double minimum = -speed * maximumOppositionFraction;
+  if (component >= minimum) return correction;
+  limited = true;
+  return correction + direction * (minimum - component);
+}
+
+public void UpdateHeadControl()
+{
+  if (!HeadTargetValid) { StopNow("Head target unavailable; run On."); return; }
+  double interval = Math.Min(HeadElapsedSeconds, 0.10);
+  Vector3D position, forward, up;
+  if (!ReadHeadPose(out position, out forward, out up))
+  { StopNow("Head drill/reference unavailable."); return; }
+  if (HeadObservationValid)
+  {
+    Vector3D measuredVelocity = (position - HeadPreviousP) / HeadElapsedSeconds;
+    Vector3D measuredAngular = HeadRotationError(HeadPreviousF, HeadPreviousU, forward, up) / HeadElapsedSeconds;
+    HeadObservedMps = measuredVelocity.Length();
+    HeadObservedDegPerSec = measuredAngular.Length() * 180 / Math.PI;
+    double blend = interval / (HeadVelocityFilterSeconds + interval);
+    HeadFilteredVelocity += (measuredVelocity - HeadFilteredVelocity) * blend;
+    HeadFilteredAngularVelocity += (measuredAngular - HeadFilteredAngularVelocity) * blend;
+  }
+  HeadPreviousP = position;
+  HeadPreviousF = forward;
+  HeadPreviousU = up;
+  HeadObservationValid = true;
+
+  Vector3D positionError = HeadTargetP - position;
+  Vector3D angleError = HeadRotationError(forward, up, HeadTargetF, HeadTargetU);
+  HeadPositionErrorM = positionError.Length();
+  HeadOrientationErrorDeg = angleError.Length() * 180 / Math.PI;
+  Vector3D localMove, localTurn;
+  ReadHeadPilot(out localMove, out localTurn);
+  if (localMove.LengthSquared() > 1) localMove = HeadUnit(localMove);
+  if (localTurn.LengthSquared() > 1) localTurn = HeadUnit(localTurn);
+  Vector3D left = Vector3D.Cross(up, forward);
+  Vector3D rawFeed = (forward * localMove.X + left * localMove.Y + up * localMove.Z) * Speed;
+  HeadTracePilot = localMove;
+  HeadRawRequestedVelocity = rawFeed;
+  HeadTraceElapsedSeconds += HeadElapsedSeconds;
+
+  string fault = CheckPositionEmergency(HeadElapsedSeconds);
+  double angularEmergency = OrientationToleranceDeg + HeadOrientationStopMarginDeg;
+  if (!MiningFinite(HeadOrientationErrorDeg)) fault = "Invalid orientation feedback.";
+  else if (HeadOrientationErrorDeg > angularEmergency)
+    fault = "Orientation tracking emergency: " + HeadOrientationErrorDeg.ToString("0.00") + " / " + angularEmergency + " deg.";
+  if (fault == "") fault = UpdatePositionRecovery(HeadElapsedSeconds);
+  RecordHeadTrackingTrace(position, positionError, fault != "");
+  if (fault != "")
+  {
+    HeadTraceFrozen = true;
+    StopNow(fault);
+    MyLog(fault);
+    return;
+  }
+
+  double turnSpeed = HeadTurnDeg * Math.PI / 180;
+  bool manualTurn = localTurn.LengthSquared() > 1e-12;
+  Vector3D turnFeed = Vector3D.Zero;
+  if (manualTurn)
+  {
+    HeadGoalPending = false;
+    turnFeed = HeadClampVector((new Vector3D(0, 0, 1) * localTurn.X - left * localTurn.Y + forward * localTurn.Z) * turnSpeed, turnSpeed);
+  }
+  else if (HeadGoalPending)
+  {
+    Vector3D remaining = HeadRotationError(HeadTargetF, HeadTargetU, HeadGoalF, HeadGoalU);
+    double actualRemaining = HeadRotationError(forward, up, HeadGoalF, HeadGoalU).Length() * 180 / Math.PI;
+    if (remaining.Length() < 0.01 * Math.PI / 180 && actualRemaining <= HeadAimToleranceDeg)
+    {
+      HeadGoalPending = false;
+      HeadTargetF = HeadGoalF;
+      HeadTargetU = HeadGoalU;
+      angleError = HeadRotationError(forward, up, HeadTargetF, HeadTargetU);
+      HeadOrientationErrorDeg = angleError.Length() * 180 / Math.PI;
+    }
+    else turnFeed = HeadClampVector(remaining * HeadPresetGain, turnSpeed);
+  }
+
+  bool translating = rawFeed.LengthSquared() > 1e-12;
+  bool aiming = manualTurn || HeadGoalPending;
+  bool rotating = aiming || turnFeed.LengthSquared() > 1e-12;
+  double angleScale = HeadAngularAdvanceScale(HeadOrientationErrorDeg, OrientationToleranceDeg);
+  HeadPositionGate = DirectionalLeadScale(positionError, rawFeed,
+    HeadInputLeadSlowM, HeadInputLeadMaxM, out HeadDirectionalLeadM);
+  Vector3D feed = rawFeed * (HeadPositionGate * angleScale);
+  // Rotation-only input retains the position target. Excessive angular lag may pause
+  // turning, but a small translational error does not erase the rotation request.
+  turnFeed *= angleScale;
+
+  double angleBand = (aiming ? 0.5 * HeadAimToleranceDeg : OrientationToleranceDeg) * Math.PI / 180;
+  Vector3D positionCorrection = HeadPositionPid.Evaluate(positionError, HeadFilteredVelocity,
+    HeadPositionDeadbandM, HeadPositionGain, HeadPositionDerivativeGain, HeadPositionCorrectionMaxMps);
+  positionCorrection = BlendManualCorrection(feed, positionCorrection,
+    HeadManualCounterCorrectionFraction, out HeadCounterCorrectionLimited);
+  Vector3D angleCorrection = HeadOrientationPid.Evaluate(angleError, HeadFilteredAngularVelocity,
+    angleBand, HeadOrientationGain, HeadOrientationDerivativeGain,
+    Math.Min(turnSpeed, HeadOrientationCorrectionMaxDegPerSec * Math.PI / 180));
+
+  double positionWeight = rotating && !translating ? HeadPositionRotationWeight : HeadPositionTranslationWeight;
+  double angularWeight = HeadOrientationWeight(HeadOrientationErrorDeg, OrientationToleranceDeg, aiming);
+  double movementDemand = translating ? 1 : 0;
+  double rotationDemand = rotating ? 1 : 0;
+  if (movementDemand + rotationDemand < 1e-9)
+  {
+    movementDemand = positionCorrection.Length() / Math.Max(Speed, HeadMinimumRecoverySpeedMps);
+    rotationDemand = angleCorrection.Length() / Math.Max(turnSpeed, 1e-9);
+  }
+  double rotationShare = movementDemand + rotationDemand > 1e-9 ?
+    rotationDemand / (movementDemand + rotationDemand) : 0.5;
+  Vector3D achievedVelocity, achievedAngular;
+  if (!SolveHeadVelocity(position, feed + positionCorrection, turnFeed + angleCorrection,
+    positionWeight, angularWeight, rotationShare, out achievedVelocity, out achievedAngular))
+  { StopNow("Head solve numerical failure; HeadInfo / DumpTrace."); return; }
+  if (HeadSolverBudgetLimited && HeadSolverPassesUsed == 0) { PauseHeadForBudget(); return; }
+  if (!CommitMixed()) return;
+
+  // Anti-windup includes both IK saturation AND the manual-opposition limiter:
+  // use RAW PID output, not the already limited correction, in unmet demand.
+  bool integrate = HeadSolverConverged && !HeadSolverBudgetLimited && !HeadPositionRecovering;
+  HeadPositionPid.Advance(positionError, feed + HeadPositionPid.Raw - achievedVelocity,
+    HeadPositionDeadbandM, HeadPositionIntegralGain, HeadPositionIntegralMaxMps,
+    HeadPositionIntegralCaptureM, interval, integrate);
+  HeadOrientationPid.Advance(angleError, turnFeed + HeadOrientationPid.Raw - achievedAngular,
+    angleBand, HeadOrientationIntegralGain, HeadOrientationIntegralMaxDegPerSec * Math.PI / 180,
+    HeadOrientationIntegralCaptureDeg * Math.PI / 180, interval, integrate);
+
+  // Advance the reference by EXACTLY the feed supplied in this committed solve.
+  // No scalar "achieved minus correction" progress estimate shared by translation
+  // and rotation. Directional lead and angular-lag guards prevent endless run-ahead.
+  HeadTargetP += feed * interval;
+  Vector3D rotationStep = turnFeed * interval;
+  HeadTargetF = HeadRotateVector(HeadTargetF, rotationStep);
+  HeadTargetU = HeadRotateVector(HeadTargetU, rotationStep);
+  HeadOrthonormalise(ref HeadTargetF, ref HeadTargetU);
+  HeadAcceptedFeed = HeadPreviousReferenceVelocity = feed;
+  HeadAppliedCorrection = positionCorrection;
+  HeadBlendedRequest = feed + positionCorrection;
+  HeadPreviousPredictedVelocity = achievedVelocity;
+  HeadProgress = HeadPositionGate * angleScale;
+  HeadGoalRemainingDeg = HeadGoalPending ? HeadRotationError(forward, up, HeadGoalF, HeadGoalU).Length() * 180 / Math.PI : 0;
+  HeadStatus = angleScale <= 0 ? "Orientation lag guard: correcting; ON." :
+    HeadPositionGate < 0.999 ? "Blended control: limiting excessive forward target lead." :
+    translating ? "Blended pilot translation + PID correction." :
+    rotating ? "Aiming about central drill; position target fixed." : "Holding position and orientation targets; ON.";
+  if (HeadCounterCorrectionLimited) HeadStatus += " Manual opposing correction limited.";
+  if (HeadRecoveryWarning != "") HeadStatus += " WARNING: " + HeadRecoveryWarning;
+}
+
+// ======================= COMMANDS / DIAGNOSTICS =======================
+void ExecuteCommand(string command)
+{
+  string[] words = command.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+  if (words.Length == 0) return;
+  string name = words[0].ToLowerInvariant();
+  try
+  {
+    foreach (ToolbarBinding binding in HeadBindings)
+      if (string.Equals(binding.Argument, name, StringComparison.OrdinalIgnoreCase))
+      {
+        RequireCount(words, 1);
+        ExecuteBoundHeadAction(binding.Action);
+        return;
+      }
+    double value;
+    switch (name)
+    {
+      case "version": RequireCount(words, 1); MyLog(DescribeControllerBuild()); break;
+      case "on": RequireCount(words, 1); SetMixedEnabled(true); break;
+      case "off": case "stop": RequireCount(words, 1); StopNow("Stop command."); break;
+      case "toggle": RequireCount(words, 1); SetMixedEnabled(!OnOff); break;
+      case "onoff": case "-oo": RequireCount(words, 2); SetMixedEnabled(OnOffToggle(words[1], OnOff)); break;
+      case "check": RequireCount(words, 1); CheckMiningGeometry(true); break;
+      case "hold": RequireCount(words, 1); RequireHeadControl(); SetMixedEnabled(true); break;
+      case "face": RequireCount(words, 2); FaceHead(words[1]); break;
+      case "yaw": case "pitch": case "roll": RequireCount(words, 2); StepHead(name, MixedParse(words[1])); break;
+      case "speed": case "-s":
+        RequireCount(words, 2); value = MixedParse(words[1]);
+        RequireRange(value, 0, MaximumMoveSpeedMps, true); Speed = value;
+        MyLog("Requested pilot translation " + value + " m/s; actuator caps remain."); break;
+      case "turnspeed":
+        RequireCount(words, 2); value = MixedParse(words[1]);
+        RequireRange(value, 0, MaximumTurnSpeedDegPerSec, false); HeadTurnDeg = value;
+        MyLog("Turn request " + value + " deg/s."); break;
+      case "stepangle":
+        RequireCount(words, 2); value = MixedParse(words[1]);
+        RequireRange(value, 0, MaximumStepAngleDeg, false); HeadStepDeg = value;
+        MyLog("Toolbar turn steps " + value + " deg."); break;
+      case "orientationtolerance":
+        RequireCount(words, 2); value = MixedParse(words[1]);
+        RequireRange(value, 0, MaximumOrientationToleranceDeg, true);
+        StopNow("OrientationTolerance changed."); OrientationToleranceDeg = value;
+        MyLog("Orientation tolerance " + value + " deg; stopped. On resumes."); break;
+      case "jointspeed": RequireCount(words, 2); SetMixedManualCap(true, MixedParse(words[1])); break;
+      case "pistonspeed": RequireCount(words, 2); SetMixedManualCap(false, MixedParse(words[1])); break;
+      case "homespeed":
+        RequireCount(words, 3); double rpm = MixedParse(words[1]), mps = MixedParse(words[2]);
+        RequireRange(rpm, 0, MaximumHomeJointCapRPM, false); RequireRange(mps, 0, MaximumHomePistonCapMps, false);
+        StopNow("HomeSpeed changed."); MixedHomeRPM = rpm; MixedHomeMPS = mps;
+        MyLog("Home caps " + rpm + " RPM / " + mps + " m/s; stopped."); break;
+      case "readkeyboard": case "-rk": RequireCount(words, 2); ReadKeyboard = OnOffToggle(words[1], ReadKeyboard); break;
+      case "readroll": RequireCount(words, 2); HeadReadRoll = OnOffToggle(words[1], HeadReadRoll); break;
+      case "sethome": case "-sh": RequireCount(words, 1); CaptureMixedHome(); break;
+      case "gohome": case "-gh": RequireCount(words, 1); BeginJointHome(); break;
+      case "homeinfo": RequireCount(words, 1); PrintMixedHome(); break;
+      case "headinfo": RequireCount(words, 1); PrintHeadInfo(); break;
+      case "settings": RequireCount(words, 1); PrintHeadSettings(); break;
+      case "bindings": RequireCount(words, 1); PrintHeadBindings(); break;
+      case "dumptrace": RequireCount(words, 1); DumpHeadTrackingTrace(); break;
+      case "traceclear":
+        RequireCount(words, 1); HeadTrace.Clear(); HeadTraceFrozen = false;
+        HeadTraceLastSampleSeconds = -1; HeadTraceElapsedSeconds = 0;
+        MyLog("Tracking trace cleared; next active update starts recording."); break;
+      case "help": RequireCount(words, 1); PrintHelp(); break;
+      default: MyLog("Unknown/retired command: " + words[0] + ". Use Help. No command applied."); break;
+    }
+  }
+  catch (Exception error)
+  {
+    StopNow("Command rejected: " + command + " - " + error.Message);
+    MyLog(LastStopReason);
+  }
+}
+
+static void RequireCount(string[] words, int count)
+{
+  if (words.Length != count) throw new Exception(words[0] + " expects " + (count - 1) + " parameter(s).");
+}
+
+static void RequireRange(double value, double minimum, double maximum, bool includeMinimum)
+{
+  if (!MiningFinite(value) || (includeMinimum ? value < minimum : value <= minimum) || value > maximum)
+    throw new Exception("Value outside " + (includeMinimum ? "[" : "(") + minimum + ", " + maximum + "].");
+}
+
+void PrintHelp()
+{
+  MyLog("Run arguments (case insensitive):\n" +
+    "On | Off | Stop | Toggle | OnOff On/Off/Toggle | Check | Version | Hold\n" +
+    "Face Forward/Back/Left/Right/Down | Yaw/Pitch/Roll signedDegrees | 1..9 bindings\n" +
+    "Speed mps | TurnSpeed deg/s | StepAngle degrees | OrientationTolerance degrees\n" +
+    "JointSpeed rpm | PistonSpeed mps | HomeSpeed rpm mps\n" +
+    "ReadKeyboard On/Off/Toggle | ReadRoll On/Off/Toggle\n" +
+    "SetHome | GoHome | HomeInfo | HeadInfo | Settings | Bindings\n" +
+    "DumpTrace (REPLACES CustomData) | TraceClear | Help\n" +
+    "No Legacy mode, Move/MoveTo/RelMove, ReadMouse, Softness or panel-command execution.");
+}
+
+void PrintHeadInfo()
+{
+  MyLog(DescribeControllerBuild() +
+    "\nSnapshot: enabled " + OnOff + "; homing " + GoingHome + "; target valid " + HeadTargetValid +
+    "\nLast stop: " + (LastStopReason == "" ? "none" : LastStopReason) +
+    "\nPosition error " + HeadPositionErrorM.ToString("0.0000") + " m; orientation " + HeadOrientationErrorDeg.ToString("0.000") + " deg" +
+    "\nRaw pilot: " + HeadTraceVector(HeadRawRequestedVelocity) +
+    "\nAccepted pilot feed: " + HeadTraceVector(HeadAcceptedFeed) +
+    "\nApplied position correction: " + HeadTraceVector(HeadAppliedCorrection) +
+    "\nCombined request: " + HeadTraceVector(HeadBlendedRequest) +
+    "\nPredicted: " + HeadPredictedMps.ToString("0.0000") + " m/s; measured: " + HeadObservedMps.ToString("0.0000") + " m/s" +
+    "\nLead along input: " + HeadDirectionalLeadM.ToString("0.0000") + " m; feed scale: " + HeadProgress.ToString("0.000") +
+    "; opposing correction limited: " + HeadCounterCorrectionLimited +
+    "\nSolver passes " + HeadSolverPassesUsed + "; converged " + HeadSolverConverged + "; budget limited " + HeadSolverBudgetLimited +
+    "; active bounds " + HeadActiveBounds + "; budget pause " + HeadBudgetPauseSeconds.ToString("0.000") + " s" +
+    "\nResidual " + HeadSolveLinearResidual.ToString("0.0000") + " m/s / " + HeadSolveAngularResidual.ToString("0.000") + " deg/s" +
+    "\nPredicted rotation " + HeadPredictedDegPerSec.ToString("0.000") + "; measured " + HeadObservedDegPerSec.ToString("0.000") + " deg/s" +
+    "\nDeviation warning flag " + HeadPositionRecovering + " (NOT an input lock); " + HeadRecoveryWarning +
+    "\nPending angle " + HeadGoalRemainingDeg.ToString("0.00") + " deg; last interval " + (HeadElapsedSeconds * 1000).ToString("0.00") + " ms" +
+    "\nTrace samples " + HeadTrace.Count + "; frozen " + HeadTraceFrozen + ". DumpTrace exports.");
+}
+
+void PrintHeadSettings()
+{
+  string text = "HEAD-ONLY SETTINGS\nMove " + Speed + " m/s; turn " + HeadTurnDeg + " deg/s; step " + HeadStepDeg + " deg" +
+    "\nOrientation band " + OrientationToleranceDeg + " deg; lead fade " + HeadInputLeadSlowM + ".." + HeadInputLeadMaxM + " m" +
+    "\nMax counter-correction / feed " + HeadManualCounterCorrectionFraction +
+    "\nPosition PID " + HeadPositionGain + "/" + HeadPositionIntegralGain + "/" + HeadPositionDerivativeGain +
+    "; correction cap " + HeadPositionCorrectionMaxMps + " m/s; I cap " + HeadPositionIntegralMaxMps + " m/s" +
+    "\nOrientation PID " + HeadOrientationGain + "/" + HeadOrientationIntegralGain + "/" + HeadOrientationDerivativeGain +
+    "\nHome caps " + MixedHomeRPM + " RPM / " + MixedHomeMPS + " m/s" +
+    "\nAll PID, blend, input mapping and participation defaults are at the top.\nGROUP: movement/orientation mobility; active cap";
+  foreach (MixedDrive drive in MiningDrives)
+    text += "\n" + drive.Names[0] + ": " + HeadJointParticipation[drive.Index, 0] + "/" + HeadJointParticipation[drive.Index, 1] +
+      "; " + (drive.Rotary ? drive.ManualCap * 30 / Math.PI : drive.ManualCap).ToString("0.###") + (drive.Rotary ? " RPM" : " m/s");
+  MyLog(text);
+}
+
+public static bool OnOffToggle(string word, bool value = false)
+{
+  word = word.Trim().ToLowerInvariant();
+  if (word == "on" || word == "1" || word == "true") return true;
+  if (word == "off" || word == "0" || word == "false") return false;
+  if (word == "toggle" || word == "-1") return ! value;
+  throw new Exception("Use On, Off or Toggle.");
+}

@@ -1,0 +1,34 @@
+AutoArm 2.7 — Fresh headless pickup and declaration compression
+
+Tool couplers now use ROTOR bases on the tools and a rotor part on the arm.
+Arm joints still support pistons, rotors and hinges. Pickup preserves rotor
+lock state; Rotor Lock can keep the tool coupler static after mounting.
+
+A fresh headless arm can start, move and pick up a parked tool without Storage
+or an initial attachment. Tools.ArmTip defines its pivot offset in metres
+Forward/Left/Up from the arm reference, plus optional forward/up axes relative
+to that reference. Default axes are Forward/Up. The rotor family follows the
+named tool base. Example: ArmTip=0 2.5 0 | Forward | Up, for a pivot one
+large-grid cell LEFT of an aligned reference. Adjust to the actual placement.
+
+No unseen identity is invented or persisted. First pickup verifies the actual
+supported rotor part's cell, finite axes, arm grid and reciprocal base before
+adopting its ID/subtype. Existing two-observation live pose and proven-support
+gates remain required before disabling the selected tool merges. Unknown
+ownership, wrong cell/axes, non-rotor parts and malformed definitions refuse
+motion or support release. Saved arm-end metadata remains usable at restart.
+
+Custom Data remains Format 4. ArmTip is optional for an already attached or
+previously recorded arm. Wrong/missing formats still refuse without migration.
+
+The two GPT-6.1 Sol agents reduced declaration syntax and shared control/Home
+logic. The packer infers local/array types only when semantic types are equal,
+removes redundant private modifiers, and compares final IL to the original
+readable source. Control preserves arithmetic order, additive pilot input,
+manual-priority correction, gravity bias and native Home routes. Task-matrix
+formation shares a bounded-mode branch; actual instruction costs are unprofiled.
+
+AutoArm_Compact.txt has 99,846 UTF-16 characters, leaving 154 under 100,000.
+Longer ArmName values consume that margin. Full validation passes C#6 against
+installed SE APIs, exact compact-token reversal, identical method IL and
+177,201 simulated assertions. Live game physics remains unverified.

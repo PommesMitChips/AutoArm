@@ -1,0 +1,90 @@
+// Swap motion uses the existing physical Jacobian, limits, budget guard and
+// output commit. Only verified open-chain phases call this boundary.
+string ToolGroupKey(AutoGroup g)
+{
+    string key = g.Rotary ? "R" : "P";
+    foreach (var m in g.M) key += ":" + m.B.EntityId + (m.Sign > 0 ? "+" : "-");
+    return key;
+}
+
+void RememberToolWeights(bool capture = true)
+{
+    if (!ToolWeightsLoaded)
+    {
+        var saved = AutoConfig.Saved(Storage);
+        string rows = saved.Get(ToolWeightsSection, "Rows").ToString();
+        foreach (string row in rows.Split('\n'))
+        {
+            if (row.Trim().Length == 0) continue;
+            string[] cells = row.Split('|'); double m, r;
+            if (cells.Length != 3 || !ReadDouble(cells[1], out m) ||
+                !ReadDouble(cells[2], out r) ||
+                !Finite(m) || !Finite(r) || m < 0 || m > 10 || r < 0 || r > 10)
+                throw new Exception("Invalid saved tool actuator preferences.");
+            ToolWeights[cells[0]] = new double[] { m, r };
+        }
+        ToolWeightsLoaded = true;
+    }
+    if (!capture) return;
+    foreach (var g in Topology.Groups) ToolWeights[ToolGroupKey(g)] = new double[] { g.MoveW, g.TurnW };
+    var keys = new List<string>(ToolWeights.Keys); keys.Sort(StringComparer.Ordinal);
+    var text = new System.Text.StringBuilder();
+    foreach (string key in keys)
+    {
+        if (text.Length > 0) text.Append('\n');
+        text.Append(key).Append('|').Append(AutoSettings.Number(ToolWeights[key][0])).Append('|').Append(AutoSettings.Number(ToolWeights[key][1]));
+    }
+    var ini = AutoConfig.Saved(Storage); ini.Set(ToolWeightsSection, "Rows", text.ToString()); Storage = ini.ToString();
+}
+
+bool RebuildToolTopology(out string why)
+{
+    why = ""; StopMotion(""); ConfigValid = false;
+    try
+    {
+        RememberToolWeights();
+        Topology.SetEndpointOverride(Tools.Endpoint, Tools.IgnoredMount);
+        if (!Topology.Discover(out why)) return false;
+        foreach (var g in Topology.Groups)
+        {
+            double[] value;
+            if (ToolWeights.TryGetValue(ToolGroupKey(g), out value)) { g.MoveW = value[0]; g.TurnW = value[1]; }
+        }
+        Allocate(Topology.Groups.Count); ConfigValid = true;
+        SetupElapsed = ControlElapsed = 0;
+        Runtime.UpdateFrequency = UpdateFrequency.Update1;
+        return true;
+    }
+    catch (Exception e) { why = e.Message; return false; }
+}
+
+bool SettleToolTopology(out string why)
+{
+    if (!ConfigValid) { why = "Tool topology is not configured."; return false; }
+    if (!Topology.StableSetup(out why)) return false;
+    AutoConfig.UpdateGroups(this); LoadHome();
+    return true;
+}
+
+bool ToolPoseStep(MatrixD world, double dt, double observationDt, double moveCap,
+    double turnCap, double positionTolerance, double angleTolerance,
+    out bool settled, out string why)
+{
+    settled = false; why = "";
+    if (!Topology.Ready || !ConfigValid) { why = "Tool topology is not ready."; return false; }
+    if (!Finite(dt) || dt <= 0 || !Finite(observationDt) || observationDt <= 0 ||
+        !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0)
+    { why = "Invalid tool movement interval or cap."; return false; }
+    MatrixD basis = Topology.Base.WorldMatrix;
+    if (!SetPoseTarget(InFrame(world.Translation - Topology.Base.GetPosition(), basis),
+        InFrame(world.Forward, basis), InFrame(world.Up, basis), 3))
+    { why = "Invalid tool target frame."; return false; }
+    ToolDriveMoveCap = moveCap; ToolDriveTurnCap = turnCap * Math.PI / 180;
+    ToolDriving = true;
+    try { UpdateControl(Math.Min(dt, .1), observationDt); }
+    finally { ToolDriving = false; }
+    if (!TargetValid || !Topology.Ready) { why = LastFault.Length > 0 ? LastFault : "Tool motion stopped."; return false; }
+    settled = LastPositionError <= positionTolerance && LastOrientationErrorDeg <= angleTolerance &&
+        FilteredV.Length() <= .005 && FilteredW.Length() * 180 / Math.PI <= .2;
+    return true;
+}
