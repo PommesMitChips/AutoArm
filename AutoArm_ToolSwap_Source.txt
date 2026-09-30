@@ -5,7 +5,7 @@ const string ArmName = "Arm 1";
 
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "3.0";
+const string ControllerBuildVersion = "3.1";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -43,10 +43,14 @@ string PendingCommand = "Reload", RemoteError = "", DisplayText = "ToolSwap star
 string CancelReason = "";
 string SentPath = "";
 long SentAnchor, ReportedPath;
+long TransitionRequest;
+string TransitionKind = "";
+bool ResumeRequested;
 int CompletedWaypoints;
 bool ReadKeyboard = true, ReadMouse, ReadRoll = true;
 readonly List<IMyShipController> Controllers = new List<IMyShipController>();
 int ControllerPoll;
+double DefaultMove = .2, DefaultTurn = 5;
 public Program()
 {
     Runtime.UpdateFrequency = UpdateFrequency.Update1;
@@ -165,6 +169,7 @@ void Receive()
             if (epoch != Link.RemoteEpoch) { Link.Received = 0; Acquired = false; }
             Link.RemoteEpoch = epoch; Link.Generation = ini.Get(LinkSection, "Generation").ToInt64(); Link.Received = sequence; Link.Age = 0;
             RemoteStopped = ini.Get(LinkSection, "Stopped").ToBoolean(); MoveRequest = StopRequest = BuildRequest = HelloRequest = 0; RemoteError = "";
+            TransitionRequest = 0; TransitionKind = ""; ResumeRequested = false;
             string command = ini.Get(LinkSection, "Command").ToString();
             if (command.Equals("ToolInfo", StringComparison.OrdinalIgnoreCase)) { Tools.Handle("ToolInfo"); var info = Link.Packet("INFO"); info.Set(LinkSection, "Text", DisplayText); Link.Send(info); continue; }
             if (command.Equals("Stop", StringComparison.OrdinalIgnoreCase))
@@ -179,7 +184,9 @@ void Receive()
         RemoteSettled = ini.Get(LinkSection, "Settled").ToBoolean(); RemotePilot = ini.Get(LinkSection, "Pilot").ToBoolean(); RemoteError = ini.Get(LinkSection, "Error").ToString();
         ReportedPath = ini.Get(LinkSection, "PathId").ToInt64(); CompletedWaypoints = ini.Get(LinkSection, "Completed").ToInt32();
         ReadKeyboard = ini.Get(LinkSection, "Keyboard").ToBoolean(true); ReadMouse = ini.Get(LinkSection, "Mouse").ToBoolean(); ReadRoll = ini.Get(LinkSection, "Roll").ToBoolean(true);
+        DefaultMove = ini.Get(LinkSection, "DefaultMove").ToDouble(.2); DefaultTurn = ini.Get(LinkSection, "DefaultTurn").ToDouble(5);
         Acquired = ini.Get(LinkSection, "Lease").ToBoolean();
+        if (ResumeRequested && ini.Get(LinkSection, "Enabled").ToBoolean()) { ResumeRequested = false; Say("Tool ready; arm ON."); }
         if (HelloRequest != 0 && Ack >= HelloRequest && !Acquired) HelloRequest = 0;
         if (MoveRequest != 0 && ini.Get(LinkSection, "MoveAck").ToInt64() != MoveRequest) RemoteSettled = false;
         Topology.Head = GridTerminalSystem.GetBlockWithId(ini.Get(LinkSection, "Head").ToInt64()); Topology.Groups.Clear();
@@ -203,10 +210,18 @@ void StopMotion(string reason)
     throw new RemoteWait();
 }
 void CancelMotion(string reason)
-{ CancelReason = reason; try { StopMotion(reason); } catch (RemoteWait) { } catch { } }
+{ CancelReason = reason; ResumeRequested = false; try { StopMotion(reason); } catch (RemoteWait) { } catch { } }
+void ExpectTransition(string kind)
+{
+    StopMotion("");
+    if (TransitionKind != kind || TransitionRequest == 0)
+    { var packet = Link.Packet("TRANSITION"); packet.Set(LinkSection, "Kind", kind); TransitionKind = kind; TransitionRequest = Link.Sequence; Link.Send(packet); throw new RemoteWait(); }
+    if (Ack < TransitionRequest || !RemoteStopped) throw new RemoteWait();
+}
 bool RebuildToolTopology(out string why)
 {
     StopMotion(""); var build = EquipmentPacket("BUILD"); BuildRequest = Link.Sequence;
+    TransitionRequest = 0; TransitionKind = "";
     RemoteReady = false; RemoteSettled = false; Link.Send(build); why = ""; return true;
 }
 bool SettleToolTopology(out string why)
@@ -217,22 +232,25 @@ bool SettleToolTopology(out string why)
 }
 bool ToolPoseStep(MatrixD world, double dt, double observationDt, double moveCap, double turnCap, double positionTolerance, double angleTolerance, out bool settled, out string why)
 {
-    return SubmitPath(PathRow(world), 0, 0, moveCap, turnCap, positionTolerance, angleTolerance, out settled, out why);
+    return SubmitPath(PathRow(world), 0, 0, moveCap, turnCap, positionTolerance, angleTolerance, false, out settled, out why);
 }
 bool ToolPathStep(MatrixD first, MatrixD second, IMyCubeBlock anchor, int waypoint, double moveCap, double turnCap, double positionTolerance, double angleTolerance, out bool settled, out string why)
-{ return SubmitPath(PathRow(first) + "|" + PathRow(second), anchor.EntityId, waypoint, moveCap, turnCap, positionTolerance, angleTolerance, out settled, out why); }
-bool SubmitPath(string rows, long anchor, int waypoint, double moveCap, double turnCap, double positionTolerance, double angleTolerance, out bool settled, out string why)
+{ return SubmitPath(PathRow(first) + "|" + PathRow(second), anchor.EntityId, waypoint, moveCap, turnCap, positionTolerance, angleTolerance, true, out settled, out why); }
+bool SubmitPath(string rows, long anchor, int waypoint, double moveCap, double turnCap, double positionTolerance, double angleTolerance, bool travel, out bool settled, out string why)
 {
     settled = false; why = ""; if (RemoteError.Length > 0) { why = RemoteError; return false; }
     if (MoveRequest != 0 && rows == SentPath && anchor == SentAnchor)
     { settled = ReportedPath == MoveRequest && CompletedWaypoints > waypoint && Link.Age < .2 && (waypoint == 0 && rows.Contains("|") || RemoteSettled && RemoteStopped); return true; }
     var packet = Link.Packet("PATH"); packet.Set(LinkSection, "Waypoints", rows); packet.Set(LinkSection, "Anchor", anchor); packet.Set(LinkSection, "Move", moveCap); packet.Set(LinkSection, "Turn", turnCap);
     packet.Set(LinkSection, "PosTol", positionTolerance); packet.Set(LinkSection, "AngleTol", angleTolerance);
+    packet.Set(LinkSection, "Moves", travel ? "0|" + AutoSettings.Number(moveCap) : AutoSettings.Number(moveCap));
+    packet.Set(LinkSection, "Turns", travel ? "0|" + AutoSettings.Number(turnCap) : AutoSettings.Number(turnCap));
+    packet.Set(LinkSection, "Lines", travel ? "false|true" : "true");
     MoveRequest = Link.Sequence; SentPath = rows; SentAnchor = anchor; RemoteStopped = RemoteSettled = false; Link.Send(packet); return true;
 }
 void EnableControl()
 {
-    var resume = EquipmentPacket("RESUME"); resume.Set(LinkSection, "Permit", Permit()); Link.Send(resume); Released = true;
+    var resume = EquipmentPacket("RESUME"); resume.Set(LinkSection, "Permit", Permit()); Link.Send(resume); Released = ResumeRequested = true;
     Say("Tool ready; arm control resuming.");
 }
 MyIni EquipmentPacket(string operation)
@@ -584,7 +602,7 @@ static class ToolGeometry
 // Tool changes use timed observations and journal every mechanical mutation.
 sealed class ToolSwapController
 {
-    sealed class Profile
+    public sealed class Profile
     {
         public string Name, Prefix, MarkerName, CouplerName;
         public readonly List<string> HeadNames = new List<string>(), StandNames = new List<string>();
@@ -918,6 +936,7 @@ sealed class ToolSwapController
             foreach (var merge in h.Heads) if (!Scan.Blocks.Contains(merge.EntityId)) { why = "Foreign head merge: " + merge.CustomName; return false; }
             if (ScanStand) Prefix(h.Prefix, h.Stands);
             foreach (var merge in h.Stands) if (h.Heads.Contains(merge)) { why = "Stand is on head: " + merge.CustomName; return false; }
+            P.CaptureParkPose(h, Axis);
             ScanIndex++; Scan = null; return true;
         }
         if (Tip == null)
@@ -1056,7 +1075,7 @@ sealed class ToolSwapController
         }
         var rack = ParkOnly ? Parks : Source.Stands;
         if (Source.Heads.Count == 0 || rack.Count == 0) { why = "Missing parking merges."; return false; }
-        if (!ToolGeometry.TryDockPoseAt(Source.Marker, Source.Heads, rack, Axis, 0, anchor, out Dock, out Pairs, out why)) return false;
+        if (!P.ParkPose(Source, rack, anchor, out Dock, out Pairs) && !ToolGeometry.TryDockPoseAt(Source.Marker, Source.Heads, rack, Axis, 0, anchor, out Dock, out Pairs, out why)) return false;
         Vector3I direction; if (!ToolGeometry.MergeDirection(Pairs[0].Stand, Axis, out direction, out why)) return false;
         Vector3D outward = Vector3D.TransformNormal((Vector3D)direction, Pairs[0].Stand.CubeGrid.WorldMatrix);
         foreach (var pair in Pairs)
@@ -1070,6 +1089,9 @@ sealed class ToolSwapController
         DockAnchor = Pairs[0].Stand;
         var inverse = MatrixD.Invert(DockAnchor.WorldMatrix); Dock *= inverse; Approach *= inverse;
         Supported = Source;
+        // Prevent native merge snap from closing the chain during the docking
+        // path. Support is enabled only after the arm confirms stopped output.
+        foreach (var head in Source.Heads) head.Enabled = false;
         Go(ApproachDockPhase); return true;
     }
     bool AllLocked()
@@ -1165,10 +1187,11 @@ sealed class ToolSwapController
                     foreach (var h in Profiles) if (h.Coupler.PendingAttachment)
                     {
                         if (h.Coupler.IsAttached || h.Coupler.Top != null || Last != "Scan" || PassiveScan) { Cancel("Explicit ToolScan required for pending Mount."); return; }
-                        Clearing.Add(h.Coupler);
+                        if (!Clearing.Contains(h.Coupler)) Clearing.Add(h.Coupler);
                     }
                     if (Clearing.Count > 0)
                     {
+                        P.ExpectTransition("CancelPending");
                         Journal("ScanPending"); foreach (var coupler in Clearing) coupler.Detach(); Go("ScanPending"); return;
                     }
                     if (!P.RebuildToolTopology(out why)) { Cancel(why); return; }
@@ -1199,7 +1222,9 @@ sealed class ToolSwapController
                 case ApproachDockPhase:
                     Go("Dock"); return;
                 case "Dock":
-                    P.StopMotion("Supporting OFF"); Journal("EnableSupport");
+                    Go("Support"); return;
+                case "Support":
+                    P.ExpectTransition("MergeSupport"); Journal("EnableSupport");
                     foreach (var pair in Pairs) pair.Head.Enabled = true;
                     DockMoved = true;
                     Go("Lock"); return;
@@ -1207,8 +1232,10 @@ sealed class ToolSwapController
                     P.StopMotion("Support wait OFF");
                     if (!Mounted(Source)) { Cancel("Source detached prematurely."); return; }
                     if (!Observe(AllLocked())) return;
+                    P.CaptureParkPose(Source, Axis);
                     if (DockMoved) SetRetreat();
                     ParkedPairs = new List<ToolPortPair>(Pairs);
+                    P.ExpectTransition("DetachMount");
                     Source.Angle = Source.Coupler.Angle; Journal("Detach"); Source.Coupler.Detach(); Go("Detach"); return;
                 case "Detach":
                     P.StopMotion("Detach wait OFF");
@@ -1223,8 +1250,10 @@ sealed class ToolSwapController
                 case ApproachTopPhase:
                     Go(AlignTopPhase); return;
                 case AlignTopPhase:
+                    Go("PrepareAttach"); return;
+                case "PrepareAttach":
                     foreach (var h in Profiles) if (h.Coupler.IsAttached || h.Coupler.PendingAttachment || h.Coupler.Top != null) { Cancel("Arm tip no longer bare."); return; }
-                    P.StopMotion("Attaching OFF"); if (AxialPickup) Destination.Relock = Destination.Coupler.RotorLock;
+                    P.ExpectTransition("AttachMount"); if (AxialPickup) Destination.Relock = Destination.Coupler.RotorLock;
                     Journal("Attach"); if (Destination.Relock) Destination.Coupler.RotorLock = false; Destination.Coupler.Attach(); Go("Attach"); return;
                 case "Attach":
                     P.StopMotion("Attach wait OFF");
@@ -1236,6 +1265,8 @@ sealed class ToolSwapController
                         Vector3D.Dot(Reference.WorldMatrix.Up, expected.Up) > .9999939 && Vector3D.Dot(Reference.WorldMatrix.Forward, expected.Forward) > .9999939;
                     if (!Observe(Mounted(Destination) && !Destination.Coupler.PendingAttachment && aligned)) return;
                     if (Destination.Relock) { Destination.Coupler.RotorLock = true; Destination.Relock = false; }
+                    P.ExpectTransition("MergeRelease");
+                    P.CaptureParkPose(Destination, Axis);
                     Journal("ReleaseSupport"); foreach (var pair in Pairs) pair.Head.Enabled = false; Go("Release"); return;
                 case "Release":
                     P.StopMotion("Split wait OFF");
@@ -1267,6 +1298,62 @@ sealed class ToolSwapController
         return b.ToString();
     }
 }
+
+
+// Automatically record the actual parked assembly pose, not an arbitrary
+// quarter-turn alignment of visually symmetric merge blocks.
+bool CaptureParkPose(ToolSwapController.Profile h, string axis)
+{
+    if (h.Heads.Count == 0) return false;
+    var pairs = new List<ToolPortPair>();
+    foreach (var head in h.Heads)
+    {
+        IMyShipMergeBlock stand;
+        if (!head.IsConnected || !ToolGeometry.TryLockedPartner(head, axis, out stand)) return false;
+        var pair = new ToolPortPair { Head = head, Stand = stand }; if (!ToolGeometry.PairLocked(pair, axis)) return false;
+        pairs.Add(pair);
+    }
+    var data = new MyIni(); var anchor = pairs[0].Stand;
+    data.Set(LinkSection, "Marker", h.Marker.EntityId); data.Set(LinkSection, "Anchor", anchor.EntityId);
+    WriteFrame(data, "Dock", h.Marker.WorldMatrix * MatrixD.Invert(anchor.WorldMatrix));
+    var rows = new List<string>();
+    for (int i = 0; i < pairs.Count; i++)
+    {
+        var pair = pairs[i]; rows.Add(pair.Head.EntityId + " " + pair.Stand.EntityId);
+        WriteFrame(data, "Head" + i, pair.Head.WorldMatrix * MatrixD.Invert(h.Marker.WorldMatrix));
+        WriteFrame(data, "Stand" + i, pair.Stand.WorldMatrix * MatrixD.Invert(anchor.WorldMatrix));
+    }
+    data.Set(LinkSection, "Pairs", string.Join("\n", rows));
+    var saved = AutoConfig.Saved(Storage); const string section = "AutoArm Park Poses";
+    saved.Set(section, "PB", Me.EntityId); saved.Set(section, "Arm", ArmName);
+    saved.Set(section, h.Coupler.EntityId.ToString(), data.ToString()); Storage = saved.ToString(); return true;
+}
+bool ParkPose(ToolSwapController.Profile h, List<IMyShipMergeBlock> rack, long selected, out MatrixD pose, out List<ToolPortPair> pairs)
+{
+    pose = MatrixD.Identity; pairs = new List<ToolPortPair>(); const string section = "AutoArm Park Poses";
+    var saved = AutoConfig.Saved(Storage);
+    if (saved.Get(section, "PB").ToInt64() != Me.EntityId || saved.Get(section, "Arm").ToString() != ArmName) return false;
+    string text = saved.Get(section, h.Coupler.EntityId.ToString()).ToString(); if (text.Length == 0) return false;
+    var data = new MyIni(); if (!data.TryParse(text)) throw new Exception("Invalid saved park pose; park tool and ToolScan.");
+    if (data.Get(LinkSection, "Marker").ToInt64() != h.Marker.EntityId) return false;
+    var anchor = GridTerminalSystem.GetBlockWithId(data.Get(LinkSection, "Anchor").ToInt64()) as IMyShipMergeBlock;
+    if (anchor == null || anchor.Closed || selected != 0 && selected != anchor.EntityId) return false;
+    string[] rows = data.Get(LinkSection, "Pairs").ToString().Split('\n'); if (rows.Length != h.Heads.Count || rows.Length > 16) return false;
+    for (int i = 0; i < rows.Length; i++)
+    {
+        string[] cells = rows[i].Split(' '); long headId, standId;
+        if (cells.Length != 2 || !long.TryParse(cells[0], out headId) || !long.TryParse(cells[1], out standId)) throw new Exception("Invalid saved park ports; park tool and ToolScan.");
+        var head = GridTerminalSystem.GetBlockWithId(headId) as IMyShipMergeBlock;
+        var stand = GridTerminalSystem.GetBlockWithId(standId) as IMyShipMergeBlock;
+        if (head == null || stand == null || !h.Heads.Contains(head) || !rack.Contains(stand) || head.Closed || stand.Closed) return false;
+        if (!SameParkFrame(head.WorldMatrix * MatrixD.Invert(h.Marker.WorldMatrix), LinkFrame(data, "Head" + i)) ||
+            !SameParkFrame(stand.WorldMatrix * MatrixD.Invert(anchor.WorldMatrix), LinkFrame(data, "Stand" + i))) return false;
+        pairs.Add(new ToolPortPair { Head = head, Stand = stand });
+    }
+    pose = LinkFrame(data, "Dock") * anchor.WorldMatrix; return true;
+}
+static bool SameParkFrame(MatrixD a, MatrixD b)
+{ return Vector3D.DistanceSquared(a.Translation, b.Translation) < .000001 && Vector3D.Dot(a.Forward, b.Forward) > .9999995 && Vector3D.Dot(a.Up, b.Up) > .9999995; }
 
 
 static Vector3D Rotate(Vector3D value, Vector3D rotation)
@@ -1325,7 +1412,7 @@ static bool ReadDouble(string text, out double value) => double.TryParse(text, S
 
 // Versioned unicast transport. Epochs survive recompilation; generations revoke
 // outstanding commands on Stop. Messages never grant direct actuator access.
-const string LinkTag = "AutoArm/3";
+const string LinkTag = "AutoArm/4";
 const string LinkSection = "Link";
 
 sealed class ModuleLink
@@ -1354,7 +1441,7 @@ sealed class ModuleLink
     }
     public MyIni Packet(string operation)
     {
-        var ini = new MyIni(); ini.Set(LinkSection, "Version", 3); ini.Set(LinkSection, "Arm", ArmName);
+        var ini = new MyIni(); ini.Set(LinkSection, "Version", 4); ini.Set(LinkSection, "Arm", ArmName);
         ini.Set(LinkSection, "Epoch", Epoch); ini.Set(LinkSection, "Remote", RemoteEpoch);
         ini.Set(LinkSection, "Generation", Generation); ini.Set(LinkSection, "Sequence", ++Sequence);
         ini.Set(LinkSection, "Operation", operation); return ini;
@@ -1370,7 +1457,7 @@ sealed class ModuleLink
     {
         ini = new MyIni(); var text = message.Data as string;
         return Peer != null && !Peer.Closed && Peer.IsFunctional && Peer.IsSameConstructAs(P.Me) && message.Source == Peer.EntityId && message.Tag == LinkTag &&
-            text != null && text.Length <= 16000 && ini.TryParse(text) && ini.Get(LinkSection, "Version").ToInt32() == 3 && ini.Get(LinkSection, "Arm").ToString() == ArmName &&
+            text != null && text.Length <= 16000 && ini.TryParse(text) && ini.Get(LinkSection, "Version").ToInt32() == 4 && ini.Get(LinkSection, "Arm").ToString() == ArmName &&
             ini.Get(LinkSection, "Epoch").ToInt64() > 0 && ini.Get(LinkSection, "Sequence").ToInt64() > 0;
     }
 }

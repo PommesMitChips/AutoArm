@@ -4,4 +4,4 @@
 const string ArmName = "Arm 1";
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "3.0";
+const string ControllerBuildVersion = "3.1";

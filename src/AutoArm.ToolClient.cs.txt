@@ -13,10 +13,10 @@ sealed class ToolSwapLink
     IMyTerminalBlock End;
     string PeerName = "", Queued = "", Error = "";
     long Ignore, Request, MoveRequest;
-    bool Lease, Rebuilding, Driving, Permitted, Settled, Changing;
+    bool Lease, Rebuilding, Driving, Permitted, Settled, Changing, Transition, ResumePending;
     ArmPath Path;
     double Move, Turn, PosTol, AngleTol, ReportElapsed;
-    public bool Busy => Lease || Queued.Length > 0;
+    public bool Busy => Lease || ResumePending || Queued.Length > 0;
     public bool Automatic => Lease && Changing;
     public bool Configured => PeerName.Length > 0;
     public IMyTerminalBlock Endpoint => End;
@@ -29,7 +29,7 @@ sealed class ToolSwapLink
         why = ""; MyIni ini;
         if (!AutoConfig.ReadCurrent(P.Me.CustomData, out ini, out why)) return false;
         PeerName = ini.Get("Modules", "ToolSwapPB").ToString().Trim();
-        Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = false; Error = "";
+        Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = Transition = ResumePending = false; Error = "";
         if (!Configured) { Link.Peer = null; End = null; Frame = null; Tip = null; Couplers.Clear(); Markers.Clear(); Tops.Clear(); Merges.Clear(); return true; }
         Link.Resolve(PeerName); Link.Generation++; Link.RemoteEpoch = Link.Received = 0; Link.Age = 0;
         Queued = "Reload"; return true;
@@ -55,7 +55,7 @@ sealed class ToolSwapLink
     { var packet = Link.Packet("COMMAND"); packet.Set(LinkSection, "Command", command); packet.Set(LinkSection, "Stopped", !Driving); Link.Send(packet); }
     public void Cancel(string why)
     {
-        Driving = Rebuilding = Lease = Permitted = false; Queued = ""; Error = why; Link.Generation++;
+        Driving = Rebuilding = Lease = Permitted = Transition = ResumePending = false; Queued = ""; Error = why; Link.Generation++;
         P.Topology.ZeroOwned(); ZeroMount();
         if (Link.Peer != null) try { SendCommand("Stop"); } catch { }
     }
@@ -94,11 +94,11 @@ sealed class ToolSwapLink
                 if (ini.Get(LinkSection, "Remote").ToInt64() != 0 && ini.Get(LinkSection, "Remote").ToInt64() != Link.Epoch) continue;
                 bool acquire = ini.Get(LinkSection, "Acquire").ToBoolean();
                 if (epoch < Link.RemoteEpoch) continue;
-                if (Link.RemoteEpoch != epoch) { P.StopMotion(""); Link.RemoteEpoch = epoch; Link.Received = 0; Lease = Driving = Rebuilding = Permitted = false; }
+                if (Link.RemoteEpoch != epoch) { P.StopMotion(""); Link.RemoteEpoch = epoch; Link.Received = 0; Lease = Driving = Rebuilding = Permitted = Transition = ResumePending = false; }
                 if (seq <= Link.Received) continue;
                 Link.Received = seq;
                 if (acquire && P.ConfigValid && ini.Get(LinkSection, "Remote").ToInt64() == Link.Epoch && ini.Get(LinkSection, "Generation").ToInt64() == Link.Generation)
-                { P.StopMotion(""); Lease = true; Driving = Rebuilding = Permitted = false; Changing = ini.Get(LinkSection, "Changing").ToBoolean(); Error = ""; }
+                { P.StopMotion(""); Lease = true; Driving = Rebuilding = Permitted = Transition = ResumePending = false; Changing = ini.Get(LinkSection, "Changing").ToBoolean(); Error = ""; }
                 Link.Age = 0; Request = seq; Reply("STATE"); continue;
             }
             if (epoch != Link.RemoteEpoch || seq <= Link.Received || ini.Get(LinkSection, "Remote").ToInt64() != Link.Epoch || ini.Get(LinkSection, "Generation").ToInt64() != Link.Generation) continue;
@@ -112,6 +112,8 @@ sealed class ToolSwapLink
                     if (P.Enabled && !Permitted) { P.Fault("ToolSwap equipment not ready."); }
                 }
                 else if (!Lease) throw new Exception("No movement lease.");
+                else if (op == "TRANSITION")
+                { Driving = false; Path = null; Transition = true; P.StopMotion(""); P.Topology.Ready = false; }
                 else if (op == "ABORT")
                 { Driving = Rebuilding = Lease = Permitted = false; Path = null; Error = ini.Get(LinkSection, "Reason").ToString(); P.StopMotion(Error); P.Say("ToolSwap stopped: " + Error); }
                 else if (op == "STOP" || op == "PAUSE") { Driving = false; Path = null; P.StopMotion(""); }
@@ -124,16 +126,17 @@ sealed class ToolSwapLink
                 }
                 else if (op == "PATH")
                 {
-                    if (!P.Topology.Ready || Rebuilding) throw new Exception("Arm topology is not ready.");
-                    Move = Number(ini, "Move", .001, 1); Turn = Number(ini, "Turn", .01, 30);
+                    if (!P.Topology.Ready || Rebuilding || Transition) throw new Exception("Arm topology is not ready.");
+                    Move = Number(ini, "Move", .001, 5); Turn = Number(ini, "Turn", .01, 30);
                     PosTol = Number(ini, "PosTol", .001, .05); AngleTol = Number(ini, "AngleTol", .01, 2);
                     Path = P.ReadPath(ini.Get(LinkSection, "Waypoints").ToString(), ini.Get(LinkSection, "Anchor").ToInt64(), seq, Move, Turn, PosTol, AngleTol);
+                    P.ConfigurePathStages(Path, ini);
                     Driving = true; Settled = false; MoveRequest = seq;
                 }
                 else if (op == "RESUME" || op == "RELEASE")
                 {
                     Driving = false; P.StopMotion(""); ApplyEquipment(ini); Permitted = ini.Get(LinkSection, "Permit").ToBoolean();
-                    Lease = false; if (op == "RESUME") P.EnableControl();
+                    Lease = false; ResumePending = op == "RESUME";
                 }
                 else throw new Exception("Unknown module operation.");
                 Reply("STATE");
@@ -188,7 +191,13 @@ sealed class ToolSwapLink
         if (Queued.Length > 0) { string command = Queued; Queued = ""; Lease = true; SendCommand(command); }
         if (Link.Age > .5) return;
         if (Rebuilding)
-        { string why; if (P.SettleToolTopology(out why)) { Rebuilding = false; Reply("STATE"); } }
+        { string why; if (P.SettleToolTopology(out why)) { Rebuilding = Transition = false; Reply("STATE"); } }
+        if (ResumePending && P.Topology.Ready && (P.Runtime.MaxInstructionCount <= 0 || P.Runtime.CurrentInstructionCount < P.Runtime.MaxInstructionCount * .3))
+        {
+            ResumePending = false; string why;
+            if (!AllowManual(out why)) { ResumePending = true; return; }
+            P.EnableControl(); Reply("STATE");
+        }
         if (Driving)
         {
             string why; int previous = Path.Completed;
@@ -202,11 +211,13 @@ sealed class ToolSwapLink
     void Reply(string operation)
     {
         var ini = Link.Packet(operation); ini.Set(LinkSection, "Ack", Request); ini.Set(LinkSection, "MoveAck", MoveRequest);
-        ini.Set(LinkSection, "Lease", Lease); ini.Set(LinkSection, "Ready", P.ConfigValid && P.Topology.Ready && !Rebuilding);
+        ini.Set(LinkSection, "Lease", Lease); ini.Set(LinkSection, "Ready", P.ConfigValid && P.Topology.Ready && !Rebuilding && !Transition);
+        ini.Set(LinkSection, "Enabled", P.Enabled);
         ini.Set(LinkSection, "Stopped", !Driving && !P.Enabled); ini.Set(LinkSection, "Settled", Settled);
         ini.Set(LinkSection, "PathId", Path == null ? 0 : Path.Id); ini.Set(LinkSection, "Completed", Path == null ? 0 : Path.Completed); ini.Set(LinkSection, "Count", Path == null ? 0 : Path.Waypoints.Count);
         ini.Set(LinkSection, "Error", Error); ini.Set(LinkSection, "Pilot", P.HasPilotInput());
         ini.Set(LinkSection, "Keyboard", P.ReadKeyboard); ini.Set(LinkSection, "Mouse", P.ReadMouse); ini.Set(LinkSection, "Roll", P.ReadRoll);
+        ini.Set(LinkSection, "DefaultMove", P.MoveMps); ini.Set(LinkSection, "DefaultTurn", P.TurnDeg);
         ini.Set(LinkSection, "Head", P.Topology.Head == null ? 0 : P.Topology.Head.EntityId);
         var rows = new List<string>(); foreach (var group in P.Topology.Groups)
         { var ids = new List<string>(); foreach (var member in group.M) ids.Add(member.B.EntityId.ToString()); rows.Add(string.Join(",", ids)); }

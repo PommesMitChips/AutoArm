@@ -444,12 +444,12 @@ void UpdateControl(double dt, double observationDt)
     }
     Vector3D rawPositionFeedback = positionDemand + PositionI - FilteredV * 0.0;
     Vector3D rawOrientationFeedback = orientationDemand + OrientationI - FilteredW * 0.0;
-    Vector3D boundedPositionFeedback = ClampLength(rawPositionFeedback, PositionCorrectionCap);
+    Vector3D boundedPositionFeedback = ClampLength(rawPositionFeedback, ToolDriving ? ToolDriveMoveCap : PositionCorrectionCap);
     LastFeedbackLinear = BlendManualCorrection(LastPilotLinear, boundedPositionFeedback,
         ManualCounterCorrectionFraction, out LastCounterCorrectionLimited);
     bool angularLimited;
     LastFeedbackAngular = BlendManualCorrection(LastPilotAngular, ClampLength(rawOrientationFeedback,
-        Math.Min(TurnDeg, OrientationCorrectionCapDeg) * Math.PI / 180),
+        ToolDriving ? ToolDriveTurnCap : Math.Min(TurnDeg, OrientationCorrectionCapDeg) * Math.PI / 180),
         ManualCounterCorrectionFraction, out angularLimited);
     LastCounterCorrectionLimited |= angularLimited;
 
@@ -472,9 +472,9 @@ void UpdateControl(double dt, double observationDt)
     Vector3D positionAllocationResidual = LastUnconstrainedLinear - LastAchievedLinear;
     Vector3D orientationAllocationResidual = LastUnconstrainedAngular - LastAchievedAngular;
     UpdateIntegral(ref PositionI, ToolDriving ? positionDemand - FilteredV : pe, ToolDriving ? 0 : PositionDeadbandM, positionClipResidual, positionAllocationResidual,
-        ToolDriving ? PositionKi / PositionKp : PositionKi, Math.Min(PositionIntegralCap, PositionCorrectionCap), ToolDriving ? double.MaxValue : 0.10, dt, LastSolverConverged && !LastSolverBudgetLimited);
+        ToolDriving ? PositionKi / PositionKp : PositionKi, Math.Min(PositionIntegralCap, ToolDriving ? ToolDriveMoveCap : PositionCorrectionCap), ToolDriving ? double.MaxValue : 0.10, dt, LastSolverConverged && !LastSolverBudgetLimited);
     UpdateIntegral(ref OrientationI, ToolDriving ? orientationDemand - FilteredW : oe, ToolDriving ? 0 : orientationBand, orientationClipResidual, orientationAllocationResidual, ToolDriving ? OrientationKi / OrientationKp : OrientationKi,
-        Math.Min(OrientationIntegralCapDeg, Math.Min(TurnDeg, OrientationCorrectionCapDeg)) * Math.PI / 180, ToolDriving ? double.MaxValue : 10.0 * Math.PI / 180,
+        Math.Min(OrientationIntegralCapDeg * Math.PI / 180, ToolDriving ? ToolDriveTurnCap : Math.Min(TurnDeg, OrientationCorrectionCapDeg) * Math.PI / 180), ToolDriving ? double.MaxValue : 10.0 * Math.PI / 180,
         dt, LastSolverConverged && !LastSolverBudgetLimited);
 
     LastLinearAdvance = PilotAdvance(LastPilotLinear, LastAchievedLinear - LastFeedbackLinear);
@@ -497,7 +497,7 @@ void RenderRoutineStatus()
     if (DisplayWritten || DisplayPinned || StatusElapsed < StatusRefreshSeconds) return;
     StatusElapsed = 0;
     RoutineStatusBuilds++;
-    Status = (ToolDriving ? "PATH motion | remaining " : "ON | input+feedback | error ") + LastPositionError.ToString(ThreeDecimals) + " m / " +
+    Status = (ToolDriving ? "PATH motion | remaining " : "ON | input+feedback | error ") + (ToolDriving ? PathRemainingDistance : LastPositionError).ToString(ThreeDecimals) + " m / " +
         LastOrientationErrorDeg.ToString("0.00") + " deg";
     if (LastCounterCorrectionLimited) Status += " | manual priority";
     if (ToolDriving)

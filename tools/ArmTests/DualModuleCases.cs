@@ -59,9 +59,9 @@ internal sealed class DualRig
     }
     internal void Tick(double dt=1d/60)
     {
-        if(Bus.Queues[F.Rig.PB.EntityId].Count>0) Frame(Arm,F.Rig,"AutoArm/3",false,0,UpdateType.IGC);
+        if(Bus.Queues[F.Rig.PB.EntityId].Count>0) Frame(Arm,F.Rig,"AutoArm/4",false,0,UpdateType.IGC);
         Frame(Arm,F.Rig,dt:dt);
-        if(Bus.Queues[ToolRig.PB.EntityId].Count>0) Frame(Tool,ToolRig,"AutoArm/3",false,0,UpdateType.IGC);
+        if(Bus.Queues[ToolRig.PB.EntityId].Count>0) Frame(Tool,ToolRig,"AutoArm/4",false,0,UpdateType.IGC);
         Frame(Tool,ToolRig,dt:dt);
     }
     internal void Command(string command) { Frame(Arm,F.Rig,command,false,0); }
@@ -100,7 +100,7 @@ internal static partial class Scenarios
             var cockpit=d.F.Rig.Blocks.OfType<IMyShipController>().Single(); RecordProxy.Of(cockpit).Values["MoveIndicator"]=new Vector3(0,0,-1); d.Tick();
             Check(d.F.AnyDrive,"Dual manual movement failed."); RecordProxy.Of(cockpit).Values["MoveIndicator"]=Vector3.Zero;
             d.Command("Tool 2"); for(int i=0;i<8;i++) d.Tick(); DualPlant(d,"Idle"); for(int i=0;i<12;i++) d.Tick();
-            Check(Enabled(d.Arm) && d.F.Couplers[1].Top==d.F.ArmTip,"Dual swap did not mount/resume.");
+            Check(Enabled(d.Arm) && d.F.Couplers[1].Top==d.F.ArmTip,"Dual swap did not mount/resume: "+string.Join(" | ",d.ToolRig.Log.TakeLast(6))+" / "+string.Join(" | ",d.F.Rig.Log.TakeLast(6)));
             Check(d.F.Mutations.All(m=>m.Stopped && m.Supported),"Dual attachment changed without confirmed stopped arm/support.");
             var paths=d.Bus.Sent.Select(x=>{var ini=new MyIni(); ini.TryParse(x.Data); return ini;}).Where(x=>x.Get("Link","Operation").ToString()=="PATH").ToArray();
             Check(paths.Any(p=>p.Get("Link","Waypoints").ToString().Split('|').Length==2),"ToolSwap did not submit approach/insertion as a whole path.");
@@ -134,8 +134,8 @@ internal static partial class Scenarios
         var replay=new DualRig(armType,toolType); DualStart(replay); replay.Command("Tool 2"); for(int i=0;i<8;i++) replay.Tick(); DualPlant(replay,"ApproachDock"); for(int i=0;i<8;i++) replay.Tick();
         string oldPath=replay.Bus.Sent.Last(x=>{var ini=new MyIni(); ini.TryParse(x.Data); return ini.Get("Link","Operation").ToString()=="PATH";}).Data;
         replay.Command("Stop"); for(int i=0;i<10;i++) replay.Tick(); int prior=replay.F.Mutations.Count;
-        replay.Bus.Queues[replay.F.Rig.PB.EntityId].Enqueue(new MyIGCMessage(oldPath,"AutoArm/3",replay.ToolRig.PB.EntityId));
-        replay.Bus.Queues[replay.F.Rig.PB.EntityId].Enqueue(new MyIGCMessage(oldPath,"AutoArm/3",999999));
+        replay.Bus.Queues[replay.F.Rig.PB.EntityId].Enqueue(new MyIGCMessage(oldPath,"AutoArm/4",replay.ToolRig.PB.EntityId));
+        replay.Bus.Queues[replay.F.Rig.PB.EntityId].Enqueue(new MyIGCMessage(oldPath,"AutoArm/4",999999));
         for(int i=0;i<10;i++) replay.Tick();
         Check(!Enabled(replay.Arm) && !replay.F.AnyDrive && replay.F.Mutations.Count==prior,"A replayed/foreign path crossed the Stop generation fence.");
         var canceled=new DualRig(armType,toolType,true); canceled.F.AutoAttach=false; RecordProxy.Of(canceled.F.Couplers[1]).Values["RotorLock"]=true; DualStart(canceled);
@@ -148,6 +148,7 @@ internal static partial class Scenarios
         canceled.Command("On"); for(int i=0;i<400 && !Enabled(canceled.Arm);i++) canceled.Tick();
         Check(Enabled(canceled.Arm) && !canceled.F.Couplers[1].PendingAttachment && canceled.F.Couplers[1].RotorLock,"One On failed to reconcile a bare pending attachment after Tool PB restart.");
         DualAdversarialCases(armType,toolType);
+        ToolPathRevisionCases(armType,toolType);
         Console.WriteLine("Two-PB integration: mounted/bare On, final hinge, motion ownership, stopped attachment fence, automatic resume, parking, heartbeat timeout and in-flight Stop.");
     }
     static void DualAdversarialCases(Type armType,Type toolType)
@@ -186,5 +187,35 @@ internal static partial class Scenarios
         var info=new DualRig(armType,toolType); DualStart(info); info.Command("Tool 2"); for(int i=0;i<8;i++) info.Tick(); DualPlant(info,"ApproachDock"); for(int i=0;i<10;i++) info.Tick();
         long pathId=(long)Get(Get(Get(info.Arm,"Tools")!,"Path")!,"Id")!; info.Command("ToolInfo"); for(int i=0;i<5;i++) info.Tick();
         Check((long)Get(Get(Get(info.Arm,"Tools")!,"Path")!,"Id")! ==pathId && info.F.Rig.Log.Last().Contains("Tools"),"Read-only ToolInfo restarted an in-flight path or failed to report to arm PB.");
+    }
+    static void ToolPathRevisionCases(Type armType,Type toolType)
+    {
+        var speed=new DualRig(armType,toolType); var ini=new MyIni(); ini.TryParse(speed.F.Rig.PB.CustomData); ini.Set("Config","HeadSpeed",2); ini.Set("Config","HeadTurnSpeed",12); RecordProxy.Of(speed.F.Rig.PB).Values["CustomData"]=ini.ToString();
+        DualStart(speed); speed.Command("Tool 2"); for(int i=0;i<8;i++) speed.Tick(); DualPlant(speed,"ApproachDock"); for(int i=0;i<12;i++) speed.Tick();
+        var path=Get(Get(speed.Arm,"Tools")!,"Path")!;
+        Check(((double[])Get(path,"Moves")!)[0]==2 && ((double[])Get(path,"Turns")!)[0]==12,"Travel did not inherit arm movement defaults.");
+        Check(((double[])Get(path,"Moves")!)[1]==.05 && ((bool[])Get(path,"Lines")!)[1],"Final approach lost its slow straight-line policy.");
+        var displaced=speed.F.Markers[0].WorldMatrix; displaced.Translation+=Vector3D.Up*4; speed.F.MoveSource(displaced); for(int i=0;i<3;i++) speed.Tick();
+        Check(((VRageMath.Vector3D)Get(speed.Arm,"LastRequestedLinear")!).Length()>1,"Manual correction cap still imposed a hidden travel-speed ceiling.");
+        speed.Command("Stop"); for(int i=0;i<10;i++) speed.Tick();
+        var parked=new DualRig(armType,toolType,true,customise:f=>f.LockSource());
+        DualStart(parked);
+        var initial=parked.F.Markers[1].WorldMatrix * MatrixD.Invert(parked.F.Stands[1][0].WorldMatrix);
+        Check(((TestHost)parked.Tool).Storage.Contains("AutoArm Park Poses"),"All-parked startup did not record return poses.");
+        parked.Command("Tool 2"); for(int i=0;i<8;i++) parked.Tick(); DualPlant(parked,"Idle"); for(int i=0;i<12;i++) parked.Tick();
+        parked.ToolRig.Storage=((TestHost)parked.Tool).Storage; parked.Tool=Tests.Create(toolType,parked.ToolRig); parked.F.Host=(TestHost)parked.Tool;
+        for(int i=0;i<180;i++) parked.Tick(); parked.Command("On"); for(int i=0;i<300 && !Enabled(parked.Arm);i++) parked.Tick();
+        var changed=parked.F.Markers[1].WorldMatrix; changed=MatrixD.CreateWorld(changed.Translation,Vector3D.Cross(changed.Up,changed.Forward),changed.Up); parked.F.MoveSource(changed,1);
+        parked.Command("Tool 1"); for(int i=0;i<8;i++) parked.Tick(); DualPlant(parked,"ApproachDock");
+        var returned=SwapGoal(parked.Tool,"Dock") * MatrixD.Invert(parked.F.Stands[1][0].WorldMatrix);
+        VCNear(returned.Forward,initial.Forward,"Return preserved recorded parked forward",1e-6); VCNear(returned.Up,initial.Up,"Return preserved recorded parked up",1e-6); VCNear(returned.Translation,initial.Translation,"Return preserved parked relative position",1e-6);
+        var active=Get(parked.Arm,"Tools")!; for(int i=0;i<12;i++) parked.Tick();
+        parked.Command("ToolInfo"); for(int i=0;i<5;i++) parked.Tick();
+        Check((bool)Get(active,"Busy")!,"Read-only status cleared tool ownership.");
+        DualPlant(parked,"Lock");
+        Check(!(bool)Get(Get(parked.Arm,"Topology")!,"Ready")! && (bool)Get(active,"Transition")!,"Expected merge did not pause stale topology.");
+        DualPlant(parked,"Idle"); for(int i=0;i<12;i++) parked.Tick();
+        Check(Enabled(parked.Arm),"Expected topology transitions required another On to finish the swap.");
+        Console.WriteLine("Tool revision: inherited travel speeds, slow linear entry, recorded parked pose across restart and expected-topology resume.");
     }
 }

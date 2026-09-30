@@ -10,7 +10,7 @@ $outputPath = Join-Path $workspace 'AutoArm_Compact.txt'
 $source = ($parts | ForEach-Object { [IO.File]::ReadAllText((Join-Path $workspace ('src\' + $_))) }) -join "`n`n"
 [IO.File]::WriteAllText($sourcePath, $source, [Text.UTF8Encoding]::new($false))
 & (Join-Path $PSScriptRoot 'Build.ps1') -Source $sourcePath -Output $outputPath -GameBin $GameBin
-$toolParts = @('AutoArm.ToolPrefix.cs.txt', 'AutoArm.ToolHost.cs.txt', 'AutoArm.TopInfo.cs.txt', 'AutoArm.ToolGeometry.cs.txt', 'AutoArm.Tools.cs.txt', 'AutoArm.Math.cs.txt', 'AutoArm.Link.cs.txt')
+$toolParts = @('AutoArm.ToolPrefix.cs.txt', 'AutoArm.ToolHost.cs.txt', 'AutoArm.TopInfo.cs.txt', 'AutoArm.ToolGeometry.cs.txt', 'AutoArm.Tools.cs.txt', 'AutoArm.ParkPoses.cs.txt', 'AutoArm.Math.cs.txt', 'AutoArm.Link.cs.txt')
 $toolSourcePath = Join-Path $workspace 'AutoArm_ToolSwap_Source.txt'
 $toolOutputPath = Join-Path $workspace 'AutoArm_ToolSwap_Compact.txt'
 $toolSource = ($toolParts | ForEach-Object { [IO.File]::ReadAllText((Join-Path $workspace ('src\' + $_))) }) -join "`n`n"

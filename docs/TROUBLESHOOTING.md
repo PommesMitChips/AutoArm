@@ -37,3 +37,11 @@ Arm configuration uses Format 6; ToolSwap configuration uses Format 1. If the lo
 ## Interrupted swaps
 
 `Stop`, `Off`, `SwapCancel` or pilot input stops automatic movement while retaining support. Inspect the connections and run `On` to scan and resume. An explicit scan clears a pending failed attachment only when that base is actually bare. Successful tool pickup/swap resumes manual control automatically; parking and canceled or failed operations stay OFF. `Stop` also cancels startup requested by `On`.
+
+During a normal swap, merge and mount changes are expected. The arm pauses commands, waits for separation/attachment and rebuilds its topology before continuing. Replace both PB scripts together if a tool remains OFF after its support merges separate. Unrelated upstream changes still stop the operation.
+
+## Parked orientation and tool speed
+
+Start with tools merged to their stands so ToolSwap can record their actual rest poses. Those poses survive ToolSwap recompilation and prevent quarter-turn changes caused by visually symmetric merge blocks. A never-observed parked tool uses merge geometry for its first parking operation.
+
+Travel uses HeadSpeed/HeadTurnSpeed in the arm PB. MoveSpeed/TurnSpeed in ToolSwap apply only to final docking/insertion and straight withdrawal. ApproachDistance determines the clearance and backoff. Insertion/withdrawal hold orientation and follow a Cartesian line; this does not add obstacle avoidance during travel.

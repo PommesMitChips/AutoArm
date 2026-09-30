@@ -1,6 +1,6 @@
 // Versioned unicast transport. Epochs survive recompilation; generations revoke
 // outstanding commands on Stop. Messages never grant direct actuator access.
-const string LinkTag = "AutoArm/3";
+const string LinkTag = "AutoArm/4";
 const string LinkSection = "Link";
 
 sealed class ModuleLink
@@ -29,7 +29,7 @@ sealed class ModuleLink
     }
     public MyIni Packet(string operation)
     {
-        var ini = new MyIni(); ini.Set(LinkSection, "Version", 3); ini.Set(LinkSection, "Arm", ArmName);
+        var ini = new MyIni(); ini.Set(LinkSection, "Version", 4); ini.Set(LinkSection, "Arm", ArmName);
         ini.Set(LinkSection, "Epoch", Epoch); ini.Set(LinkSection, "Remote", RemoteEpoch);
         ini.Set(LinkSection, "Generation", Generation); ini.Set(LinkSection, "Sequence", ++Sequence);
         ini.Set(LinkSection, "Operation", operation); return ini;
@@ -45,7 +45,7 @@ sealed class ModuleLink
     {
         ini = new MyIni(); var text = message.Data as string;
         return Peer != null && !Peer.Closed && Peer.IsFunctional && Peer.IsSameConstructAs(P.Me) && message.Source == Peer.EntityId && message.Tag == LinkTag &&
-            text != null && text.Length <= 16000 && ini.TryParse(text) && ini.Get(LinkSection, "Version").ToInt32() == 3 && ini.Get(LinkSection, "Arm").ToString() == ArmName &&
+            text != null && text.Length <= 16000 && ini.TryParse(text) && ini.Get(LinkSection, "Version").ToInt32() == 4 && ini.Get(LinkSection, "Arm").ToString() == ArmName &&
             ini.Get(LinkSection, "Epoch").ToInt64() > 0 && ini.Get(LinkSection, "Sequence").ToInt64() > 0;
     }
 }

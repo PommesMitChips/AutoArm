@@ -30,6 +30,14 @@ internal static partial class Scenarios
         Check(!Enabled(script) && Get(script,"LocalPath")==null,"Pilot input did not cancel autonomous path ownership."); NoVelocity(rig); RecordProxy.Of(cockpit).Values["MoveIndicator"]=Vector3.Zero;
         Run(script,"On"); InvokeFrame(script,rig,"Path "+PCRow(a),UpdateType.Terminal,0); InvokeFrame(script,rig,"Hold",UpdateType.Terminal,0);
         Check(Enabled(script) && Get(script,"LocalPath")==null,"Hold failed to take over a path.");
+        Run(script,"On"); var lineGoal=head.WorldMatrix; lineGoal.Translation+=Vector3D.Forward*.08; InvokeFrame(script,rig,"Path "+PCRow(lineGoal),UpdateType.Terminal,0);
+        var line=Get(script,"LocalPath")!; var lineConfig=new VRage.Game.ModAPI.Ingame.Utilities.MyIni(); lineConfig.Set("Link","Moves","0.001"); lineConfig.Set("Link","Turns","5"); lineConfig.Set("Link","Lines","true"); Tests.Call(script,"ConfigurePathStages",line,lineConfig);
+        for(int i=0;i<8;i++) InvokeFrame(script,rig,"",UpdateType.Update1,1d/60);
+        Check((int)Get(line,"Completed")! ==0,"Slow line lookahead falsely reported the remote endpoint reached.");
+        var offset=(Vector3D)Get(script,"TargetP")!; var root=rig.Blocks.OfType<IMyMotorStator>().Single().WorldMatrix;
+        var world=root.Translation+root.Forward*offset.X+root.Left*offset.Y+root.Up*offset.Z;
+        var start=(Vector3D)Get(line,"LineStart")!; Check(Vector3D.Cross(world-start,Vector3D.Forward).Length()<1e-9,"Line reference left its Cartesian segment.");
+        Run(script,"Stop"); NoVelocity(rig);
         Console.WriteLine("Paths: two ordered world-space poses, measured settling, whole-list rejection, 32-waypoint limit, Stop/pilot cancellation and Hold takeover.");
     }
 }

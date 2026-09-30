@@ -1,7 +1,7 @@
 // Tool changes use timed observations and journal every mechanical mutation.
 sealed class ToolSwapController
 {
-    sealed class Profile
+    public sealed class Profile
     {
         public string Name, Prefix, MarkerName, CouplerName;
         public readonly List<string> HeadNames = new List<string>(), StandNames = new List<string>();
@@ -335,6 +335,7 @@ sealed class ToolSwapController
             foreach (var merge in h.Heads) if (!Scan.Blocks.Contains(merge.EntityId)) { why = "Foreign head merge: " + merge.CustomName; return false; }
             if (ScanStand) Prefix(h.Prefix, h.Stands);
             foreach (var merge in h.Stands) if (h.Heads.Contains(merge)) { why = "Stand is on head: " + merge.CustomName; return false; }
+            P.CaptureParkPose(h, Axis);
             ScanIndex++; Scan = null; return true;
         }
         if (Tip == null)
@@ -473,7 +474,7 @@ sealed class ToolSwapController
         }
         var rack = ParkOnly ? Parks : Source.Stands;
         if (Source.Heads.Count == 0 || rack.Count == 0) { why = "Missing parking merges."; return false; }
-        if (!ToolGeometry.TryDockPoseAt(Source.Marker, Source.Heads, rack, Axis, 0, anchor, out Dock, out Pairs, out why)) return false;
+        if (!P.ParkPose(Source, rack, anchor, out Dock, out Pairs) && !ToolGeometry.TryDockPoseAt(Source.Marker, Source.Heads, rack, Axis, 0, anchor, out Dock, out Pairs, out why)) return false;
         Vector3I direction; if (!ToolGeometry.MergeDirection(Pairs[0].Stand, Axis, out direction, out why)) return false;
         Vector3D outward = Vector3D.TransformNormal((Vector3D)direction, Pairs[0].Stand.CubeGrid.WorldMatrix);
         foreach (var pair in Pairs)
@@ -487,6 +488,9 @@ sealed class ToolSwapController
         DockAnchor = Pairs[0].Stand;
         var inverse = MatrixD.Invert(DockAnchor.WorldMatrix); Dock *= inverse; Approach *= inverse;
         Supported = Source;
+        // Prevent native merge snap from closing the chain during the docking
+        // path. Support is enabled only after the arm confirms stopped output.
+        foreach (var head in Source.Heads) head.Enabled = false;
         Go(ApproachDockPhase); return true;
     }
     bool AllLocked()
@@ -582,10 +586,11 @@ sealed class ToolSwapController
                     foreach (var h in Profiles) if (h.Coupler.PendingAttachment)
                     {
                         if (h.Coupler.IsAttached || h.Coupler.Top != null || Last != "Scan" || PassiveScan) { Cancel("Explicit ToolScan required for pending Mount."); return; }
-                        Clearing.Add(h.Coupler);
+                        if (!Clearing.Contains(h.Coupler)) Clearing.Add(h.Coupler);
                     }
                     if (Clearing.Count > 0)
                     {
+                        P.ExpectTransition("CancelPending");
                         Journal("ScanPending"); foreach (var coupler in Clearing) coupler.Detach(); Go("ScanPending"); return;
                     }
                     if (!P.RebuildToolTopology(out why)) { Cancel(why); return; }
@@ -616,7 +621,9 @@ sealed class ToolSwapController
                 case ApproachDockPhase:
                     Go("Dock"); return;
                 case "Dock":
-                    P.StopMotion("Supporting OFF"); Journal("EnableSupport");
+                    Go("Support"); return;
+                case "Support":
+                    P.ExpectTransition("MergeSupport"); Journal("EnableSupport");
                     foreach (var pair in Pairs) pair.Head.Enabled = true;
                     DockMoved = true;
                     Go("Lock"); return;
@@ -624,8 +631,10 @@ sealed class ToolSwapController
                     P.StopMotion("Support wait OFF");
                     if (!Mounted(Source)) { Cancel("Source detached prematurely."); return; }
                     if (!Observe(AllLocked())) return;
+                    P.CaptureParkPose(Source, Axis);
                     if (DockMoved) SetRetreat();
                     ParkedPairs = new List<ToolPortPair>(Pairs);
+                    P.ExpectTransition("DetachMount");
                     Source.Angle = Source.Coupler.Angle; Journal("Detach"); Source.Coupler.Detach(); Go("Detach"); return;
                 case "Detach":
                     P.StopMotion("Detach wait OFF");
@@ -640,8 +649,10 @@ sealed class ToolSwapController
                 case ApproachTopPhase:
                     Go(AlignTopPhase); return;
                 case AlignTopPhase:
+                    Go("PrepareAttach"); return;
+                case "PrepareAttach":
                     foreach (var h in Profiles) if (h.Coupler.IsAttached || h.Coupler.PendingAttachment || h.Coupler.Top != null) { Cancel("Arm tip no longer bare."); return; }
-                    P.StopMotion("Attaching OFF"); if (AxialPickup) Destination.Relock = Destination.Coupler.RotorLock;
+                    P.ExpectTransition("AttachMount"); if (AxialPickup) Destination.Relock = Destination.Coupler.RotorLock;
                     Journal("Attach"); if (Destination.Relock) Destination.Coupler.RotorLock = false; Destination.Coupler.Attach(); Go("Attach"); return;
                 case "Attach":
                     P.StopMotion("Attach wait OFF");
@@ -653,6 +664,8 @@ sealed class ToolSwapController
                         Vector3D.Dot(Reference.WorldMatrix.Up, expected.Up) > .9999939 && Vector3D.Dot(Reference.WorldMatrix.Forward, expected.Forward) > .9999939;
                     if (!Observe(Mounted(Destination) && !Destination.Coupler.PendingAttachment && aligned)) return;
                     if (Destination.Relock) { Destination.Coupler.RotorLock = true; Destination.Relock = false; }
+                    P.ExpectTransition("MergeRelease");
+                    P.CaptureParkPose(Destination, Axis);
                     Journal("ReleaseSupport"); foreach (var pair in Pairs) pair.Head.Enabled = false; Go("Release"); return;
                 case "Release":
                     P.StopMotion("Split wait OFF");

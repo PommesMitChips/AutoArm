@@ -1,27 +1,26 @@
-AutoArm 3.0 — Separate ToolSwap PB and ordered motion paths
+AutoArm 3.1 — Predictable tool return, linear docking and expected transitions
 
-AutoArm owns the arm, joint state, targets, movement and Home. ToolSwap now runs
-in a second PB and owns tool profiles, docking geometry and equipment sequencing.
-Only AutoArm writes actuator velocities. ToolSwap sends complete approach and
-insertion pose lists; AutoArm executes them and reports waypoint completion.
-Retreat is also a path. Optional live anchors follow moving stands. The arm also
-accepts world-space pose lists through the public Path Run argument.
+ToolSwap records the actual parked position/orientation relative to a stand while
+its merge pairs are connected. The record survives restart and is validated by
+marker/merge identities and rigid layout. Returning to that rack preserves the
+original rest pose rather than choosing a visually indistinguishable quarter turn.
+Start with all tools parked; no manual orientation input or teaching is required.
 
-Transport uses versioned unicast IGC, scoped peer identities, persistent session
-epochs, request sequences and revocable movement generations. Missing valid
-communication stops the arm. Attachment changes wait for stopped output; native
-part identity, live coupling pose and support observations still gate release.
-Stop cancels queued startup/paths. Tool PB restart retains pending-lock recovery.
+Travel uses HeadSpeed and HeadTurnSpeed from the arm PB. ToolSwap MoveSpeed and
+TurnSpeed apply only to final docking/insertion and withdrawal. Optional per-point
+policies select inherited arm speeds. Manual correction caps no longer impose a
+hidden ceiling on autonomous travel; physical actuator/acceleration bounds remain.
+Linear stages align first, hold orientation and track a reference on the captured
+Cartesian segment. Completion checks the endpoint, including very slow movement.
 
-Install AutoArm_Compact.txt in the arm PB and AutoArm_ToolSwap_Compact.txt in
-another PB on the same construct. Configure their exact names in Modules.ToolSwapPB
-and Link.ArmPB. Run On on the arm PB once. Successful mounting resumes control;
-parking, cancellation and failed operations remain OFF. A simple arm still needs
-only the arm PB, with the module name empty.
+Before native merge/mount changes, the coordinator declares a stopped transition.
+The arm pauses stale topology without canceling the swap. Once separation/attachment
+is observed, it rewalks and settles the arm, then activates control on a fresh timed
+update. Source support merges stay disabled during travel to prevent early snap.
+Unexpected upstream changes still stop. Collision avoidance remains outside scope.
 
-Configuration is strict: Format 6 for the arm PB, Format 1 for ToolSwap.
-Re-enter existing settings in the supplied examples; no migration is included.
-Current compact sizes: arm 78,266 characters; ToolSwap 48,330 characters.
-C#6/installed SE API, exact token reversal, identical original-source method IL
-and 178,559 simulated assertions pass. Live-game physics remains unverified.
-Collision geometry/voxel sensing is not implemented in this release.
+Replace BOTH PB scripts: protocol v4 requires matching peers. Existing v3.0
+configuration remains valid (arm Format 6, ToolSwap Format 1); no migration added.
+Arm: 79,911 characters, 20,089 free. ToolSwap: 51,414, 48,586 free.
+C#6/installed SE API, token reversal, original-source identical IL and 179,223
+simulated assertions pass. Live game physics remains unverified.
