@@ -5,7 +5,7 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 ## Installation
 
 1. Run `Stop` on the previous controller, if one is installed.
-2. Copy the entire [AutoArm script](https://github.com/PommesMitChips/AutoArm/blob/v2.7/AutoArm_Compact.txt) into the programmable block's script editor.
+2. Copy the entire [AutoArm script](https://github.com/PommesMitChips/AutoArm/blob/v2.8/AutoArm_Compact.txt) into the programmable block's script editor.
 3. Change `const string ArmName = "Arm 1";` to your arm's name, then check/compile it in the game editor.
 4. Choose a setup below. Name the parts and put the matching configuration in the **programmable block's Custom Data**.
 5. Run `Reload`, wait for setup to finish OFF, then `Check` and `On`.
@@ -27,25 +27,24 @@ Use this for one fixed tool without automatic parking or swapping.
 
 Name only one arm joint with the `Arm 1 - Base` prefix and only one reference block with the `Arm 1 - Head` prefix. Other drills, merges and spare tools must not use that head prefix in this setup.
 
-Use [SimpleArm.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.7/examples/SimpleArm.ini). Keep `[Tools] Enabled=false`, then run `Reload`, `Check` and `On`.
+Use [SimpleArm.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.8/examples/SimpleArm.ini). Keep `[Tools] Enabled=false`, then run `Reload`, `Check` and `On`.
 
 ### One tool with automatic parking
 
-For automatic parking and swapping, put the detachable rotor **base on the tool**, and its unnamed **top on the arm**. Keep an existing terminal block or camera on the arm's end as its reference. The reference stays with the arm when a tool is removed.
+For automatic parking and swapping, put the detachable rotor **base on the tool**, and its unnamed **top on the arm**. AutoArm finds the arm-side rotor part automatically. The final arm joint can have any name.
 
 | Part | Exact example name |
 | --- | --- |
 | First arm joint | `Arm 1 - Base - Rotor` |
-| Reference block at the arm's end | `Arm 1 - ToolMount` |
-| Rotor/hinge base carried by the tool | `Arm 1 - Head 1 - Mount` |
+| Rotor base carried by the tool | `Arm 1 - Head 1 - Mount` |
 | Drill used as the tool reference | `Arm 1 - Head 1 - Drill` |
 | Merge carried by the tool | `Arm 1 - Head 1 - HeadMerge` |
 | Merge fixed to the parking support | `Arm 1 - ParkMerge 1` |
-| Rotor/hinge top carried by the arm | Leave unnamed |
+| Rotor top carried by the arm | Leave unnamed |
 
 Keep the tool's reference, base and head merge connected together. The head merge must face the support merge. Avoid another solid connection between tool and support that would prevent separation.
 
-Use [Park.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.7/examples/Park.ini). `[Tools] Mount` names the arm-end reference; `[Tool01] Mount` names the tool's rotor base. Run `Reload`, wait for the scan to finish, and inspect `ToolInfo`. If the arm starts bare, configure `ArmTip` as described below.
+Use [Park.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.8/examples/Park.ini). `[Tool01] Mount` names the tool's rotor base. Run `Reload`, wait for the scan to finish, and inspect `ToolInfo`.
 
 - `Park` or `Park 1` parks and detaches the tool.
 - `Tool Head 1` picks it up again.
@@ -60,7 +59,6 @@ Use the same arrangement: one unnamed rotor top stays on the arm, and each tool 
 | Part | Exact example name |
 | --- | --- |
 | First arm joint | `Arm 1 - Base - Rotor` |
-| Reference block at the arm's end | `Arm 1 - ToolMount` |
 | Drill tool's rotor base | `Arm 1 - Head 1 - Mount` |
 | Drill tool reference | `Arm 1 - Head 1 - Drill` |
 | Drill tool merge | `Arm 1 - Head 1 - HeadMerge` |
@@ -69,37 +67,30 @@ Use the same arrangement: one unnamed rotor top stays on the arm, and each tool 
 | Welder tool reference | `Arm 1 - Head 2 - Welder` |
 | Welder tool merge | `Arm 1 - Head 2 - HeadMerge` |
 | Welder stand merge | `Arm 1 - Head 2 - StandMerge` |
-| Rotor/hinge top carried by the arm | Leave unnamed |
+| Rotor top carried by the arm | Leave unnamed |
 
-Use [ToolSwap.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.7/examples/ToolSwap.ini). `[Tools] Mount` names the arm-end reference. Each `[ToolNN] Mount` names that tool's rotor base. List the complete drill/welder names in `Heads`; their order matches `Tool01`, `Tool02`, and so on. The example lists the merges explicitly and provides the command aliases `Head 1` and `Head 2`.
+Use [ToolSwap.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.8/examples/ToolSwap.ini). Each `[ToolNN] Mount` names that tool's rotor base. List the complete drill/welder names in `Heads`; their order matches `Tool01`, `Tool02`, and so on. The example lists the merges explicitly and provides the command aliases `Head 1` and `Head 2`.
 
-Keep spare tools secured on their stands. Head 1 can already be attached, or the arm can start bare with `ArmTip` configured. Run `Reload`, wait for the scan to finish, and check `ToolInfo`. Then `Tool 2` or `Tool Head 2` parks Head 1 and picks up Head 2. `Tool 1` or `Tool Head 1` switches back. Each spare tool can be used immediately; you do not need to mount it first or teach a parking position.
+Keep spare tools secured on their stands. Head 1 can already be attached, or the arm can start bare with its unnamed rotor part installed. Run `Reload`, wait for the scan to finish, and check `ToolInfo`. Then `Tool 2` or `Tool Head 2` parks Head 1 and picks up Head 2. `Tool 1` or `Tool Head 1` switches back. Each spare tool can be used immediately; you do not need to mount it first or teach a parking position.
 
-The arm-end setup survives saving or recompiling the same PB. For a new PB or changed arm end, configure `ArmTip` to start bare, or run setup with a tool already attached. To add a common parking support, configure its merges under `ParkMerges`.
+AutoArm detects the arm end again after restarting or recompiling, whether a tool is attached or the arm is bare. To add a common parking support, configure its merges under `ParkMerges`.
 
 ### Starting with a bare arm
 
-A new arm can start with only its rotor top, move under manual control, and pick up any configured parked tool. Keep the named arm-end reference on the same rigid piece as that top. Tool couplers use rotors only; ordinary arm joints can use pistons, rotors and hinges. Turn on a tool rotor's **Rotor Lock** if you want it to stay static after pickup.
+Build one unattached rotor part on the arm's moving end. It can be placed directly on the final hinge's moving head. The hinge does not need a special name, and no camera or reference block is required.
 
-Set `ArmTip` in `[Tools]` to the rotor-top pivot's offset from the reference, in metres **Forward, Left, Up**. Optional forward/up directions describe how the top is oriented relative to that reference; both default to Forward/Up. Directions are Forward, Backward, Left, Right, Up or Down.
+Use [ToolSwap.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.8/examples/ToolSwap.ini), keep the selected tool secured on its stand, run `Reload`, and wait for setup to finish. `On` enables bare-arm control; `Tool 2` approaches and picks up Head 2. No offset, direction settings, initial tool mount or teaching is required. The rotor part is the movement focus while the arm is bare; the configured tool marker becomes the focus after pickup.
 
-For example, with the pivot one large-grid cell to the reference's left and matching forward/up directions:
+Keep only one loose rotor part on the moving arm. Its attachment to the arm must be clear: avoid surrounding it with blocks touching several possible mounting faces. AutoArm stops if it cannot identify a unique part and mounting face.
 
-```ini
-[Tools]
-ArmTip=0 2.5 0 | Forward | Up
-```
-
-Use `0.5` instead of `2.5` for one small-grid cell. Adjust the offset for your placement; it must point to the rotor top's pivot cell. If the reference's directions already match the top, `ArmTip=0 2.5 0` is sufficient.
-
-[HeadlessToolSwap.ini](https://github.com/PommesMitChips/AutoArm/blob/v2.7/examples/HeadlessToolSwap.ini) shows that example arrangement. Keep the selected tool locked to its stand, run `Reload`, and wait for setup to finish. `On` enables bare-arm movement; `Tool 2` approaches and picks up Head 2 automatically. No initial tool mount or teaching is required. Leave `ArmTip` blank when using an existing saved arm-end setup or installing with a tool already attached.
+For the first pickup from a bare arm, leave the selected tool rotor's lower and upper angle limits **unlimited**. **Rotor Lock** is supported: AutoArm temporarily unlocks it for that first attachment and restores the requested lock after verification. Tool couplers use rotors; ordinary arm joints can use pistons, rotors and hinges.
 
 ## Use and features
 
 AutoArm supports:
 
 - Mixed piston, rotor and hinge arms, including offset and differently oriented joints.
-- Compatible parallel actuators, including opposite-facing rotor pairs sharing a rotation axis.
+- Compatible parallel actuators, including opposite-facing rotor/hinge pairs sharing a rotation axis.
 - Position and orientation hold while moving the head.
 - Head, excavator and crane movement views.
 - Saved home positions, tool parking and tool swapping.
@@ -155,7 +146,7 @@ Run `On` first. `MoveTo` coordinates are metres from the base in its Forward, Le
 
 Edit `[Config]` in PB Custom Data, then run `Reload`. Use `HeadSpeed` and `HeadTurnSpeed` for head movement, and `JointSpeed` and `PistonSpeed` for actuator speeds. Setting comments show units and accepted ranges.
 
-The `Actuators` table has `Translation` and `Orientation` preferences from 0 to 10. Edit those two values to tune each group's participation in positioning and turning. Additional commands are listed in Custom Data.
+The `Actuators` table has `Translation` and `Orientation` preferences from 0 to 10. Edit those two values to tune each group's participation in positioning and turning. Use the toolbar command table above; Custom Data contains settings only.
 
 ## Acknowledgements
 
