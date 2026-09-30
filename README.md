@@ -2,9 +2,9 @@
 
 Automatic mechanical-arm control for the Space Engineers programmable block.
 
-This snapshot is **v2.0**, covering automatic discovery and additive pose control. Paste the whole [AutoArm_Compact.txt](AutoArm_Compact.txt) into the programmable block; build tools are for development only.
+This snapshot is **v2.1-preview**, covering manual-priority correction and reference behavior review. Paste the whole [AutoArm_Compact.txt](AutoArm_Compact.txt) into the programmable block; build tools are for development only.
 
-Set `ArmName` in code, name the base actuator `<Arm name> - Base*` and the head reference `<Arm name> - Head*`, then follow the preserved [release notes](releases/v2.0/MArmOS_AutoArm_v2_Notes.md). The script starts OFF. Run `Check`, then `On` when setup is ready. Stop the old script before replacing it.
+Set `ArmName` in code, name the base actuator `<Arm name> - Base*` and the head reference `<Arm name> - Head*`, then follow the preserved [release notes](releases/v2.1-preview/MArmOS_AutoArm_v2_1_Notes.md). The script starts OFF. Run `Check`, then `On` when setup is ready. Stop the old script before replacing it.
 
 Pistons, rotors and hinges can appear throughout a serial arm, including spatially offset or differently oriented stages. Compatible equal-stage parallel branches are synchronized; opposite-facing coaxial rotary pairs receive signed commands. General closed linkages are unsupported. There is no collision avoidance or collision-free homing guarantee.
 
