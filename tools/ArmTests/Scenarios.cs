@@ -107,7 +107,7 @@ internal static partial class Scenarios
     }
     static void Configuration(Type type)
     {
-        var rig=Fixtures.Serial(out _,out _,out _,out _);RecordProxy.Of(rig.PB).Values["CustomData"]="[AutoArm]\nArm=Arm 1\nFormat=4\n[Unrelated]\nKeep=original\n";
+        var rig=Fixtures.Serial(out _,out _,out _,out _);RecordProxy.Of(rig.PB).Values["CustomData"]="[AutoArm]\nArm=Arm 1\nFormat=5\n[Unrelated]\nKeep=original\n";
         var script=Start(type,rig);
         var ini=new MyIni();Check(ini.TryParse(rig.PB.CustomData),"Generated INI invalid.");
         Check(ini.Get("Unrelated","Keep").ToString()=="original","Unrelated configuration lost.");

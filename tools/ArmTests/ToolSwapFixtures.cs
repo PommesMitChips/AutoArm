@@ -10,9 +10,11 @@ internal sealed class ToolSwapFixture
 {
     internal readonly Rig Rig = new();
     internal readonly IMyMotorStator Base;
+    internal IMyMotorStator? LastHinge;
     internal readonly IMyPistonBase Piston;
     internal readonly IMyTerminalBlock ArmRef;
     internal readonly IMyMotorRotor ArmTip;
+    internal IMyCubeBlock MotionReference;
     internal readonly IMyCubeGrid ArmGrid;
     internal readonly IMyTerminalBlock[] Markers = new IMyTerminalBlock[2];
     internal readonly IMyMotorStator[] Couplers = new IMyMotorStator[2];
@@ -25,9 +27,10 @@ internal sealed class ToolSwapFixture
     readonly Dictionary<IMyCubeGrid,Dictionary<Vector3I,IMySlimBlock>> Cells = new();
     internal ToolSwapFixture(bool ports=true,bool explicitOnly=false,bool headless=false,double destinationAngle=0)
     {
-        var shoulder=Rig.Grid(); ArmGrid=Grid(new Vector3D(0,.4208642244338989,-10));
-        Base=Rig.Rotor("Arm 1 - Base - Rotor",Rig.Root,shoulder);
+        var shoulder=Grid(Vector3D.Zero); ArmGrid=Grid(new Vector3D(0,.4208642244338989,-10));
+        Base=Rig.Rotor("Arm 1 - Base - Rotor",Rig.Root,shoulder); Put(Base.Top,shoulder,Vector3I.Zero);
         Piston=Rig.Piston("Reach piston",shoulder,ArmGrid,new Vector3D(0,0,-2),Vector3D.Forward);
+        var pistonPose=Piston.WorldMatrix; Put(Piston,shoulder,new Vector3I(0,1,0)); RecordProxy.Of(Piston).Values["WorldMatrix"]=pistonPose; Put(Piston.Top,ArmGrid,Vector3I.Zero); MotionReference=Piston.Top;
         ArmRef=Rig.Block<IMyShipDrill>("Arm reference",ArmGrid);
         Put(ArmRef,ArmGrid,new Vector3I(1,0,0));
         RecordProxy.Of(ArmRef).Values["WorldMatrix"]=MatrixD.CreateWorld(ArmGrid.GridIntegerToWorld(ArmRef.Position),Vector3D.Left,Vector3D.Up);
@@ -87,7 +90,7 @@ internal sealed class ToolSwapFixture
         RecordProxy.Of(ArmTip).Values["Base"]=headless?null:Couplers[0];
         var other=Grid(new Vector3D(20,0,-10)); UnrelatedMerge=Rig.Block<IMyShipMergeBlock>("Unrelated station merge",other);
         Put(UnrelatedMerge,other,Vector3I.Zero,true); RecordProxy.Of(UnrelatedMerge).Values["IsConnected"]=true;
-        var ini=new MyIni(); ini.Set("AutoArm","Format",4); ini.Set("AutoArm","Arm","Arm 1");
+        var ini=new MyIni(); ini.Set("AutoArm","Format",5); ini.Set("AutoArm","Arm","Arm 1");
         ini.Set("Tools","Enabled",true); ini.Set("Tools","Mount",ArmRef.CustomName);
         ini.Set("Tools","Heads",string.Join("\n",Markers.Select(m=>m.CustomName)));
         ini.Set("Tools","MergeNormal","Right"); ini.Set("Tools","PhaseTimeout",60);
@@ -143,9 +146,9 @@ internal sealed class ToolSwapFixture
     internal void MoveSource(MatrixD target)
     {
         var delta=MatrixD.Invert(Markers[0].WorldMatrix)*target;
-        TransformGrid(Markers[0].CubeGrid,delta); TransformGrid(ArmGrid,delta);
+        TransformGrid(Markers[0].CubeGrid,delta); TransformGrid(ArmTip.CubeGrid,delta);
     }
-    internal void MoveArm(MatrixD target) => TransformGrid(ArmGrid,MatrixD.Invert(ArmRef.WorldMatrix)*target);
+    internal void MoveArm(MatrixD target) => TransformGrid(ArmTip.CubeGrid,MatrixD.Invert(MotionReference.WorldMatrix)*target);
     internal void ShiftIncoming(Vector3D shift) { var delta=MatrixD.Identity; delta.Translation=shift; TransformGrid(Markers[1].CubeGrid,delta); }
     internal void LockSource(int count=2)
     {
@@ -157,6 +160,29 @@ internal sealed class ToolSwapFixture
         var grid=Grid(Markers[n].WorldMatrix.Translation);
         foreach(var b in new IMyCubeBlock[]{Markers[n],Couplers[n]}.Concat(Heads[n])) { var pose=b.WorldMatrix; Put(b,grid,b.Position); RecordProxy.Of(b).Values["WorldMatrix"]=pose; }
         Armor(grid,new Vector3I(0,1,0)); foreach(var b in Heads[n].Concat(Stands[n])) RecordProxy.Of(b).Values["IsConnected"]=false;
+    }
+    internal void NoNamedArmReference()
+    { Rig.Blocks.Remove(ArmRef); Cells[ArmRef.CubeGrid].Remove(ArmRef.Position); var ini=new MyIni(); ini.TryParse(Rig.PB.CustomData); ini.Delete("Tools","Mount"); ini.Delete("Tools","ArmTip"); RecordProxy.Of(Rig.PB).Values["CustomData"]=ini.ToString(); }
+    internal void ExtraFace() => Armor(ArmTip.CubeGrid,ArmTip.Position+Vector3I.UnitX);
+    internal void NoPart() => Cells[ArmTip.CubeGrid].Remove(ArmTip.Position);
+    internal void LargeSmallGridPart(bool flipped)
+    {
+        Cells[ArmGrid].Remove(ArmTip.Position); RecordProxy.Of(ArmGrid).Values["GridSize"]=.5f; RecordProxy.Of(ArmGrid).Values["GridSizeEnum"]=MyCubeSize.Small;
+        var min=new Vector3I(-1,flipped?1:-2,-1); var max=min+new Vector3I(2,1,2); var pivot=new Vector3I(0,flipped?2:-2,0);
+        Put(ArmTip,ArmGrid,pivot); RecordProxy.Of(ArmTip).Values["Min"]=min; RecordProxy.Of(ArmTip).Values["Max"]=max;
+        RecordProxy.Of(ArmTip).Values["BlockDefinition"]=Definition("SmallAdvancedRotor");
+        RecordProxy.Of(ArmTip).Values["WorldMatrix"]=MatrixD.CreateWorld(ArmGrid.GridIntegerToWorld(pivot),Vector3D.Forward,flipped?Vector3D.Down:Vector3D.Up);
+        for(int x=min.X;x<=max.X;x++) for(int y=min.Y;y<=max.Y;y++) for(int z=min.Z;z<=max.Z;z++) { var slim=RecordProxy.Make<IMySlimBlock>(); RecordProxy.Of(slim).Values["FatBlock"]=ArmTip; Cells[ArmGrid][new Vector3I(x,y,z)]=slim; }
+    }
+    internal void HingeEnd()
+    {
+        Cells[ArmGrid].Remove(ArmTip.Position);
+        var end=Grid(ArmGrid.GridIntegerToWorld(new Vector3I(0,1,0)));
+        LastHinge=Rig.Rotor("Hinge",ArmGrid,end); Put(LastHinge,ArmGrid,new Vector3I(0,1,0));
+        RecordProxy.Of(LastHinge).Values["BlockDefinition"]=Definition("LargeHinge");
+        Put(LastHinge.Top,end,Vector3I.Zero); RecordProxy.Of(LastHinge.Top).Values["BlockDefinition"]=Definition("LargeHingeHead");
+        Put(ArmTip,end,new Vector3I(-1,0,0)); RecordProxy.Of(ArmTip).Values["WorldMatrix"]=MatrixD.CreateWorld(end.GridIntegerToWorld(ArmTip.Position),Vector3D.Forward,Vector3D.Right);
+        MotionReference=LastHinge.Top;
     }
     internal IMyMotorRotor WrongArmPart()
     {
@@ -178,7 +204,7 @@ internal sealed class ToolSwapFixture
         var other=Rig.Rotor("Unconfigured rotor owner",Rig.Root,ArmGrid);
         var v=RecordProxy.Of(other).Values; v["IsAttached"]=false; v["Top"]=null; v["TopGrid"]=null; return other;
     }
-    internal bool AnyDrive => Math.Abs(Base.TargetVelocityRad)>1e-7 || Math.Abs(Piston.Velocity)>1e-7 || Couplers.Any(m=>Math.Abs(m.TargetVelocityRad)>1e-7);
+    internal bool AnyDrive => Math.Abs(Base.TargetVelocityRad)>1e-7 || LastHinge!=null && Math.Abs(LastHinge.TargetVelocityRad)>1e-7 || Math.Abs(Piston.Velocity)>1e-7 || Couplers.Any(m=>Math.Abs(m.TargetVelocityRad)>1e-7);
     internal bool AnyDriveWritten => new IMyTerminalBlock[]{Base,Piston,Couplers[0],Couplers[1]}.Any(b=>RecordProxy.Of(b).Writes.Any(w=>(w.Name=="Velocity" || w.Name=="TargetVelocityRad") && Math.Abs(Convert.ToDouble(w.Value))>1e-7));
     internal bool StationWritten => Stands.SelectMany(x=>x).Append(UnrelatedMerge).Any(b=>RecordProxy.Of(b).Writes.Any(w=>w.Name=="Enabled"));
 }

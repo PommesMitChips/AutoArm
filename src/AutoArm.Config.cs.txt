@@ -67,7 +67,7 @@ sealed class AutoSettings
 
 static class AutoConfig
 {
-    public const int Format = 4;
+    public const int Format = 5;
     const string Identity = "AutoArm Config";
     const string Header = "Name | Kind | Translation | Orientation";
 
@@ -98,7 +98,7 @@ static class AutoConfig
         if (!string.IsNullOrWhiteSpace(p.Me.CustomData)) return;
         MyIni ini; string why;
         if (!ReadCurrent("", out ini, out why)) throw new Exception(why);
-        new AutoSettings().Write(ini); Instructions(ini);
+        new AutoSettings().Write(ini); ini.DeleteSection("Instructions");
         if (p.Tools != null) p.Tools.WriteConfig(ini);
         ini.Set(ConfigSection, "Actuators", "");
         p.Me.CustomData = ini.ToString();
@@ -159,7 +159,7 @@ static class AutoConfig
             }
             return true;
         }
-        settings.Write(ini); Instructions(ini);
+        settings.Write(ini); ini.DeleteSection("Instructions");
         if (p.Tools != null) p.Tools.WriteConfig(ini);
         var values = new List<double[]>();
         foreach (var g in t.Groups)
@@ -209,14 +209,6 @@ static class AutoConfig
         ini.Set(ConfigSection, "Actuators", table.ToString()); ini.SetComment(ConfigSection, "Actuators", "Edit only the two weights (0..10), then Reload.");
         saved.DeleteSection(Identity); saved.Set(Identity, "Format", 1); saved.Set(Identity, "Arm", t.Arm); saved.Set(Identity, "PB", p.Me.EntityId); saved.Set(Identity, "Rows", identities.ToString());
         state = saved.ToString(); return ini.ToString();
-    }
-
-    static void Instructions(MyIni ini)
-    {
-        ini.Set("Instructions", "Setup", "Edit Config; Reload, Check, On. Base: '" + ArmName + " - Base'; Head: '" + ArmName + " - Head'.\nWeights 0..10; edit the two weights. Blank Actuators resets.\nDifferent Format: delete Custom Data. IDs: Info/Joints.");
-        ini.Set("Instructions", "Commands", "On / Off / Stop / Toggle / Hold / Check / Rescan / Reload\nInfo / Help / Settings / Status / Joints / Bindings / Version\nSetHome / GoHome / HomeInfo\nForward / Back / Left / Right / Up / Down; Face <direction>\nPitchUp / PitchDown / YawLeft / YawRight / RollLeft / RollRight\nStep Yaw|Pitch|Roll <degrees>; Yaw / Pitch / Roll <degrees>\nMode HEAD|HRZ|VRT; ReadMouse / ReadKeyboard / ReadRoll On|Off|Toggle\nSpeed <m/s>; TurnSpeed <deg/s>; StepSize <deg>; JointSpeed <RPM>; PistonSpeed <m/s>\nHomeSpeed <RPM> <m/s>; OrientationTolerance <deg>\nTool <name/index>; Park [port number]; ToolScan / ToolInfo / SwapCancel\nPivotProbe Start <group>; PivotProbe End / Report / Reset\nSeparate commands with ;. Reload restores defaults.");
-        ini.Set("Instructions", "Pose", "MoveTo x y z; OrientTo fx fy fz ux uy uz; MoveToPosOri x y z fx fy fz ux uy uz.\nBase Forward/Left/Up coordinates; On required; pilot input remains active.");
-        ini.Set("Instructions", "Bindings", "Toolbar Run: PitchUp Back PitchDown Left Down Right YawLeft Forward YawRight.\nHEAD=head axes; HRZ=cockpit axes; VRT=W/S screen Up/Down, C/Space into/out of view.\nTranslation holds orientation; Q/E Head roll; optional mouse view rotation.\nTool <name> swaps; Park uses ParkMerge; SwapCancel/Stop retains support.");
     }
 
     static string Kind(string sig) { return sig.StartsWith("R", StringComparison.Ordinal) ? "Rotor/Hinge" : "Piston"; }

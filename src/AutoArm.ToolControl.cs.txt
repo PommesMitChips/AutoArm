@@ -43,7 +43,7 @@ bool RebuildToolTopology(out string why)
     try
     {
         RememberToolWeights();
-        Topology.SetEndpointOverride(Tools.Endpoint, Tools.IgnoredMount);
+        Topology.SetEndpointOverride(Tools.Endpoint, Tools.IgnoredMount, Tools.EndFrame, Tools.Focus);
         if (!Topology.Discover(out why)) return false;
         foreach (var g in Topology.Groups)
         {

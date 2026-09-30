@@ -116,7 +116,7 @@ internal static partial class Scenarios
         var script=SwapStart(type,f); SwapReverseMember(script,f.Couplers[0]);
         Check(!f.Rig.Blocks.Any(b=>ReferenceEquals(b,f.ArmTip)),"Arm tip accidentally entered terminal inventory.");
         var saved=new MyIni(); saved.TryParse(((TestHost)script).Storage);
-        Check(saved.Get("AutoArm Arm Tip","E"+f.ArmRef.EntityId).ToString().StartsWith(f.ArmTip.EntityId+"|"),"Initial mounted Head1 did not automatically persist arm-reference geometry.");
+        Check((long)Get(Get(SwapController(script),"Tip")!,"EntityId")! == f.ArmTip.EntityId,"Mounted tool rotor identity was not read automatically.");
         SwapFrame(script,"Tool 2",false,0);
         string first=SwapPhase(script); for(int i=0;i<8;i++) SwapFrame(script,timed:true,dt:0);
         Check(SwapPhase(script)==first && f.Mutations.Count==0,"Zero-time updates advanced reverse change or mutated attachments.");
@@ -143,7 +143,7 @@ internal static partial class Scenarios
     {
         var f=new ToolSwapFixture(); var script=SwapStart(type,f); SwapFrame(script,"Park",false,0);
         bool drove=SwapPlant(script,f,"Idle");
-        Check(drove && !Enabled(script) && f.ArmTip.Base==null && f.Couplers[0].Top==null && Get(Get(script,"Topology")!,"Head")==f.ArmRef,"Generic Park did not drive, detach tool base, and finish bare-reference OFF.");
+        Check(drove && !Enabled(script) && f.ArmTip.Base==null && f.Couplers[0].Top==null && Get(Get(script,"Topology")!,"End")==f.MotionReference,"Generic Park did not drive, detach tool base, and finish bare-reference OFF.");
         f.Rig.Storage=((TestHost)script).Storage; int before=f.Mutations.Count;
         var restarted=SwapStart(type,f); SwapFrame(restarted,"Tool 2",false,0); SwapPlant(restarted,f,"Idle");
         Check(!Enabled(restarted) && f.Couplers[1].Top?.EntityId==f.ArmTip.EntityId && f.Mutations.Count==before+1,"Saved bare-arm restart required per-tool learning or failed automatic incoming attachment."); SwapStationUntouched(f);
@@ -202,7 +202,7 @@ internal static partial class Scenarios
                 foreach(double displacement in new[]{lo,0,hi}.Distinct())
                 {
                     RecordProxy.Of(c).Values["Displacement"]=(float)displacement;
-                    var args=new object?[]{c,top,MatrixD.Identity,""}; bool ok=(bool)inverse.Invoke(null,args)!;
+                    var args=new object?[]{c,top,MatrixD.Identity,"",false}; bool ok=(bool)inverse.Invoke(null,args)!;
                     Check(ok,"Native inverse refused supported "+bases[index]+"/"+head+" displacement "+displacement+": "+args[3]);
                     var desiredTip=local*(MatrixD)args[2]!;
                     var dummy=hinge?Vector3D.Zero:dummies[index]; double offset=index==1 || index==4?.045:index==3?.11:0;
@@ -213,11 +213,11 @@ internal static partial class Scenarios
                 }
                 foreach(double bad in new[]{lo-.001,hi+.001,double.NaN})
                 {
-                    RecordProxy.Of(c).Values["Displacement"]=(float)bad; var args=new object?[]{c,top,MatrixD.Identity,""};
+                    RecordProxy.Of(c).Values["Displacement"]=(float)bad; var args=new object?[]{c,top,MatrixD.Identity,"",false};
                     Check(!(bool)inverse.Invoke(null,args)!,"Native inverse accepted clamping/nonfinite displacement for "+bases[index]+"/"+head);
                 }
                 RecordProxy.Of(c).Values["Displacement"]=0f; RecordProxy.Of(c).Values["LowerLimitRad"]=.6f; RecordProxy.Of(c).Values["UpperLimitRad"]=.8f;
-                var limits=new object?[]{c,top,MatrixD.Identity,""}; Check(!(bool)inverse.Invoke(null,limits)!,"Native inverse accepted retained angle outside real tool mount limits.");
+                var limits=new object?[]{c,top,MatrixD.Identity,"",false}; Check(!(bool)inverse.Invoke(null,limits)!,"Native inverse accepted retained angle outside real tool mount limits.");
             }
         }
     }
@@ -230,7 +230,7 @@ internal static partial class Scenarios
         Check(!f.Heads[1].Any(m=>RecordProxy.Of(m).Writes.Any(w=>w.Name=="Enabled" && Equals(w.Value,false))),"Wrong arm-part ID produced a head merge disable write."); SwapStationUntouched(f);
         var pose=new ToolSwapFixture(); var good=SwapStart(type,pose); SwapFrame(good,"Tool 2",false,0); SwapPlant(good,pose,"Attach");
         SwapFrame(good); Check(SwapPhase(good)=="Attach" && pose.Heads[1].All(m=>m.Enabled),"Single correct attachment observation released support.");
-        var shifted=pose.ArmRef.WorldMatrix; shifted.Translation+=Vector3D.Up*.02; pose.MoveArm(shifted);
+        var shifted=pose.MotionReference.WorldMatrix; shifted.Translation+=Vector3D.Up*.02; pose.MoveArm(shifted);
         for(int i=0;i<8;i++) SwapFrame(good);
         Check(SwapPhase(good)=="Attach" && pose.Heads[1].All(m=>m.Enabled),"Correct ID but actual arm pose 2cm off alignment released support.");
         SwapFrame(good,"SwapCancel",false,0); SwapStationUntouched(pose);
@@ -294,22 +294,10 @@ internal static partial class Scenarios
     }
     static void ReverseSetupAndCacheScope(Type type)
     {
-        var fresh=new ToolSwapFixture(headless:true); var script=SwapStart(type,fresh); SwapFrame(script,"Tool 2",false,0);
-        for(int i=0;i<160 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
-        Check(!Enabled(script) && fresh.Mutations.Count==0 && fresh.Rig.Log.Any(s=>s.Contains("Tools.ArmTip",StringComparison.OrdinalIgnoreCase)),"Fresh bare installation without tip frame did not refuse with explicit arm-tip configuration status.");
-        var f=new ToolSwapFixture(); var learned=SwapStart(type,f); SwapFrame(learned,"Park",false,0); SwapPlant(learned,f,"Idle"); string storage=((TestHost)learned).Storage;
-        foreach(string fault in new[]{"PB","Arm","Marker","Axes"})
-        {
-            var ini=new MyIni(); ini.TryParse(storage); const string section="AutoArm Arm Tip"; string key="E"+f.ArmRef.EntityId;
-            if(fault=="PB") ini.Set(section,"PB",f.Rig.PB.EntityId+1);
-            else if(fault=="Arm") ini.Set(section,"Arm","Other arm");
-            else if(fault=="Marker") ini.Delete(section,key);
-            else { var cells=ini.Get(section,key).ToString().Split('|'); cells[5]="2"; ini.Set(section,key,string.Join("|",cells)); }
-            f.Rig.Storage=ini.ToString(); int mutations=f.Mutations.Count; var refused=Tests.Create(type,f.Rig);
-            for(int i=0;i<160 && SwapPhase(refused)!="Idle";i++) SwapFrame(refused);
-            SwapFrame(refused,"Tool 2",false,0); for(int i=0;i<160 && SwapPhase(refused)!="Idle";i++) SwapFrame(refused);
-            Check(SwapPhase(refused)=="Idle" && !Enabled(refused) && !f.AnyDrive && f.Mutations.Count==mutations,"Invalid arm-tip cache "+fault+" authorized automatic movement/attachment.");
-        }
+        var fresh=new ToolSwapFixture(headless:true); var script=SwapStart(type,fresh);
+        Check((long)Get(Get(SwapController(script),"Tip")!,"EntityId")! ==0,"Fresh auto-detection fabricated a part identity.");
+        SwapFrame(script,"Tool 2",false,0); SwapPlant(script,fresh,"Idle");
+        Check(fresh.Couplers[1].Top==fresh.ArmTip,"Automatic fresh setup still required teaching or offsets.");
     }
     static void ReverseStartupStop(Type type)
     {

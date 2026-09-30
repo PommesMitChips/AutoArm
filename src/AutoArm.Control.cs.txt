@@ -136,9 +136,8 @@ void ZeroSavedDrives()
             }
         }
     var config = new MyIni(); MyIniParseResult error;
-    string mount = config.TryParse(Me.CustomData, out error) && config.Get(ArmSection, "Arm").ToString() == ArmName && config.Get(ToolsSection, EnabledKey).ToBoolean(false) ? config.Get(ToolsSection, "Mount").ToString().Trim() : "";
+    config.TryParse(Me.CustomData, out error);
     var mounts = new List<string>();
-    if (mount.Length > 0) mounts.Add(mount);
     if (config.Get(ArmSection, "Arm").ToString() == ArmName && config.Get(ToolsSection, EnabledKey).ToBoolean(false))
         for (int i = 1; i <= 16; i++)
         { string name = config.Get("Tool" + i.ToString("00"), "Mount").ToString().Trim(); if (name.Length > 0 && !mounts.Contains(name)) mounts.Add(name); }
@@ -258,7 +257,7 @@ void Discover(bool explicitRequest)
         if (!AutoConfig.LoadOrGenerate(this, Topology, Me.CustomData, out preserved, out differs, out why, true)) throw new Exception(why);
     }
     if (Tools != null && !Tools.Load(out why)) throw new Exception(why);
-    Topology.SetEndpointOverride(Tools == null ? null : Tools.Endpoint, Tools == null ? 0 : Tools.IgnoredMount);
+    Topology.SetEndpointOverride(Tools == null ? null : Tools.Endpoint, Tools == null ? 0 : Tools.IgnoredMount, Tools == null ? null : Tools.EndFrame, Tools == null ? null : Tools.Focus);
     if (!Topology.Discover(out why))
     {
         Status = "Discovery failed: " + why;
@@ -385,11 +384,12 @@ void Fault(string reason)
 bool ReadPose(out Vector3D p, out Vector3D f, out Vector3D u)
 {
     p = f = u = Vector3D.Zero;
-    if (Topology == null || Topology.Base == null || Topology.Head == null || Topology.Base.Closed || Topology.Head.Closed) return false;
+    if (Topology == null || Topology.Base == null || Topology.End == null || Topology.Base.Closed || Topology.End.Closed) return false;
     MatrixD r = Topology.Base.WorldMatrix;
-    p = InFrame(Topology.Head.GetPosition() - Topology.Base.GetPosition(), r);
-    f = InFrame(Topology.Head.WorldMatrix.Forward, r);
-    u = InFrame(Topology.Head.WorldMatrix.Up, r);
+    p = InFrame(Topology.EndPosition - Topology.Base.GetPosition(), r);
+    var pose = Topology.EndPose;
+    f = InFrame(pose.Forward, r);
+    u = InFrame(pose.Up, r);
     if (!Finite(p.LengthSquared())) return false;
     return Orthonormalise(ref f, ref u);
 }
@@ -508,7 +508,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
     double moveDemand = linear.Length(), turnDemand = angular.Length();
     double demand = moveDemand + turnDemand;
     MatrixD frame = Topology.Base.WorldMatrix;
-    Vector3D headWorld = Topology.Head.GetPosition();
+    Vector3D headWorld = Topology.EndPosition;
     for (int i = 0; i < n; i++)
     {
         AutoGroup g = Topology.Groups[i];
@@ -1071,7 +1071,7 @@ void Check()
     foreach (AutoGroup g in Topology.Groups)
     {
         double lo, hi;
-        if (!Topology.Refresh(g, Topology.Head.GetPosition(), Topology.Base.WorldMatrix, out lo, out hi, out why))
+        if (!Topology.Refresh(g, Topology.EndPosition, Topology.Base.WorldMatrix, out lo, out hi, out why))
         { Say("CHECK FAILED: " + why); return; }
     }
     Say("CHECK PASS | " + Topology.Groups.Count + " groups | " + Topology.Fingerprint + "\n" + Topology.Report);
@@ -1092,7 +1092,7 @@ void PrintInfo()
         LastLinearAdvance.ToString("0.00") + "/" + LastAngularAdvance.ToString("0.00") +
         "; passes=" + LastSolverPasses + "; converged=" + LastSolverConverged +
         "; budget=" + LastSolverBudgetLimited + "\nLast stop=" + (LastFault == "" ? "none" : LastFault) +
-        "\nCommands/settings: Custom Data. Tools: ToolInfo." +
+        "\nCommands: README. Settings: Custom Data. Tools: ToolInfo." +
         "\nMovementMode=" + MovementMode + "; ReadMouse=" + ReadMouse + "; MouseSensitivity=" + MouseSensitivity +
         "\nReadKeyboard=" + ReadKeyboard + "; ReadRoll=" + ReadRoll + "; OrientationTolerance=" + OrientationToleranceDeg +
         " deg; opposition limit=" + ManualCounterCorrectionFraction;
@@ -1237,7 +1237,7 @@ void UpdateHome(double dt)
         double tolerance = g.Rotary ? 0.25 * Math.PI / 180 : 0.005;
         if (Math.Abs(error) > tolerance) complete = false;
         double lo, hi;
-        if (!Topology.Refresh(g, Topology.Head.GetPosition(), Topology.Base.WorldMatrix, out lo, out hi, out why))
+        if (!Topology.Refresh(g, Topology.EndPosition, Topology.Base.WorldMatrix, out lo, out hi, out why))
         { Fault("GoHome: " + why); return; }
         double cap = g.Rotary ? HomeJointRpm * Math.PI / 30 : HomePistonMps;
         double lower = Math.Max(lo, -cap), upper = Math.Min(hi, cap);

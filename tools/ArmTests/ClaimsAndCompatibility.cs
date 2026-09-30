@@ -82,13 +82,13 @@ internal static partial class Scenarios
     {
         var rig=Fixtures.Serial(out _,out _,out _,out _);var script=Start(type,rig);
         var ini=new MyIni();ini.TryParse(rig.PB.CustomData);
-        Check(ini.Get("AutoArm","Format").ToInt32()==4,"Generated config has no supported Format 4 tag.");
+        Check(ini.Get("AutoArm","Format").ToInt32()==5,"Generated config has no supported Format 5 tag.");
         Check(!ini.ContainsKey("AutoArm","Fingerprint"),"Fingerprint still stored in editable configuration.");
         Check(!rig.PB.CustomData.Contains("R01 = grid"),"Rigid-grid diagnostic was moved into another persistent INI key.");
         Check(((string)Get(Get(script,"Topology")!,"Report")!).Contains("R01 = grid"),"Rigid-grid IDs disappeared from diagnostics.");
         string current=rig.PB.CustomData,storage=((TestHost)script).Storage;
         var rejected=new List<(string Label,string Text)>();
-        foreach(string format in new[]{"1","2","3","5","99","bogus","0","-1","1.5","3.0","4.0",""})
+        foreach(string format in new[]{"1","2","3","4","6","99","bogus","0","-1","1.5","3.0","4.0","5.0",""})
         {
             var candidate=FCIni(current);candidate.Set("AutoArm","Format",format);rejected.Add(("format "+format,candidate.ToString()));
         }

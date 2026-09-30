@@ -50,25 +50,35 @@ class AutoTopology
     readonly HashSet<long> Watch = new HashSet<long>();
     public IMyMechanicalConnectionBlock Base;
     public IMyTerminalBlock Head;
+    public IMyCubeBlock End;
+    IMyCubeBlock EndOverride;
+    ToolTopInfo Focus;
+    public MatrixD EndPose
+    {
+        get { var pose = Focus == null ? End.WorldMatrix : Focus.WorldMatrix; pose.Translation = EndPosition; return pose; }
+    }
+    public Vector3D EndPosition => Focus == null ? End.GetPosition() : Focus.CubeGrid.GridIntegerToWorld(Focus.Position);
     IMyTerminalBlock EndpointOverride;
     string EndpointName = "";
     long ExcludedMechanical;
 
-    public void SetEndpointOverride(IMyTerminalBlock endpoint, long ignoredMechanical)
+    public void SetEndpointOverride(IMyTerminalBlock endpoint, long ignoredMechanical, IMyCubeBlock frame = null, ToolTopInfo focus = null)
     {
         EndpointOverride = endpoint; EndpointName = endpoint == null ? "" : endpoint.CustomName;
+        EndOverride = frame;
+        Focus = focus;
         ExcludedMechanical = ignoredMechanical; Ready = false;
     }
 
     bool HeadMark(IMyTerminalBlock b)
     {
         return EndpointOverride == null ? Mark(b.CustomName, "Head") :
-            b.CustomName.Equals(EndpointName, StringComparison.OrdinalIgnoreCase);
+            b.EntityId == EndpointOverride.EntityId && b.CustomName.Equals(EndpointName, StringComparison.OrdinalIgnoreCase);
     }
     public string Fingerprint = "", Report = "";
     public bool Ready;
     long Hull, Start;
-    long BaseId, HeadId, HeadGrid;
+    long BaseId, HeadId, HeadGrid, EndId, EndGrid;
     string Snapshot = "";
     int StableCount;
     int ScanBases, ScanHeads;
@@ -121,8 +131,11 @@ class AutoTopology
         if (!Attached(Base) || Kind(Base) == 0) return Bad("The Base marker must be an attached piston, rotor, or hinge.", out why);
         if (heads != 1) return Bad("Need exactly one terminal block named '" + Arm + " - Head*'; found " + heads + ".", out why);
         BaseId = Base.EntityId; HeadId = Head.EntityId; HeadGrid = Head.CubeGrid.EntityId;
+        End = EndOverride ?? Head;
+        if (End.Closed || End.CubeGrid == null) return Bad("Endpoint unavailable.", out why);
+        EndId = End.EntityId; EndGrid = End.CubeGrid.EntityId;
         Hull = Base.CubeGrid.EntityId; Start = Base.TopGrid.EntityId;
-        if (Hull == Start || Head.CubeGrid.EntityId == Hull) return Bad("Base top/Head must be beyond the hull.", out why);
+        if (Hull == Start || EndGrid == Hull) return Bad("Base top/Head must be beyond the hull.", out why);
         for (int i = 0; i < All.Count; i++)
         {
             if ((i & 63) == 0 && !Guard("mechanical edge inventory", out why)) return false;
@@ -137,11 +150,11 @@ class AutoTopology
         if (!Has(root, Base.EntityId)) return Bad("Base marker attachment changed while scanning.", out why);
         if (!AddGroup(root, out why)) return false;
         Corridor.Add(Start); Corridor.Add(Hull);
-        var dist = Distances(Head.CubeGrid.EntityId, out why); if (dist == null) return false;
+        var dist = Distances(EndGrid, out why); if (dist == null) return false;
         int d;
         if (!dist.TryGetValue(Start, out d)) return Bad("Head route returns through hull or is unreachable.", out why);
         long at = Start;
-        while (at != Head.CubeGrid.EntityId)
+        while (at != EndGrid)
         {
             if (!Guard("corridor recognition", out why)) return false;
             if (Groups.Count >= MaxGroups) return Bad("Active arm exceeds " + MaxGroups + " generalized groups.", out why);
@@ -316,7 +329,7 @@ class AutoTopology
             if (Kind(l.E.B) != kind) return Bad("Parallel stage mixes piston and rotary actuators.", out why);
             var m = new AutoMember { B = l.E.B, U = l.U, V = l.V, Sign = 1 };
             Vector3D lin, ang;
-            if (!Raw(m, Head.GetPosition(), out lin, out ang, out why)) return Bad(why, out why);
+            if (!Raw(m, EndPosition, out lin, out ang, out why)) return Bad(why, out why);
             if (i == 0) { baseL = lin; baseA = ang; }
             else
             {
@@ -483,6 +496,11 @@ class AutoTopology
             !Base.IsSameConstructAs(P.Me) || !Head.IsSameConstructAs(P.Me) || !Mark(Base.CustomName, "Base") || !HeadMark(Head))
         { why = "Base/Head marker disappeared or was renamed."; return Fail(why); }
         if (Head.CubeGrid == null || Head.CubeGrid.EntityId != HeadGrid) { why = "Head marker moved to another rigid grid; Rescan is required."; return Fail(why); }
+        var marker = Head as IMyMechanicalConnectionBlock;
+        if (End == null || End.Closed || End.EntityId != EndId || End.CubeGrid == null || End.CubeGrid.EntityId != EndGrid ||
+            Focus != null && (Focus.Closed || Focus.CubeGrid.EntityId != EndGrid || Focus.Marker.CubeGrid.EntityId != EndGrid) ||
+            Focus == null && End != Head && marker != null && (!Attached(marker) || marker.Top.EntityId != EndId))
+        { why = "Endpoint changed; Rescan is required."; return Fail(why); }
         for (int i = 0; i < Edges.Count; i++)
         {
             var e = Edges[i]; var b = e.B;

@@ -248,6 +248,39 @@ internal static class ScriptPack
         var tree = compilation.SyntaxTrees.Single();
         var model = compilation.GetSemanticModel(tree);
         var edits = new List<(int Start, int Length, string Text)>();
+        foreach (var type in tree.GetRoot().DescendantNodes().OfType<TypeDeclarationSyntax>())
+            for (int i = 1; i < type.Members.Count; i++)
+            {
+                var previous = type.Members[i - 1] as FieldDeclarationSyntax;
+                var current = type.Members[i] as FieldDeclarationSyntax;
+                if (previous == null || current == null || previous.SpanStart < Header.Length + boundary ||
+                    previous.AttributeLists.Count != 0 || current.AttributeLists.Count != 0 ||
+                    previous.Declaration.Type.ToString() != current.Declaration.Type.ToString() ||
+                    !previous.Modifiers.Select(t => t.Kind()).SequenceEqual(current.Modifiers.Select(t => t.Kind()))) continue;
+                // Adjacent declarations retain their metadata and initializer order.
+                // Their common modifier/type prefix only needs to be written once.
+                edits.Add((previous.SemicolonToken.SpanStart - Header.Length, 1, ","));
+                edits.Add((current.SpanStart - Header.Length, current.Declaration.Type.Span.End - current.SpanStart, ""));
+            }
+        foreach (var method in tree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>())
+        {
+            var body = method.Body;
+            if (body == null || body.SpanStart < Header.Length + boundary || body.Statements.Count != 1 ||
+                body.Statements[0] is not ReturnStatementSyntax { Expression: not null } statement) continue;
+            edits.Add((body.OpenBraceToken.SpanStart - Header.Length, 1, "=>"));
+            edits.Add((statement.ReturnKeyword.SpanStart - Header.Length, statement.ReturnKeyword.Span.Length, ""));
+            edits.Add((body.CloseBraceToken.SpanStart - Header.Length, 1, ""));
+        }
+        foreach (var qualified in tree.GetRoot().DescendantNodes().OfType<QualifiedNameSyntax>())
+        {
+            if (qualified.SpanStart < Header.Length + boundary || qualified.Parent is QualifiedNameSyntax) continue;
+            if (edits.Any(e => e.Start <= qualified.SpanStart - Header.Length && e.Start + e.Length >= qualified.Span.End - Header.Length)) continue;
+            var declared = model.GetTypeInfo(qualified).Type;
+            var shorter = qualified.Right.WithoutTrivia();
+            var inferred = model.GetSpeculativeTypeInfo(qualified.SpanStart, shorter, SpeculativeBindingOption.BindAsTypeOrNamespace).Type;
+            if (declared == null || !SymbolEqualityComparer.Default.Equals(declared, inferred)) continue;
+            edits.Add((qualified.SpanStart - Header.Length, qualified.Span.Length, shorter.ToString()));
+        }
         foreach (var array in tree.GetRoot().DescendantNodes().OfType<ArrayCreationExpressionSyntax>())
         {
             if (array.SpanStart < Header.Length + boundary || array.Initializer == null ||
@@ -257,6 +290,7 @@ internal static class ScriptPack
             var originalType = model.GetTypeInfo(array).Type;
             var inferredType = model.GetSpeculativeTypeInfo(array.SpanStart, inferredSyntax, SpeculativeBindingOption.BindAsExpression).Type;
             if (originalType == null || !SymbolEqualityComparer.Default.Equals(originalType, inferredType)) continue;
+            edits.RemoveAll(e => e.Start >= array.Type.SpanStart - Header.Length && e.Start + e.Length <= array.Type.Span.End - Header.Length);
             edits.Add((array.Type.SpanStart - Header.Length, array.Type.Span.Length, "[]"));
         }
         foreach (var declaration in tree.GetRoot().DescendantNodes().OfType<LocalDeclarationStatementSyntax>())
@@ -276,11 +310,13 @@ internal static class ScriptPack
             // null or lambda initializers. The original-source IL gate below also
             // rejects any unforeseen overload or emitted-local change.
             if (declared == null || !SymbolEqualityComparer.Default.Equals(declared, inferred)) continue;
+            edits.RemoveAll(e => e.Start >= variables.Type.SpanStart - Header.Length && e.Start + e.Length <= variables.Type.Span.End - Header.Length);
             edits.Add((variables.Type.SpanStart - Header.Length, variables.Type.Span.Length, "var"));
         }
         foreach (var token in tree.GetRoot().DescendantTokens().Where(t => t.IsKind(SyntaxKind.PrivateKeyword)))
         {
             if (token.SpanStart < Header.Length + boundary || token.Parent?.Parent is not ClassDeclarationSyntax) continue;
+            if (edits.Any(e => e.Start <= token.SpanStart - Header.Length && e.Start + e.Length >= token.Span.End - Header.Length)) continue;
             edits.Add((token.SpanStart - Header.Length, token.Span.Length, ""));
         }
         var result = new StringBuilder(source);

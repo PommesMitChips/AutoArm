@@ -1,34 +1,30 @@
-AutoArm 2.7 — Fresh headless pickup and declaration compression
+AutoArm 2.8 — Automatic bare endpoint discovery
 
-Tool couplers now use ROTOR bases on the tools and a rotor part on the arm.
-Arm joints still support pistons, rotors and hinges. Pickup preserves rotor
-lock state; Rotor Lock can keep the tool coupler static after mounting.
+Name the arm Base and configure the tools' markers, rotor bases and merges.
+An arm-side ToolMount name, reference camera and ArmTip offset are unnecessary.
+The script follows moving grids and finds a single loose rotor part, including
+one directly on the final hinge's moving head. That part is the bare-arm focus;
+a mounted tool uses its configured marker. Startup rescans without teaching or
+saved coupler geometry. Ordinary arm joints remain pistons, rotors and hinges.
 
-A fresh headless arm can start, move and pick up a parked tool without Storage
-or an initial attachment. Tools.ArmTip defines its pivot offset in metres
-Forward/Left/Up from the arm reference, plus optional forward/up axes relative
-to that reference. Default axes are Forward/Up. The rotor family follows the
-named tool base. Example: ArmTip=0 2.5 0 | Forward | Up, for a pivot one
-large-grid cell LEFT of an aligned reference. Adjust to the actual placement.
+Detection excludes known attached tops and refuses multiple parts, unsupported
+shapes or ambiguous mounting faces. Native pivot/axis alignment permits arbitrary
+rotor azimuth during first acquisition. The selected rotor's angle limits must
+be unlimited for that acquisition; Rotor Lock is temporarily released and restored
+only after verification. Actual part cell, family, finite axis, moving grid and
+reciprocal base precede the existing two-observation pose/support release gate.
+Interrupted lock intent is journaled and explicitly reconciled while supported.
 
-No unseen identity is invented or persisted. First pickup verifies the actual
-supported rotor part's cell, finite axes, arm grid and reciprocal base before
-adopting its ID/subtype. Existing two-observation live pose and proven-support
-gates remain required before disabling the selected tool merges. Unknown
-ownership, wrong cell/axes, non-rotor parts and malformed definitions refuse
-motion or support release. Saved arm-end metadata remains usable at restart.
+Custom Data uses Format 5. Incompatible formats are rejected: keep settings you
+want to re-enter, delete Custom Data and copy the current example or Reload.
+No migration is included. Instructions and boilerplate setup banners are removed.
+README is the setup/command guide. ToolNN.Mount still names each tool's rotor base.
 
-Custom Data remains Format 4. ArmTip is optional for an already attached or
-previously recorded arm. Wrong/missing formats still refuse without migration.
-
-The two GPT-6.1 Sol agents reduced declaration syntax and shared control/Home
-logic. The packer infers local/array types only when semantic types are equal,
-removes redundant private modifiers, and compares final IL to the original
-readable source. Control preserves arithmetic order, additive pilot input,
-manual-priority correction, gravity bias and native Home routes. Task-matrix
-formation shares a bounded-mode branch; actual instruction costs are unprofiled.
-
-AutoArm_Compact.txt has 99,846 UTF-16 characters, leaving 154 under 100,000.
-Longer ArmName values consume that margin. Full validation passes C#6 against
-installed SE APIs, exact compact-token reversal, identical method IL and
-177,201 simulated assertions. Live game physics remains unverified.
+Packing additionally fuses equivalent adjacent fields, unqualifies imported types
+and converts single-return methods, preserving original-source method IL.
+AutoArm_Compact.txt: 99,505 UTF-16 characters; 495 free under 100,000.
+Build passes C#6/installed SE API checks, exact token reversal, identical IL and
+177,705 simulated assertions. Cold automatic pickup tests cover no camera/name/
+offset, a final hinge, rotor quarter turns, signed multi-cell small-grid parts,
+unknown ownership, wrong observed parts, ambiguity, budgets, lock restart recovery,
+and existing control/Home/discovery. Live game physics remains unverified.

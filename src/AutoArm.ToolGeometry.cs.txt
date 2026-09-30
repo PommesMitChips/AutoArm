@@ -5,8 +5,7 @@ class ToolPortPair { public IMyShipMergeBlock Head, Stand; }
 // is relative to the fixed arm reference; every other tool has a visible base.
 class ToolTopInfo
 {
-    const string Section = "AutoArm Arm Tip";
-    public IMyTerminalBlock Marker;
+    public IMyCubeBlock Marker;
     public IMyMotorRotor Live;
     public long EntityId;
     public string Subtype;
@@ -26,49 +25,28 @@ class ToolTopInfo
             return null;
         }
     }
-    public static ToolTopInfo Capture(IMyTerminalBlock marker, IMyMotorRotor top, List<IMyTerminalBlock> inventory)
+    public static ToolTopInfo Capture(IMyCubeBlock marker, IMyMotorRotor top, List<IMyTerminalBlock> inventory)
     {
         var pose = top.WorldMatrix; pose.Translation = top.CubeGrid.GridIntegerToWorld(top.Position);
         return new ToolTopInfo { Marker = marker, Live = top, EntityId = top.EntityId, Subtype = top.BlockDefinition.SubtypeName, Local = pose * MatrixD.Invert(marker.WorldMatrix), Inventory = inventory };
     }
-    public static ToolTopInfo Load(Program p, IMyTerminalBlock marker, List<IMyTerminalBlock> inventory)
-    {
-        var ini = AutoConfig.Saved(p.Storage);
-        if (ini.Get(Section, "PB").ToInt64() != p.Me.EntityId || ini.Get(Section, "Arm").ToString() != ArmName) return null;
-        string text = ini.Get(Section, "E" + marker.EntityId).ToString(); if (text.Length == 0) return null;
-        var row = text.Split('|'); long id; var v = new double[9];
-        if (ini.Get(Section, "Format").ToInt32() != 1 || row.Length != 11 || !long.TryParse(row[0], out id) || id <= 0 || row[1].Length == 0) throw new Exception("Invalid coupler cache; clear AutoArm Arm Tip in Storage.");
-        for (int i = 0; i < 9; i++) if (!ReadDouble(row[i + 2], out v[i])) throw new Exception("Invalid coupler geometry.");
-        var forward = new Vector3D(v[3], v[4], v[5]); var up = new Vector3D(v[6], v[7], v[8]);
-        if (Math.Abs(forward.LengthSquared() - 1) > 1e-6 || Math.Abs(up.LengthSquared() - 1) > 1e-6 || Math.Abs(Vector3D.Dot(forward, up)) > 1e-6) throw new Exception("Invalid coupler axes.");
-        return new ToolTopInfo { Marker = marker, EntityId = id, Subtype = row[1], Local = MatrixD.CreateWorld(new Vector3D(v[0], v[1], v[2]), forward, up), Inventory = inventory };
-    }
-    public void Save(Program p)
-    {
-        if (EntityId == 0) return;
-        var ini = AutoConfig.Saved(p.Storage);
-        if (ini.Get(Section, "PB").ToInt64() != p.Me.EntityId || ini.Get(Section, "Arm").ToString() != ArmName) ini.DeleteSection(Section);
-        ini.Set(Section, "PB", p.Me.EntityId); ini.Set(Section, "Arm", ArmName); ini.Set(Section, "Format", 1);
-        var s = new System.Text.StringBuilder(EntityId + "|" + Subtype);
-        foreach (double n in new double[] { Local.Translation.X, Local.Translation.Y, Local.Translation.Z, Local.Forward.X, Local.Forward.Y, Local.Forward.Z, Local.Up.X, Local.Up.Y, Local.Up.Z }) s.Append('|').Append(AutoSettings.Number(n));
-        ini.Set(Section, "E" + Marker.EntityId, s.ToString()); p.Storage = ini.ToString();
-    }
 }
 class ToolRegionScan
 {
-    Program P; IMyTerminalBlock Marker; IMyCubeGrid Grid;
+    Program P; IMyCubeBlock Marker; IMyCubeGrid Grid;
     long GridId; int Limit; string Axis, Fault;
     Queue<Vector3I> Pending = new Queue<Vector3I>();
     public HashSet<Vector3I> Cells = new HashSet<Vector3I>();
+    public HashSet<Vector3I> Hidden = new HashSet<Vector3I>();
     public HashSet<long> Blocks = new HashSet<long>();
     public List<IMyShipMergeBlock> Merges = new List<IMyShipMergeBlock>();
-    static Vector3I[] Dirs = { Vector3I.UnitX, -Vector3I.UnitX, Vector3I.UnitY, -Vector3I.UnitY, Vector3I.UnitZ, -Vector3I.UnitZ };
-    public ToolRegionScan(Program p, IMyTerminalBlock marker, IMyMotorStator mount, int cellLimit, string mergeAxis)
+    public static Vector3I[] Dirs = { Vector3I.UnitX, -Vector3I.UnitX, Vector3I.UnitY, -Vector3I.UnitY, Vector3I.UnitZ, -Vector3I.UnitZ };
+    public ToolRegionScan(Program p, IMyCubeBlock marker, int cellLimit, string mergeAxis)
     {
         P = p; Marker = marker; Limit = Math.Min(4096, Math.Max(1, cellLimit)); Axis = mergeAxis;
-        if (marker == null || mount == null) { Fault = "Missing Head/Mount."; return; }
+        if (marker == null) { Fault = "Missing Head/Mount."; return; }
         Grid = marker.CubeGrid; GridId = Grid.EntityId;
-        if (Grid.GetCubeBlock(marker.Position) == null) { Fault = "Head cell missing."; return; }
+        if (!Grid.CubeExists(marker.Position)) { Fault = "Head cell missing."; return; }
         Cells.Add(marker.Position); Pending.Enqueue(marker.Position);
     }
     public bool Step(out bool done, out string why)
@@ -81,6 +59,7 @@ class ToolRegionScan
             if (P.Runtime.MaxInstructionCount > 0 && P.Runtime.CurrentInstructionCount >= P.Runtime.MaxInstructionCount * .5) return true;
             Vector3I cell = Pending.Dequeue(); var slim = Grid.GetCubeBlock(cell);
             if (slim == null && !Grid.CubeExists(cell)) return ToolGeometry.Fail(out why, Fault = "Head cells changed; retry.");
+            if (slim == null) Hidden.Add(cell);
             var fat = slim == null ? null : slim.FatBlock;
             if (fat != null && Blocks.Add(fat.EntityId))
             {
@@ -115,27 +94,41 @@ static class ToolGeometry
     static string[] Bases = { "LargeStator", "SmallStator", "LargeAdvancedStator", "SmallAdvancedStator", "SmallAdvancedStatorSmall" };
     static string[] Heads = { "LargeRotor", "SmallRotor", "LargeAdvancedRotor", "SmallAdvancedRotor", "SmallAdvancedRotorSmall" };
     public static bool Rotor(IMyCubeBlock b) => Array.IndexOf(b is IMyMotorRotor ? Heads : Bases, b.BlockDefinition.SubtypeName) >= 0;
-    public static ToolTopInfo DeclaredTip(Program p, IMyTerminalBlock marker, IMyMotorStator coupler, List<IMyTerminalBlock> inventory)
+    public static ToolTopInfo FindTip(IMyCubeBlock marker, HashSet<Vector3I> hidden, List<IMyTerminalBlock> inventory)
     {
-        var ini = AutoConfig.Saved(p.Me.CustomData);
-        var row = ini.Get(ToolsSection, "ArmTip").ToString().Split('|');
-        string type = Heads[Array.IndexOf(Bases, coupler.BlockDefinition.SubtypeName)];
-        if (row[0].Trim().Length == 0) return null;
-        if (row.Length > 3) throw new Exception("ArmTip: offset | forward | up.");
-        var values = row[0].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-        if (values.Length != 3) throw new Exception("Invalid ArmTip offset.");
-        Vector3D position = marker.GetPosition() + marker.WorldMatrix.Forward * p.Parse(values[0]) + marker.WorldMatrix.Left * p.Parse(values[1]) + marker.WorldMatrix.Up * p.Parse(values[2]);
-        Vector3D forward = TipAxis(row.Length > 1 ? row[1] : "Forward", marker.WorldMatrix), up = TipAxis(row.Length > 2 ? row[2] : "Up", marker.WorldMatrix);
-        if (!Finite(position) || !Orthonormalise(ref forward, ref up)) throw new Exception("Invalid tip frame.");
-        var cell = marker.CubeGrid.WorldToGridInteger(position);
-        if (!marker.CubeGrid.CubeExists(cell) || marker.CubeGrid.GetCubeBlock(cell) != null || Vector3D.DistanceSquared(position, marker.CubeGrid.GridIntegerToWorld(cell)) > 1e-8) throw new Exception("ArmTip offset must locate the hidden top cell.");
-        return new ToolTopInfo { Marker = marker, Subtype = type, Local = MatrixD.CreateWorld(position, forward, up) * MatrixD.Invert(marker.WorldMatrix), Inventory = inventory };
-    }
-    static Vector3D TipAxis(string text, MatrixD frame)
-    {
-        int index = Array.IndexOf(Axes, text.Trim().ToLowerInvariant());
-        if (index < 0) throw new Exception("Invalid tip axis.");
-        return Vector3D.TransformNormal(Normals[index], frame);
+        var grid = marker.CubeGrid;
+        if (!Budget()) throw new Exception(GeometryBudgetMessage);
+        foreach (var b in inventory)
+        {
+            if (!Budget()) throw new Exception(GeometryBudgetMessage);
+            var m = b as IMyMechanicalConnectionBlock;
+            var top = m == null ? null : m.Top;
+            if (top != null && top.CubeGrid.EntityId == grid.EntityId)
+                hidden.RemoveWhere(c => c.X >= top.Min.X && c.X <= top.Max.X && c.Y >= top.Min.Y && c.Y <= top.Max.Y && c.Z >= top.Min.Z && c.Z <= top.Max.Z);
+        }
+        if (hidden.Count == 0) return null;
+        if (hidden.Count != 1 && hidden.Count != 18) throw new Exception("Need one loose rotor part on the end grid.");
+        Vector3I min = new Vector3I(int.MaxValue), max = new Vector3I(int.MinValue);
+        foreach (var c in hidden) { min = Vector3I.Min(min, c); max = Vector3I.Max(max, c); }
+        var size = max - min + Vector3I.One;
+        if (size.X * size.Y * size.Z != hidden.Count || hidden.Count == 18 && size.X + size.Y + size.Z != 8) throw new Exception("Ambiguous loose part shape.");
+        Vector3I up = Vector3I.Zero; int faces = 0;
+        foreach (var d in ToolRegionScan.Dirs)
+        {
+            if (hidden.Count == 18 && (d.X != 0 ? size.X : d.Y != 0 ? size.Y : size.Z) != 2) continue;
+            bool joined = false;
+            foreach (var c in hidden) if (!hidden.Contains(c + d) && grid.CubeExists(c + d)) joined = true;
+            if (joined) { up = d; faces++; }
+        }
+        if (faces != 1) throw new Exception("Loose rotor mounting face is ambiguous.");
+        var pivot = min + (size - Vector3I.One) / 2;
+        if (hidden.Count == 18) pivot -= new Vector3I(Math.Min(0, up.X), Math.Min(0, up.Y), Math.Min(0, up.Z));
+        Vector3D axis = Vector3D.TransformNormal((Vector3D)up, grid.WorldMatrix), forward = marker.WorldMatrix.Forward;
+        forward -= axis * Vector3D.Dot(forward, axis);
+        if (forward.LengthSquared() < .1) forward = marker.WorldMatrix.Up;
+        if (!Orthonormalise(ref forward, ref axis)) throw new Exception("Invalid rotor mounting frame.");
+        string type = hidden.Count == 18 ? "SmallAdvancedRotor" : grid.GridSizeEnum == MyCubeSize.Large ? "LargeRotor" : "SmallRotor";
+        return new ToolTopInfo { Marker = marker, Subtype = type, Local = MatrixD.CreateWorld(grid.GridIntegerToWorld(pivot), forward, axis) * MatrixD.Invert(marker.WorldMatrix), Inventory = inventory };
     }
     static Vector3D[] Dummies = { new Vector3D(1.033530949712258e-7, .4208642244338989, 1.3662192088759184e-7), new Vector3D(2.17650750755638e-7, .036039892584085464, 3.7548051068370114e-7), new Vector3D(1.033530949712258e-7, .19979000091552734, 1.2796517978586053e-7), Vector3D.Zero, new Vector3D(2.553320221920785e-8, .047984808683395386, 5.927423671892029e-7) };
     class Face
@@ -226,7 +219,6 @@ static class ToolGeometry
         if (other == null || !PairLocked(new ToolPortPair { Head = a, Stand = other }, axis)) return false;
         partner = other; return true;
     }
-    public static bool TryDockPose(IMyTerminalBlock marker, List<IMyShipMergeBlock> own, List<IMyShipMergeBlock> rack, string axis, double clearance, out MatrixD pose, out List<ToolPortPair> pairs, out string why) => TryDockPoseAt(marker, own, rack, axis, clearance, 0, out pose, out pairs, out why);
     public static bool TryDockPoseAt(IMyTerminalBlock marker, List<IMyShipMergeBlock> own, List<IMyShipMergeBlock> rack, string axis, double clearance, long primaryStandID, out MatrixD pose, out List<ToolPortPair> pairs, out string why)
     {
         pose = MatrixD.Identity; pairs = null; why = null;
@@ -274,13 +266,20 @@ static class ToolGeometry
         if (pairs == null) return Fail(out why, "No unique merge layout; check ports/mergeAxis.");
         return true;
     }
-    public static bool TryTopPose(IMyMotorStator mount, ToolTopInfo top, out MatrixD pose, out string why)
+    public static bool TryTopPose(IMyMotorStator mount, ToolTopInfo top, out MatrixD pose, out string why, bool axial = false)
     {
         pose = MatrixD.Identity; MatrixD desiredBase;
         if (!TryAttachPose(mount, top, out desiredBase, out why)) return false;
         var delta = MatrixD.Invert(desiredBase) * mount.WorldMatrix;
         var desiredTop = top.WorldMatrix * delta;
         desiredTop.Translation = Vector3D.Transform(top.CubeGrid.GridIntegerToWorld(top.Position), delta);
+        if (axial)
+        {
+            Vector3D a = top.WorldMatrix.Up, b = mount.WorldMatrix.Up;
+            var cross = Vector3D.Cross(a, b);
+            var rotation = cross.LengthSquared() > 1e-20 ? Unit(cross) * Math.Acos(Clamp(Vector3D.Dot(a, b), -1, 1)) : Vector3D.Dot(a, b) > 0 ? Vector3D.Zero : top.WorldMatrix.Forward * Math.PI;
+            desiredTop = MatrixD.CreateWorld(desiredTop.Translation, Rotate(top.WorldMatrix.Forward, rotation), b);
+        }
         pose = MatrixD.Invert(top.Local) * desiredTop;
         if (!Finite(pose.Translation) || !Finite(pose.Up) || !Finite(pose.Forward)) return Fail(out why, "Bad arm coupling frame.");
         return true;
