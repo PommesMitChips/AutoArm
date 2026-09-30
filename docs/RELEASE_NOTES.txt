@@ -1,49 +1,34 @@
-AutoArm 2.6 — Tool-side couplers and shared pose targets
+AutoArm 2.7 — Fresh headless pickup and declaration compression
 
-DELIVERY
-Paste AutoArm_Compact.txt into the Space Engineers programmable block.
-Only ArmName needs editing in code. The compact script is 99,238 UTF-16 characters; 762 remain under 100,000. Source fragments remain readable;
-the build generates compact C#6 with single-character Unicode identifiers.
+Tool couplers now use ROTOR bases on the tools and a rotor part on the arm.
+Arm joints still support pistons, rotors and hinges. Pickup preserves rotor
+lock state; Rotor Lock can keep the tool coupler static after mounting.
 
-CONFIGURATION
-Custom Data requires Format=4. Wrong, missing or invalid formats are rejected;
-save settings you wish to retain, delete Custom Data and run Reload.
-No config migration is included. Saved Home still needs a matching fingerprint.
+A fresh headless arm can start, move and pick up a parked tool without Storage
+or an initial attachment. Tools.ArmTip defines its pivot offset in metres
+Forward/Left/Up from the arm reference, plus optional forward/up axes relative
+to that reference. Default axes are Forward/Up. The rotor family follows the
+named tool base. Example: ArmTip=0 2.5 0 | Forward | Up, for a pivot one
+large-grid cell LEFT of an aligned reference. Adjust to the actual placement.
 
-TOOL LAYOUT
-The compatible unnamed rotor/hinge TOP stays on the arm.
-Each tool carries a named rotor/hinge BASE, marker and optional head merges.
-[Tools] Mount names a fixed terminal reference on the arm-tip grid.
-[ToolNN] Mount names the base on that tool. Heads lists exact markers.
-Start a fresh installation with any compatible tool attached. Its real Top
-establishes the single arm-tip identity/geometry automatically. Every other
-named parked tool can then be selected immediately; no per-tool teaching or
-manual setup mount is required. The arm-tip record persists across a headless
-restart of the same PB. A new PB or changed arm tip/reference needs setup
-with one attached tool.
+No unseen identity is invented or persisted. First pickup verifies the actual
+supported rotor part's cell, finite axes, arm grid and reciprocal base before
+adopting its ID/subtype. Existing two-observation live pose and proven-support
+gates remain required before disabling the selected tool merges. Unknown
+ownership, wrong cell/axes, non-rotor parts and malformed definitions refuse
+motion or support release. Saved arm-end metadata remains usable at restart.
 
-Parking verifies all selected merges before the source TOOL BASE detaches.
-Pickup computes the arm-reference goal from the incoming visible BASE pose,
-retained angle, subtype and displacement, then requests Attach on that base.
-Exact arm-top identity, reciprocal owner, grid and two aligned observations
-are required before disabling only the selected tool's head merges. Actual
-split precedes topology rebuilding. Interrupted swaps stay OFF and preserve
-support; explicit ToolScan reconciles recovery. Failed pending requests are
-cancelled only when a base is observed bare, then bare state must persist.
-Unsupported/corrupt layouts and unexpected ownership refuse motion.
+Custom Data remains Format 4. ArmTip is optional for an already attached or
+previously recorded arm. Wrong/missing formats still refuse without migration.
 
-MOVEMENT REUSE
-MoveTo x y z sets absolute Base Forward/Left/Up position in metres.
-OrientTo fx fy fz ux uy uz sets normalized forward/up directions in that frame.
-MoveToPosOri accepts both (nine values). On is required; normal live pilot
-input remains additive. Invalid arity, non-finite and degenerate directions
-are rejected before any target assignment. The common target setter is also
-used by Face, Step and tool pose motion; tool-only guards/caps are retained.
-Enable and Hold share observation/bias reset. GoHome keeps native joint-space
-routes, limits and exact saved configuration instead of Cartesian IK.
+The two GPT-6.1 Sol agents reduced declaration syntax and shared control/Home
+logic. The packer infers local/array types only when semantic types are equal,
+removes redundant private modifiers, and compares final IL to the original
+readable source. Control preserves arithmetic order, additive pilot input,
+manual-priority correction, gravity bias and native Home routes. Task-matrix
+formation shares a bounded-mode branch; actual instruction costs are unprofiled.
 
-VERIFICATION
-Build checks C#6 against installed game interfaces, exact compact-token
-reversal and identical method IL. Simulated regression tests cover control,
-discovery, configuration, gravity bias, views, pose commands and tool state
-transitions (176,822 assertions pass). Live game physics and actual instruction costs remain unverified.
+AutoArm_Compact.txt has 99,846 UTF-16 characters, leaving 154 under 100,000.
+Longer ArmName values consume that margin. Full validation passes C#6 against
+installed SE APIs, exact compact-token reversal, identical method IL and
+177,201 simulated assertions. Live game physics remains unverified.

@@ -1,0 +1,5058 @@
+[
+  {
+    "symbol": "Program.Topology",
+    "name": "C"
+  },
+  {
+    "symbol": "Program.AutoTopology.Groups",
+    "name": "D"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.Coupler",
+    "name": "H"
+  },
+  {
+    "symbol": "Program.Finite(double)",
+    "name": "I"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Destination",
+    "name": "L"
+  },
+  {
+    "symbol": "Program.ToolsSection",
+    "name": "N"
+  },
+  {
+    "symbol": "Program.ConfigSection",
+    "name": "O"
+  },
+  {
+    "symbol": "Program.AutoMember",
+    "name": "S"
+  },
+  {
+    "symbol": "Program.ToolPortPair",
+    "name": "W"
+  },
+  {
+    "symbol": "Program.ToolGeometry",
+    "name": "\u0100"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profiles",
+    "name": "\u0101"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile",
+    "name": "\u0102"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Source",
+    "name": "\u0103"
+  },
+  {
+    "symbol": "Program.AutoGroup",
+    "name": "\u0104"
+  },
+  {
+    "symbol": "Program.Tools",
+    "name": "\u0105"
+  },
+  {
+    "symbol": "Program.StopMotion(string)",
+    "name": "\u0106"
+  },
+  {
+    "symbol": "Program.LastSolverBudgetLimited",
+    "name": "\u0107"
+  },
+  {
+    "symbol": "Program.ConfigValid",
+    "name": "\u0108"
+  },
+  {
+    "symbol": "Program.ToolDriving",
+    "name": "\u0109"
+  },
+  {
+    "symbol": "Program.BoundState",
+    "name": "\u010A"
+  },
+  {
+    "symbol": "Program.LastOrientationErrorDeg",
+    "name": "\u010B"
+  },
+  {
+    "symbol": "Program.AutoEdge",
+    "name": "\u010C"
+  },
+  {
+    "symbol": "Program.Status",
+    "name": "\u010D"
+  },
+  {
+    "symbol": "Program.ControlElapsed",
+    "name": "\u010E"
+  },
+  {
+    "symbol": "Program.InputController",
+    "name": "\u010F"
+  },
+  {
+    "symbol": "Program.AutoSettings",
+    "name": "\u0110"
+  },
+  {
+    "symbol": "Program.LastPilotAngular",
+    "name": "\u0111"
+  },
+  {
+    "symbol": "Program.ApproachDockPhase",
+    "name": "\u0112"
+  },
+  {
+    "symbol": "Program.ThreeDecimals",
+    "name": "\u0113"
+  },
+  {
+    "symbol": "Program.LastPilotLinear",
+    "name": "\u0114"
+  },
+  {
+    "symbol": "Program.AutoConfig",
+    "name": "\u0115"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Phase",
+    "name": "\u0116"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Cancel(string)",
+    "name": "\u0117"
+  },
+  {
+    "symbol": "Program.LastSolverConverged",
+    "name": "\u0118"
+  },
+  {
+    "symbol": "Program.LastFeedbackLinear",
+    "name": "\u0119"
+  },
+  {
+    "symbol": "Program.ApproachTopPhase",
+    "name": "\u011A"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.SafetyMerges",
+    "name": "\u011B"
+  },
+  {
+    "symbol": "Program.AutoTopology.Fingerprint",
+    "name": "\u011C"
+  },
+  {
+    "symbol": "Program.LastLinearAdvance",
+    "name": "\u011D"
+  },
+  {
+    "symbol": "Program.LastFeedbackAngular",
+    "name": "\u011E"
+  },
+  {
+    "symbol": "Program.HomeFingerprint",
+    "name": "\u011F"
+  },
+  {
+    "symbol": "Program.JointAccelerationRpmPerSec",
+    "name": "\u0120"
+  },
+  {
+    "symbol": "Program.RetreatPhase",
+    "name": "\u0121"
+  },
+  {
+    "symbol": "Program.GeometryBudgetMessage",
+    "name": "\u0122"
+  },
+  {
+    "symbol": "Program.ManualCounterCorrectionFraction",
+    "name": "\u0123"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Mount",
+    "name": "\u0124"
+  },
+  {
+    "symbol": "Program.Orthonormalise(ref VRageMath.Vector3D, ref VRageMath.Vector3D)",
+    "name": "\u0125"
+  },
+  {
+    "symbol": "Program.ToolGeometry.MergeDirection(SpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock, string, out VRageMath.Vector3I, out string)",
+    "name": "\u0126"
+  },
+  {
+    "symbol": "Program.Say(string)",
+    "name": "\u0127"
+  },
+  {
+    "symbol": "Program.AutoGroup.Rotary",
+    "name": "\u0128"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.Marker",
+    "name": "\u0129"
+  },
+  {
+    "symbol": "Program.StatusRefreshSeconds",
+    "name": "\u012A"
+  },
+  {
+    "symbol": "Program.LastPositionError",
+    "name": "\u012B"
+  },
+  {
+    "symbol": "Program.AimingTarget",
+    "name": "\u012C"
+  },
+  {
+    "symbol": "Program.MovementMode",
+    "name": "\u012D"
+  },
+  {
+    "symbol": "Program.OrientationToleranceDeg",
+    "name": "\u012E"
+  },
+  {
+    "symbol": "Program.ToolTopInfo",
+    "name": "\u012F"
+  },
+  {
+    "symbol": "Program.AlignTopPhase",
+    "name": "\u0130"
+  },
+  {
+    "symbol": "Program.Enabled",
+    "name": "\u0131"
+  },
+  {
+    "symbol": "Program.LastCounterCorrectionLimited",
+    "name": "\u0132"
+  },
+  {
+    "symbol": "Program.DisplayPinned",
+    "name": "\u0133"
+  },
+  {
+    "symbol": "Program.AutoLink",
+    "name": "\u0134"
+  },
+  {
+    "symbol": "Program.PistonAccelerationMps2",
+    "name": "\u0135"
+  },
+  {
+    "symbol": "Program.LastSolverPasses",
+    "name": "\u0136"
+  },
+  {
+    "symbol": "Program.AutoTopology.Edges",
+    "name": "\u0137"
+  },
+  {
+    "symbol": "Program.OrientationCorrectionCapDeg",
+    "name": "\u0138"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Supported",
+    "name": "\u0139"
+  },
+  {
+    "symbol": "Program.LastAngularAdvance",
+    "name": "\u013A"
+  },
+  {
+    "symbol": "Program.ToolWeights",
+    "name": "\u013B"
+  },
+  {
+    "symbol": "Program.AutoTopology",
+    "name": "\u013C"
+  },
+  {
+    "symbol": "Program.ToolSwapController.EnabledTools",
+    "name": "\u013D"
+  },
+  {
+    "symbol": "Program.LastQdot",
+    "name": "\u013E"
+  },
+  {
+    "symbol": "Program.GoingHome",
+    "name": "\u013F"
+  },
+  {
+    "symbol": "Program.SwapBatchLock",
+    "name": "\u0140"
+  },
+  {
+    "symbol": "Program.StatusElapsed",
+    "name": "\u0141"
+  },
+  {
+    "symbol": "Program.Fault(string)",
+    "name": "\u0142"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Mounted(Program.ToolSwapController.Profile)",
+    "name": "\u0143"
+  },
+  {
+    "symbol": "Program.LastRequestedAngular",
+    "name": "\u0144"
+  },
+  {
+    "symbol": "Program.LastUnconstrainedAngular",
+    "name": "\u0145"
+  },
+  {
+    "symbol": "Program.InFrame(VRageMath.Vector3D, VRageMath.MatrixD)",
+    "name": "\u0146"
+  },
+  {
+    "symbol": "Program.EnabledKey",
+    "name": "\u0147"
+  },
+  {
+    "symbol": "Program.DisplayText",
+    "name": "\u0148"
+  },
+  {
+    "symbol": "Program.LastRequestedLinear",
+    "name": "\u0149"
+  },
+  {
+    "symbol": "Program.LastAchievedAngular",
+    "name": "\u014A"
+  },
+  {
+    "symbol": "Program.LastActiveBounds",
+    "name": "\u014B"
+  },
+  {
+    "symbol": "Program.RebuildToolTopology(out string)",
+    "name": "\u014C"
+  },
+  {
+    "symbol": "Program.AutoTopology.Inventory",
+    "name": "\u014D"
+  },
+  {
+    "symbol": "Program.AutoTopology.ZeroOwned()",
+    "name": "\u014E"
+  },
+  {
+    "symbol": "Program.SetupElapsed",
+    "name": "\u014F"
+  },
+  {
+    "symbol": "Program.LastUnconstrainedLinear",
+    "name": "\u0150"
+  },
+  {
+    "symbol": "Program.LastAchievedLinear",
+    "name": "\u0151"
+  },
+  {
+    "symbol": "Program.AutoTopology.Corridor",
+    "name": "\u0152"
+  },
+  {
+    "symbol": "Program.AutoTopology.Head",
+    "name": "\u0153"
+  },
+  {
+    "symbol": "Program.AutoTopology.BudgetAvailable()",
+    "name": "\u0154"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Fail(out string, string)",
+    "name": "\u0155"
+  },
+  {
+    "symbol": "Program.ArmSection",
+    "name": "\u0156"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.MarkerName",
+    "name": "\u0157"
+  },
+  {
+    "symbol": "Program.SwapSection",
+    "name": "\u0158"
+  },
+  {
+    "symbol": "Program.PositionCorrectionCap",
+    "name": "\u0159"
+  },
+  {
+    "symbol": "Program.ClampLength(VRageMath.Vector3D, double)",
+    "name": "\u015A"
+  },
+  {
+    "symbol": "Program.AutoTopology.Base",
+    "name": "\u015B"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Pairs",
+    "name": "\u015C"
+  },
+  {
+    "symbol": "Program.ObservationValid",
+    "name": "\u015D"
+  },
+  {
+    "symbol": "Program.AutoTopology.MaxMembers",
+    "name": "\u015E"
+  },
+  {
+    "symbol": "Program.OrientationIntegralCapDeg",
+    "name": "\u015F"
+  },
+  {
+    "symbol": "Program.PivotProbe",
+    "name": "\u0160"
+  },
+  {
+    "symbol": "Program.FindInputController(bool)",
+    "name": "\u0161"
+  },
+  {
+    "symbol": "Program.SetPoseTarget(VRageMath.Vector3D, VRageMath.Vector3D, VRageMath.Vector3D, int)",
+    "name": "\u0162"
+  },
+  {
+    "symbol": "Program.ToolPortPair.Stand",
+    "name": "\u0163"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Section",
+    "name": "\u0164"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Inventory",
+    "name": "\u0165"
+  },
+  {
+    "symbol": "Program.AutoTopology.StableCount",
+    "name": "\u0166"
+  },
+  {
+    "symbol": "Program.AutoTopology.Validate(out string, bool)",
+    "name": "\u0167"
+  },
+  {
+    "symbol": "Program.MovementModeKey",
+    "name": "\u0168"
+  },
+  {
+    "symbol": "Program.AutoConfig.Identity",
+    "name": "\u0169"
+  },
+  {
+    "symbol": "Program.AutoConfig.ReadCurrent(string, out VRage.Game.ModAPI.Ingame.Utilities.MyIni, out string)",
+    "name": "\u016A"
+  },
+  {
+    "symbol": "Program.HomeSection",
+    "name": "\u016B"
+  },
+  {
+    "symbol": "Program.Finite(VRageMath.Vector3D)",
+    "name": "\u016C"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.CouplerName",
+    "name": "\u016D"
+  },
+  {
+    "symbol": "Program.AutoTopology.ExcludedMechanical",
+    "name": "\u016E"
+  },
+  {
+    "symbol": "Program.AutoTopology.Ready",
+    "name": "\u016F"
+  },
+  {
+    "symbol": "Program.ToolWeightsSection",
+    "name": "\u0170"
+  },
+  {
+    "symbol": "Program.ToolSwapController",
+    "name": "\u0171"
+  },
+  {
+    "symbol": "Program.SettleToolTopology(out string)",
+    "name": "\u0172"
+  },
+  {
+    "symbol": "Program.AutoTopology.SnapshotRows",
+    "name": "\u0173"
+  },
+  {
+    "symbol": "Program.OrientationToleranceKey",
+    "name": "\u0174"
+  },
+  {
+    "symbol": "Program.MaximumPilotTargetLeadM",
+    "name": "\u0175"
+  },
+  {
+    "symbol": "Program.ReadKeyboard",
+    "name": "\u0176"
+  },
+  {
+    "symbol": "Program.DisplayWritten",
+    "name": "\u0177"
+  },
+  {
+    "symbol": "Program.AutoTopology.Bad(string, out string)",
+    "name": "\u0178"
+  },
+  {
+    "symbol": "Program.AutoTopology.Guard(string, out string)",
+    "name": "\u0179"
+  },
+  {
+    "symbol": "Program.PendingOn",
+    "name": "\u017A"
+  },
+  {
+    "symbol": "Program.LastFault",
+    "name": "\u017B"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Connected(System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E)",
+    "name": "\u017C"
+  },
+  {
+    "symbol": "Program.ReadDouble(string, out double)",
+    "name": "\u017D"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Recovery",
+    "name": "\u017E"
+  },
+  {
+    "symbol": "Program.AutoTopology.SnapshotFromInventory(out string, out string)",
+    "name": "\u017F"
+  },
+  {
+    "symbol": "Program.IntegralUnwindSeconds",
+    "name": "\u0180"
+  },
+  {
+    "symbol": "Program.OrientationTaskWeight",
+    "name": "\u0181"
+  },
+  {
+    "symbol": "Program.MouseSensitivity",
+    "name": "\u0182"
+  },
+  {
+    "symbol": "Program.StepDeg",
+    "name": "\u0183"
+  },
+  {
+    "symbol": "Program.TargetF",
+    "name": "\u0184"
+  },
+  {
+    "symbol": "Program.EnableControl()",
+    "name": "\u0185"
+  },
+  {
+    "symbol": "Program.ToolSwapController.AllowManual(out string)",
+    "name": "\u0186"
+  },
+  {
+    "symbol": "Program.BlendManualCorrection(VRageMath.Vector3D, VRageMath.Vector3D, double, out bool)",
+    "name": "\u0187"
+  },
+  {
+    "symbol": "Program.Clamp(double, double, double)",
+    "name": "\u0188"
+  },
+  {
+    "symbol": "Program.Number(string[], int, double, double, string)",
+    "name": "\u0189"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.WorldMatrix",
+    "name": "\u018A"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Tip",
+    "name": "\u018B"
+  },
+  {
+    "symbol": "Program.ToolSwapController.PassiveScan",
+    "name": "\u018C"
+  },
+  {
+    "symbol": "Program.ToolSwapController.TopApproach",
+    "name": "\u018D"
+  },
+  {
+    "symbol": "Program.ToolSwapController.RetreatAnchor",
+    "name": "\u018E"
+  },
+  {
+    "symbol": "Program.ToolSwapController.ParkedPairs",
+    "name": "\u018F"
+  },
+  {
+    "symbol": "Program.AutoTopology.Position(Program.AutoMember)",
+    "name": "\u0190"
+  },
+  {
+    "symbol": "Program.ReadMouse",
+    "name": "\u0191"
+  },
+  {
+    "symbol": "Program.FilteredV",
+    "name": "\u0192"
+  },
+  {
+    "symbol": "Program.FilteredW",
+    "name": "\u0193"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Local",
+    "name": "\u0194"
+  },
+  {
+    "symbol": "Program.AutoTopology.MaxInventory",
+    "name": "\u0195"
+  },
+  {
+    "symbol": "Program.AutoTopology.SnapshotText",
+    "name": "\u0196"
+  },
+  {
+    "symbol": "Program.OrientationI",
+    "name": "\u0197"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Face.Normal",
+    "name": "\u0198"
+  },
+  {
+    "symbol": "Program.ToolSwapController.UpstreamTops",
+    "name": "\u0199"
+  },
+  {
+    "symbol": "Program.ToolSwapController.AttachAnchor",
+    "name": "\u019A"
+  },
+  {
+    "symbol": "Program.AutoTopology.SetEndpointOverride(Sandbox.ModAPI.Ingame.IMyTerminalBlock, long)",
+    "name": "\u019B"
+  },
+  {
+    "symbol": "Program.RememberToolWeights(bool)",
+    "name": "\u019C"
+  },
+  {
+    "symbol": "Program.PositionIntegralCap",
+    "name": "\u019D"
+  },
+  {
+    "symbol": "Program.TargetU",
+    "name": "\u019E"
+  },
+  {
+    "symbol": "Program.IntegralGrowthScale(VRageMath.Vector3D, VRageMath.Vector3D, VRageMath.Vector3D)",
+    "name": "\u019F"
+  },
+  {
+    "symbol": "Program.AutoConfig.LoadOrGenerate(Program, Program.AutoTopology, string, out string, out bool, out string, bool)",
+    "name": "\u01A0"
+  },
+  {
+    "symbol": "Program.PivotProbeTool",
+    "name": "\u01A1"
+  },
+  {
+    "symbol": "Program.ControllerAxes(Sandbox.ModAPI.Ingame.IMyShipController, out VRageMath.Vector3D, out VRageMath.Vector3D, out VRageMath.Vector3D)",
+    "name": "\u01A2"
+  },
+  {
+    "symbol": "Program.ToolRegionScan",
+    "name": "\u01A3"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.Heads",
+    "name": "\u01A4"
+  },
+  {
+    "symbol": "Program.AutoMember.Sign",
+    "name": "\u01A5"
+  },
+  {
+    "symbol": "Program.PositionTaskWeight",
+    "name": "\u01A6"
+  },
+  {
+    "symbol": "Program.AutoTopology.Report",
+    "name": "\u01A7"
+  },
+  {
+    "symbol": "Program.KeyboardKey",
+    "name": "\u01A8"
+  },
+  {
+    "symbol": "Program.TargetValid",
+    "name": "\u01A9"
+  },
+  {
+    "symbol": "Program.HoldCurrent()",
+    "name": "\u01AA"
+  },
+  {
+    "symbol": "Program.ToolSwapController.PhaseBudget",
+    "name": "\u01AB"
+  },
+  {
+    "symbol": "Program.AutoTopology.Attached(Sandbox.ModAPI.Ingame.IMyMechanicalConnectionBlock)",
+    "name": "\u01AC"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.EntityId",
+    "name": "\u01AD"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.CubeGrid",
+    "name": "\u01AE"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Upstream",
+    "name": "\u01AF"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Clearing",
+    "name": "\u01B0"
+  },
+  {
+    "symbol": "Program.ToolSwapController.ParkOnly",
+    "name": "\u01B1"
+  },
+  {
+    "symbol": "Program.AutoTopology.Fail(string)",
+    "name": "\u01B2"
+  },
+  {
+    "symbol": "Program.OrientationKi",
+    "name": "\u01B3"
+  },
+  {
+    "symbol": "Program.PositionDeadbandM",
+    "name": "\u01B4"
+  },
+  {
+    "symbol": "Program.ToolWeightsLoaded",
+    "name": "\u01B5"
+  },
+  {
+    "symbol": "Program.HomePistonMps",
+    "name": "\u01B6"
+  },
+  {
+    "symbol": "Program.InputScan",
+    "name": "\u01B7"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Clearance",
+    "name": "\u01B8"
+  },
+  {
+    "symbol": "Program.ToolSwapController.ScanIndex",
+    "name": "\u01B9"
+  },
+  {
+    "symbol": "Program.ToolSwapController.ParkIndex",
+    "name": "\u01BA"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Journal(string)",
+    "name": "\u01BB"
+  },
+  {
+    "symbol": "Program.ToolSwapController.AllLocked()",
+    "name": "\u01BC"
+  },
+  {
+    "symbol": "Program.AutoTopology.EndpointOverride",
+    "name": "\u01BD"
+  },
+  {
+    "symbol": "Program.AutoTopology.OwnedCount()",
+    "name": "\u01BE"
+  },
+  {
+    "symbol": "Program.AutoConfig.Refuse(Program.AutoTopology, string, out string)",
+    "name": "\u01BF"
+  },
+  {
+    "symbol": "Program.ToolDriveMoveCap",
+    "name": "\u01C0"
+  },
+  {
+    "symbol": "Program.ToolDriveTurnCap",
+    "name": "\u01C1"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Result",
+    "name": "\u01C2"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Face.Center",
+    "name": "\u01C3"
+  },
+  {
+    "symbol": "Program.ToolGeometry.PairLocked(Program.ToolPortPair, string)",
+    "name": "\u01C4"
+  },
+  {
+    "symbol": "Program.ToolSwapController.DockAnchor",
+    "name": "\u01C5"
+  },
+  {
+    "symbol": "Program.AutoTopology.Start",
+    "name": "\u01C6"
+  },
+  {
+    "symbol": "Program.AutoConfig.Saved(string)",
+    "name": "\u01C7"
+  },
+  {
+    "symbol": "Program.ToolGroupKey(Program.AutoGroup)",
+    "name": "\u01C8"
+  },
+  {
+    "symbol": "Program.HomeJointRpm",
+    "name": "\u01C9"
+  },
+  {
+    "symbol": "Program.InputScratch",
+    "name": "\u01CA"
+  },
+  {
+    "symbol": "Program.ControllerBuildVersion",
+    "name": "\u01CB"
+  },
+  {
+    "symbol": "Program.AutoTopology.HeadMark(Sandbox.ModAPI.Ingame.IMyTerminalBlock)",
+    "name": "\u01CC"
+  },
+  {
+    "symbol": "Program.AimToleranceDeg",
+    "name": "\u01CD"
+  },
+  {
+    "symbol": "Program.ReadRoll",
+    "name": "\u01CE"
+  },
+  {
+    "symbol": "Program.TargetP",
+    "name": "\u01CF"
+  },
+  {
+    "symbol": "Program.Solution",
+    "name": "\u01D0"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Endpoint",
+    "name": "\u01D1"
+  },
+  {
+    "symbol": "Program.MemberHomeError(Program.AutoMember, bool)",
+    "name": "\u01D2"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Face",
+    "name": "\u01D3"
+  },
+  {
+    "symbol": "Program.ToolGeometry.AdjacentPartner(SpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock, SpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock, string)",
+    "name": "\u01D4"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Approach",
+    "name": "\u01D5"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Complete(string)",
+    "name": "\u01D6"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Observe(bool)",
+    "name": "\u01D7"
+  },
+  {
+    "symbol": "Program.AutoTopology.MaxGroups",
+    "name": "\u01D8"
+  },
+  {
+    "symbol": "Program.AutoSettings.Number(double)",
+    "name": "\u01D9"
+  },
+  {
+    "symbol": "Program.PositionI",
+    "name": "\u01DA"
+  },
+  {
+    "symbol": "Program.PoseCommand(string[], int)",
+    "name": "\u01DB"
+  },
+  {
+    "symbol": "Program.InputToggle(string[], bool)",
+    "name": "\u01DC"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Fingerprint",
+    "name": "\u01DD"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Fault",
+    "name": "\u01DE"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Budget()",
+    "name": "\u01DF"
+  },
+  {
+    "symbol": "Program.ToolSwapController.ParkNames",
+    "name": "\u01E0"
+  },
+  {
+    "symbol": "Program.ToolSwapController.FindSupport(Program.ToolSwapController.Profile, out string)",
+    "name": "\u01E1"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Busy",
+    "name": "\u01E2"
+  },
+  {
+    "symbol": "Program.UpdateIntegral(ref VRageMath.Vector3D, VRageMath.Vector3D, double, VRageMath.Vector3D, VRageMath.Vector3D, double, double, double, double, bool)",
+    "name": "\u01E3"
+  },
+  {
+    "symbol": "Program.MemberPosition(Program.AutoMember)",
+    "name": "\u01E4"
+  },
+  {
+    "symbol": "Program.ToolPortPair.Head",
+    "name": "\u01E5"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Live",
+    "name": "\u01E6"
+  },
+  {
+    "symbol": "Program.AutoGroup.Label",
+    "name": "\u01E7"
+  },
+  {
+    "symbol": "Program.AutoTopology.FullScanIn",
+    "name": "\u01E8"
+  },
+  {
+    "symbol": "Program.PositionKi",
+    "name": "\u01E9"
+  },
+  {
+    "symbol": "Program.OrientationKp",
+    "name": "\u01EA"
+  },
+  {
+    "symbol": "Program.SolverDamping",
+    "name": "\u01EB"
+  },
+  {
+    "symbol": "Program.TurnDeg",
+    "name": "\u01EC"
+  },
+  {
+    "symbol": "Program.RoutineStatusBuilds",
+    "name": "\u01ED"
+  },
+  {
+    "symbol": "Program.HasPilotInput()",
+    "name": "\u01EE"
+  },
+  {
+    "symbol": "Program.UpdateControl(double, double)",
+    "name": "\u01EF"
+  },
+  {
+    "symbol": "Program.RotationError(VRageMath.Vector3D, VRageMath.Vector3D, VRageMath.Vector3D, VRageMath.Vector3D)",
+    "name": "\u01F0"
+  },
+  {
+    "symbol": "Program.RenderRoutineStatus()",
+    "name": "\u01F1"
+  },
+  {
+    "symbol": "Program.InputScope(Sandbox.ModAPI.Ingame.IMyShipController)",
+    "name": "\u01F2"
+  },
+  {
+    "symbol": "Program.RunCommand(string)",
+    "name": "\u01F3"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Say(string)",
+    "name": "\u01F4"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Subtype",
+    "name": "\u01F5"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Pending",
+    "name": "\u01F6"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Face.HalfU",
+    "name": "\u01F7"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Face.HalfV",
+    "name": "\u01F8"
+  },
+  {
+    "symbol": "Program.ToolGeometry.TryDockPoseAt(Sandbox.ModAPI.Ingame.IMyTerminalBlock, System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E, System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E, string, double, long, out VRageMath.MatrixD, out System.Collections.Generic.List\u003CProgram.ToolPortPair\u003E, out string)",
+    "name": "\u01F9"
+  },
+  {
+    "symbol": "Program.ToolGeometry.TryTopPose(Sandbox.ModAPI.Ingame.IMyMotorStator, Program.ToolTopInfo, out VRageMath.MatrixD, out string)",
+    "name": "\u01FA"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.StandNames",
+    "name": "\u01FB"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Scanned",
+    "name": "\u01FC"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Last",
+    "name": "\u01FD"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Scan",
+    "name": "\u01FE"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Retreat",
+    "name": "\u01FF"
+  },
+  {
+    "symbol": "Program.ToolSwapController.MergeNames(System.Collections.Generic.List\u003Cstring\u003E, System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E, out string)",
+    "name": "\u0200"
+  },
+  {
+    "symbol": "Program.ToolSwapController.BeginIncoming(out string)",
+    "name": "\u0201"
+  },
+  {
+    "symbol": "Program.MouseKey",
+    "name": "\u0202"
+  },
+  {
+    "symbol": "Program.ReadPose(out VRageMath.Vector3D, out VRageMath.Vector3D, out VRageMath.Vector3D)",
+    "name": "\u0203"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Marker",
+    "name": "\u0204"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Position",
+    "name": "\u0205"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.Stands",
+    "name": "\u0206"
+  },
+  {
+    "symbol": "Program.ToolSwapController.AngleTol",
+    "name": "\u0207"
+  },
+  {
+    "symbol": "Program.AutoTopology.MaxWorkEdges",
+    "name": "\u0208"
+  },
+  {
+    "symbol": "Program.AutoTopology.EndpointName",
+    "name": "\u0209"
+  },
+  {
+    "symbol": "Program.AutoTopology.Hull",
+    "name": "\u020A"
+  },
+  {
+    "symbol": "Program.AutoConfig.Instructions(VRage.Game.ModAPI.Ingame.Utilities.MyIni)",
+    "name": "\u020B"
+  },
+  {
+    "symbol": "Program.Home",
+    "name": "\u020C"
+  },
+  {
+    "symbol": "Program.ToolSwapController.IgnoredMount",
+    "name": "\u020D"
+  },
+  {
+    "symbol": "Program.PilotAdvance(VRageMath.Vector3D, VRageMath.Vector3D)",
+    "name": "\u020E"
+  },
+  {
+    "symbol": "Program.Step(string, double)",
+    "name": "\u020F"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Shot.Axis",
+    "name": "\u0210"
+  },
+  {
+    "symbol": "Program.AutoGroup.MoveW",
+    "name": "\u0211"
+  },
+  {
+    "symbol": "Program.AutoGroup.TurnW",
+    "name": "\u0212"
+  },
+  {
+    "symbol": "Program.AutoTopology.ScanBases",
+    "name": "\u0213"
+  },
+  {
+    "symbol": "Program.AutoTopology.ScanHeads",
+    "name": "\u0214"
+  },
+  {
+    "symbol": "Program.PistonMps",
+    "name": "\u0215"
+  },
+  {
+    "symbol": "Program.PreviousP",
+    "name": "\u0216"
+  },
+  {
+    "symbol": "Program.PreviousF",
+    "name": "\u0217"
+  },
+  {
+    "symbol": "Program.PreviousU",
+    "name": "\u0218"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Owner",
+    "name": "\u0219"
+  },
+  {
+    "symbol": "Program.TargetLeadAdvance(VRageMath.Vector3D, VRageMath.Vector3D, double)",
+    "name": "\u021A"
+  },
+  {
+    "symbol": "Program.UnconstrainedTask(int, double, out VRageMath.Vector3D, out VRageMath.Vector3D)",
+    "name": "\u021B"
+  },
+  {
+    "symbol": "Program.PrintInfo()",
+    "name": "\u021C"
+  },
+  {
+    "symbol": "Program.Unlimited(Sandbox.ModAPI.Ingame.IMyMotorStator)",
+    "name": "\u021D"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Result.Error",
+    "name": "\u021E"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Inventory",
+    "name": "\u021F"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.HeadNames",
+    "name": "\u0220"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Parks",
+    "name": "\u0221"
+  },
+  {
+    "symbol": "Program.ToolSwapController.MountName",
+    "name": "\u0222"
+  },
+  {
+    "symbol": "Program.ToolSwapController.ScanStand",
+    "name": "\u0223"
+  },
+  {
+    "symbol": "Program.ToolSwapController.DockMoved",
+    "name": "\u0224"
+  },
+  {
+    "symbol": "Program.ToolSwapController.CellLimit",
+    "name": "\u0225"
+  },
+  {
+    "symbol": "Program.AutoTopology.AxisCos",
+    "name": "\u0226"
+  },
+  {
+    "symbol": "Program.AutoTopology.RotaryLineM",
+    "name": "\u0227"
+  },
+  {
+    "symbol": "Program.Wrap(double)",
+    "name": "\u0228"
+  },
+  {
+    "symbol": "Program.AutoTopology.StableSetup(out string)",
+    "name": "\u0229"
+  },
+  {
+    "symbol": "Program.ForwardName",
+    "name": "\u022A"
+  },
+  {
+    "symbol": "Program.RollKey",
+    "name": "\u022B"
+  },
+  {
+    "symbol": "Program.ToolSwapController.WriteConfig(VRage.Game.ModAPI.Ingame.Utilities.MyIni)",
+    "name": "\u022C"
+  },
+  {
+    "symbol": "Program.Banner()",
+    "name": "\u022D"
+  },
+  {
+    "symbol": "Program.CapturePose(VRageMath.Vector3D, VRageMath.Vector3D, VRageMath.Vector3D)",
+    "name": "\u022E"
+  },
+  {
+    "symbol": "Program.PilotInputs(out VRageMath.Vector3D, out VRageMath.Vector2, out double)",
+    "name": "\u022F"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Result.Orientation",
+    "name": "\u0230"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Result.Spread",
+    "name": "\u0231"
+  },
+  {
+    "symbol": "Program.ToolGeometry.GetFace(SpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock, string, out Program.ToolGeometry.Face, out string)",
+    "name": "\u0232"
+  },
+  {
+    "symbol": "Program.ToolGeometry.TryLockedPartner(SpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock, string, out SpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock)",
+    "name": "\u0233"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.Prefix",
+    "name": "\u0234"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Axis",
+    "name": "\u0235"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Timeout",
+    "name": "\u0236"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Elapsed",
+    "name": "\u0237"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Attach",
+    "name": "\u0238"
+  },
+  {
+    "symbol": "Program.AutoGroup.Index",
+    "name": "\u0239"
+  },
+  {
+    "symbol": "Program.AutoTopology.Rigid",
+    "name": "\u023A"
+  },
+  {
+    "symbol": "Program.AutoTopology.Building",
+    "name": "\u023B"
+  },
+  {
+    "symbol": "Program.AutoTopology.AddGroup(System.Collections.Generic.List\u003CProgram.AutoLink\u003E, out string)",
+    "name": "\u023C"
+  },
+  {
+    "symbol": "Program.AutoTopology.CurrentSnapshot(out string, out string)",
+    "name": "\u023D"
+  },
+  {
+    "symbol": "Program.AutoSettings.DefaultBindings",
+    "name": "\u023E"
+  },
+  {
+    "symbol": "Program.AutoSettings.Keyboard",
+    "name": "\u023F"
+  },
+  {
+    "symbol": "Program.JointRpm",
+    "name": "\u0240"
+  },
+  {
+    "symbol": "Program.Residual",
+    "name": "\u0241"
+  },
+  {
+    "symbol": "Program.ZeroSavedDrives()",
+    "name": "\u0242"
+  },
+  {
+    "symbol": "Program.Discover(bool)",
+    "name": "\u0243"
+  },
+  {
+    "symbol": "Program.Allocate(int)",
+    "name": "\u0244"
+  },
+  {
+    "symbol": "Program.LoadHome()",
+    "name": "\u0245"
+  },
+  {
+    "symbol": "Program.SetMovementMode(string)",
+    "name": "\u0246"
+  },
+  {
+    "symbol": "Program.ToolSwapController.ScanHead",
+    "name": "\u0247"
+  },
+  {
+    "symbol": "Program.ToolSwapController.ScanPark",
+    "name": "\u0248"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Exact(string, out Sandbox.ModAPI.Ingame.IMyTerminalBlock, out string)",
+    "name": "\u0249"
+  },
+  {
+    "symbol": "Program.ToolSwapController.TipOwned(out string)",
+    "name": "\u024A"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Configured",
+    "name": "\u024B"
+  },
+  {
+    "symbol": "Program.PositionKp",
+    "name": "\u024C"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Shot",
+    "name": "\u024D"
+  },
+  {
+    "symbol": "Program.ToolSwapController.NumberKeys",
+    "name": "\u024E"
+  },
+  {
+    "symbol": "Program.ToolSwapController.RefreshTip(out string)",
+    "name": "\u024F"
+  },
+  {
+    "symbol": "Program.ToolSwapController.SetRetreat()",
+    "name": "\u0250"
+  },
+  {
+    "symbol": "Program.AutoTopology.ClassifyUnused(out string)",
+    "name": "\u0251"
+  },
+  {
+    "symbol": "Program.AutoConfig.EnsureDefaults(Program)",
+    "name": "\u0252"
+  },
+  {
+    "symbol": "Program.AutoConfig.Format",
+    "name": "\u0253"
+  },
+  {
+    "symbol": "Program.Rotate(VRageMath.Vector3D, VRageMath.Vector3D)",
+    "name": "\u0254"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Blocks",
+    "name": "\u0255"
+  },
+  {
+    "symbol": "Program.ToolSwapController.PosTol",
+    "name": "\u0256"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Stable",
+    "name": "\u0257"
+  },
+  {
+    "symbol": "Program.AutoTopology.Used",
+    "name": "\u0258"
+  },
+  {
+    "symbol": "Program.AutoTopology.Watch",
+    "name": "\u0259"
+  },
+  {
+    "symbol": "Program.AutoTopology.CheckSync(Program.AutoGroup, out string)",
+    "name": "\u025A"
+  },
+  {
+    "symbol": "Program.AutoTopology.Refresh(Program.AutoGroup, VRageMath.Vector3D, VRageMath.MatrixD, out double, out double, out string)",
+    "name": "\u025B"
+  },
+  {
+    "symbol": "Program.AutoSettings.Keys",
+    "name": "\u025C"
+  },
+  {
+    "symbol": "Program.ApplySettings(Program.AutoSettings)",
+    "name": "\u025D"
+  },
+  {
+    "symbol": "Program.MoveMps",
+    "name": "\u025E"
+  },
+  {
+    "symbol": "Program.MaintainSetup()",
+    "name": "\u025F"
+  },
+  {
+    "symbol": "Program.ToolSwapController.ZeroMount()",
+    "name": "\u0260"
+  },
+  {
+    "symbol": "Program.Outside(VRageMath.Vector3D, double)",
+    "name": "\u0261"
+  },
+  {
+    "symbol": "Program.Unit(VRageMath.Vector3D)",
+    "name": "\u0262"
+  },
+  {
+    "symbol": "Program.NumericAction(int)",
+    "name": "\u0263"
+  },
+  {
+    "symbol": "Program.PrintBindings()",
+    "name": "\u0264"
+  },
+  {
+    "symbol": "Program.WriteHome()",
+    "name": "\u0265"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Clear()",
+    "name": "\u0266"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Grid",
+    "name": "\u0267"
+  },
+  {
+    "symbol": "Program.ToolGeometry.TransformFace(Program.ToolGeometry.Face, VRageMath.MatrixD)",
+    "name": "\u0268"
+  },
+  {
+    "symbol": "Program.ToolGeometry.TryAttachPose(Sandbox.ModAPI.Ingame.IMyMotorStator, Program.ToolTopInfo, out VRageMath.MatrixD, out string)",
+    "name": "\u0269"
+  },
+  {
+    "symbol": "Program.AutoTopology.All",
+    "name": "\u026A"
+  },
+  {
+    "symbol": "Program.AutoConfig.UpdateGroups(Program)",
+    "name": "\u026B"
+  },
+  {
+    "symbol": "Program.ToolPoseStep(VRageMath.MatrixD, double, double, double, double, double, double, out bool, out string)",
+    "name": "\u026C"
+  },
+  {
+    "symbol": "Program.AutoEdge.BaseMark",
+    "name": "\u026D"
+  },
+  {
+    "symbol": "Program.AutoEdge.HeadMark",
+    "name": "\u026E"
+  },
+  {
+    "symbol": "Program.AutoTopology.Mark(string, string)",
+    "name": "\u026F"
+  },
+  {
+    "symbol": "Program.AutoTopology.HeadGrid",
+    "name": "\u0270"
+  },
+  {
+    "symbol": "Program.AutoTopology.Snapshot",
+    "name": "\u0271"
+  },
+  {
+    "symbol": "Program.AutoTopology.Kind(Sandbox.ModAPI.Ingame.IMyMechanicalConnectionBlock)",
+    "name": "\u0272"
+  },
+  {
+    "symbol": "Program.AutoTopology.Discover(out string)",
+    "name": "\u0273"
+  },
+  {
+    "symbol": "Program.AutoSettings.ReadMode(string, out Program.PilotMode)",
+    "name": "\u0274"
+  },
+  {
+    "symbol": "Program.Cholesky(double[*,*], double[], double[*,*], double[], double[])",
+    "name": "\u0275"
+  },
+  {
+    "symbol": "Program.ToolGeometry.SameFace(Program.ToolGeometry.Face, Program.ToolGeometry.Face, double)",
+    "name": "\u0276"
+  },
+  {
+    "symbol": "Program.Scale",
+    "name": "\u0277"
+  },
+  {
+    "symbol": "Program.Trial",
+    "name": "\u0278"
+  },
+  {
+    "symbol": "Program.RunCommands(string)",
+    "name": "\u0279"
+  },
+  {
+    "symbol": "Program.PrintJoints()",
+    "name": "\u027A"
+  },
+  {
+    "symbol": "Program.CaptureHome()",
+    "name": "\u027B"
+  },
+  {
+    "symbol": "Program.ResolveHome(Program.AutoMember, double, out double)",
+    "name": "\u027C"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Closed",
+    "name": "\u027D"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Cells",
+    "name": "\u027E"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Merges",
+    "name": "\u027F"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.Angle",
+    "name": "\u0280"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Names(string)",
+    "name": "\u0281"
+  },
+  {
+    "symbol": "Program.ToolSwapController.BeginChange(out string)",
+    "name": "\u0282"
+  },
+  {
+    "symbol": "Program.AutoTopology.Arm",
+    "name": "\u0283"
+  },
+  {
+    "symbol": "Program.AutoTopology.ScopeEdges(out string)",
+    "name": "\u0284"
+  },
+  {
+    "symbol": "Program.AutoTopology.BuildWatch(out string)",
+    "name": "\u0285"
+  },
+  {
+    "symbol": "Program.Gram",
+    "name": "\u0286"
+  },
+  {
+    "symbol": "Program.Task",
+    "name": "\u0287"
+  },
+  {
+    "symbol": "Program.UpdateHome(double)",
+    "name": "\u0288"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.AxisCos",
+    "name": "\u0289"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Shot.Base",
+    "name": "\u028A"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Result.Verdict",
+    "name": "\u028B"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Capture(int, out Program.PivotProbeTool.Shot, out string)",
+    "name": "\u028C"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Profile.Name",
+    "name": "\u028D"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Dock",
+    "name": "\u028E"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Go(string)",
+    "name": "\u028F"
+  },
+  {
+    "symbol": "Program.AutoGroup.Sig",
+    "name": "\u0290"
+  },
+  {
+    "symbol": "Program.AutoTopology.Distances(long, out string)",
+    "name": "\u0291"
+  },
+  {
+    "symbol": "Program.AutoSettings.Mouse",
+    "name": "\u0292"
+  },
+  {
+    "symbol": "Program.AutoConfig.Signature(string)",
+    "name": "\u0293"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Automatic",
+    "name": "\u0294"
+  },
+  {
+    "symbol": "Program.ReadPilot(VRageMath.Vector3D, VRageMath.Vector3D, out VRageMath.Vector3D, out VRageMath.Vector3D)",
+    "name": "\u0295"
+  },
+  {
+    "symbol": "Program.Parse(string)",
+    "name": "\u0296"
+  },
+  {
+    "symbol": "Program.BeginHome()",
+    "name": "\u0297"
+  },
+  {
+    "symbol": "Program.PrintHome()",
+    "name": "\u0298"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.MinTravel",
+    "name": "\u0299"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Point(VRageMath.Vector3D, VRageMath.Vector3D, VRageMath.MatrixD)",
+    "name": "\u029A"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Candidate(Program.PivotProbeTool.Shot, int, int)",
+    "name": "\u029B"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Limit",
+    "name": "\u029C"
+  },
+  {
+    "symbol": "Program.ToolSwapController.TargetTop(out string)",
+    "name": "\u029D"
+  },
+  {
+    "symbol": "Program.AutoTopology.BaseId",
+    "name": "\u029E"
+  },
+  {
+    "symbol": "Program.AutoTopology.HeadId",
+    "name": "\u029F"
+  },
+  {
+    "symbol": "Program.AutoConfig.Header",
+    "name": "\u02A0"
+  },
+  {
+    "symbol": "Program.AutoConfig.Render(Program, Program.AutoTopology, VRage.Game.ModAPI.Ingame.Utilities.MyIni, VRage.Game.ModAPI.Ingame.Utilities.MyIni, System.Collections.Generic.List\u003Cdouble[]\u003E, out string)",
+    "name": "\u02A1"
+  },
+  {
+    "symbol": "Program.Commit()",
+    "name": "\u02A2"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Result.Travel",
+    "name": "\u02A3"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Format(Program.PivotProbeTool.Result)",
+    "name": "\u02A4"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Marker",
+    "name": "\u02A5"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.GridId",
+    "name": "\u02A6"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Axis",
+    "name": "\u02A7"
+  },
+  {
+    "symbol": "Program.ToolGeometry.OnFace(SpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock, VRageMath.Vector3I, VRageMath.Vector3I)",
+    "name": "\u02A8"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Move",
+    "name": "\u02A9"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Turn",
+    "name": "\u02AA"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Bool(VRage.Game.ModAPI.Ingame.Utilities.MyIni, string, ref bool, out string)",
+    "name": "\u02AB"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Prefix(string, System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E)",
+    "name": "\u02AC"
+  },
+  {
+    "symbol": "Program.AutoGroup.Lin",
+    "name": "\u02AD"
+  },
+  {
+    "symbol": "Program.AutoGroup.Ang",
+    "name": "\u02AE"
+  },
+  {
+    "symbol": "Program.AutoSettings.Defaults",
+    "name": "\u02AF"
+  },
+  {
+    "symbol": "Program.ToolSwapController.ScanStep(out bool, out string)",
+    "name": "\u0400"
+  },
+  {
+    "symbol": "Program.ToolSwapController.MovePose(VRageMath.MatrixD, double, double, out bool, out string)",
+    "name": "\u0401"
+  },
+  {
+    "symbol": "Program.AutoMember.Last",
+    "name": "\u0402"
+  },
+  {
+    "symbol": "Program.AutoTopology.Between(long, long)",
+    "name": "\u0403"
+  },
+  {
+    "symbol": "Program.AutoSettings.Units",
+    "name": "\u0404"
+  },
+  {
+    "symbol": "Program.AutoSettings.Roll",
+    "name": "\u0405"
+  },
+  {
+    "symbol": "Program.AutoSettings.Mode",
+    "name": "\u0406"
+  },
+  {
+    "symbol": "Program.AutoSettings.Write(VRage.Game.ModAPI.Ingame.Utilities.MyIni)",
+    "name": "\u0407"
+  },
+  {
+    "symbol": "Program.AutoConfig.Valid(double)",
+    "name": "\u0408"
+  },
+  {
+    "symbol": "Program.Chol",
+    "name": "\u0409"
+  },
+  {
+    "symbol": "Program.Rhs",
+    "name": "\u040A"
+  },
+  {
+    "symbol": "Program.Temp",
+    "name": "\u040B"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Shot.Top",
+    "name": "\u040C"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Result.Group",
+    "name": "\u040D"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Result.Delta",
+    "name": "\u040E"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Ready(out string)",
+    "name": "\u040F"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Analyse(Program.PivotProbeTool.Shot, Program.PivotProbeTool.Shot, int, out Program.PivotProbeTool.Result, out string)",
+    "name": "\u0410"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Unit(ref VRageMath.Vector3D)",
+    "name": "\u0411"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Angle(VRageMath.Vector3D, VRageMath.Vector3D)",
+    "name": "\u0412"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Capture(Sandbox.ModAPI.Ingame.IMyTerminalBlock, Sandbox.ModAPI.Ingame.IMyMotorRotor, System.Collections.Generic.List\u003CSandbox.ModAPI.Ingame.IMyTerminalBlock\u003E)",
+    "name": "\u0413"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Normals",
+    "name": "\u0414"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Dummies",
+    "name": "\u0415"
+  },
+  {
+    "symbol": "Program.AutoTopology.Bounds(Program.AutoMember, out double, out double, out string)",
+    "name": "\u0416"
+  },
+  {
+    "symbol": "Program.Lo",
+    "name": "\u0417"
+  },
+  {
+    "symbol": "Program.Hi",
+    "name": "\u0418"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Handle(string)",
+    "name": "\u0419"
+  },
+  {
+    "symbol": "Program.Reload()",
+    "name": "\u041A"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.OtherA",
+    "name": "\u041B"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.OtherP",
+    "name": "\u041C"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Report()",
+    "name": "\u041D"
+  },
+  {
+    "symbol": "Program.ToolGeometry.TryDockPose(Sandbox.ModAPI.Ingame.IMyTerminalBlock, System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E, System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E, string, double, out VRageMath.MatrixD, out System.Collections.Generic.List\u003CProgram.ToolPortPair\u003E, out string)",
+    "name": "\u041E"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Number(VRage.Game.ModAPI.Ingame.Utilities.MyIni, string, ref double, double, double, out string)",
+    "name": "\u041F"
+  },
+  {
+    "symbol": "Program.AutoMember.Home",
+    "name": "\u0420"
+  },
+  {
+    "symbol": "Program.AutoSettings.Read(VRage.Game.ModAPI.Ingame.Utilities.MyIni, out string)",
+    "name": "\u0421"
+  },
+  {
+    "symbol": "Program.AutoConfig.Kind(string)",
+    "name": "\u0422"
+  },
+  {
+    "symbol": "Program.Face(string)",
+    "name": "\u0423"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Help()",
+    "name": "\u0424"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Base",
+    "name": "\u0425"
+  },
+  {
+    "symbol": "Program.AutoSettings.Min",
+    "name": "\u0426"
+  },
+  {
+    "symbol": "Program.AutoSettings.Max",
+    "name": "\u0427"
+  },
+  {
+    "symbol": "Program.Solve(VRageMath.Vector3D, double, VRageMath.Vector3D, VRageMath.Vector3D, out VRageMath.Vector3D, out VRageMath.Vector3D, out string)",
+    "name": "\u0428"
+  },
+  {
+    "symbol": "Program.Check()",
+    "name": "\u0429"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.PairA",
+    "name": "\u042A"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Start(int)",
+    "name": "\u042B"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Rot(VRageMath.Vector3D, VRageMath.Vector3D, double)",
+    "name": "\u042C"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Row(Program.PivotProbeTool.Result, int)",
+    "name": "\u042D"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Bases",
+    "name": "\u042E"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Heads",
+    "name": "\u042F"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Guard(out string)",
+    "name": "\u0430"
+  },
+  {
+    "symbol": "Program.AutoMember.Q0",
+    "name": "\u0431"
+  },
+  {
+    "symbol": "Program.AutoTopology.Raw(Program.AutoMember, VRageMath.Vector3D, out VRageMath.Vector3D, out VRageMath.Vector3D, out string)",
+    "name": "\u0432"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Tick(double, double)",
+    "name": "\u0433"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Load(out string)",
+    "name": "\u0434"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.MinA",
+    "name": "\u0435"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.MaxA",
+    "name": "\u0436"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Deg(double)",
+    "name": "\u0437"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Name(int)",
+    "name": "\u0438"
+  },
+  {
+    "symbol": "Program.ToolTopInfo.Load(Program, Sandbox.ModAPI.Ingame.IMyTerminalBlock, System.Collections.Generic.List\u003CSandbox.ModAPI.Ingame.IMyTerminalBlock\u003E)",
+    "name": "\u0439"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Dirs",
+    "name": "\u043A"
+  },
+  {
+    "symbol": "Program.ToolRegionScan.Step(out bool, out string)",
+    "name": "\u043B"
+  },
+  {
+    "symbol": "Program.ToolGeometry.Axes",
+    "name": "\u043C"
+  },
+  {
+    "symbol": "Program.ToolSwapController.Info()",
+    "name": "\u043D"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Trials",
+    "name": "\u043E"
+  },
+  {
+    "symbol": "Program.AutoTopology.Has(System.Collections.Generic.List\u003CProgram.AutoLink\u003E, long)",
+    "name": "\u043F"
+  },
+  {
+    "symbol": "Program.AutoTopology.Set(Program.AutoGroup, double)",
+    "name": "\u0440"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.Run(string[])",
+    "name": "\u0441"
+  },
+  {
+    "symbol": "Program.PivotProbeTool.End()",
+    "name": "\u0442"
+  },
+  {
+    "symbol": "long ignoredMechanical",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.IMyTerminalBlock endpoint",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "Program owner",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string arm",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "string name",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string role",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "destinations",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "paths",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "nextEdges",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "candidate",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "dist",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "chosen",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "bases",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "heads",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "stages",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "occupied",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "path",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "count",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "path",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "count",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "stage",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "at",
+    "name": "\u03C1"
+  },
+  {
+    "symbol": "root",
+    "name": "\u03C3"
+  },
+  {
+    "symbol": "meet",
+    "name": "\u03C4"
+  },
+  {
+    "symbol": "same",
+    "name": "\u03C5"
+  },
+  {
+    "symbol": "guard",
+    "name": "\u03C6"
+  },
+  {
+    "symbol": "here",
+    "name": "\u03C7"
+  },
+  {
+    "symbol": "fp",
+    "name": "\u03C8"
+  },
+  {
+    "symbol": "nd",
+    "name": "\u03C9"
+  },
+  {
+    "symbol": "vd",
+    "name": "\u0391"
+  },
+  {
+    "symbol": "ud",
+    "name": "\u0392"
+  },
+  {
+    "symbol": "byGrid",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "scoped",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "keep",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "nodes",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "list",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CProgram.AutoLink\u003E links",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "long id",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "long target",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "nd",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CProgram.AutoLink\u003E links",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "kind",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "baseL",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "compatible",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "baseA",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "label",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "lin",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "ang",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "sig",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "dot",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "axis",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.Vector3D head",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "dir",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D lin",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D ang",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "spread",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "lo",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "hi",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "tol",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "nd",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.MatrixD reference",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "firstL",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "VRageMath.Vector3D headWorld",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "firstA",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out double lo",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "out double hi",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "sl",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "sa",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "ml",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "mh",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "accel",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "margin",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out double lo",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "out double hi",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "mn",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "mx",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "double velocity",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "delta",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "target",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "moved",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "current",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "bool full",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "boundary",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "ignored",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "seen",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "seed",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "count",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string snapshot",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "terminal",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string snapshot",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "string phase",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string text",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRage.Game.ModAPI.Ingame.Utilities.MyIni ini",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRage.Game.ModAPI.Ingame.Utilities.MyIni ini",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out Program.PilotMode mode",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string text",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "format",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out VRage.Game.ModAPI.Ingame.Utilities.MyIni ini",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "error",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "string text",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string text",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "error",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string updated",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "bool captureToolWeights",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "settings",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "values",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "saved",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "row",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "parts",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "string customData",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "out bool changed",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "current",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "signatures",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "table",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "row",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "state",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "header",
+    "name": "\u03C1"
+  },
+  {
+    "symbol": "text",
+    "name": "\u03C3"
+  },
+  {
+    "symbol": "move",
+    "name": "\u03C4"
+  },
+  {
+    "symbol": "turn",
+    "name": "\u03C5"
+  },
+  {
+    "symbol": "line",
+    "name": "\u03C6"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u03C7"
+  },
+  {
+    "symbol": "item",
+    "name": "\u03C8"
+  },
+  {
+    "symbol": "map",
+    "name": "\u03C9"
+  },
+  {
+    "symbol": "sig",
+    "name": "\u0391"
+  },
+  {
+    "symbol": "seen",
+    "name": "\u0392"
+  },
+  {
+    "symbol": "old",
+    "name": "\u0393"
+  },
+  {
+    "symbol": "key",
+    "name": "\u0394"
+  },
+  {
+    "symbol": "raw",
+    "name": "\u0395"
+  },
+  {
+    "symbol": "raw",
+    "name": "\u0396"
+  },
+  {
+    "symbol": "state",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "values",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "text",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "identities",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRage.Game.ModAPI.Ingame.Utilities.MyIni saved",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "name",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003Cdouble[]\u003E values",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "VRage.Game.ModAPI.Ingame.Utilities.MyIni ini",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "table",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "out string state",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "VRage.Game.ModAPI.Ingame.Utilities.MyIni ini",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string sig",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "parts",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "part",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "at",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "string sig",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "ids",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "to",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "id",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "string text",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "config",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "section",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "mounts",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "token",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "cells",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "blocks",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "rotor",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "unique",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "piston",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "mount",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "name",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "found",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "count",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "error",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "ids",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "part",
+    "name": "\u03C1"
+  },
+  {
+    "symbol": "name",
+    "name": "\u03C3"
+  },
+  {
+    "symbol": "row",
+    "name": "\u03C4"
+  },
+  {
+    "symbol": "key",
+    "name": "\u03C5"
+  },
+  {
+    "symbol": "id",
+    "name": "\u03C6"
+  },
+  {
+    "symbol": "elapsed",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string argument",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "toolDt",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "timed",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.UpdateType source",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "dt",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "string text",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "bool explicitRequest",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "toolConfig",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "toolEnabled",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "changed",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "preserved",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "options",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "differs",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "updated",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "toolWhy",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "string reason",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string reason",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "orientationDemand",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "positionDemand",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "rawOrientationFeedback",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "double observationDt",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "orientationAllocationResidual",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "rawPositionFeedback",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "positionAllocationResidual",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "boundedPositionFeedback",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "orientationClipResidual",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "orientationBand",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "angularLimited",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "positionClipResidual",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "manualTurn",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "measuredV",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "measuredW",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "blend",
+    "name": "\u03C1"
+  },
+  {
+    "symbol": "aiming",
+    "name": "\u03C3"
+  },
+  {
+    "symbol": "step",
+    "name": "\u03C4"
+  },
+  {
+    "symbol": "double dt",
+    "name": "\u03C5"
+  },
+  {
+    "symbol": "pe",
+    "name": "\u03C6"
+  },
+  {
+    "symbol": "oe",
+    "name": "\u03C7"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D achievedAngular",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D achievedLinear",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "velocity",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "VRageMath.Vector3D angular",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "gradient",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "moveDemand",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "turnDemand",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "physicalLo",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "physicalHi",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "preference",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "VRageMath.Vector3D linear",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "alpha",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "value",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "release",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "violation",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "VRageMath.Vector3D headReferencePosition",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "delta",
+    "name": "\u03C1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03C3"
+  },
+  {
+    "symbol": "headWorld",
+    "name": "\u03C4"
+  },
+  {
+    "symbol": "accel",
+    "name": "\u03C5"
+  },
+  {
+    "symbol": "ridge",
+    "name": "\u03C6"
+  },
+  {
+    "symbol": "maxPasses",
+    "name": "\u03C7"
+  },
+  {
+    "symbol": "hit",
+    "name": "\u03C8"
+  },
+  {
+    "symbol": "demand",
+    "name": "\u03C9"
+  },
+  {
+    "symbol": "centre",
+    "name": "\u0391"
+  },
+  {
+    "symbol": "side",
+    "name": "\u0392"
+  },
+  {
+    "symbol": "pass",
+    "name": "\u0393"
+  },
+  {
+    "symbol": "value",
+    "name": "\u0394"
+  },
+  {
+    "symbol": "total",
+    "name": "\u0395"
+  },
+  {
+    "symbol": "value",
+    "name": "\u0396"
+  },
+  {
+    "symbol": "worst",
+    "name": "\u0397"
+  },
+  {
+    "symbol": "weight",
+    "name": "\u0398"
+  },
+  {
+    "symbol": "weight",
+    "name": "\u0399"
+  },
+  {
+    "symbol": "frame",
+    "name": "\u039A"
+  },
+  {
+    "symbol": "cap",
+    "name": "\u039B"
+  },
+  {
+    "symbol": "lo",
+    "name": "\u039C"
+  },
+  {
+    "symbol": "hi",
+    "name": "\u039D"
+  },
+  {
+    "symbol": "old",
+    "name": "\u039E"
+  },
+  {
+    "symbol": "double dt",
+    "name": "\u039F"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D angular",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D linear",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "rate",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "total",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "double ridge",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "ref VRageMath.Vector3D integral",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.Vector3D allocationResidual",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRageMath.Vector3D clipResidual",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "outside",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "delta",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "double deadband",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "VRageMath.Vector3D error",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "double capture",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "bool permit",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "scale",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "double cap",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "double ki",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "double dt",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "VRageMath.Vector3D residual",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "growth",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRageMath.Vector3D integral",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "VRageMath.Vector3D delta",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "double maximumOppositionFraction",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.Vector3D correction",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRageMath.Vector3D pilotVelocity",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "direction",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "component",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out bool limited",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "minimum",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "speed",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "VRageMath.Vector3D achievedMinusFeedback",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.Vector3D pilot",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "radius",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.Vector3D error",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRageMath.Vector3D step",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "double limit",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "root",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "double deadband",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.Vector3D error",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "forward",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D angular",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRageMath.Vector3D headForward",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "moveForward",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "local",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "input",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "mouse",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D linear",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "left",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "moveUp",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "VRageMath.Vector3D headUp",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "roll",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "up",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "out VRageMath.Vector2 mouse",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out double roll",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D move",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "mouse",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "move",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "roll",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "bool force",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D forward",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "frame",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D left",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "out VRageMath.Vector3D up",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "mode",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string text",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "int parts",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "int parts",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "targetForward",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "targetUp",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "forward",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "string direction",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "left",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "up",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "viewLeft",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "viewForward",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "kind",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "viewUp",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "double degrees",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "step",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "string axis",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "string argument",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "commands",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "raw",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "string command",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "tolerance",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "string[] words",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "value",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "bool current",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "action",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "configIni",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "updated",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "changed",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "lo",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "hi",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "text",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "text",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "section",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "candidate",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "fingerprint",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "sections",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "value",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "result",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "key",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "text",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "resolved",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "permission",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "haveBranch",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "branch",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "velocity",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "error",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "agreement",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "tolerance",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "complete",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "lower",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "upper",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "unlimited",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "centre",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "accel",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "cap",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "double dt",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "lo",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "hi",
+    "name": "\u03C1"
+  },
+  {
+    "symbol": "out double resolved",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "double requested",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "turn",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "kMin",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "kMax",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "lo",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "hi",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "error",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "bool rotary",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "piston",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "rotor",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string label",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "string[] words",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "int index",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "double min",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "double max",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string text",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out double value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string text",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "double[] answer",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "double[] temp",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "value",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "value",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "angle",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "skew",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "axis",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "VRageMath.Vector3D tf",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "VRageMath.Vector3D tu",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "tl",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "d00",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "d11",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "d22",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "d01",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "d02",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "d10",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "d12",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "d20",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "d21",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "angle",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.Vector3D rotation",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRageMath.Vector3D value",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "axis",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "fn",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "un",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRageMath.Vector3D value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.Vector3D value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "double cap",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRageMath.Vector3D value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.MatrixD frame",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "double value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "double lo",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "double hi",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "double angle",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "double value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "VRageMath.Vector3D value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "Program.AutoTopology topology",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "Program owner",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "int selected",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "count",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "margin",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "dir",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out Program.PivotProbeTool.Result result",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "predicted",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "delta",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "int group",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "best",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "first",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "travel",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "mean",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "total",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "next",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "ori",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CSandbox.ModAPI.Ingame.IMyTerminalBlock\u003E inventory",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.IMyTerminalBlock marker",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.IMyMotorRotor top",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "pose",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "forward",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CSandbox.ModAPI.Ingame.IMyTerminalBlock\u003E inventory",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.IMyTerminalBlock marker",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "row",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "text",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "id",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "up",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.IMyTerminalBlock marker",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "int cellLimit",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "string mergeAxis",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.IMyMotorStator mount",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "neighbor",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "next",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "merge",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "cell",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "count",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "slim",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "fat",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "out bool done",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "ad",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "bd",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "string message",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "index",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "string axis",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "size",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "cells",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "local",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "string axis",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "VRageMath.MatrixD transform",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "double clearance",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "min",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "max",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "slim",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "string axis",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "Program.ToolPortPair pair",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string axis",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "af",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "bf",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out SpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock partner",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "other",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "string axis",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "slim",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "double clearance",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.IMyTerminalBlock marker",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out System.Collections.Generic.List\u003CProgram.ToolPortPair\u003E pairs",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E rack",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "string axis",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out VRageMath.MatrixD pose",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E own",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "anchor",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "long primaryStandID",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E rack",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "double clearance",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.IMyTerminalBlock marker",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out System.Collections.Generic.List\u003CProgram.ToolPortPair\u003E pairs",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "transform",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "match",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E own",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "trial",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "valid",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "roll",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "string axis",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "tangent",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "cost",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "found",
+    "name": "\u03C1"
+  },
+  {
+    "symbol": "source",
+    "name": "\u03C3"
+  },
+  {
+    "symbol": "target",
+    "name": "\u03C4"
+  },
+  {
+    "symbol": "out VRageMath.MatrixD pose",
+    "name": "\u03C5"
+  },
+  {
+    "symbol": "best",
+    "name": "\u03C6"
+  },
+  {
+    "symbol": "used",
+    "name": "\u03C7"
+  },
+  {
+    "symbol": "ids",
+    "name": "\u03C8"
+  },
+  {
+    "symbol": "moved",
+    "name": "\u03C9"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u0391"
+  },
+  {
+    "symbol": "desiredBase",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "desiredTop",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out VRageMath.MatrixD pose",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.IMyMotorStator mount",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "Program.ToolTopInfo top",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "delta",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "displacement",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "index",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "forward",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "Sandbox.ModAPI.Ingame.IMyMotorStator mount",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "hinge",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out VRageMath.MatrixD pose",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "headIndex",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "candidate",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "inLimits",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "Program.ToolTopInfo top",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "lower",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "upper",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "turn",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "offset",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "dummy",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "lo",
+    "name": "\u03C1"
+  },
+  {
+    "symbol": "hi",
+    "name": "\u03C3"
+  },
+  {
+    "symbol": "up",
+    "name": "\u03C4"
+  },
+  {
+    "symbol": "string value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string key",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "ref bool value",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "ref double value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string key",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "double min",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "double max",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "profiles",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "heads",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "values",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "coupler",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "mountName",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "enabled",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "section",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "axis",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "mount",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "limit",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "marker",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "block",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "shortName",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "minimum",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "maximum",
+    "name": "\u03C1"
+  },
+  {
+    "symbol": "name",
+    "name": "\u03C3"
+  },
+  {
+    "symbol": "seen",
+    "name": "\u03C4"
+  },
+  {
+    "symbol": "sh",
+    "name": "\u03C5"
+  },
+  {
+    "symbol": "ss",
+    "name": "\u03C6"
+  },
+  {
+    "symbol": "sp",
+    "name": "\u03C7"
+  },
+  {
+    "symbol": "out Sandbox.ModAPI.Ingame.IMyTerminalBlock block",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string name",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "VRage.Game.ModAPI.Ingame.Utilities.MyIni ini",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "values",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "names",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "top",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "actual",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "found",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E merges",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "verb",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "split",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "index",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "text",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "string command",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "arg",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "merge",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E output",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "name",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003Cstring\u003E names",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "System.Collections.Generic.List\u003CSpaceEngineers.Game.ModAPI.Ingame.IMyShipMergeBlock\u003E output",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string prefix",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "finished",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "current",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "other",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "merge",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "merge",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "out bool done",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "string phase",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "target",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "current",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "anchor",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "trace",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "string phase",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "changing",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "string message",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "bool condition",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "owner",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "merge",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "member",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "mountIndex",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "anchor",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "direction",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "outward",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "inverse",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "merge",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "previous",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "block",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "other",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "member",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "before",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "rack",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "valid",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "pose",
+    "name": "\u03C1"
+  },
+  {
+    "symbol": "covered",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "stand",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "head",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "tool",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "inverse",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out bool settled",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "VRageMath.MatrixD pose",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "double obs",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "double dt",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "double observationDt",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "expected",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "coupler",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "anchor",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "settled",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "coupler",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "clear",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "aligned",
+    "name": "\u03BA"
+  },
+  {
+    "symbol": "split",
+    "name": "\u03BB"
+  },
+  {
+    "symbol": "done",
+    "name": "\u03BC"
+  },
+  {
+    "symbol": "goal",
+    "name": "\u03BD"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u03BE"
+  },
+  {
+    "symbol": "pair",
+    "name": "\u03BF"
+  },
+  {
+    "symbol": "double dt",
+    "name": "\u03C0"
+  },
+  {
+    "symbol": "key",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "cells",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "text",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "bool capture",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "keys",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "saved",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "key",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "rows",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "row",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "ini",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "value",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "double observationDt",
+    "name": "\u03B1"
+  },
+  {
+    "symbol": "double positionTolerance",
+    "name": "\u03B2"
+  },
+  {
+    "symbol": "double angleTolerance",
+    "name": "\u03B3"
+  },
+  {
+    "symbol": "double moveCap",
+    "name": "\u03B4"
+  },
+  {
+    "symbol": "double turnCap",
+    "name": "\u03B5"
+  },
+  {
+    "symbol": "out bool settled",
+    "name": "\u03B6"
+  },
+  {
+    "symbol": "VRageMath.MatrixD world",
+    "name": "\u03B7"
+  },
+  {
+    "symbol": "basis",
+    "name": "\u03B8"
+  },
+  {
+    "symbol": "out string why",
+    "name": "\u03B9"
+  },
+  {
+    "symbol": "double dt",
+    "name": "\u03BA"
+  }
+]

@@ -128,8 +128,8 @@ sealed class ToolSwapController
                 IMyTerminalBlock block;
                 if (!Exact(profiles[n].CouplerName, out block, out why)) return false;
                 var coupler = block as IMyMotorStator;
-                if (coupler == null || coupler is IMyMotorSuspension || coupler.CubeGrid.EntityId != marker.CubeGrid.EntityId || block == mount || (mount != null && coupler.CubeGrid.EntityId == mount.CubeGrid.EntityId))
-                { why = "Tool Mount must be its rotor/hinge base."; return false; }
+                if (coupler == null || !ToolGeometry.Rotor(coupler) || coupler.CubeGrid.EntityId != marker.CubeGrid.EntityId || block == mount || (mount != null && coupler.CubeGrid.EntityId == mount.CubeGrid.EntityId))
+                { why = "Tool Mount must be its rotor base."; return false; }
                 for (int j = 0; j < n; j++) if (profiles[j].Coupler == coupler) { why = "Duplicate tool Mount."; return false; }
                 profiles[n].Coupler = coupler;
             }
@@ -170,6 +170,8 @@ sealed class ToolSwapController
         for (int n = 0; n < values.Length; n++) ini.Set(ToolsSection, NumberKeys[n], AutoSettings.Number(values[n])); ini.Set(ToolsSection, "CellLimit", CellLimit);
         ini.SetComment(ToolsSection, "Heads", "Exact markers, one per line; ToolNN order. Tool <name/index>; Park [number]; ToolScan; SwapCancel.");
         ini.SetComment(ToolsSection, "Mount", "Arm-end reference; ToolNN.Mount = exact tool base name.");
+        if (!ini.ContainsKey(ToolsSection, "ArmTip")) ini.Set(ToolsSection, "ArmTip", "");
+        ini.SetComment(ToolsSection, "ArmTip", "Fresh bare arm: offset metres Forward/Left/Up | forward | up. Relative to Mount; default Forward/Up.");
         for (int n = 0; n < Profiles.Count; n++)
         {
             var h = Profiles[n]; string s = "Tool" + (n + 1).ToString("00");
@@ -180,7 +182,14 @@ sealed class ToolSwapController
     {
         if (h == null || h.Coupler == null || h.Coupler.Closed || !h.Coupler.IsAttached || Tip == null || Tip.Closed) return false;
         var top = h.Coupler.Top as IMyMotorRotor;
-        if (top == null || top.EntityId != Tip.EntityId || top.Base == null || top.Base.EntityId != h.Coupler.EntityId || top.CubeGrid.EntityId != Mount.CubeGrid.EntityId) return false;
+        if (top == null || top.Base == null || top.Base.EntityId != h.Coupler.EntityId || top.CubeGrid.EntityId != Mount.CubeGrid.EntityId) return false;
+        if (Tip.EntityId == 0)
+        {
+            var frame = Tip.WorldMatrix;
+            if (top.Position != Tip.Position || !ToolGeometry.Rotor(top) || !Finite(top.WorldMatrix.Up) || !Finite(top.WorldMatrix.Forward) || Vector3D.Dot(top.WorldMatrix.Up, frame.Up) < .9999939 || Vector3D.Dot(top.WorldMatrix.Forward, frame.Forward) < .9999939) return false;
+            Tip.EntityId = top.EntityId;
+        }
+        if (top.EntityId != Tip.EntityId) return false;
         Tip.Live = top; Tip.Subtype = top.BlockDefinition.SubtypeName;
         return true;
     }
@@ -197,6 +206,7 @@ sealed class ToolSwapController
         }
         if (found != null) Tip = found;
         if (Tip == null) Tip = ToolTopInfo.Load(P, Mount, Inventory);
+        if (Tip == null && EnabledTools) Tip = ToolGeometry.DeclaredTip(P, Mount, Profiles[0].Coupler, Inventory);
         if (Tip == null || (!Tip.Closed && Tip.CubeGrid.EntityId == Mount.CubeGrid.EntityId && Mount.CubeGrid.CubeExists(Tip.Position))) return true;
         why = "Arm tip outside reference grid."; return false;
     }
@@ -356,7 +366,7 @@ sealed class ToolSwapController
     {
         why = "";
         foreach (var h in Profiles) if (Mounted(h)) Source = h;
-        if (Tip == null) { why = "Fresh installation requires a tool attached."; return false; }
+        if (Tip == null) { why = "Fresh bare arm: configure Tools.ArmTip."; return false; }
         if (!TipOwned(out why)) return false;
         foreach (var h in Profiles)
         {
@@ -576,7 +586,7 @@ sealed class ToolSwapController
     string Info()
     {
         var b = new System.Text.StringBuilder("Tools " + (EnabledTools ? EnabledKey : "disabled") + "; " + Phase + (Recovery ? "; recovery OFF" : "") + "\n" + Last);
-        b.Append(Tip == null ? "\nFresh install: attach one tool." : "\nArm tip recorded.");
+        b.Append(Tip == null ? "\nBare setup: Tools.ArmTip." : "\nArm tip configured.");
         for (int n = 0; n < Profiles.Count; n++) { var h = Profiles[n]; b.Append("\n").Append(n + 1).Append(" ").Append(h.Name).Append(Mounted(h) ? " mounted" : " detached").Append("; Mount ").Append(h.CouplerName).Append("; merges ").Append(h.Heads.Count).Append('/').Append(h.Stands.Count); }
         return b.ToString();
     }

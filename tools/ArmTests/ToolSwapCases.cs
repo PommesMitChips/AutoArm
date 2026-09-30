@@ -61,7 +61,7 @@ internal static partial class Scenarios
                 if(phase=="ApproachDock" || phase=="Dock") f.MoveSource(goal); else f.MoveArm(goal);
             }
             else if(phase=="Lock" && autoLock) f.LockSource();
-            else if(phase=="Release" && autoSplit) f.SplitTool(1);
+            else if(phase=="Release" && autoSplit) f.SplitTool(Array.IndexOf(f.Markers,(IMyTerminalBlock)Get(Get(SwapController(script),"Destination")!,"Marker")!));
             SwapFrame(script,dt:.05); drove|=f.AnyDrive; previous=phase;
         }
         Check(SwapPhase(script)==until,"Reverse operation did not reach "+until+"; at "+SwapPhase(script)); return drove;
@@ -78,7 +78,8 @@ internal static partial class Scenarios
         ReverseFreshSwap(type,0,false);
         ReverseFreshSwap(type,.4,true);
         ReverseFreshSwap(type,-.4,false);
-        ReverseHingeSwap(type);
+        RejectHingeToolCouplers(type);
+        FreshHeadlessTipCases(type);
         NativeReverseGeometry(type);
         ReverseWeightRetention(type);
         ReverseParkRestart(type);
@@ -167,20 +168,19 @@ internal static partial class Scenarios
             else Check(Math.Abs(Convert.ToDouble(Get(g,"MoveW"))-1)<1e-12 && Math.Abs(Convert.ToDouble(Get(g,"TurnW"))-1)<1e-12,"New physical incoming actuator inherited another tool's editable preferences.");
         }
     }
-    static void ReverseHingeSwap(Type type)
+    static void RejectHingeToolCouplers(Type type)
     {
-        var f=new ToolSwapFixture(destinationAngle:-.3);
-        foreach(var c in f.Couplers) RecordProxy.Of(c).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargeHinge");
-        RecordProxy.Of(f.ArmTip).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargeHingeHead");
-        var reference=f.ArmRef.WorldMatrix; reference.Translation-=Vector3D.Up*.4208642244338989; f.MoveArm(reference);
-        var script=SwapStart(type,f); SwapFrame(script,"Tool 2",false,0); bool drove=SwapPlant(script,f,"Idle");
-        Check(drove && !Enabled(script) && !(bool)Get(SwapController(script),"Recovery")! && f.Couplers[1].Top?.EntityId==f.ArmTip.EntityId,"Visible tool-side hinge swap failed without per-tool teaching.");
-        Check(f.Mutations.Select(m=>(m.Tool,m.Kind)).SequenceEqual(new[]{(0,"Detach"),(1,"Attach")}) && f.Mutations.All(m=>m.Supported && m.Stopped),"Hinge swap mechanical ordering/support guards differ from rotor swap.");
-        SwapReverseMember(script,f.Couplers[1]); SwapStationUntouched(f);
+        foreach(string subtype in new[]{"LargeHinge","MediumHinge","SmallHinge"})
+        {
+            var f=new ToolSwapFixture(); foreach(var c in f.Couplers) RecordProxy.Of(c).Values["BlockDefinition"]=ToolSwapFixture.Definition(subtype);
+            string original=f.Rig.PB.CustomData; var script=Tests.Create(type,f.Rig);
+            SwapFrame(script,"On",false,0); SwapFrame(script,"Tool 2",false,0); SwapFrame(script);
+            Check(!Enabled(script) && !f.AnyDrive && f.Mutations.Count==0 && f.Rig.PB.CustomData==original,"Hinge tool coupler must refuse before drive/config or connection mutations.");
+        }
     }
     static void NativeReverseGeometry(Type type)
     {
-        string[] bases={"LargeStator","SmallStator","LargeAdvancedStator","SmallAdvancedStator","SmallAdvancedStatorSmall","LargeHinge","MediumHinge","SmallHinge"};
+        string[] bases={"LargeStator","SmallStator","LargeAdvancedStator","SmallAdvancedStator","SmallAdvancedStatorSmall"};
         var dummies=new[]{new Vector3D(1.033530949712258e-7,.4208642244338989,1.3662192088759184e-7),new Vector3D(2.17650750755638e-7,.036039892584085464,3.7548051068370114e-7),new Vector3D(1.033530949712258e-7,.19979000091552734,1.2796517978586053e-7),Vector3D.Zero,new Vector3D(2.553320221920785e-8,.047984808683395386,5.927423671892029e-7)};
         var geometry=type.GetNestedType("ToolGeometry",All)!; var info=type.GetNestedType("ToolTopInfo",All)!;
         var capture=info.GetMethod("Capture",All)!; var inverse=geometry.GetMethod("TryTopPose",All)!;
@@ -296,7 +296,7 @@ internal static partial class Scenarios
     {
         var fresh=new ToolSwapFixture(headless:true); var script=SwapStart(type,fresh); SwapFrame(script,"Tool 2",false,0);
         for(int i=0;i<160 && SwapPhase(script)!="Idle";i++) SwapFrame(script);
-        Check(!Enabled(script) && fresh.Mutations.Count==0 && fresh.Rig.Log.Any(s=>s.Contains("installation",StringComparison.OrdinalIgnoreCase) && s.Contains("attached",StringComparison.OrdinalIgnoreCase)),"Fresh bare installation without tip frame did not refuse with initial attached-tool setup status.");
+        Check(!Enabled(script) && fresh.Mutations.Count==0 && fresh.Rig.Log.Any(s=>s.Contains("Tools.ArmTip",StringComparison.OrdinalIgnoreCase)),"Fresh bare installation without tip frame did not refuse with explicit arm-tip configuration status.");
         var f=new ToolSwapFixture(); var learned=SwapStart(type,f); SwapFrame(learned,"Park",false,0); SwapPlant(learned,f,"Idle"); string storage=((TestHost)learned).Storage;
         foreach(string fault in new[]{"PB","Arm","Marker","Axes"})
         {

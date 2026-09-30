@@ -536,19 +536,17 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         BoundState[i] = Hi[i] - Lo[i] <= 1e-12 ? 2 :
             old == -1 && Math.Abs(X[i] - Lo[i]) <= 1e-9 ? -1 :
             old == 1 && Math.Abs(X[i] - Hi[i]) <= 1e-9 ? 1 : 0;
-        J[0, i] = g.Lin.X; J[1, i] = g.Lin.Y; J[2, i] = g.Lin.Z;
-        J[3, i] = g.Ang.X; J[4, i] = g.Ang.Y; J[5, i] = g.Ang.Z;
         for (int r = 0; r < 6; r++)
         {
             double weight = r < 3 ? PositionTaskWeight : OrientationTaskWeight;
+            J[r, i] = Component(r < 3 ? g.Lin : g.Ang, r % 3);
             B[r, i] = weight * J[r, i] * s;
         }
     }
     for (int r = 0; r < 6; r++)
     {
         double weight = r < 3 ? PositionTaskWeight : OrientationTaskWeight;
-        Task[r] = weight * (r == 0 ? linear.X : r == 1 ? linear.Y : r == 2 ? linear.Z :
-            r == 3 ? angular.X : r == 4 ? angular.Y : angular.Z);
+        Task[r] = weight * Component(r < 3 ? linear : angular, r % 3);
     }
     double ridge = SolverDamping * SolverDamping;
     int maxPasses = Math.Min(64, Math.Max(8, 2 * n + 4));
@@ -560,18 +558,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
             break;
         }
         LastSolverPasses = pass + 1;
-        for (int r = 0; r < 6; r++)
-        {
-            double value = Task[r];
-            for (int i = 0; i < n; i++) if (BoundState[i] != 0) value -= B[r, i] * X[i];
-            Rhs[r] = value;
-            for (int c = 0; c <= r; c++)
-            {
-                double total = r == c ? ridge : 0;
-                for (int i = 0; i < n; i++) if (BoundState[i] == 0) total += B[r, i] * B[c, i];
-                Gram[r, c] = total;
-            }
-        }
+        BuildTaskMatrix(n, ridge, true);
         if (!Cholesky(Gram, Rhs, Chol, Temp, Solution)) { why = "singular/non-finite damped task matrix"; return false; }
         double alpha = 1;
         int hit = -1, side = 0;
@@ -582,16 +569,13 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
             double value = 0;
             for (int r = 0; r < 6; r++) value += B[r, i] * Solution[r];
             Trial[i] = value;
-            double delta = value - X[i], a;
-            if (delta < -1e-14 && value < Lo[i] - 1e-12)
+            double delta = value - X[i];
+            int bound = delta < -1e-14 && value < Lo[i] - 1e-12 ? -1 :
+                delta > 1e-14 && value > Hi[i] + 1e-12 ? 1 : 0;
+            if (bound != 0)
             {
-                a = Math.Max(0, (Lo[i] - X[i]) / delta);
-                if (a < alpha) { alpha = a; hit = i; side = -1; }
-            }
-            else if (delta > 1e-14 && value > Hi[i] + 1e-12)
-            {
-                a = Math.Max(0, (Hi[i] - X[i]) / delta);
-                if (a < alpha) { alpha = a; hit = i; side = 1; }
+                double a = Math.Max(0, ((bound < 0 ? Lo[i] : Hi[i]) - X[i]) / delta);
+                if (a < alpha) { alpha = a; hit = i; side = bound; }
             }
         }
         for (int i = 0; i < n; i++) if (BoundState[i] == 0)
@@ -642,19 +626,30 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
     return Finite(achievedLinear.LengthSquared()) && Finite(achievedAngular.LengthSquared());
 }
 
-bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D angular)
+static double Component(Vector3D v, int axis)
 {
-    linear = angular = Vector3D.Zero;
+    return axis == 0 ? v.X : axis == 1 ? v.Y : v.Z;
+}
+
+void BuildTaskMatrix(int n, double ridge, bool bounded)
+{
     for (int r = 0; r < 6; r++)
     {
         Rhs[r] = Task[r];
+        if (bounded) for (int i = 0; i < n; i++) if (BoundState[i] != 0) Rhs[r] -= B[r, i] * X[i];
         for (int c = 0; c <= r; c++)
         {
             double total = r == c ? ridge : 0;
-            for (int i = 0; i < n; i++) total += B[r, i] * B[c, i];
+            for (int i = 0; i < n; i++) if (!bounded || BoundState[i] == 0) total += B[r, i] * B[c, i];
             Gram[r, c] = total;
         }
     }
+}
+
+bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D angular)
+{
+    linear = angular = Vector3D.Zero;
+    BuildTaskMatrix(n, ridge, false);
     if (!Cholesky(Gram, Rhs, Chol, Temp, Solution)) return false;
     for (int i = 0; i < n; i++)
     {
@@ -890,13 +885,13 @@ void Face(string direction)
     if (!Enabled) throw new Exception("Run On before Face.");
     Vector3D forward = new Vector3D(1, 0, 0), left = new Vector3D(0, 1, 0), up = new Vector3D(0, 0, 1);
     if (MovementMode != PilotMode.HEAD) ControllerAxes(FindInputController(true), out forward, out left, out up);
-    Vector3D targetForward, targetUp;
+    Vector3D targetForward, targetUp = up;
     switch (direction.ToLowerInvariant())
     {
-        case "forward": targetForward = forward; targetUp = up; break;
-        case "back": targetForward = -forward; targetUp = up; break;
-        case "left": targetForward = left; targetUp = up; break;
-        case "right": targetForward = -left; targetUp = up; break;
+        case "forward": targetForward = forward; break;
+        case "back": targetForward = -forward; break;
+        case "left": targetForward = left; break;
+        case "right": targetForward = -left; break;
         case "down": targetForward = -up; targetUp = forward; break;
         case "up": targetForward = up; targetUp = -forward; break;
         default: throw new Exception("Face expects Forward, Back, Left, Right, Up or Down.");
@@ -955,7 +950,8 @@ void RunCommand(string command)
         case "off": case "stop": if (Tools != null && Tools.Busy) Tools.Cancel(c); StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
         case "toggle": if (Enabled) { StopMotion("Toggle OFF."); Say(Status); } else EnableControl(); break;
         case "onoff": case "-oo":
-            if (w.Length < 2 || (w[1].ToLowerInvariant() != "on" && w[1].ToLowerInvariant() != "off" && w[1].ToLowerInvariant() != "toggle")) throw new Exception("OnOff expects On, Off or Toggle.");
+            c = w.Length < 2 ? "" : w[1].ToLowerInvariant();
+            if (c != "on" && c != "off" && c != "toggle") throw new Exception("OnOff expects On, Off or Toggle.");
             RunCommand(w[1]);
             break;
         case "hold": HoldCurrent(); break;
@@ -999,12 +995,9 @@ void RunCommand(string command)
         case "yaw": Step("yaw", Number(w, 1, -180, 180, "Yaw")); break;
         case "pitch": Step("pitch", Number(w, 1, -180, 180, "Pitch")); break;
         case "roll": Step("roll", Number(w, 1, -180, 180, "Roll")); break;
-        case "yawleft": Step("yaw", StepDeg); break;
-        case "yawright": Step("yaw", -StepDeg); break;
-        case "pitchup": Step("pitch", StepDeg); break;
-        case "pitchdown": Step("pitch", -StepDeg); break;
-        case "rollleft": Step("roll", -StepDeg); break;
-        case "rollright": Step("roll", StepDeg); break;
+        case "yawleft": case "yawright": Step("yaw", c == "yawleft" ? StepDeg : -StepDeg); break;
+        case "pitchup": case "pitchdown": Step("pitch", c == "pitchup" ? StepDeg : -StepDeg); break;
+        case "rollleft": case "rollright": Step("roll", c == "rollright" ? StepDeg : -StepDeg); break;
         case "dumptrace": PrintInfo(); Say("See Info; Custom Data unchanged."); break;
         case "traceclear": Say("No trace buffer."); break;
         case "moveto": PoseCommand(w, 1); break;
@@ -1018,8 +1011,7 @@ void RunCommand(string command)
 
 static bool InputToggle(string[] words, bool current)
 {
-    if (words.Length != 2) throw new Exception(words[0] + " expects On, Off or Toggle.");
-    string value = words[1].ToLowerInvariant();
+    string value = words.Length == 2 ? words[1].ToLowerInvariant() : "";
     if (value == "on") return true;
     if (value == "off") return false;
     if (value == "toggle") return !current;
@@ -1227,8 +1219,7 @@ void UpdateHome(double dt)
         // may then select the equivalent circular error nearest that branch.
         if (g.Rotary) foreach (AutoMember m in g.M)
         {
-            var r = (IMyMotorStator)m.B;
-            if (r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000) continue;
+            if (Unlimited((IMyMotorStator)m.B)) continue;
             double e = m.Sign * MemberHomeError(m, true);
             if (!haveBranch) { branch = e; haveBranch = true; }
             else if (Math.Abs(e - branch) > agreement) { Fault("GoHome limited-member routes disagree at " + g.Label); return; }
@@ -1236,12 +1227,7 @@ void UpdateHome(double dt)
         foreach (AutoMember m in g.M)
         {
             double e = m.Sign * MemberHomeError(m, g.Rotary);
-            bool unlimited = false;
-            if (g.Rotary)
-            {
-                var r = (IMyMotorStator)m.B;
-                unlimited = r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000;
-            }
+            bool unlimited = g.Rotary && Unlimited((IMyMotorStator)m.B);
             if (!haveBranch) { branch = e; haveBranch = true; }
             else if (unlimited) e = branch + Wrap(e - branch);
             if (Math.Abs(e - branch) > agreement) { Fault("GoHome member errors disagree at " + g.Label); return; }
@@ -1268,6 +1254,11 @@ void UpdateHome(double dt)
         Say(Status);
     }
     else Commit();
+}
+
+static bool Unlimited(IMyMotorStator r)
+{
+    return r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000;
 }
 
 bool ResolveHome(AutoMember m, double requested, out double resolved)
@@ -1297,8 +1288,7 @@ double MemberHomeError(AutoMember m, bool rotary)
 {
     double error = m.Home - MemberPosition(m);
     if (!rotary) return error;
-    var r = (IMyMotorStator)m.B;
-    return r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000 ? Wrap(error) : error;
+    return Unlimited((IMyMotorStator)m.B) ? Wrap(error) : error;
 }
 
 double MemberPosition(AutoMember m)

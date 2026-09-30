@@ -4,7 +4,7 @@
 const string ArmName = "Arm 1";
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "2.6";
+const string ControllerBuildVersion = "2.7";
 
 
 // C# 6 programmable-block fragment. Paste inside Program.
@@ -817,8 +817,8 @@ static class AutoConfig
 
     static void Instructions(MyIni ini)
     {
-        ini.Set("Instructions", "Setup", "Edit Config, Reload, Check, On. Base: '" + ArmName + " - Base'; Head: '" + ArmName + " - Head'.\nWeights 0..10 are preferences. Edit only the two weights; blank Actuators resets them.\nDifferent Format: delete Custom Data. IDs: Info/Joints.");
-        ini.Set("Instructions", "Commands", "On / Off / Stop / Toggle / Hold / Check / Rescan / Reload\nInfo / Help / Settings / Status / Joints / Bindings / Version\nSetHome / GoHome / HomeInfo\nForward / Back / Left / Right / Up / Down; Face <direction>\nPitchUp / PitchDown / YawLeft / YawRight / RollLeft / RollRight\nStep Yaw|Pitch|Roll <degrees>; Yaw / Pitch / Roll <degrees>\nMode HEAD|HRZ|VRT; ReadMouse / ReadKeyboard / ReadRoll On|Off|Toggle\nSpeed <m/s>; TurnSpeed <deg/s>; StepSize <deg>; JointSpeed <RPM>; PistonSpeed <m/s>\nHomeSpeed <RPM> <m/s>; OrientationTolerance <deg>\nTool <name/index>; Park [port number]; ToolScan / ToolInfo / SwapCancel\nPivotProbe Start <group>; PivotProbe End / Report / Reset\nSemicolons separate commands. Reload restores Config defaults.");
+        ini.Set("Instructions", "Setup", "Edit Config; Reload, Check, On. Base: '" + ArmName + " - Base'; Head: '" + ArmName + " - Head'.\nWeights 0..10; edit the two weights. Blank Actuators resets.\nDifferent Format: delete Custom Data. IDs: Info/Joints.");
+        ini.Set("Instructions", "Commands", "On / Off / Stop / Toggle / Hold / Check / Rescan / Reload\nInfo / Help / Settings / Status / Joints / Bindings / Version\nSetHome / GoHome / HomeInfo\nForward / Back / Left / Right / Up / Down; Face <direction>\nPitchUp / PitchDown / YawLeft / YawRight / RollLeft / RollRight\nStep Yaw|Pitch|Roll <degrees>; Yaw / Pitch / Roll <degrees>\nMode HEAD|HRZ|VRT; ReadMouse / ReadKeyboard / ReadRoll On|Off|Toggle\nSpeed <m/s>; TurnSpeed <deg/s>; StepSize <deg>; JointSpeed <RPM>; PistonSpeed <m/s>\nHomeSpeed <RPM> <m/s>; OrientationTolerance <deg>\nTool <name/index>; Park [port number]; ToolScan / ToolInfo / SwapCancel\nPivotProbe Start <group>; PivotProbe End / Report / Reset\nSeparate commands with ;. Reload restores defaults.");
         ini.Set("Instructions", "Pose", "MoveTo x y z; OrientTo fx fy fz ux uy uz; MoveToPosOri x y z fx fy fz ux uy uz.\nBase Forward/Left/Up coordinates; On required; pilot input remains active.");
         ini.Set("Instructions", "Bindings", "Toolbar Run: PitchUp Back PitchDown Left Down Right YawLeft Forward YawRight.\nHEAD=head axes; HRZ=cockpit axes; VRT=W/S screen Up/Down, C/Space into/out of view.\nTranslation holds orientation; Q/E Head roll; optional mouse view rotation.\nTool <name> swaps; Park uses ParkMerge; SwapCancel/Stop retains support.");
     }
@@ -1382,19 +1382,17 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         BoundState[i] = Hi[i] - Lo[i] <= 1e-12 ? 2 :
             old == -1 && Math.Abs(X[i] - Lo[i]) <= 1e-9 ? -1 :
             old == 1 && Math.Abs(X[i] - Hi[i]) <= 1e-9 ? 1 : 0;
-        J[0, i] = g.Lin.X; J[1, i] = g.Lin.Y; J[2, i] = g.Lin.Z;
-        J[3, i] = g.Ang.X; J[4, i] = g.Ang.Y; J[5, i] = g.Ang.Z;
         for (int r = 0; r < 6; r++)
         {
             double weight = r < 3 ? PositionTaskWeight : OrientationTaskWeight;
+            J[r, i] = Component(r < 3 ? g.Lin : g.Ang, r % 3);
             B[r, i] = weight * J[r, i] * s;
         }
     }
     for (int r = 0; r < 6; r++)
     {
         double weight = r < 3 ? PositionTaskWeight : OrientationTaskWeight;
-        Task[r] = weight * (r == 0 ? linear.X : r == 1 ? linear.Y : r == 2 ? linear.Z :
-            r == 3 ? angular.X : r == 4 ? angular.Y : angular.Z);
+        Task[r] = weight * Component(r < 3 ? linear : angular, r % 3);
     }
     double ridge = SolverDamping * SolverDamping;
     int maxPasses = Math.Min(64, Math.Max(8, 2 * n + 4));
@@ -1406,18 +1404,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
             break;
         }
         LastSolverPasses = pass + 1;
-        for (int r = 0; r < 6; r++)
-        {
-            double value = Task[r];
-            for (int i = 0; i < n; i++) if (BoundState[i] != 0) value -= B[r, i] * X[i];
-            Rhs[r] = value;
-            for (int c = 0; c <= r; c++)
-            {
-                double total = r == c ? ridge : 0;
-                for (int i = 0; i < n; i++) if (BoundState[i] == 0) total += B[r, i] * B[c, i];
-                Gram[r, c] = total;
-            }
-        }
+        BuildTaskMatrix(n, ridge, true);
         if (!Cholesky(Gram, Rhs, Chol, Temp, Solution)) { why = "singular/non-finite damped task matrix"; return false; }
         double alpha = 1;
         int hit = -1, side = 0;
@@ -1428,16 +1415,13 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
             double value = 0;
             for (int r = 0; r < 6; r++) value += B[r, i] * Solution[r];
             Trial[i] = value;
-            double delta = value - X[i], a;
-            if (delta < -1e-14 && value < Lo[i] - 1e-12)
+            double delta = value - X[i];
+            int bound = delta < -1e-14 && value < Lo[i] - 1e-12 ? -1 :
+                delta > 1e-14 && value > Hi[i] + 1e-12 ? 1 : 0;
+            if (bound != 0)
             {
-                a = Math.Max(0, (Lo[i] - X[i]) / delta);
-                if (a < alpha) { alpha = a; hit = i; side = -1; }
-            }
-            else if (delta > 1e-14 && value > Hi[i] + 1e-12)
-            {
-                a = Math.Max(0, (Hi[i] - X[i]) / delta);
-                if (a < alpha) { alpha = a; hit = i; side = 1; }
+                double a = Math.Max(0, ((bound < 0 ? Lo[i] : Hi[i]) - X[i]) / delta);
+                if (a < alpha) { alpha = a; hit = i; side = bound; }
             }
         }
         for (int i = 0; i < n; i++) if (BoundState[i] == 0)
@@ -1488,19 +1472,30 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
     return Finite(achievedLinear.LengthSquared()) && Finite(achievedAngular.LengthSquared());
 }
 
-bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D angular)
+static double Component(Vector3D v, int axis)
 {
-    linear = angular = Vector3D.Zero;
+    return axis == 0 ? v.X : axis == 1 ? v.Y : v.Z;
+}
+
+void BuildTaskMatrix(int n, double ridge, bool bounded)
+{
     for (int r = 0; r < 6; r++)
     {
         Rhs[r] = Task[r];
+        if (bounded) for (int i = 0; i < n; i++) if (BoundState[i] != 0) Rhs[r] -= B[r, i] * X[i];
         for (int c = 0; c <= r; c++)
         {
             double total = r == c ? ridge : 0;
-            for (int i = 0; i < n; i++) total += B[r, i] * B[c, i];
+            for (int i = 0; i < n; i++) if (!bounded || BoundState[i] == 0) total += B[r, i] * B[c, i];
             Gram[r, c] = total;
         }
     }
+}
+
+bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D angular)
+{
+    linear = angular = Vector3D.Zero;
+    BuildTaskMatrix(n, ridge, false);
     if (!Cholesky(Gram, Rhs, Chol, Temp, Solution)) return false;
     for (int i = 0; i < n; i++)
     {
@@ -1736,13 +1731,13 @@ void Face(string direction)
     if (!Enabled) throw new Exception("Run On before Face.");
     Vector3D forward = new Vector3D(1, 0, 0), left = new Vector3D(0, 1, 0), up = new Vector3D(0, 0, 1);
     if (MovementMode != PilotMode.HEAD) ControllerAxes(FindInputController(true), out forward, out left, out up);
-    Vector3D targetForward, targetUp;
+    Vector3D targetForward, targetUp = up;
     switch (direction.ToLowerInvariant())
     {
-        case "forward": targetForward = forward; targetUp = up; break;
-        case "back": targetForward = -forward; targetUp = up; break;
-        case "left": targetForward = left; targetUp = up; break;
-        case "right": targetForward = -left; targetUp = up; break;
+        case "forward": targetForward = forward; break;
+        case "back": targetForward = -forward; break;
+        case "left": targetForward = left; break;
+        case "right": targetForward = -left; break;
         case "down": targetForward = -up; targetUp = forward; break;
         case "up": targetForward = up; targetUp = -forward; break;
         default: throw new Exception("Face expects Forward, Back, Left, Right, Up or Down.");
@@ -1801,7 +1796,8 @@ void RunCommand(string command)
         case "off": case "stop": if (Tools != null && Tools.Busy) Tools.Cancel(c); StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
         case "toggle": if (Enabled) { StopMotion("Toggle OFF."); Say(Status); } else EnableControl(); break;
         case "onoff": case "-oo":
-            if (w.Length < 2 || (w[1].ToLowerInvariant() != "on" && w[1].ToLowerInvariant() != "off" && w[1].ToLowerInvariant() != "toggle")) throw new Exception("OnOff expects On, Off or Toggle.");
+            c = w.Length < 2 ? "" : w[1].ToLowerInvariant();
+            if (c != "on" && c != "off" && c != "toggle") throw new Exception("OnOff expects On, Off or Toggle.");
             RunCommand(w[1]);
             break;
         case "hold": HoldCurrent(); break;
@@ -1845,12 +1841,9 @@ void RunCommand(string command)
         case "yaw": Step("yaw", Number(w, 1, -180, 180, "Yaw")); break;
         case "pitch": Step("pitch", Number(w, 1, -180, 180, "Pitch")); break;
         case "roll": Step("roll", Number(w, 1, -180, 180, "Roll")); break;
-        case "yawleft": Step("yaw", StepDeg); break;
-        case "yawright": Step("yaw", -StepDeg); break;
-        case "pitchup": Step("pitch", StepDeg); break;
-        case "pitchdown": Step("pitch", -StepDeg); break;
-        case "rollleft": Step("roll", -StepDeg); break;
-        case "rollright": Step("roll", StepDeg); break;
+        case "yawleft": case "yawright": Step("yaw", c == "yawleft" ? StepDeg : -StepDeg); break;
+        case "pitchup": case "pitchdown": Step("pitch", c == "pitchup" ? StepDeg : -StepDeg); break;
+        case "rollleft": case "rollright": Step("roll", c == "rollright" ? StepDeg : -StepDeg); break;
         case "dumptrace": PrintInfo(); Say("See Info; Custom Data unchanged."); break;
         case "traceclear": Say("No trace buffer."); break;
         case "moveto": PoseCommand(w, 1); break;
@@ -1864,8 +1857,7 @@ void RunCommand(string command)
 
 static bool InputToggle(string[] words, bool current)
 {
-    if (words.Length != 2) throw new Exception(words[0] + " expects On, Off or Toggle.");
-    string value = words[1].ToLowerInvariant();
+    string value = words.Length == 2 ? words[1].ToLowerInvariant() : "";
     if (value == "on") return true;
     if (value == "off") return false;
     if (value == "toggle") return !current;
@@ -2073,8 +2065,7 @@ void UpdateHome(double dt)
         // may then select the equivalent circular error nearest that branch.
         if (g.Rotary) foreach (AutoMember m in g.M)
         {
-            var r = (IMyMotorStator)m.B;
-            if (r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000) continue;
+            if (Unlimited((IMyMotorStator)m.B)) continue;
             double e = m.Sign * MemberHomeError(m, true);
             if (!haveBranch) { branch = e; haveBranch = true; }
             else if (Math.Abs(e - branch) > agreement) { Fault("GoHome limited-member routes disagree at " + g.Label); return; }
@@ -2082,12 +2073,7 @@ void UpdateHome(double dt)
         foreach (AutoMember m in g.M)
         {
             double e = m.Sign * MemberHomeError(m, g.Rotary);
-            bool unlimited = false;
-            if (g.Rotary)
-            {
-                var r = (IMyMotorStator)m.B;
-                unlimited = r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000;
-            }
+            bool unlimited = g.Rotary && Unlimited((IMyMotorStator)m.B);
             if (!haveBranch) { branch = e; haveBranch = true; }
             else if (unlimited) e = branch + Wrap(e - branch);
             if (Math.Abs(e - branch) > agreement) { Fault("GoHome member errors disagree at " + g.Label); return; }
@@ -2114,6 +2100,11 @@ void UpdateHome(double dt)
         Say(Status);
     }
     else Commit();
+}
+
+static bool Unlimited(IMyMotorStator r)
+{
+    return r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000;
 }
 
 bool ResolveHome(AutoMember m, double requested, out double resolved)
@@ -2143,8 +2134,7 @@ double MemberHomeError(AutoMember m, bool rotary)
 {
     double error = m.Home - MemberPosition(m);
     if (!rotary) return error;
-    var r = (IMyMotorStator)m.B;
-    return r.LowerLimitRad < -1000000 && r.UpperLimitRad > 1000000 ? Wrap(error) : error;
+    return Unlimited((IMyMotorStator)m.B) ? Wrap(error) : error;
 }
 
 double MemberPosition(AutoMember m)
@@ -2434,7 +2424,7 @@ class ToolTopInfo
         {
             if (Live != null) return Live.Base;
             foreach (var b in Inventory)
-            { var m = b as IMyMechanicalConnectionBlock; if (m != null && m.Top != null && m.Top.EntityId == EntityId) return m; }
+            { var m = b as IMyMechanicalConnectionBlock; if (m != null && m.Top != null && (m.Top.EntityId == EntityId || EntityId == 0 && m.Top.CubeGrid.EntityId == CubeGrid.EntityId && m.Top.Position == Position)) return m; }
             return null;
         }
     }
@@ -2457,6 +2447,7 @@ class ToolTopInfo
     }
     public void Save(Program p)
     {
+        if (EntityId == 0) return;
         var ini = AutoConfig.Saved(p.Storage);
         if (ini.Get(Section, "PB").ToInt64() != p.Me.EntityId || ini.Get(Section, "Arm").ToString() != ArmName) ini.DeleteSection(Section);
         ini.Set(Section, "PB", p.Me.EntityId); ini.Set(Section, "Arm", ArmName); ini.Set(Section, "Format", 1);
@@ -2523,8 +2514,31 @@ static class ToolGeometry
     public static bool Fail(out string why, string message) { why = message; return false; }
     static string[] Axes = { "right", "left", "up", "down", "forward", "backward" };
     static Vector3D[] Normals = { Vector3D.Right, Vector3D.Left, Vector3D.Up, Vector3D.Down, Vector3D.Forward, Vector3D.Backward };
-    static string[] Bases = { "LargeStator", "SmallStator", "LargeAdvancedStator", "SmallAdvancedStator", "SmallAdvancedStatorSmall", "LargeHinge", "MediumHinge", "SmallHinge" };
-    static string[] Heads = { "LargeRotor", "SmallRotor", "LargeAdvancedRotor", "SmallAdvancedRotor", "SmallAdvancedRotorSmall", "LargeHingeHead", "MediumHingeHead", "SmallHingeHead" };
+    static string[] Bases = { "LargeStator", "SmallStator", "LargeAdvancedStator", "SmallAdvancedStator", "SmallAdvancedStatorSmall" };
+    static string[] Heads = { "LargeRotor", "SmallRotor", "LargeAdvancedRotor", "SmallAdvancedRotor", "SmallAdvancedRotorSmall" };
+    public static bool Rotor(IMyCubeBlock b) => Array.IndexOf(b is IMyMotorRotor ? Heads : Bases, b.BlockDefinition.SubtypeName) >= 0;
+    public static ToolTopInfo DeclaredTip(Program p, IMyTerminalBlock marker, IMyMotorStator coupler, List<IMyTerminalBlock> inventory)
+    {
+        var ini = AutoConfig.Saved(p.Me.CustomData);
+        var row = ini.Get(ToolsSection, "ArmTip").ToString().Split('|');
+        string type = Heads[Array.IndexOf(Bases, coupler.BlockDefinition.SubtypeName)];
+        if (row[0].Trim().Length == 0) return null;
+        if (row.Length > 3) throw new Exception("ArmTip: offset | forward | up.");
+        var values = row[0].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        if (values.Length != 3) throw new Exception("Invalid ArmTip offset.");
+        Vector3D position = marker.GetPosition() + marker.WorldMatrix.Forward * p.Parse(values[0]) + marker.WorldMatrix.Left * p.Parse(values[1]) + marker.WorldMatrix.Up * p.Parse(values[2]);
+        Vector3D forward = TipAxis(row.Length > 1 ? row[1] : "Forward", marker.WorldMatrix), up = TipAxis(row.Length > 2 ? row[2] : "Up", marker.WorldMatrix);
+        if (!Finite(position) || !Orthonormalise(ref forward, ref up)) throw new Exception("Invalid tip frame.");
+        var cell = marker.CubeGrid.WorldToGridInteger(position);
+        if (!marker.CubeGrid.CubeExists(cell) || marker.CubeGrid.GetCubeBlock(cell) != null || Vector3D.DistanceSquared(position, marker.CubeGrid.GridIntegerToWorld(cell)) > 1e-8) throw new Exception("ArmTip offset must locate the hidden top cell.");
+        return new ToolTopInfo { Marker = marker, Subtype = type, Local = MatrixD.CreateWorld(position, forward, up) * MatrixD.Invert(marker.WorldMatrix), Inventory = inventory };
+    }
+    static Vector3D TipAxis(string text, MatrixD frame)
+    {
+        int index = Array.IndexOf(Axes, text.Trim().ToLowerInvariant());
+        if (index < 0) throw new Exception("Invalid tip axis.");
+        return Vector3D.TransformNormal(Normals[index], frame);
+    }
     static Vector3D[] Dummies = { new Vector3D(1.033530949712258e-7, .4208642244338989, 1.3662192088759184e-7), new Vector3D(2.17650750755638e-7, .036039892584085464, 3.7548051068370114e-7), new Vector3D(1.033530949712258e-7, .19979000091552734, 1.2796517978586053e-7), Vector3D.Zero, new Vector3D(2.553320221920785e-8, .047984808683395386, 5.927423671892029e-7) };
     class Face
     {
@@ -2680,21 +2694,20 @@ static class ToolGeometry
         string s = mount.BlockDefinition.SubtypeName, t = top.Subtype;
         int index = Array.IndexOf(Bases, s), headIndex = Array.IndexOf(Heads, t);
         if (index < 0) return Fail(out why, "Unsupported mount: " + s);
-        bool hinge = index >= 5;
-        if (headIndex < 0 || (headIndex >= 5) != hinge) return Fail(out why, "Incompatible factory head: " + t);
-        Vector3D dummy = hinge ? Vector3D.Zero : Dummies[index];
+        if (headIndex < 0) return Fail(out why, "Incompatible factory head: " + t);
+        Vector3D dummy = Dummies[index];
         double offset = index == 1 || index == 4 ? .045 : index == 3 ? .11 : 0;
-        double lo = hinge ? 0 : index == 3 ? -.02 : -.11, hi = hinge ? 0 : .11;
+        double lo = index == 3 ? -.02 : -.11, hi = .11;
         if ((index == 0 || index == 2) && top.CubeGrid.GridSizeEnum == MyCubeSize.Large) { lo = -.4; hi = .2; }
         double displacement = mount.Displacement;
         if (!Finite(displacement) || displacement < lo - .000001 || displacement > hi + .000001) return Fail(out why, "Attach would clamp displacement; use " + lo + " .. " + hi + ".");
-        // Attach retains Angle and lock state. Preserve that phase for either
-        // factory joint type instead of imposing a zero-angle head frame.
+        // Attach retains Angle and lock state. Preserve the phase for the rotor
+        // instead of imposing a zero-angle head frame.
         double q = mount.Angle;
         if (!Finite(q)) return Fail(out why, "Bad mount angle.");
         double lower = mount.LowerLimitRad, upper = mount.UpperLimitRad;
         bool inLimits = false;
-        for (int turn = hinge ? 0 : -1; turn <= (hinge ? 0 : 1); turn++)
+        for (int turn = -1; turn <= 1; turn++)
         {
             double candidate = q + turn * Math.PI * 2;
             if ((lower < -1e6 || candidate >= lower - .001) && (upper > 1e6 || candidate <= upper + .001)) inLimits = true;
@@ -2843,8 +2856,8 @@ sealed class ToolSwapController
                 IMyTerminalBlock block;
                 if (!Exact(profiles[n].CouplerName, out block, out why)) return false;
                 var coupler = block as IMyMotorStator;
-                if (coupler == null || coupler is IMyMotorSuspension || coupler.CubeGrid.EntityId != marker.CubeGrid.EntityId || block == mount || (mount != null && coupler.CubeGrid.EntityId == mount.CubeGrid.EntityId))
-                { why = "Tool Mount must be its rotor/hinge base."; return false; }
+                if (coupler == null || !ToolGeometry.Rotor(coupler) || coupler.CubeGrid.EntityId != marker.CubeGrid.EntityId || block == mount || (mount != null && coupler.CubeGrid.EntityId == mount.CubeGrid.EntityId))
+                { why = "Tool Mount must be its rotor base."; return false; }
                 for (int j = 0; j < n; j++) if (profiles[j].Coupler == coupler) { why = "Duplicate tool Mount."; return false; }
                 profiles[n].Coupler = coupler;
             }
@@ -2885,6 +2898,8 @@ sealed class ToolSwapController
         for (int n = 0; n < values.Length; n++) ini.Set(ToolsSection, NumberKeys[n], AutoSettings.Number(values[n])); ini.Set(ToolsSection, "CellLimit", CellLimit);
         ini.SetComment(ToolsSection, "Heads", "Exact markers, one per line; ToolNN order. Tool <name/index>; Park [number]; ToolScan; SwapCancel.");
         ini.SetComment(ToolsSection, "Mount", "Arm-end reference; ToolNN.Mount = exact tool base name.");
+        if (!ini.ContainsKey(ToolsSection, "ArmTip")) ini.Set(ToolsSection, "ArmTip", "");
+        ini.SetComment(ToolsSection, "ArmTip", "Fresh bare arm: offset metres Forward/Left/Up | forward | up. Relative to Mount; default Forward/Up.");
         for (int n = 0; n < Profiles.Count; n++)
         {
             var h = Profiles[n]; string s = "Tool" + (n + 1).ToString("00");
@@ -2895,7 +2910,14 @@ sealed class ToolSwapController
     {
         if (h == null || h.Coupler == null || h.Coupler.Closed || !h.Coupler.IsAttached || Tip == null || Tip.Closed) return false;
         var top = h.Coupler.Top as IMyMotorRotor;
-        if (top == null || top.EntityId != Tip.EntityId || top.Base == null || top.Base.EntityId != h.Coupler.EntityId || top.CubeGrid.EntityId != Mount.CubeGrid.EntityId) return false;
+        if (top == null || top.Base == null || top.Base.EntityId != h.Coupler.EntityId || top.CubeGrid.EntityId != Mount.CubeGrid.EntityId) return false;
+        if (Tip.EntityId == 0)
+        {
+            var frame = Tip.WorldMatrix;
+            if (top.Position != Tip.Position || !ToolGeometry.Rotor(top) || !Finite(top.WorldMatrix.Up) || !Finite(top.WorldMatrix.Forward) || Vector3D.Dot(top.WorldMatrix.Up, frame.Up) < .9999939 || Vector3D.Dot(top.WorldMatrix.Forward, frame.Forward) < .9999939) return false;
+            Tip.EntityId = top.EntityId;
+        }
+        if (top.EntityId != Tip.EntityId) return false;
         Tip.Live = top; Tip.Subtype = top.BlockDefinition.SubtypeName;
         return true;
     }
@@ -2912,6 +2934,7 @@ sealed class ToolSwapController
         }
         if (found != null) Tip = found;
         if (Tip == null) Tip = ToolTopInfo.Load(P, Mount, Inventory);
+        if (Tip == null && EnabledTools) Tip = ToolGeometry.DeclaredTip(P, Mount, Profiles[0].Coupler, Inventory);
         if (Tip == null || (!Tip.Closed && Tip.CubeGrid.EntityId == Mount.CubeGrid.EntityId && Mount.CubeGrid.CubeExists(Tip.Position))) return true;
         why = "Arm tip outside reference grid."; return false;
     }
@@ -3071,7 +3094,7 @@ sealed class ToolSwapController
     {
         why = "";
         foreach (var h in Profiles) if (Mounted(h)) Source = h;
-        if (Tip == null) { why = "Fresh installation requires a tool attached."; return false; }
+        if (Tip == null) { why = "Fresh bare arm: configure Tools.ArmTip."; return false; }
         if (!TipOwned(out why)) return false;
         foreach (var h in Profiles)
         {
@@ -3291,7 +3314,7 @@ sealed class ToolSwapController
     string Info()
     {
         var b = new System.Text.StringBuilder("Tools " + (EnabledTools ? EnabledKey : "disabled") + "; " + Phase + (Recovery ? "; recovery OFF" : "") + "\n" + Last);
-        b.Append(Tip == null ? "\nFresh install: attach one tool." : "\nArm tip recorded.");
+        b.Append(Tip == null ? "\nBare setup: Tools.ArmTip." : "\nArm tip configured.");
         for (int n = 0; n < Profiles.Count; n++) { var h = Profiles[n]; b.Append("\n").Append(n + 1).Append(" ").Append(h.Name).Append(Mounted(h) ? " mounted" : " detached").Append("; Mount ").Append(h.CouplerName).Append("; merges ").Append(h.Heads.Count).Append('/').Append(h.Stands.Count); }
         return b.ToString();
     }

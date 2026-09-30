@@ -13,6 +13,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v2.5` | Tool swaps, facing-merge region discovery, strict Format 3, support/attachment interlocks and startup/Home regression fixes | 99,883 |
 | `v2.5.1` | PB-safe hidden-top occupancy, mounted coupling learning, persistent identity/pose checks and tighter compaction | 99,772 |
 | `v2.6` | Named tool-side bases without per-tool teaching, shared pose commands, Unicode compaction and strengthened support/ownership guards | 99,238 |
+| `v2.7` | Rotor-only tool couplers, fresh headless pickup from declared arm-tip pose, shared control logic and inferred declarations | 99,846 |
 
 Read a previous script without changing your working tree:
 

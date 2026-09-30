@@ -80,6 +80,10 @@ internal static class ScriptPack
 
     static void Pack(string source, CSharpCompilation compilation, string output)
     {
+        var originalCompilation = compilation;
+        source = ShortDeclarations(source, compilation);
+        compilation = Compile(source, "declaration compression");
+        Check(compilation);
         var tree = compilation.SyntaxTrees.Single();
         var root = tree.GetRoot();
         var model = compilation.GetSemanticModel(tree);
@@ -214,7 +218,7 @@ internal static class ScriptPack
         if (automaticArm) packed = "// AutoArm " + version.Trim('"') + "\n// OFF. Check/On. No collision avoidance.\n" + settings + compact + "\n";
         var packedCompilation = Compile(packed, output);
         Check(packedCompilation);
-        CompareIL(compilation, packedCompilation);
+        CompareIL(originalCompilation, packedCompilation);
         // Reverse the exact token substitutions and compare to the complete source token stream.
         for (int i = 0; i < tokens.Length; i++)
         {
@@ -234,6 +238,55 @@ internal static class ScriptPack
         Directory.CreateDirectory(Path.GetDirectoryName(mapPath)!);
         File.WriteAllText(mapPath, JsonSerializer.Serialize(symbols.Select(kv => new { symbol = kv.Key.ToDisplayString(), name = kv.Value }), new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine($"Packed: {packed.Length:N0} characters; {100000 - packed.Length:N0} free to 100,000. Token round-trip, compilation and identical method IL: PASS. Renamed {symbols.Count} symbols.");
+    }
+
+    static string ShortDeclarations(string source, CSharpCompilation compilation)
+    {
+        int boundary = source.IndexOf("static string MiningTuningError", StringComparison.Ordinal);
+        if (boundary < 0) boundary = source.IndexOf("// ===== IMPLEMENTATION =====", StringComparison.Ordinal);
+        if (boundary < 0) throw new Exception("Missing settings boundary.");
+        var tree = compilation.SyntaxTrees.Single();
+        var model = compilation.GetSemanticModel(tree);
+        var edits = new List<(int Start, int Length, string Text)>();
+        foreach (var array in tree.GetRoot().DescendantNodes().OfType<ArrayCreationExpressionSyntax>())
+        {
+            if (array.SpanStart < Header.Length + boundary || array.Initializer == null ||
+                array.Type.RankSpecifiers.Count != 1 || array.Type.RankSpecifiers[0].Rank != 1 ||
+                array.Type.RankSpecifiers[0].Sizes.Any(s => s is not OmittedArraySizeExpressionSyntax)) continue;
+            var inferredSyntax = SyntaxFactory.ParseExpression("new[]" + array.Initializer.ToString(), options: ParseOptions);
+            var originalType = model.GetTypeInfo(array).Type;
+            var inferredType = model.GetSpeculativeTypeInfo(array.SpanStart, inferredSyntax, SpeculativeBindingOption.BindAsExpression).Type;
+            if (originalType == null || !SymbolEqualityComparer.Default.Equals(originalType, inferredType)) continue;
+            edits.Add((array.Type.SpanStart - Header.Length, array.Type.Span.Length, "[]"));
+        }
+        foreach (var declaration in tree.GetRoot().DescendantNodes().OfType<LocalDeclarationStatementSyntax>())
+        {
+            var variables = declaration.Declaration;
+            if (variables.Type.SpanStart < Header.Length + boundary || variables.Type.IsVar ||
+                variables.Type.Span.Length <= 3 || variables.Variables.Count != 1 ||
+                declaration.Modifiers.Count != 0) continue;
+            var initializer = variables.Variables[0].Initializer?.Value;
+            if (initializer == null) continue;
+            var declared = model.GetTypeInfo(variables.Type).Type;
+            var inferred = model.GetTypeInfo(initializer).Type;
+            // Script-owned simple type names receive one-character aliases later;
+            // replacing those with the three-character keyword would cost space.
+            if (variables.Type is IdentifierNameSyntax && declared?.Locations.Any(l => l.IsInSource) == true) continue;
+            // Equality excludes implicit numeric/reference conversions and target-typed
+            // null or lambda initializers. The original-source IL gate below also
+            // rejects any unforeseen overload or emitted-local change.
+            if (declared == null || !SymbolEqualityComparer.Default.Equals(declared, inferred)) continue;
+            edits.Add((variables.Type.SpanStart - Header.Length, variables.Type.Span.Length, "var"));
+        }
+        foreach (var token in tree.GetRoot().DescendantTokens().Where(t => t.IsKind(SyntaxKind.PrivateKeyword)))
+        {
+            if (token.SpanStart < Header.Length + boundary || token.Parent?.Parent is not ClassDeclarationSyntax) continue;
+            edits.Add((token.SpanStart - Header.Length, token.Span.Length, ""));
+        }
+        var result = new StringBuilder(source);
+        foreach (var edit in edits.OrderByDescending(e => e.Start))
+            result.Remove(edit.Start, edit.Length).Insert(edit.Start, edit.Text);
+        return result.ToString();
     }
 
     static void CompareIL(CSharpCompilation source, CSharpCompilation packed)
