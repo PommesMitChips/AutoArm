@@ -2,15 +2,25 @@
 
 AutoArm is a mechanical-arm control program for the Space Engineers programmable block. It simplifies setup of robotic arms to configuring the start and endpoint of an arm, while allowing later fine tuning of parameters via CustomData within the programmable block.
 
-## Install and choose a setup
+## Install AutoArm 2.5
 
-Stop the previous controller before replacing its script. Set the one required code value, `const string ArmName = "Arm 1";`, then follow one of the three setups below. Names shown are actual block names; do not type a wildcard `*` into them. Configuration is the **programmable block's Custom Data**, not the individual parts' Custom Data.
+1. Run `Stop` on the previous controller. Copy the **entire** [AutoArm_Compact.txt](AutoArm_Compact.txt) into the programmable block's script editor.
+2. Set the code value `const string ArmName = "Arm 1";` to your arm's name, then check/compile the script in the PB editor. No local build tools are needed to play.
+3. Run the PB with `Version` and confirm `AutoArm 2.5`. It starts OFF; a first discovery error is expected if the parts or tool profiles are not configured yet.
+4. Choose a setup below, name the parts, and edit the **programmable block's Custom Data**. Do not put these settings in the drills, rotors or merge blocks' Custom Data.
+5. Run `Reload`, let discovery/scanning finish OFF, then run `Check`. For parking or swapping, also inspect `ToolInfo`. Run `On` when setup is ready and the mounted tool is clear of its merge support.
 
-Run `Version` first. **Parking and tool swapping require AutoArm 2.5.** Until its PR is merged, GitHub's `main` contains v2.4. Use [the v2.5 branch's complete compact script](https://github.com/PommesMitChips/AutoArm/blob/release/v2.5-tool-head-swap/AutoArm_Compact.txt) for those features.
+The examples use `Arm 1`; substitute your chosen name in the block names, `[AutoArm] Arm`, `Mount` and profile lists. Names shown are actual block names. A wildcard `*` in an explanation means “begins with”; do not type it into a name.
 
-**v2.5 requires Custom Data Format 3.** If existing data has a different or missing format, record the preferences you want to retain, delete Custom Data, and run `Reload`. The loader rejects older formats instead of migrating them. A populated actuator table is tied to this PB's saved identity cache; clear `Actuators` when installing into another PB.
+| Setup | Starter Custom Data | Selection |
+| --- | --- | --- |
+| Fixed tool, ordinary arm control | [SimpleArm.ini](examples/SimpleArm.ini) | `[Tools] Enabled=false`; one head-prefix marker |
+| One detachable tool and a common parking support | [Park.ini](examples/Park.ini) | Tools enabled; one exact marker, end mount and park ports |
+| Several detachable tools with individual stands | [ToolSwap.ini](examples/ToolSwap.ini) | Tools enabled; exact marker and merge lists for each profile |
 
-Longer `ArmName` values consume the small remaining character allowance. Speed and acceleration caps are not measurements of physical momentum. Motor torque/force, travel limits and game physics still determine what the arm can achieve.
+For a **fresh setup**, copy the chosen starter into PB Custom Data and adjust the names. Missing scalar settings are filled with defaults. For an **existing valid setup**, edit its existing sections to retain your speeds, tuning and actuator weights; do not append duplicate sections.
+
+AutoArm 2.5 requires `[AutoArm] Format=3`. If older data has a different or missing format, save the preferences you want to re-enter, delete Custom Data, and run `Reload` to generate the current format. There is no format migration. A populated `Actuators` table belongs to this PB's saved identity cache; clear that value when installing into another PB so its own table is generated.
 
 ### 1. Simple arm: one fixed tool, no automatic parking
 
@@ -87,7 +97,7 @@ If the head uses multiple support merges, enumerate and list every required head
 
 ### 3. Tool swap setup: drill and welder with their own stands
 
-**The six names in the reported screenshot are valid with this explicit configuration.** Keep these names and add the marked base and end coupler:
+This example uses a drill tool and a welder tool. The merge blocks can share the `Head 1`/`Head 2` naming scheme because tool mode selects the exact configured markers:
 
 | Part | Exact block name | Location |
 | --- | --- | --- |
@@ -135,14 +145,14 @@ StandMerges=
 
 Run `Reload`, let scanning finish OFF, then `ToolInfo`. It should show both aliases, their mounted/detached state, and `merges 1/1` for each one-port tool/stand profile. It does not print marker/top identities; those are checked internally. Use `Tool Head 2` (or `Tool 2`) to park the drill on its own stand and pick up the welder. `Tool Head 1` reverses the swap. Successful changes finish OFF; run `On` for manual control. Generic `Park` is optional: add `Arm 1 - ParkMerge 1` to `[Tools] ParkMerges` if you want a separate common parking support.
 
-If you prefer automatic merge adoption, set the corresponding scans to `true`. Head-side merges are adopted from the physically scanned tool region, irrespective of their names. Stand auto-adoption uses `StandPrefix`; when it is blank, it is derived from the **full marker name**. With marker `Arm 1 - Head 1 - Drill`, the default is `Arm 1 - Head 1 - Drill - StandMerge `, not `Arm 1 - Head 1 - StandMerge `. The simpler automatic naming scheme in the preserved release example assumes the marker is named exactly `Arm 1 - Head 1`. Number automatic stand and park merges, starting with `1`.
+If you prefer automatic merge adoption, set the corresponding scans to `true`. Head-side merges are adopted from the physically scanned tool region, irrespective of their names. Stand auto-adoption uses `StandPrefix`; when it is blank, it is derived from the **full marker name**. With marker `Arm 1 - Head 1 - Drill`, the default is `Arm 1 - Head 1 - Drill - StandMerge `, not `Arm 1 - Head 1 - StandMerge `. For the simpler automatic naming convention, name the marker exactly `Arm 1 - Head 1` and its stand merges `Arm 1 - Head 1 - StandMerge 1`, etc. Number automatic stand and park merges, starting with `1`.
 
 ### Fixing “Head*; found 6”
 
 This message means discovery is using the simple-arm head-prefix rule and sees six matches. `Arm 1 - Head 1 - HeadMerge` and `Arm 1 - Head 1 - StandMerge` count just as much as the drill. It does not mean the arm contains six selected tool markers.
 
-- **For a simple arm:** keep only one reference block beginning `Arm 1 - Head`; rename the other five so they do not use that prefix.
-- **For this two-tool setup:** run `Version` and use v2.5, set `[Tools] Enabled=true`, specify the end-coupler base in `Mount`, and use the exact two marker names and merge lists above. Edit existing sections rather than adding duplicate `[Tools]` sections. Run `Reload` after editing; `Check` alone does not load tool configuration.
+- **For a simple arm:** keep only one reference block beginning `Arm 1 - Head`; rename all other matching parts so they do not use that prefix.
+- **For a tool setup:** set `[Tools] Enabled=true`, specify the end-coupler base in `Mount`, and list the full marker names and merges as shown above. Run `Reload` after editing; `Check` alone does not load tool configuration. If `Version` does not report 2.5, install the current compact script first.
 - **For missing-name errors:** match spelling, spaces and capitalization exactly. `Arm 1 - Head 1` is not the full name `Arm 1 - Head 1 - Drill`. Do not leave a profile for an absent tool; remove its `Heads` entry and keep `ToolNN` sections in list order.
 
 For a fresh setup, the linked INI examples include `[AutoArm] Arm=Arm 1` and `Format=3` and intentionally leave `Actuators` blank. When editing an existing valid setup, retain your current `[Config]` settings and actuator table rather than replacing them unnecessarily.
@@ -163,14 +173,7 @@ Q/E rolls around the actual head. Optional mouse pitch/yaw follows the current v
 
 Useful toolbar Run arguments include `On`, `Stop`, `Hold`, `Check`, `Reload`, `Info`, `Joints`, `SetHome`, `GoHome`, `PitchUp`, `PitchDown`, `YawLeft`, `YawRight`, `RollLeft`, `RollRight` and `Face <direction>`. Custom Data contains the full command list and setting ranges. Runtime speed/mode commands are temporary; Reload restores configured defaults.
 
-## Tool Head Swap
-
-Tools are optional and disabled by default. The three setup recipes above distinguish simple prefix discovery from configured exact tool markers. The swap example uses explicit merge names:
-
-- Enable `[Tools]`, set `Mount` to the exact unique name of the detachable rotor/hinge **base**, and list exact head-marker names in `Heads`.
-- Each `ToolNN` section follows that list's order. `Name` provides a convenient command alias such as `Head 1`.
-- With a marker named exactly `Arm 1 - Head 1`, default stand merges use `Arm 1 - Head 1 - StandMerge 1`, etc. Longer marker names change the inferred prefix; explicit lists avoid this. Generic park ports use `Arm 1 - ParkMerge 1`, etc.
-- Explicit `HeadMerges`, `StandMerges` and `ParkMerges` lists work with automatic adoption disabled. `ScanHeadMerges`, `ScanStandMerges`, `ScanParkMerges` control adoption.
+## Tool operations and recovery
 
 The parked-tool scan walks occupied cells from the marker and stops only across adjacent opposed merge faces: head merge **><** stand merge. Parallel/non-facing merges are not barriers. This identifies the tool's exact rotor/hinge top even when it shares the stand grid. Supported vanilla couplers do not require a teaching mount.
 
@@ -180,7 +183,7 @@ Completion stays **OFF**; run `On` to resume manual control. Pilot input, `SwapC
 
 Automatic operations require proven compatible support. Unknown/modded or flipped couplers and incompatible attachment geometry are refused. **There is no collision checking or path planning**; approach clearance does not guarantee a clear route. Volumetric restrictions remain future work.
 
-See the [v2.5 release notes](releases/v2.5/AutoArm_v2_5_Notes.txt) for complete setup, restrictions and recovery details. Historical filenames in those notes refer to the exact preserved artifacts alongside them. [examples/CustomData.ini](examples/CustomData.ini) shows the generated ten-joint configuration; generate your own identity table rather than copying its populated actuator rows.
+See [docs/RELEASE_NOTES.txt](docs/RELEASE_NOTES.txt) for v2.5 details and [docs/HISTORY.md](docs/HISTORY.md) for retrieving older versions from Git tags. [examples/CustomData.ini](examples/CustomData.ini) shows a generated ten-joint configuration; generate your own identity table rather than copying its populated actuator rows.
 
 ## Build and test
 
@@ -198,7 +201,9 @@ For a nondefault game location:
 .\tools\Build-AutoArm.ps1 -GameBin 'D:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64' -Test
 ```
 
-Edit the fragments in `src/`. The build regenerates `AutoArm_Source.txt` and `AutoArm_Compact.txt`, checks C# 6 against installed SE APIs, verifies token round-trip and identical method IL, and runs the simulated PB harness. Tests also regenerate `examples/CustomData.ini`. Preserved files under `releases/` are not rewritten by the build. [`src/AutoArm.Seam.md`](src/AutoArm.Seam.md) describes the implementation boundaries.
+Edit the fragments in `src/`. The build regenerates `AutoArm_Source.txt` and `AutoArm_Compact.txt`, checks C# 6 against installed SE APIs, verifies token round-trip and identical method IL, and runs the simulated PB harness. Tests also regenerate `examples/CustomData.ini`. [`src/AutoArm.Seam.md`](src/AutoArm.Seam.md) describes the implementation boundaries.
+
+The current compact script has 99,883 characters, leaving 117 under the PB's 100,000-character limit; a longer `ArmName` consumes some of that allowance. Configured velocity and acceleration caps are not physical momentum measurements. Available torque/force, travel limits and game physics determine achievable motion.
 
 The relocated v2.5 suite passes **174,262 assertions**. Coverage includes topology discovery, signed parallel groups, additive/manual-priority input, gravity bias, movement frames, facing-merge boundaries, swap/park sequences, partial support, wrong tops, pose gates, cancellation/restart, startup drive stopping and Home attachment faults. Live SE physics, actual instruction costs and loaded merge timing remain unverified.
 

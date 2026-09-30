@@ -1,6 +1,6 @@
-# Reconstructed version history
+# Versions
 
-The original workspace was not a Git repository. Its saved releases were imported in development order, with one commit and annotated tag per snapshot. These are reconstructed snapshots, not recovered original commits. Git timestamps identify this import, not the time each feature was written. Historical filenames and release notes are preserved without edits.
+The working tree contains the current script, source fragments, examples and development tools. Previous releases are retained in Git commits and annotated tags, rather than parallel release folders.
 
 | Tag | Preserved change | Compact characters |
 | --- | --- | ---: |
@@ -12,10 +12,21 @@ The original workspace was not a Git repository. Its saved releases were importe
 | `v2.4` | HEAD/HRZ/VRT frames, active cockpit selection, optional mouse input and named toolbar actions | 69,408 |
 | `v2.5` | Tool swaps, facing-merge region discovery, strict Format 3, support/attachment interlocks and startup/Home regression fixes | 99,883 |
 
-`main` contains the imported releases through v2.4. The `release/v2.5-tool-head-swap` branch and its pull request contain v2.5, the current development fragments, build tools, tests and setup examples. The v2.5 tag identifies that branch's imported release snapshot; its presence does not imply that the PR was merged or that live game physics were validated.
+Read a previous script without changing your working tree:
 
-Each commit updates the top-level `AutoArm_Source.txt` and `AutoArm_Compact.txt`. Exact delivered artifacts live under `releases/<tag>/`. Earlier maintainable source fragments were not preserved independently, so the historical tags supply the combined source rather than pretending the current fragments were used to build earlier versions. The complete current toolchain is introduced with v2.5.
+```powershell
+git show v2.4:AutoArm_Compact.txt
+git show v2.4:AutoArm_Source.txt
+```
+
+Or check out a complete historical snapshot:
+
+```powershell
+git switch --detach v2.4
+```
+
+Run `git switch -` to return to your previous branch. Tags retain their original notes and configuration examples as well as the top-level source and compact script. Historical folder names exist only in those snapshots. Earlier versions preserve combined source; the full maintainable fragments and current toolchain were introduced with v2.5.
 
 Historical notes describe the configuration and behavior at their own version. In particular, their migration advice does not apply to v2.5: nonblank Custom Data must use Format 3. Re-enter previous preferences after deleting older Custom Data.
 
-Pre-rewrite mining-arm adaptations and setup probes were retained in the local workspace archive, outside this AutoArm repository. The supplied `reference/MiningArm_v2_0_HeadOnly.txt` remains a behavior-comparison fixture used by the tests.
+The supplied `reference/MiningArm_v2_0_HeadOnly.txt` remains a behavior-comparison fixture required by the tests; it is not a parallel AutoArm release.

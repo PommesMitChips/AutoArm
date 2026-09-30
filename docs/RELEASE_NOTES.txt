@@ -1,10 +1,10 @@
 AutoArm 2.5 — Tool Head Swap
 
 DELIVERY
-Paste the entire AutoArm_v2_5_Compact.txt into the game's programmable block.
+Paste the entire AutoArm_Compact.txt into the game's programmable block.
 Only ArmName needs editing in code. The compact script is 99,883 characters:
 117 characters remain under the 100,000 limit. Longer arm names consume that
-space. AutoArm_v2_5_Source.txt is the readable development source.
+space. AutoArm_Source.txt is the readable development source.
 
 UPGRADE
 Stop the arm before replacing the script. Custom Data requires Format=3.
@@ -23,7 +23,7 @@ the last coupler between the upstream arm and the tool assembly. A tool has
 one unambiguous eligible rotor/hinge top. Settings in Tool01, Tool02, etc.
 correspond to the order of Heads. Name is a convenient toolbar alias.
 
-AutoArm_v2_5_ToolSwap_Config_Example.ini is a complete starter with two profiles.
+examples/ToolSwap.ini is a complete starter with two profiles and explicit names.
 Rename the example mount and markers to actual blocks, or rename those blocks
 to match. Its empty actuator table regenerates current physical groups.
 
