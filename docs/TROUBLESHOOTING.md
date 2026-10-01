@@ -2,9 +2,13 @@
 
 ## “Head*; found X”
 
-With tools disabled, exactly one terminal block must start with the arm's head prefix. For `Arm 1`, names such as `Arm 1 - Head 1 - Drill` and `Arm 1 - Head 1 - HeadMerge` both match `Arm 1 - Head`. Keep that prefix on only the reference block for a simple arm.
+With `[Modules] ToolSwapPB` empty, exactly one terminal block must start with the arm's head prefix. For `Arm 1`, names such as `Arm 1 - Head 1 - Drill` and `Arm 1 - Head 1 - HeadMerge` both match `Arm 1 - Head`. Keep that prefix on only the reference block for a simple arm.
 
-For a tool setup, enable `[Tools]`, configure the arm-end reference in `[Tools] Mount`, each tool-side rotor base in `[ToolNN] Mount`, and complete marker names in `Heads`. Run `Reload`; `Check` does not load configuration edits.
+For a tool setup, install the second PB and set the arm PB's `Modules.ToolSwapPB` to its exact name. Put `[Tools]` and `[ToolNN]` sections in the ToolSwap PB, with complete marker names in `Heads` and tool-side rotor bases in `Mount`. Run `On` on the arm PB to load, scan and enable. `Check` alone does not load configuration edits.
+
+## Module PB missing or not responding
+
+Both PBs must be functional, running and on the same construct. Their code must use the same arm name. `Modules.ToolSwapPB` in the arm PB and `Link.ArmPB` in the ToolSwap PB must name the other PB exactly. Check that each PB contains the correct script and configuration example. Run `On` on the arm PB after fixing them. Loss of module communication stops movement.
 
 ## Missing or ambiguous names
 
@@ -12,9 +16,11 @@ Names must match the whole name, including spaces and capitalization. `Arm 1 - H
 
 ## Tool mount and arm tip
 
-The rotor base belongs on the tool. The unnamed compatible top stays on the arm beside its fixed reference block. A tool's base, marker and head merges must belong to its connected tool assembly. Facing head/stand merges delimit that assembly; another solid connection around them defeats separation.
+The rotor base belongs on the tool; one unnamed rotor part stays on the moving arm. There is no arm-side Mount name or ArmTip offset. The part can sit directly on the last hinge's moving head. AutoArm follows the named Base, finds that part, and uses it as the bare movement focus. Each tool's named base, marker and head merges remain on its tool assembly.
 
-A fresh PB can start bare using `[Tools] ArmTip`: offset metres Forward/Left/Up from the arm reference, followed by optional forward/up axes. Its offset must identify the rotor part pivot cell, and its axes must match the part. Alternatively, install with a tool already attached. Spare tools need no setup mount. Rotor tool couplers are required; arm joints can still be hinges. Saving/recompiling the same PB retains its arm-end setup.
+`No loose arm rotor part` means no candidate was found on reachable moving arm grids. Check the Base attachment and the part's rigid connection to the arm. Multiple loose parts or a part surrounded on several possible mounting faces are ambiguous; remove spare parts or make the mounting arrangement clear.
+
+First automatic acquisition needs unlimited lower/upper angle limits on the selected tool rotor. Rotor Lock is supported and restored after verification. If cancelled while pending, keep support, inspect the equipment and run `On`; its scan cancels a confirmed bare pending request before restoring the lock. Use `ToolScan` instead to check while remaining OFF. No tool merge is released for an unverified actual part.
 
 `Tool attached elsewhere` means a configured tool base is attached to a different top. Keep that tool supported and remove its unintended attachment before scanning. Do not move an arm still attached to a merged tool.
 
@@ -26,8 +32,16 @@ Automatic generic parking uses numbered names such as `Arm 1 - ParkMerge 1`. An 
 
 ## Configuration format
 
-Current configuration uses Format 4. If the loader reports the wrong format, save the preferences you want to retain, delete Custom Data and run `Reload`. When installing into another PB, clear a copied `Actuators` table so the new PB can generate its own rows.
+Arm configuration uses Format 6; ToolSwap configuration uses Format 1. If the loader reports the wrong format, save the preferences you want to retain, delete Custom Data and copy the current example for that PB. Run `On` on the arm PB. When installing into another arm PB, clear a copied `Actuators` table so the new PB can generate its own rows.
 
 ## Interrupted swaps
 
-`Stop`, `Off`, `SwapCancel` or pilot input stops automatic movement while retaining support. Inspect the connections and run `ToolScan` before continuing. An explicit scan clears a pending failed attachment only when that base is actually bare. Automatic completion stays OFF; run `On` for manual control afterward.
+`Stop`, `Off`, `SwapCancel` or pilot input stops automatic movement while retaining support. Inspect the connections and run `On` to scan and resume. An explicit scan clears a pending failed attachment only when that base is actually bare. Successful tool pickup/swap resumes manual control automatically; parking and canceled or failed operations stay OFF. `Stop` also cancels startup requested by `On`.
+
+During a normal swap, merge and mount changes are expected. The arm pauses commands, waits for separation/attachment and rebuilds its topology before continuing. Replace both PB scripts together if a tool remains OFF after its support merges separate. Unrelated upstream changes still stop the operation.
+
+## Parked orientation and tool speed
+
+Start with tools merged to their stands so ToolSwap can record their actual rest poses. Those poses survive ToolSwap recompilation and prevent quarter-turn changes caused by visually symmetric merge blocks. A never-observed parked tool uses merge geometry for its first parking operation.
+
+Travel uses HeadSpeed/HeadTurnSpeed in the arm PB. MoveSpeed/TurnSpeed in ToolSwap apply only to final docking/insertion and straight withdrawal. ApproachDistance determines the clearance and backoff. Insertion/withdrawal hold orientation and follow a Cartesian line; this does not add obstacle avoidance during travel.

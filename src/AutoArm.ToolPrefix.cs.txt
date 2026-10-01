@@ -1,0 +1,3 @@
+// AutoArm ToolSwap: configure tools in this PB's Custom Data.
+const string ArmName = "Arm 1";
+// ===== IMPLEMENTATION =====

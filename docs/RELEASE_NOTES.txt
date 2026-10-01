@@ -1,34 +1,32 @@
-AutoArm 2.7 — Fresh headless pickup and declaration compression
+AutoArm 3.2 — Direct PB peers and leaner validation
 
-Tool couplers now use ROTOR bases on the tools and a rotor part on the arm.
-Arm joints still support pistons, rotors and hinges. Pickup preserves rotor
-lock state; Rotor Lock can keep the tool coupler static after mounting.
+Optional Modules.Peers accepts up to 16 additional exact PB names with Observe,
+Plan or Stop permissions. Each peer talks directly to the Arm PB. A shared helper
+can maintain independent sessions with several arm owners; no ToolSwap relay is
+required. Planners submit complete paths with inherited arm speeds and optional
+per-point policies; observers read live pose/state/progress; safety peers can stop
+manual control, Home, planner paths and ToolSwap. The Arm PB remains the only
+joint writer. Numerical solving is not distributed across PBs.
 
-A fresh headless arm can start, move and pick up a parked tool without Storage
-or an initial attachment. Tools.ArmTip defines its pivot offset in metres
-Forward/Left/Up from the arm reference, plus optional forward/up axes relative
-to that reference. Default axes are Forward/Up. The rotor family follows the
-named tool base. Example: ArmTip=0 2.5 0 | Forward | Up, for a pivot one
-large-grid cell LEFT of an aligned reference. Adjust to the actual placement.
+Independent authenticated sessions, bounded traffic, exclusive path ownership,
+revocable revisions and a 0.5-second active-planner watchdog fence stale traffic
+and competing clients. Extra peers cannot change topology or attach equipment.
+The specialized ToolSwap protocol and automatic resume behavior are preserved.
 
-No unseen identity is invented or persisted. First pickup verifies the actual
-supported rotor part's cell, finite axes, arm grid and reciprocal base before
-adopting its ID/subtype. Existing two-observation live pose and proven-support
-gates remain required before disabling the selected tool merges. Unknown
-ownership, wrong cell/axes, non-rotor parts and malformed definitions refuse
-motion or support release. Saved arm-end metadata remains usable at restart.
+Active topology validation checks only a precomputed list of unowned edges.
+Owned availability/endpoints/names/synchronization are checked once by each
+mandatory Refresh before output. Singleton position validation comes from Bounds.
+A ten-rotary simulated active pass now has one attachment check and one Angle
+read per joint. Owned disconnect and paired desynchronization remain immediate;
+full snapshots still run every 30 active passes and on explicit full checks.
 
-Custom Data remains Format 4. ArmTip is optional for an already attached or
-previously recorded arm. Wrong/missing formats still refuse without migration.
+Saved tool preferences prune absent, closed or wrong-family actuator identities
+after successful stopped discovery/setup, including cold load. Parked/live weights
+and unrelated Storage survive. Failed discovery and low-budget cleanup do not
+commit removals. No terminal enumeration is added to active ticks.
 
-The two GPT-6.1 Sol agents reduced declaration syntax and shared control/Home
-logic. The packer infers local/array types only when semantic types are equal,
-removes redundant private modifiers, and compares final IL to the original
-readable source. Control preserves arithmetic order, additive pilot input,
-manual-priority correction, gravity bias and native Home routes. Task-matrix
-formation shares a bounded-mode branch; actual instruction costs are unprofiled.
-
-AutoArm_Compact.txt has 99,846 UTF-16 characters, leaving 154 under 100,000.
-Longer ArmName values consume that margin. Full validation passes C#6 against
-installed SE APIs, exact compact-token reversal, identical method IL and
-177,201 simulated assertions. Live game physics remains unverified.
+Arm Format 6 and ToolSwap Format 1 are unchanged; Peers is optional. Both current
+PB scripts are supplied. Arm: 84,975 characters, 15,025 free. ToolSwap: 51,414,
+48,586 free. C#6/installed SE API, token reversal, original-source identical IL
+and 179,678 simulated assertions pass. Live game physics and instruction timing
+remain unverified.

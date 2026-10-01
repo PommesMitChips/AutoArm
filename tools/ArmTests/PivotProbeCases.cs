@@ -35,7 +35,7 @@ internal static partial class Scenarios
             Check(DriveWrites(rig)==writes,"Passive successful probe commanded an actuator.");
             Check(rig.PB.CustomData==config&&((TestHost)script).Storage==storage,"Probe overwrote configuration or home storage.");
             InvokeFrame(script,rig,"PivotProbe Report",UpdateType.Terminal,0);Check(rig.Log.Last().Contains("no pivot changed"),"Probe report implied automatic calibration.");
-            InvokeFrame(script,rig,"On",UpdateType.Terminal,0);Check(Get(script,"PivotProbe")==null,"Enabling control retained a stale empirical snapshot.");
+            Run(script,"On");Check(Get(script,"PivotProbe")==null,"Enabling control retained a stale empirical snapshot.");
             writes=DriveWrites(rig);InvokeFrame(script,rig,"PivotProbe Start 1",UpdateType.Terminal,0);
             Check(Enabled(script)&&ProbeTrials(script).Length==0&&DriveWrites(rig)==writes,"Probe changed active control instead of refusing observation.");
         }

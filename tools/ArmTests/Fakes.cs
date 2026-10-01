@@ -7,7 +7,10 @@ using VRageMath;
 // Test-only proxies implement the installed SE interfaces. No game process or save is touched.
 public class RecordProxy : DispatchProxy
 {
+    public static string Actor = "";
+    public readonly List<(string Actor,string Name,object? Value)> ActorWrites = new();
     public readonly Dictionary<string, object?> Values = new();
+    public readonly Dictionary<string,int> Reads = new();
     public readonly List<(string Name, object? Value)> Writes = new();
     public Func<MethodInfo, object?[]?, object?>? Call;
     protected override object? Invoke(MethodInfo? target, object?[]? args)
@@ -15,12 +18,13 @@ public class RecordProxy : DispatchProxy
         var method = target!;
         if (method.Name.StartsWith("get_"))
         {
+            string read=method.Name[4..]; Reads.TryGetValue(read,out int count); Reads[read]=count+1;
             if (Values.TryGetValue(method.Name[4..], out var value)) return value;
         }
         if (method.Name.StartsWith("set_"))
         {
             string key = method.Name[4..];
-            Values[key] = args![0]; Writes.Add((key, args[0])); return null;
+            Values[key] = args![0]; Writes.Add((key, args[0])); ActorWrites.Add((Actor,key,args[0])); return null;
         }
         if (Call != null) return Call(method, args);
         return method.ReturnType == typeof(void) || !method.ReturnType.IsValueType ? null : Activator.CreateInstance(method.ReturnType);
@@ -36,12 +40,14 @@ public class TestHost
     {
         Me = Next.PB; GridTerminalSystem = Next.GTS; Runtime = Next.Runtime;
         Storage = Next.Storage; Echo = Next.Log.Add;
+        IGC = Next.IGC;
     }
     public IMyProgrammableBlock Me { get; set; }
     public IMyGridTerminalSystem GridTerminalSystem { get; set; }
     public IMyGridProgramRuntimeInfo Runtime { get; set; }
     public string Storage { get; set; }
     public Action<string> Echo { get; set; }
+    public IMyIntergridCommunicationSystem IGC { get; set; }
 }
 
 public class Rig
@@ -56,11 +62,15 @@ public class Rig
     public readonly IMyGridTerminalSystem GTS;
     public readonly IMyGridProgramRuntimeInfo Runtime;
     public string Storage = "";
+    public IMyIntergridCommunicationSystem IGC;
 
-    public Rig()
+    public Rig(Rig? shared=null,string pbName="Controller")
     {
-        Root = Grid();
-        PB = Block<IMyProgrammableBlock>("Controller", Root);
+        IGC = RecordProxy.Make<IMyIntergridCommunicationSystem>();
+        RecordProxy.Of(IGC).Values["UnicastListener"] = RecordProxy.Make<IMyUnicastListener>();
+        if(shared!=null) Blocks=shared.Blocks;
+        Root = shared?.Root ?? Grid();
+        PB = shared==null?Block<IMyProgrammableBlock>(pbName,Root):shared.Block<IMyProgrammableBlock>(pbName,Root);
         RecordProxy.Of(PB).Values["CustomData"] = "";
         GTS = RecordProxy.Make<IMyGridTerminalSystem>();
         RecordProxy.Of(GTS).Call = (m, a) =>

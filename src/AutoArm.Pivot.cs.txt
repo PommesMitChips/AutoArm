@@ -51,7 +51,7 @@ class PivotProbeTool
     bool Capture(int selected,out Shot s,out string why)
     {
         s=new Shot();why="";MatrixD f=T.Base.WorldMatrix;Vector3D o=T.Base.GetPosition();
-        s.P=Point(T.Head.GetPosition(),o,f);s.F=InFrame(T.Head.WorldMatrix.Forward,f);s.U=InFrame(T.Head.WorldMatrix.Up,f);
+        s.P=Point(T.EndPosition,o,f);s.F=InFrame(T.EndPose.Forward,f);s.U=InFrame(T.EndPose.Up,f);
         if(!Finite(s.P)||!Unit(ref s.F)||!Unit(ref s.U)){why="invalid Base/Head pose.";return false;}
         s.Q=new double[T.Groups.Count][];
         for(int i=0;i<T.Groups.Count;i++){s.Q[i]=new double[T.Groups[i].M.Count];for(int j=0;j<s.Q[i].Length;j++){s.Q[i][j]=T.Position(T.Groups[i].M[j]);if(!Finite(s.Q[i][j])){why="non-finite joint position.";return false;}}}

@@ -106,7 +106,7 @@ internal static partial class Scenarios
         var rotor=rig.Rotor("Arm 1 - Base - Rotor",rig.Root,moving,Vector3D.Zero,Vector3D.Up);
         // A tool at the pivot isolates rotation from translational feedback.
         var head=rig.Block<IMyShipDrill>("Arm 1 - Head - Drill",moving,Vector3D.Zero);rig.Cockpit();
-        var script=Start(type,rig);Run(script,"OrientationTolerance 0.1");Run(script,"On");
+        var script=Start(type,rig);var settings=new VRage.Game.ModAPI.Ingame.Utilities.MyIni(); settings.TryParse(rig.PB.CustomData); settings.Set("Config","OrientationTolerance",.1); RecordProxy.Of(rig.PB).Values["CustomData"]=settings.ToString(); Run(script,"On");
         var targetForward=(Vector3D)Get(script,"TargetF")!;
         double angle=0,load=disturbance;float previous=rotor.TargetVelocityRad;
         Action tick=()=>
