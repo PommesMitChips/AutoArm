@@ -54,7 +54,7 @@ class AutoTopology
     public IMyTerminalBlock Head;
     public IMyCubeBlock End;
     IMyCubeBlock EndOverride;
-    ToolTopInfo Focus;
+    ArmTipInfo Focus;
     public MatrixD EndPose
     {
         get { var pose = Focus == null ? End.WorldMatrix : Focus.WorldMatrix; pose.Translation = EndPosition; return pose; }
@@ -64,7 +64,7 @@ class AutoTopology
     string EndpointName = "";
     long ExcludedMechanical;
 
-    public void SetEndpointOverride(IMyTerminalBlock endpoint, long ignoredMechanical, IMyCubeBlock frame = null, ToolTopInfo focus = null)
+    public void SetEndpointOverride(IMyTerminalBlock endpoint, long ignoredMechanical, IMyCubeBlock frame = null, ArmTipInfo focus = null)
     {
         EndpointOverride = endpoint; EndpointName = endpoint == null ? "" : endpoint.CustomName;
         EndOverride = frame;

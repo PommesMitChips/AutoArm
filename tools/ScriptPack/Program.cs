@@ -34,7 +34,7 @@ internal static class ScriptPack
     {
         using var dll = new MemoryStream();
         var result = compilation.Emit(dll);
-        foreach (var d in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error || d.Id == "CS0162").Take(20)) Console.Error.WriteLine(d);
+        foreach (var d in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error || d.Id == "CS0162" || d.Id == "CS0649").Take(20)) Console.Error.WriteLine(d);
         if (!result.Success) throw new Exception("C# 6 compilation failed.");
     }
 

@@ -1,0 +1,10 @@
+// Arm-side focus is the verified frame and local pose supplied by ToolSwap.
+class ArmTipInfo
+{
+    public IMyCubeBlock Marker;
+    public MatrixD Local;
+    public bool Closed => Marker.Closed;
+    public IMyCubeGrid CubeGrid => Marker.CubeGrid;
+    public MatrixD WorldMatrix => Local * Marker.WorldMatrix;
+    public Vector3I Position => CubeGrid.WorldToGridInteger(WorldMatrix.Translation);
+}

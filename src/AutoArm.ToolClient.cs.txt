@@ -9,7 +9,7 @@ sealed class ToolSwapLink
     readonly List<long> Tops = new List<long>();
     readonly List<List<IMyShipMergeBlock>> Merges = new List<List<IMyShipMergeBlock>>();
     IMyCubeBlock Frame;
-    ToolTopInfo Tip;
+    ArmTipInfo Tip;
     IMyTerminalBlock End;
     string PeerName = "", Queued = "", Error = "";
     long Ignore, Request, MoveRequest;
@@ -22,7 +22,7 @@ sealed class ToolSwapLink
     public bool Configured => PeerName.Length > 0;
     public IMyTerminalBlock Endpoint => End;
     public IMyCubeBlock EndFrame => Frame;
-    public ToolTopInfo Focus => Tip;
+    public ArmTipInfo Focus => Tip;
     public long IgnoredMount => Ignore;
     public bool IsToolJoint(IMyMechanicalConnectionBlock block) { return Couplers.Contains(block as IMyMotorStator); }
     public ToolSwapLink(Program p) { P = p; Link = new ModuleLink(p); }
@@ -187,8 +187,7 @@ sealed class ToolSwapLink
         Ignore = ini.Get(LinkSection, "Ignore").ToInt64(); Tip = null;
         if (ini.Get(LinkSection, "Focus").ToBoolean())
         {
-            var inventory = new List<IMyTerminalBlock>(); P.GridTerminalSystem.GetBlocks(inventory);
-            Tip = new ToolTopInfo { Marker = Frame, EntityId = ini.Get(LinkSection, "Part").ToInt64(), Local = LinkFrame(ini, "Local"), Inventory = inventory };
+            Tip = new ArmTipInfo { Marker = Frame, Local = LinkFrame(ini, "Local") };
             if (!Tip.CubeGrid.CubeExists(Tip.Position)) throw new Exception("Module focus is outside the arm.");
         }
         ApplyEquipment(ini);

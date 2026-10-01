@@ -4,7 +4,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $workspace = Split-Path -Parent $PSScriptRoot
-$parts = @('AutoArm.Prefix.cs.txt', 'AutoArm.Topology.cs.txt', 'AutoArm.Config.cs.txt', 'AutoArm.Control.cs.txt', 'AutoArm.Math.cs.txt', 'AutoArm.Pivot.cs.txt', 'AutoArm.TopInfo.cs.txt', 'AutoArm.ToolControl.cs.txt', 'AutoArm.Link.cs.txt', 'AutoArm.Path.cs.txt', 'AutoArm.ToolClient.cs.txt', 'AutoArm.Services.cs.txt')
+$parts = @('AutoArm.Prefix.cs.txt', 'AutoArm.Topology.cs.txt', 'AutoArm.Config.cs.txt', 'AutoArm.Control.cs.txt', 'AutoArm.Math.cs.txt', 'AutoArm.Pivot.cs.txt', 'AutoArm.ArmTip.cs.txt', 'AutoArm.ToolControl.cs.txt', 'AutoArm.Link.cs.txt', 'AutoArm.Path.cs.txt', 'AutoArm.ToolClient.cs.txt', 'AutoArm.Services.cs.txt')
 $sourcePath = Join-Path $workspace 'AutoArm_Source.txt'
 $outputPath = Join-Path $workspace 'AutoArm_Compact.txt'
 function Specialize-Source([string]$path) {

@@ -5,8 +5,8 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 ## Installation
 
 1. Stop your existing arm controller before replacing it.
-2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.2/AutoArm_Compact.txt) into an arm programmable block.
-3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.2/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
+2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.3/AutoArm_Compact.txt) into an arm programmable block.
+3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.3/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
 4. Name the parts as shown below. You do not need to edit the code or enter configuration for a quick start.
 5. Run `On` on the Arm PB. For another arm, use `On(Arm 2)`. Then use `Select Arm 2` to give it cockpit control.
 

@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.2";
+const string ControllerBuildVersion = "4.0.3";
 
 const int HostFormat = 7;
 const string WireTag = "AutoArm/5";
@@ -336,7 +336,7 @@ public void Update(string argument, UpdateType source, double elapsed)
 readonly string ArmName;
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.2";
+const string ControllerBuildVersion = "4.0.3";
 
 
 // C# 6 programmable-block fragment. Paste inside ArmCore.
@@ -395,7 +395,7 @@ class AutoTopology
     public IMyTerminalBlock Head;
     public IMyCubeBlock End;
     IMyCubeBlock EndOverride;
-    ToolTopInfo Focus;
+    ArmTipInfo Focus;
     public MatrixD EndPose
     {
         get { var pose = Focus == null ? End.WorldMatrix : Focus.WorldMatrix; pose.Translation = EndPosition; return pose; }
@@ -405,7 +405,7 @@ class AutoTopology
     string EndpointName = "";
     long ExcludedMechanical;
 
-    public void SetEndpointOverride(IMyTerminalBlock endpoint, long ignoredMechanical, IMyCubeBlock frame = null, ToolTopInfo focus = null)
+    public void SetEndpointOverride(IMyTerminalBlock endpoint, long ignoredMechanical, IMyCubeBlock frame = null, ArmTipInfo focus = null)
     {
         EndpointOverride = endpoint; EndpointName = endpoint == null ? "" : endpoint.CustomName;
         EndOverride = frame;
@@ -2791,20 +2791,15 @@ class PivotProbeTool
 }
 
 
-class ToolTopInfo
+// Arm-side focus is the verified frame and local pose supplied by ToolSwap.
+class ArmTipInfo
 {
     public IMyCubeBlock Marker;
-    public IMyMotorRotor Live;
-    public long EntityId;
-
     public MatrixD Local;
-    public List<IMyTerminalBlock> Inventory;
-    public bool Closed => Marker.Closed || (Live != null && Live.Closed);
-    public IMyCubeGrid CubeGrid => Live == null ? Marker.CubeGrid : Live.CubeGrid;
-    public MatrixD WorldMatrix => Live == null ? Local * Marker.WorldMatrix : Live.WorldMatrix;
-    public Vector3I Position => Live == null ? CubeGrid.WorldToGridInteger(WorldMatrix.Translation) : Live.Position;
-
-
+    public bool Closed => Marker.Closed;
+    public IMyCubeGrid CubeGrid => Marker.CubeGrid;
+    public MatrixD WorldMatrix => Local * Marker.WorldMatrix;
+    public Vector3I Position => CubeGrid.WorldToGridInteger(WorldMatrix.Translation);
 }
 
 
@@ -3163,7 +3158,7 @@ sealed class ToolSwapLink
     readonly List<long> Tops = new List<long>();
     readonly List<List<IMyShipMergeBlock>> Merges = new List<List<IMyShipMergeBlock>>();
     IMyCubeBlock Frame;
-    ToolTopInfo Tip;
+    ArmTipInfo Tip;
     IMyTerminalBlock End;
     string PeerName = "", Queued = "", Error = "";
     long Ignore, Request, MoveRequest;
@@ -3176,7 +3171,7 @@ sealed class ToolSwapLink
     public bool Configured => PeerName.Length > 0;
     public IMyTerminalBlock Endpoint => End;
     public IMyCubeBlock EndFrame => Frame;
-    public ToolTopInfo Focus => Tip;
+    public ArmTipInfo Focus => Tip;
     public long IgnoredMount => Ignore;
     public bool IsToolJoint(IMyMechanicalConnectionBlock block) { return Couplers.Contains(block as IMyMotorStator); }
     public ToolSwapLink(ArmCore p) { P = p; Link = new ModuleLink(p); }
@@ -3341,8 +3336,7 @@ sealed class ToolSwapLink
         Ignore = ini.Get(LinkSection, "Ignore").ToInt64(); Tip = null;
         if (ini.Get(LinkSection, "Focus").ToBoolean())
         {
-            var inventory = new List<IMyTerminalBlock>(); P.GridTerminalSystem.GetBlocks(inventory);
-            Tip = new ToolTopInfo { Marker = Frame, EntityId = ini.Get(LinkSection, "Part").ToInt64(), Local = LinkFrame(ini, "Local"), Inventory = inventory };
+            Tip = new ArmTipInfo { Marker = Frame, Local = LinkFrame(ini, "Local") };
             if (!Tip.CubeGrid.CubeExists(Tip.Position)) throw new Exception("Module focus is outside the arm.");
         }
         ApplyEquipment(ini);
