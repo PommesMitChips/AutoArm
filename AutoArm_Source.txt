@@ -2,7 +2,7 @@
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
 const string ControllerBuildVersion = "4.0";
-readonly bool ToolHost = false;
+
 const int HostFormat = 7;
 const string WireTag = "AutoArm/5";
 readonly Dictionary<string, ArmCore> Arms = new Dictionary<string, ArmCore>(StringComparer.Ordinal);
@@ -23,8 +23,10 @@ public Program()
     {
         if (!Saved.TryParse(Storage)) { Saved.Clear(); Saved.EndContent = Storage; }
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId) { InputClock = Saved.Get("AutoArm Host", "InputClock").ToInt64(); InputOwner = Saved.Get("AutoArm Host", "InputOwner").ToInt64(); }
-        if (!ToolHost) { Selection = IGC.RegisterBroadcastListener(SelectionTag); if (Selection != null) Selection.SetMessageCallback(WireTag); }
-        StopSaved(); LoadHost();
+        { Selection = IGC.RegisterBroadcastListener(SelectionTag); if (Selection != null) Selection.SetMessageCallback(WireTag); }
+        {StopSaved();
+}
+        LoadHost();
         string prior = Saved.Get("AutoArm Host", "Selected").ToString();
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Arms.ContainsKey(prior)) Selected = prior;
         SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
@@ -76,13 +78,7 @@ void LoadHost()
             if (split > 0 && !block.Closed && block.IsSameConstructAs(Me) && !detected.Contains(block.CustomName.Substring(0, split))) detected.Add(block.CustomName.Substring(0, split));
         }
         if (detected.Count == 0) detected.Add(DefaultArm); detected.Sort(StringComparer.Ordinal);
-        if (ToolHost)
-        {
-            var blocks = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(blocks);
-            detected.RemoveAll(name => !blocks.Any(block => block.CustomName.StartsWith(name + " - Head ", StringComparison.Ordinal) && block.CustomName.Substring((name + " - Head ").Length).IndexOf(" - ", StringComparison.Ordinal) > 0));
-            if (detected.Count == 0) detected.Add(DefaultArm);
-        }
-        foreach (string name in detected) ini.Set(name, ToolHost ? "Tools.Enabled" : "ToolSwapPB", ToolHost ? "true" : "");
+        foreach (string name in detected) ini.Set(name, "ToolSwapPB", "");
         Me.CustomData = ini.ToString();
     }
     if (!ini.TryParse(Me.CustomData) || ini.Get("global", "Format").ToInt32() != HostFormat)
@@ -90,7 +86,6 @@ void LoadHost()
     var names = new List<string>(); ini.GetSections(names); names.Remove("global");
     if (names.Count < 1 || names.Count > 8) throw new Exception("Configure 1..8 named arm sections.");
     foreach (string name in names) if (name.Trim() != name || name.Length == 0 || name.IndexOfAny(new char[] { ',', '|', '(', ')', ';', '\r', '\n' }) >= 0 || name.Equals("global", StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid arm section name.");
-    if (!ToolHost)
     {
         var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
         foreach (var peer in peers)
@@ -111,7 +106,8 @@ void LoadHost()
     }
     if (!Arms.ContainsKey(Selected))
     { string configured = ini.Get("global", "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
-    if (!ToolHost) foreach (var core in Arms.Values) core.Select(core.Name == Selected && InputOwner == Me.EntityId);
+    {foreach (var core in Arms.Values) core.Select(core.Name == Selected && InputOwner == Me.EntityId);
+}
     HostError = "";
 }
 string Effective(string arm, string key)
@@ -121,15 +117,15 @@ void AutoLinks()
     var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
     foreach (string name in Order)
     {
-        string key = ToolHost ? "Link.ArmPB" : "ToolSwapPB";
+        string key = "ToolSwapPB";
         if (Effective(name, key).Length > 0) continue;
         IMyProgrammableBlock found = null;
         foreach (var peer in peers)
         {
             if (peer == Me || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me)) continue;
             var data = new MyIni();
-            if (!data.TryParse(peer.CustomData) || data.Get("global", "Format").ToInt32() != (ToolHost ? 7 : 2) || !data.ContainsSection(name)) continue;
-            if (!ToolHost && !data.Get(data.ContainsKey(name, "Tools.Enabled") ? name : "global", "Tools.Enabled").ToBoolean(true)) continue;
+            if (!data.TryParse(peer.CustomData) || data.Get("global", "Format").ToInt32() != (2) || !data.ContainsSection(name)) continue;
+            if ((!data.Get(data.ContainsKey(name, "Tools.Enabled") ? name : "global", "Tools.Enabled").ToBoolean(true))) continue;
             if (found != null) throw new Exception("Multiple module PBs for " + name + ". Set " + key + ".");
             found = peer;
         }
@@ -139,7 +135,7 @@ void AutoLinks()
 }
 string InternalConfig(string name)
 {
-    var ini = new MyIni(); ini.Set("AutoArm", "Format", ToolHost ? 1 : 6); ini.Set("AutoArm", "Arm", name);
+    var ini = new MyIni(); ini.Set("AutoArm", "Format", 6); ini.Set("AutoArm", "Arm", name);
     var keys = new List<MyIniKey>(); Configuration.GetKeys("global", keys);
     var own = new List<MyIniKey>(); Configuration.GetKeys(name, own); keys.AddRange(own);
     var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -150,11 +146,6 @@ string InternalConfig(string name)
         if (dot > 0) { section = key.Substring(0, dot); field = key.Substring(dot + 1); }
         else if (key == "ToolSwapPB" || key == "Peers") section = "Modules";
         ini.Set(section, field, Effective(name, key));
-    }
-    if (ToolHost)
-    {
-        if (!ini.ContainsKey("Link", "ArmPB")) ini.Set("Link", "ArmPB", name + " - Arm PB");
-        if (!ini.ContainsKey("Tools", "Enabled")) ini.Set("Tools", "Enabled", true);
     }
     return ini.ToString();
 }
@@ -196,7 +187,7 @@ void SelectArm(string name, bool claim = true)
 {
     if (!Arms.ContainsKey(name)) throw new Exception("Unknown arm: " + name);
     Selected = name;
-    if (!ToolHost) { if (claim) { InputClock++; InputOwner = Me.EntityId; } foreach (var core in Arms.Values) core.Select(core.Name == name && InputOwner == Me.EntityId); if (InputOwner == Me.EntityId) AnnounceInput(); }
+    { if (claim) { InputClock++; InputOwner = Me.EntityId; } foreach (var core in Arms.Values) core.Select(core.Name == name && InputOwner == Me.EntityId); if (InputOwner == Me.EntityId) AnnounceInput(); }
     Save();
 }
 void Command(string raw)
@@ -272,14 +263,14 @@ void CaptureDefaults(ArmCore core)
         if (key.Section == "AutoArm" || key.Name == "Actuators") continue;
         string field = key.Section == "Config" || key.Section == "Modules" ? key.Name : key.Section + "." + key.Name;
         if (!Configuration.ContainsKey(core.Name, field) && !Configuration.ContainsKey("global", field))
-            Configuration.Set(ToolHost || field == "ToolSwapPB" || field == "Peers" ? core.Name : "global", field, ini.Get(key).ToString());
+            Configuration.Set((field == "ToolSwapPB" ) || field == "Peers" ? core.Name : "global", field, ini.Get(key).ToString());
     }
     PublishConfig();
 }
 public void Main(string argument, UpdateType source)
 {
     double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
-    try { ReceiveSelection(elapsed); } catch (Exception e) { StopAll(e.Message); }
+    try { {ReceiveSelection(elapsed); } } catch (Exception e) { StopAll(e.Message); }
     try
     {
         if (!string.IsNullOrWhiteSpace(argument) && !((source & UpdateType.IGC) != 0 && argument == WireTag))
@@ -317,7 +308,7 @@ void StopAll(string why)
 { HostError = why; foreach (var core in Arms.Values) core.Stop(why); }
 void Display()
 {
-    var lines = new List<string>(); lines.Add("AutoArm " + ControllerBuildVersion + " " + (ToolHost ? "ToolSwap" : "Arm") + " | Selected: " + Selected);
+    var lines = new List<string>(); lines.Add("AutoArm " + ControllerBuildVersion + " " + ("Arm") + " | Selected: " + Selected);
     if (HostError.Length > 0) lines.Add(HostError);
     foreach (string name in Order) lines.Add(name + ": " + Arms[name].Summary);
     ArmCore current; if (Arms.TryGetValue(Selected, out current)) lines.Add(current.Report);
@@ -1207,18 +1198,18 @@ static class AutoConfig
 
 const string ConfigSection = "Config";
 const string ToolsSection = "Tools";
-const string GeometryBudgetMessage = "Geometry budget; retry.";
-const string SwapSection = "AutoArm Swap";
-const string ApproachDockPhase = "ApproachDock";
+
+
+
 const string HomeSection = "AutoArm Home";
-const string ApproachTopPhase = "ApproachTop";
+
 const string ThreeDecimals = "0.000";
 const string EnabledKey = "Enabled";
 const string KeyboardKey = "ReadKeyboard";
-const string AlignTopPhase = "AlignTop";
+
 const string MovementModeKey = "MovementMode";
 const string ArmSection = "AutoArm";
-const string RetreatPhase = "Retreat";
+
 const string ToolWeightsSection = "AutoArm Tool Weights";
 const string OrientationToleranceKey = "OrientationTolerance";
 const string MouseKey = "ReadMouse";
@@ -1323,10 +1314,7 @@ public ArmCore(Program host, string name, string customData, string storage) { H
     Echo(DisplayText);
 }
 
-public void Save()
-{
-    // Home is written immediately by SetHome. Save intentionally has no motion side effects.
-}
+
 
 // Reloading the PB does not clear native actuator velocities. Recover only
 // identities scoped to this PB/arm, before configuration can fail discovery.
@@ -1908,7 +1896,7 @@ void UpdateIntegral(ref Vector3D integral, Vector3D error, double deadband,
     Vector3D outside = Outside(error, deadband);
     if (ki <= 0 || !permit || error.Length() > capture)
     {
-        integral = IntegralUnwindSeconds <= 0 ? Vector3D.Zero : integral / (1 + dt / IntegralUnwindSeconds);
+        integral = (integral / (1 + dt / IntegralUnwindSeconds));
         return;
     }
     // A held pose still needs the learned load bias. Reaching the deadband is
@@ -2687,7 +2675,7 @@ class PivotProbeTool
         public int Group; public double Delta,Travel,Orientation;
         public readonly double[] Error=new double[3],Spread=new double[3]; public string Verdict;
     }
-    public IList<Result> Trials => R.AsReadOnly();
+
     public PivotProbeTool(ArmCore owner,AutoTopology topology){P=owner;T=topology;}
 
     public void Run(string[] w)
@@ -2796,28 +2784,15 @@ class ToolTopInfo
     public IMyCubeBlock Marker;
     public IMyMotorRotor Live;
     public long EntityId;
-    public string Subtype;
+
     public MatrixD Local;
     public List<IMyTerminalBlock> Inventory;
     public bool Closed => Marker.Closed || (Live != null && Live.Closed);
     public IMyCubeGrid CubeGrid => Live == null ? Marker.CubeGrid : Live.CubeGrid;
     public MatrixD WorldMatrix => Live == null ? Local * Marker.WorldMatrix : Live.WorldMatrix;
     public Vector3I Position => Live == null ? CubeGrid.WorldToGridInteger(WorldMatrix.Translation) : Live.Position;
-    public IMyMechanicalConnectionBlock Base
-    {
-        get
-        {
-            if (Live != null) return Live.Base;
-            foreach (var b in Inventory)
-            { var m = b as IMyMechanicalConnectionBlock; if (m != null && m.Top != null && (m.Top.EntityId == EntityId || EntityId == 0 && m.Top.CubeGrid.EntityId == CubeGrid.EntityId && m.Top.Position == Position)) return m; }
-            return null;
-        }
-    }
-    public static ToolTopInfo Capture(IMyCubeBlock marker, IMyMotorRotor top, List<IMyTerminalBlock> inventory)
-    {
-        var pose = top.WorldMatrix; pose.Translation = top.CubeGrid.GridIntegerToWorld(top.Position);
-        return new ToolTopInfo { Marker = marker, Live = top, EntityId = top.EntityId, Subtype = top.BlockDefinition.SubtypeName, Local = pose * MatrixD.Invert(marker.WorldMatrix), Inventory = inventory };
-    }
+
+
 }
 
 
@@ -3045,11 +3020,7 @@ static IMyCubeBlock LinkAnchor(IMyTerminalBlock block, long entity)
     if (joint != null && joint.IsAttached && joint.Top != null && joint.Top.EntityId == entity) return joint.Top;
     throw new Exception("Module anchor attachment changed.");
 }
-static string PathRow(MatrixD frame)
-{
-    var values = new double[] { frame.Translation.X, frame.Translation.Y, frame.Translation.Z, frame.Forward.X, frame.Forward.Y, frame.Forward.Z, frame.Up.X, frame.Up.Y, frame.Up.Z };
-    var row = new List<string>(); foreach (double v in values) row.Add(AutoSettings.Number(v)); return string.Join(" ", row);
-}
+
 
 
 // The arm owns complete paths. A waypoint is a rigid position/orientation in

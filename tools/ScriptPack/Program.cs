@@ -42,9 +42,18 @@ internal static class ScriptPack
     {
         try
         {
-            if (args.Length < 2) throw new Exception("Usage: ScriptPack check|inspect|pack <source.txt> [output.txt]");
+            if (args.Length < 2) throw new Exception("Usage: ScriptPack check|inspect|specialize|pack <source.txt> [output.txt]");
             var source = File.ReadAllText(args[1]);
             var compilation = Compile(source, args[1]);
+            if (args[0] == "specialize" && args.Length == 3)
+            {
+                SpecializerChecks.Run();
+                source = Specializer.Run(source);
+                Check(Compile(source, args[2]));
+                File.WriteAllText(args[2], source, new UTF8Encoding(false));
+                Console.WriteLine($"Specialized: {source.Length:N0} characters; inactive branches and unreferenced members removed.");
+                return;
+            }
             Check(compilation);
             Console.WriteLine($"C# 6 / installed SE API: PASS ({source.Length:N0} UTF-16 characters)");
             if (args[0] == "check") return;

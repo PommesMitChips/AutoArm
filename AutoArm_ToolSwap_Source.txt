@@ -2,19 +2,19 @@
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
 const string ControllerBuildVersion = "4.0";
-readonly bool ToolHost = true;
+
 const int HostFormat = 2;
 const string WireTag = "AutoArm/5";
 readonly Dictionary<string, ArmCore> Arms = new Dictionary<string, ArmCore>(StringComparer.Ordinal);
 readonly List<string> Order = new List<string>();
-readonly Dictionary<long, ArmCore> Owners = new Dictionary<long, ArmCore>();
+
 MyIni Configuration = new MyIni(), Saved = new MyIni();
 string Selected = "", HostError = "";
 int Next;
-IMyBroadcastListener Selection;
+
 long InputClock, InputOwner;
-double InputAge;
-const string SelectionTag = "AutoArm/Select/1";
+
+
 public Program()
 {
     Runtime.UpdateFrequency = UpdateFrequency.Update10;
@@ -23,8 +23,7 @@ public Program()
     {
         if (!Saved.TryParse(Storage)) { Saved.Clear(); Saved.EndContent = Storage; }
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId) { InputClock = Saved.Get("AutoArm Host", "InputClock").ToInt64(); InputOwner = Saved.Get("AutoArm Host", "InputOwner").ToInt64(); }
-        if (!ToolHost) { Selection = IGC.RegisterBroadcastListener(SelectionTag); if (Selection != null) Selection.SetMessageCallback(WireTag); }
-        StopSaved(); LoadHost();
+        LoadHost();
         string prior = Saved.Get("AutoArm Host", "Selected").ToString();
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Arms.ContainsKey(prior)) Selected = prior;
         SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
@@ -41,28 +40,7 @@ public void Save()
     if (!changed) return;
     string text = Saved.ToString(); if (text != Storage) Storage = text;
 }
-void StopSaved()
-{
-    var sections = new List<string>(); Saved.GetSections(sections);
-    foreach (string section in sections)
-    {
-        if (!section.StartsWith("State ", StringComparison.Ordinal)) continue;
-        var state = new MyIni(); if (!state.TryParse(Saved.Get(section, "Data").ToString())) continue;
-        if (state.Get("AutoArm Config", "PB").ToInt64() != Me.EntityId || state.Get("AutoArm Config", "Arm").ToString() != section.Substring(6)) continue;
-        foreach (string row in (state.Get("AutoArm Config", "Rows").ToString() + "\n" + state.Get("AutoArm Tool Weights", "Rows").ToString()).Split('\n'))
-        {
-            string[] cells = row.Split('|'); string key = cells.Length == 2 ? cells[1] : cells.Length == 3 ? cells[0] : "";
-            foreach (string part in key.Split(':'))
-            {
-                string token = part.Split('@')[0]; long id;
-                if (token.Length < 2 || !long.TryParse(token.Substring(0, token.Length - 1), out id)) continue;
-                var block = GridTerminalSystem.GetBlockWithId(id); if (block == null || block.Closed || !block.IsSameConstructAs(Me)) continue;
-                var piston = block as IMyPistonBase; var rotor = block as IMyMotorStator;
-                if (piston != null) piston.Velocity = 0; else if (rotor != null && !(rotor is IMyMotorSuspension)) rotor.TargetVelocityRad = 0;
-            }
-        }
-    }
-}
+
 void LoadHost()
 {
     var ini = new MyIni();
@@ -76,13 +54,12 @@ void LoadHost()
             if (split > 0 && !block.Closed && block.IsSameConstructAs(Me) && !detected.Contains(block.CustomName.Substring(0, split))) detected.Add(block.CustomName.Substring(0, split));
         }
         if (detected.Count == 0) detected.Add(DefaultArm); detected.Sort(StringComparer.Ordinal);
-        if (ToolHost)
         {
             var blocks = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(blocks);
             detected.RemoveAll(name => !blocks.Any(block => block.CustomName.StartsWith(name + " - Head ", StringComparison.Ordinal) && block.CustomName.Substring((name + " - Head ").Length).IndexOf(" - ", StringComparison.Ordinal) > 0));
             if (detected.Count == 0) detected.Add(DefaultArm);
         }
-        foreach (string name in detected) ini.Set(name, ToolHost ? "Tools.Enabled" : "ToolSwapPB", ToolHost ? "true" : "");
+        foreach (string name in detected) ini.Set(name, "Tools.Enabled", "true");
         Me.CustomData = ini.ToString();
     }
     if (!ini.TryParse(Me.CustomData) || ini.Get("global", "Format").ToInt32() != HostFormat)
@@ -90,16 +67,6 @@ void LoadHost()
     var names = new List<string>(); ini.GetSections(names); names.Remove("global");
     if (names.Count < 1 || names.Count > 8) throw new Exception("Configure 1..8 named arm sections.");
     foreach (string name in names) if (name.Trim() != name || name.Length == 0 || name.IndexOfAny(new char[] { ',', '|', '(', ')', ';', '\r', '\n' }) >= 0 || name.Equals("global", StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid arm section name.");
-    if (!ToolHost)
-    {
-        var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
-        foreach (var peer in peers)
-        {
-            if (peer == Me || peer.Closed || !peer.IsSameConstructAs(Me)) continue;
-            var data = new MyIni(); if (!data.TryParse(peer.CustomData) || data.Get("global", "Format").ToInt32() != 7) continue;
-            foreach (string name in names) if (data.ContainsSection(name)) throw new Exception("Arm already assigned to another PB: " + name);
-        }
-    }
     var removed = new List<string>(); foreach (string name in Order) if (!names.Contains(name)) removed.Add(name);
     foreach (string name in removed) { Arms[name].Stop("Arm removed from configuration."); Saved.Set("State " + name, "Data", Arms[name].Storage); Arms.Remove(name); }
     Configuration = ini; Order.Clear(); Order.AddRange(names);
@@ -111,7 +78,6 @@ void LoadHost()
     }
     if (!Arms.ContainsKey(Selected))
     { string configured = ini.Get("global", "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
-    if (!ToolHost) foreach (var core in Arms.Values) core.Select(core.Name == Selected && InputOwner == Me.EntityId);
     HostError = "";
 }
 string Effective(string arm, string key)
@@ -121,15 +87,14 @@ void AutoLinks()
     var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
     foreach (string name in Order)
     {
-        string key = ToolHost ? "Link.ArmPB" : "ToolSwapPB";
+        string key = "Link.ArmPB";
         if (Effective(name, key).Length > 0) continue;
         IMyProgrammableBlock found = null;
         foreach (var peer in peers)
         {
             if (peer == Me || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me)) continue;
             var data = new MyIni();
-            if (!data.TryParse(peer.CustomData) || data.Get("global", "Format").ToInt32() != (ToolHost ? 7 : 2) || !data.ContainsSection(name)) continue;
-            if (!ToolHost && !data.Get(data.ContainsKey(name, "Tools.Enabled") ? name : "global", "Tools.Enabled").ToBoolean(true)) continue;
+            if (!data.TryParse(peer.CustomData) || data.Get("global", "Format").ToInt32() != (7) || !data.ContainsSection(name)) continue;
             if (found != null) throw new Exception("Multiple module PBs for " + name + ". Set " + key + ".");
             found = peer;
         }
@@ -139,7 +104,7 @@ void AutoLinks()
 }
 string InternalConfig(string name)
 {
-    var ini = new MyIni(); ini.Set("AutoArm", "Format", ToolHost ? 1 : 6); ini.Set("AutoArm", "Arm", name);
+    var ini = new MyIni(); ini.Set("AutoArm", "Format", 1); ini.Set("AutoArm", "Arm", name);
     var keys = new List<MyIniKey>(); Configuration.GetKeys("global", keys);
     var own = new List<MyIniKey>(); Configuration.GetKeys(name, own); keys.AddRange(own);
     var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -151,39 +116,13 @@ string InternalConfig(string name)
         else if (key == "ToolSwapPB" || key == "Peers") section = "Modules";
         ini.Set(section, field, Effective(name, key));
     }
-    if (ToolHost)
     {
         if (!ini.ContainsKey("Link", "ArmPB")) ini.Set("Link", "ArmPB", name + " - Arm PB");
         if (!ini.ContainsKey("Tools", "Enabled")) ini.Set("Tools", "Enabled", true);
     }
     return ini.ToString();
 }
-bool Layout(ArmCore core, out string why)
-{
-    why = ""; string name = core.Name, table = Effective(name, "Actuators"), expected = Effective(name, "Structure");
-    bool shared = !Configuration.ContainsKey(name, "Actuators") && Configuration.ContainsKey("global", "Actuators") && table.Trim().Length > 0;
-    if (shared && Configuration.ContainsKey(name, "Structure")) { why = "A local Structure requires local Actuators; clear it to inherit the global template."; return false; }
-    if (shared && expected.Length == 0)
-    {
-        ArmCore prototype;
-        if (!Arms.TryGetValue(Order[0], out prototype) || !prototype.HasLayout) { why = "Waiting for global structure prototype: " + Order[0]; return false; }
-        expected = prototype.Shape; Configuration.Set("global", "Structure", expected);
-    }
-    string shape = core.Shape;
-    if (expected.Length > 0 && expected != shape) { why = name + " does not match configured joint kinds/parallel layout."; return false; }
-    if (!core.ApplyWeights(table, out why)) return false;
-    foreach (var joint in core.Joints())
-    {
-        ArmCore owner;
-        if (Owners.TryGetValue(joint.EntityId, out owner) && owner != core && Arms.ContainsKey(owner.Name))
-        { owner.Stop("Actuator also claimed by " + name); why = "Actuator shared with " + owner.Name + ": " + joint.CustomName; return false; }
-    }
-    var release = new List<long>(); foreach (var pair in Owners) if (pair.Value == core) release.Add(pair.Key);
-    foreach (long id in release) Owners.Remove(id);
-    foreach (var joint in core.Joints()) Owners[joint.EntityId] = core;
-    if (!shared && table.Trim().Length == 0) Configuration.Set(name, "Actuators", core.WeightTable);
-    PublishConfig(); return true;
-}
+
 void PublishConfig()
 {
     // Generated values only fill missing keys. Preserve edits made while running.
@@ -196,7 +135,6 @@ void SelectArm(string name, bool claim = true)
 {
     if (!Arms.ContainsKey(name)) throw new Exception("Unknown arm: " + name);
     Selected = name;
-    if (!ToolHost) { if (claim) { InputClock++; InputOwner = Me.EntityId; } foreach (var core in Arms.Values) core.Select(core.Name == name && InputOwner == Me.EntityId); if (InputOwner == Me.EntityId) AnnounceInput(); }
     Save();
 }
 void Command(string raw)
@@ -241,26 +179,8 @@ static int Arity(string verb)
         default: return 1;
     }
 }
-void AnnounceInput()
-{ if (Selection != null) IGC.SendBroadcastMessage(SelectionTag, InputClock + "|" + Selected, TransmissionDistance.CurrentConstruct); }
-void ReceiveSelection(double elapsed)
-{
-    if (Selection == null) return;
-    int read = 0;
-    while (Selection.HasPendingMessage && read++ < 8)
-    {
-        var message = Selection.AcceptMessage(); string text = message.Data as string; long clock;
-        if (message.Tag != SelectionTag || message.Source == Me.EntityId || text == null || text.Length > 512) continue;
-        string[] cells = text.Split('|');
-        if (cells.Length != 2 || !long.TryParse(cells[0], out clock) || clock <= 0 || clock < InputClock || clock == InputClock && message.Source <= InputOwner) continue;
-        var peer = GridTerminalSystem.GetBlockWithId(message.Source) as IMyProgrammableBlock; var config = new MyIni();
-        if (peer == null || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me) || !config.TryParse(peer.CustomData) || config.Get("global", "Format").ToInt32() != 7 || !config.ContainsSection(cells[1])) continue;
-        InputClock = clock; InputOwner = message.Source;
-        foreach (var core in Arms.Values) core.Select(false);
-    }
-    if (elapsed > 0 && !double.IsInfinity(elapsed) && !double.IsNaN(elapsed)) InputAge += elapsed;
-    if (InputAge >= .1 && InputOwner == Me.EntityId) { InputAge = 0; AnnounceInput(); }
-}
+
+
 void CaptureDefaults(ArmCore core)
 {
     if (core.ExportedData == core.CustomData) return;
@@ -272,14 +192,13 @@ void CaptureDefaults(ArmCore core)
         if (key.Section == "AutoArm" || key.Name == "Actuators") continue;
         string field = key.Section == "Config" || key.Section == "Modules" ? key.Name : key.Section + "." + key.Name;
         if (!Configuration.ContainsKey(core.Name, field) && !Configuration.ContainsKey("global", field))
-            Configuration.Set(ToolHost || field == "ToolSwapPB" || field == "Peers" ? core.Name : "global", field, ini.Get(key).ToString());
+            Configuration.Set(core.Name, field, ini.Get(key).ToString());
     }
     PublishConfig();
 }
 public void Main(string argument, UpdateType source)
 {
     double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
-    try { ReceiveSelection(elapsed); } catch (Exception e) { StopAll(e.Message); }
     try
     {
         if (!string.IsNullOrWhiteSpace(argument) && !((source & UpdateType.IGC) != 0 && argument == WireTag))
@@ -317,7 +236,7 @@ void StopAll(string why)
 { HostError = why; foreach (var core in Arms.Values) core.Stop(why); }
 void Display()
 {
-    var lines = new List<string>(); lines.Add("AutoArm " + ControllerBuildVersion + " " + (ToolHost ? "ToolSwap" : "Arm") + " | Selected: " + Selected);
+    var lines = new List<string>(); lines.Add("AutoArm " + ControllerBuildVersion + " " + ("ToolSwap") + " | Selected: " + Selected);
     if (HostError.Length > 0) lines.Add(HostError);
     foreach (string name in Order) lines.Add(name + ": " + Arms[name].Summary);
     ArmCore current; if (Arms.TryGetValue(Selected, out current)) lines.Add(current.Report);
@@ -399,7 +318,7 @@ public ArmCore(Program host, string name, string customData, string storage) { H
     try { ConfigureLink(); } catch (Exception e) { PendingCommand = ""; Say(e.Message); }
     Echo(DisplayText);
 }
-public void Save() { }
+
 void ConfigureLink()
 {
     if (string.IsNullOrWhiteSpace(CustomData))
@@ -1854,18 +1773,13 @@ static Vector3D Unit(Vector3D value)
     return value / n;
 }
 
-static Vector3D ClampLength(Vector3D value, double cap)
-{
-    double n = value.Length();
-    if (!Finite(n)) return new Vector3D(double.NaN);
-    return n > cap && n > 1e-12 ? value * (cap / n) : value;
-}
 
-static Vector3D InFrame(Vector3D value, MatrixD frame) => new Vector3D(Vector3D.Dot(value, frame.Forward), Vector3D.Dot(value, frame.Left), Vector3D.Dot(value, frame.Up));
+
+
 
 static double Clamp(double value, double lo, double hi) => Math.Max(lo, Math.Min(hi, value));
 
-static double Wrap(double angle) => angle - Math.Floor((angle + Math.PI) / (2 * Math.PI)) * (2 * Math.PI);
+
 
 static bool Finite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
 
@@ -1959,14 +1873,7 @@ static MatrixD LinkFrame(MyIni ini, string key)
     if (Math.Abs(f.LengthSquared() - 1) > .001 || Math.Abs(u.LengthSquared() - 1) > .001 || Math.Abs(Vector3D.Dot(f, u)) > .001 || !Orthonormalise(ref f, ref u)) throw new Exception("Invalid module frame.");
     return MatrixD.CreateWorld(p, f, u);
 }
-static IMyCubeBlock LinkAnchor(IMyTerminalBlock block, long entity)
-{
-    if (block == null || block.Closed) throw new Exception("Module anchor lost.");
-    if (block.EntityId == entity) return block;
-    var joint = block as IMyMechanicalConnectionBlock;
-    if (joint != null && joint.IsAttached && joint.Top != null && joint.Top.EntityId == entity) return joint.Top;
-    throw new Exception("Module anchor attachment changed.");
-}
+
 static string PathRow(MatrixD frame)
 {
     var values = new double[] { frame.Translation.X, frame.Translation.Y, frame.Translation.Z, frame.Forward.X, frame.Forward.Y, frame.Forward.Z, frame.Up.X, frame.Up.Y, frame.Up.Z };
@@ -1975,11 +1882,11 @@ static string PathRow(MatrixD frame)
 
 public string Summary => Tools.Busy ? "TOOLS" : Tools.Recovery ? "RECOVERY" : "IDLE";
 public void Stop(string why) { PendingCommand = ""; Tools.Cancel(why); }
-public void Select(bool selected) { }
-public string Shape => "";
-public bool HasLayout => false;
-public string WeightTable => "";
-public bool ApplyWeights(string table, out string why) { why = ""; return true; }
-public List<IMyMechanicalConnectionBlock> Joints() { return new List<IMyMechanicalConnectionBlock>(); }
+
+
+
+
+
+
 
 }

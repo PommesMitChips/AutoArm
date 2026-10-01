@@ -2,7 +2,7 @@
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
 const string ControllerBuildVersion = "4.0";
-readonly bool ToolHost = @@TOOL@@;
+const bool ToolHost = @@TOOL@@;
 const int HostFormat = @@FORMAT@@;
 const string WireTag = "AutoArm/5";
 readonly Dictionary<string, ArmCore> Arms = new Dictionary<string, ArmCore>(StringComparer.Ordinal);
@@ -24,7 +24,8 @@ public Program()
         if (!Saved.TryParse(Storage)) { Saved.Clear(); Saved.EndContent = Storage; }
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId) { InputClock = Saved.Get("AutoArm Host", "InputClock").ToInt64(); InputOwner = Saved.Get("AutoArm Host", "InputOwner").ToInt64(); }
         if (!ToolHost) { Selection = IGC.RegisterBroadcastListener(SelectionTag); if (Selection != null) Selection.SetMessageCallback(WireTag); }
-        StopSaved(); LoadHost();
+        if (!ToolHost) StopSaved();
+        LoadHost();
         string prior = Saved.Get("AutoArm Host", "Selected").ToString();
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Arms.ContainsKey(prior)) Selected = prior;
         SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
@@ -279,7 +280,7 @@ void CaptureDefaults(ArmCore core)
 public void Main(string argument, UpdateType source)
 {
     double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
-    try { ReceiveSelection(elapsed); } catch (Exception e) { StopAll(e.Message); }
+    try { if (!ToolHost) ReceiveSelection(elapsed); } catch (Exception e) { StopAll(e.Message); }
     try
     {
         if (!string.IsNullOrWhiteSpace(argument) && !((source & UpdateType.IGC) != 0 && argument == WireTag))
