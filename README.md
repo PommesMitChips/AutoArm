@@ -35,6 +35,8 @@ AutoArm uses spare joint movement to improve clearance while tracking the head. 
 
 Collision PB commands are `Info`, `Rescan`, `On`, `Reload` and `Off`. Run `Rescan` after adding or removing ship blocks. Adjust `Clearance`, `Influence` and `AwaySpeed` in its Custom Data, then `Reload`. If `Info` reports a scan limit, increase `MaxCells` or `MaxShapes` within the accepted range.
 
+For a repeatable two-arm test, first collect a read-only geometry report with [Arm Survey](docs/IN_GAME_SURVEY.md). It records starting head poses without commanding movement; use that report to prepare the head paths before testing through ArmService with Safety enabled.
+
 This first version uses conservative occupied-block volumes, rather than exact model shapes. Intended joint and docking contacts have limited allowances. It covers construct geometry and registered arms; terrain, unrelated ships and automatic routes around traps are not covered. Clearance checks do not model every SE physics effect, so begin with low movement speeds and confirm clearance on your build.
 
 ### Tool parking and swapping

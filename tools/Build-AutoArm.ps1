@@ -63,7 +63,7 @@ $rewriteGameBin = $env:SE_BIN
 try {
     $env:DOTNET_CLI_HOME = Join-Path $PSScriptRoot '.dotnet'
     $env:SE_BIN = $GameBin
-    $rewritePaths = @($sourcePath, $toolSourcePath, $collisionSourcePath)
+    $rewritePaths = @($sourcePath, $toolSourcePath, $collisionSourcePath, (Join-Path $workspace 'AutoArm_Survey.txt'))
     if (!$SourceOnly) { $rewritePaths += @($outputPath, $toolOutputPath, $collisionOutputPath) }
     & dotnet run --project (Join-Path $PSScriptRoot 'PBCompileChecks') "-p:GameBin=$GameBin" -- @rewritePaths
     if ($LASTEXITCODE -ne 0) { throw 'Installed SE memory-safe rewriting failed.' }
