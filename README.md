@@ -37,7 +37,7 @@ Collision PB commands are `Info`, `Rescan`, `On`, `Reload` and `Off`. Run `Resca
 
 For a repeatable two-arm test, first collect a read-only geometry report with [Arm Survey](docs/IN_GAME_SURVEY.md). It records starting head poses without commanding movement; use that report to prepare the head paths before testing through ArmService with Safety enabled.
 
-The [two-arm test runner](docs/IN_GAME_BENCH.md) provides a readiness check, small outward-and-return smoke test, and repeated outward/sideways head paths for the surveyed build. It requires live Safety permission and operates through ArmService.
+The [two-arm test runner](docs/IN_GAME_BENCH.md) provides a readiness check, small outward-and-return tests, simultaneous head crossing and sweeps past the opposite arm's base. Preview commands show the requested paths before movement. It requires live Safety permission and operates through ArmService; inability to pass safely stops the test.
 
 This first version uses conservative occupied-block volumes, rather than exact model shapes. Intended joint and docking contacts have limited allowances. It covers construct geometry and registered arms; terrain, unrelated ships and automatic routes around traps are not covered. Clearance checks do not model every SE physics effect, so begin with low movement speeds and confirm clearance on your build.
 

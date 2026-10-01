@@ -1,5 +1,9 @@
 # Development
 
+The Bench encounter extension adds `PreviewCross`, `Cross`, `PreviewBases`, `Bases` and paginated `Page N` reports without changing the Arm or Collision artifacts. Focused `--bench` protocol tests pass **1,046 assertions**, including concurrent return, preview without PATH, held head orientation/depth, per-arm speed caps, stopping both paths on cancellation/Safety loss/one-arm failure, and invalid encounter settings. Installed SE C#6/type-safety/memory-safe rewriting passes for the ready-to-paste Bench. Mock marker motion only establishes protocol behavior.
+
+`dotnet run --project tools/ArmTests -- AutoArm_Source.txt --survey-encounters <survey.txt>` independently restores the captured joint configuration before each Cross/Bases ideal-plant replay. Both currently abort on Arm 2's eight-constraint limit, confirming both paths are released; neither is an avoidance-completion pass. Logs are saved under ignored `tools/ArmTests/obj/encounter-*.txt`. The existing captured Smoke still completes. The user reported a live Smoke PASS for both arms; the supplied text is truncated before Arm 2's return/footer, so complete run metrics are unavailable. The available Arm 1 live return is 5.09 mm / 0.0193 degrees.
+
 Development requires Windows, the .NET 10 SDK, the .NET Framework reference assemblies, and a local Space Engineers installation. Game assemblies and model assets are not included.
 
 From this repository:

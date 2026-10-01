@@ -125,6 +125,8 @@ internal static class Tests
             { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.BenchCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Bench.txt"))));return 0; }
             if(args.Length==3&&args[1]=="--survey-geometry")
             { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.SurveyGeometryCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))),args[2]);return 0; }
+            if(args.Length==3&&args[1]=="--survey-encounters")
+            { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.SurveyGeometryCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))),args[2],encounters:true);return 0; }
             if((args.Length==3||args.Length==4)&&args[1]=="--collision-profile")
             {
                 Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;string path=args.Length==4?args[3]:Path.Combine(Workspace,"AutoArm_Collision_Source.txt");

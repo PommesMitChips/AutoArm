@@ -2,7 +2,7 @@
 
 This runner is configured for the two arms in the submitted survey. Arm 1 has six stages; Arm 2 has nine. Both arms have two fully retracted pistons. Arm 1's useful translation plane with its head orientation held is outward and sideways. The comparison uses that plane for both arms, while each keeps its own starting head orientation.
 
-The runner submits paths to one Arm PB. It never writes joint velocities, switches equipment or runs `On`. Collision PB stays in charge of clearance. Arms run **one at a time**; the other arm continues holding its head pose.
+The runner submits paths to one Arm PB. It never writes joint velocities, switches equipment or runs `On`. Collision PB stays in charge of clearance. `Smoke` and `Run` move arms one at a time. `Cross` and `Bases` move **both arms concurrently**.
 
 ## Install
 
@@ -28,7 +28,7 @@ Run these commands on **Arm Bench**:
 
 1. **`Check`** verifies both arms are ON and idle, their poses match the survey within 3 cm / 0.5°, and ArmService reports fresh Safety permission. It sends no motion.
 2. **`Smoke`** moves Arm 1 outward **10 cm** and back, waits one second, then repeats for Arm 2. Each successful path returns to the pose captured immediately before the test.
-3. **`Run`** performs the shared-plane sequence below, first for Arm 1 and then Arm 2. For the current collision-interface validation, stop after `Smoke` and submit its report first: the larger sequence remains conservative/uncompleted in the imported ideal model.
+3. **`Run`** performs the shared-plane sequence below, first for Arm 1 and then Arm 2. The larger sequence remains conservative/uncompleted in the imported ideal model; a safe abort is not an avoidance-completion pass.
 
 | Waypoint | Outward displacement | Sideways displacement |
 | --- | ---: | ---: |
@@ -40,7 +40,32 @@ Run these commands on **Arm Bench**:
 
 All movements are straight head paths with orientation held. Speed is at most **0.05 m/s**, or the arm's configured head speed when that is lower. The normal arm joint speed/acceleration limits and Safety restrictions still apply. No depth translation is requested.
 
-`Cancel` requests Stop for the runner's active path only. `Info` displays current progress. An external Stop, cockpit cancellation, communication loss, prolonged Safety hold or failed return check aborts the test. The runner **does not restart an arm or force an automatic return after an abort**. Check Arm PB status before doing anything else. A successful run verifies both heads remain within 1 cm / 0.3° of their captured starting poses after the final hold.
+`Cancel` requests Stop for the runner's submitted paths only: both arms in a concurrent test. `Info` displays current progress. An external Stop, cockpit cancellation, communication loss, prolonged Safety hold or failed return check aborts the test. Failure on either concurrent arm stops both submitted paths. The runner **does not restart an arm or force an automatic return after an abort**. Check Arm PB status before doing anything else. A successful run verifies both heads remain within 1 cm / 0.3° of their captured starting poses after the final hold.
+
+## Larger encounters
+
+Replace only the **Arm Bench** code with the current [AutoArm_Bench.txt](../AutoArm_Bench.txt). Keep its Custom Data, Arm/Collision code, and PID settings. The new optional settings have defaults even when absent from existing data.
+
+Run `Check`, then `PreviewCross`. Preview records the requested waypoints in the report and sends no movement. `Cross` asks both heads to move past the opposite head's starting position by **1 metre**, then return. On the supplied survey this is approximately **19.4 metres each way** per head. Each retains its own orientation and depth coordinate. Both paths are submitted in the same Bench invocation, but motion starts when each ArmService context accepts it; they are not synchronized in lockstep. They can finish and start their return at different times.
+
+For the base encounter, use `PreviewBases`, then `Bases`. Both heads travel beside the opposite arm's base, lower to **7.5 metres above that base in the reference frame**, sweep from **3 metres on one side to 3 metres on the other**, then retrace and return. The default round-trip distances are approximately 77 and 83 metres. This deliberately tests passage around the other arm's structure and neighbouring ship geometry; it does not command either head into a rotor base or the floor. The sweep's nominal height and width do not establish physical clearance for the attached head's volume.
+
+The crossing/head paths use free Cartesian goal pursuit, without the docking line constraint or any contact exemptions. Bench supplies no obstacle detours: the Collision service must influence the arm movement itself. Both heads keep their starting orientation. This can be unreachable for a particular arm, and local clearance assistance can stop in a trap or deadlock instead of finding a route. **Safe hold/abort and successful passage are different results.** Completion and telemetry alone also do not establish that physical blocks never contacted: observe both arms during the test.
+
+The captured ideal model currently aborts **both Cross and Bases** because Arm 2 exceeds the service's eight independent collision constraints. Both test paths are stopped and no forced return is sent. These are useful failing encounter tests, not validated autonomous routes. A live run will show whether the same limit appears in your game; do not disable Safety or remove obstacles to turn that result into a pass.
+
+Encounter speed defaults to **0.2 m/s**, capped by each arm's configured `HeadSpeed`; normal joint speed/acceleration limits remain active. To override the encounter settings, add these keys to the existing `[Bench]` section:
+
+```ini
+EncounterSpeed=0.2
+CrossBeyond=1
+BaseHeight=7.5
+BaseSweep=3
+```
+
+Speed accepts 0.001..0.5 m/s; distances are metres, with `CrossBeyond` 0.1..5, `BaseHeight` 2.5..20 and `BaseSweep` 1..10. Height follows the reference base's Up direction, not gravity. Existing `Speed`, `Extent`, `Side` and `Repeats` continue to apply to the small tests; each encounter runs once. Restore the surveyed starting head poses before each separate test, including after any abort. A returned head pose can have a different redundant-joint posture.
+
+Encounter reports retain pose samples at roughly 2 Hz per arm, with Safety reason and delivered fraction, while summary counters continue at reply frequency. For a long report, use `Page 1`, `Page 2`, etc. after completion. Each page contains at most 12,000 report characters. Send all pages or save the complete Custom Data as a text file; a single clipboard paste can truncate the report. Request Collision `Info` after any hold too.
 
 Copy **all Arm Bench Custom Data** after completion or an abort and send it back. Its report follows `---`. It includes requested waypoints, sampled head poses, control errors, Safety holds/limits, solver budget observations, return errors and elapsed time. Sampling is approximately 10 Hz per arm; it can miss faster vibration. Control error is the controller's tracking error, not a claim about physical clearance.
 
@@ -52,4 +77,4 @@ For repeat testing, leave all Arm/Collision settings unchanged. `Run` captures o
 
 Arm Bench generates `[Bench]` with `Format=1`, `ArmPB`, `Reference`, `Arms`, `Extent=0.25`, `Side=0.1`, `Speed=0.05` and `Repeats=1`. Distances are metres. Accepted ranges: outward extent greater than zero and at most 0.5, side 0..0.2, speed greater than zero and at most 0.1, repeats 1..3. Leave the defaults for the first comparison. `[Baseline Arm 1]` and `[Baseline Arm 2]` contain the surveyed poses; do not edit them to bypass a mismatch.
 
-The total timeout is six minutes. Eight seconds without measured progress while Safety is holding aborts the path; other lack of progress is limited to 35 seconds. Test paths include their return waypoint before movement starts, but emergency stops and clearance restrictions take precedence over completion.
+Small tests have a six-minute total timeout. Encounters use twice the longest nominal path duration plus two minutes, capped at one hour. Eight seconds without measured progress while Safety is holding aborts the path; other lack of progress is limited to 35 seconds. ArmService's own waypoint timeouts also apply. Test paths include their return waypoint before movement starts, but emergency stops and clearance restrictions take precedence over completion.

@@ -10,6 +10,7 @@ internal static partial class Scenarios
         internal ModuleBus Bus;
         internal object Arm, Bench;
         internal bool Move=true, Guides=true, Hold;
+        internal double MockSpeed=.05;
         readonly Dictionary<string,long> Seen=new(), Sequences=new();
         internal BenchRig(Type armType,Type benchType)
         {
@@ -45,7 +46,7 @@ internal static partial class Scenarios
             {
                 var path=Get(Core(Arm,name),"LocalPath");if(path==null||(bool)Get(path,"Done")!)continue;
                 var goal=(MatrixD)Get(path,"Current")!;var head=Head(name);var frame=head.WorldMatrix;var delta=goal.Translation-frame.Translation;
-                if(delta.Length()>0)frame.Translation+=delta*(Math.Min(delta.Length(),.05/60)/delta.Length());
+                if(delta.Length()>0)frame.Translation+=delta*(Math.Min(delta.Length(),Math.Min(MockSpeed,(double)Get(path,"CurrentMove")!)/60)/delta.Length());
                 RecordProxy.Of(head).Values["WorldMatrix"]=frame;
             }
         }
@@ -95,7 +96,49 @@ internal static partial class Scenarios
         var replyLoss=new BenchRig(armType,benchType);status=replyLoss.Finish("Run",step:i=>{if(i==35)replyLoss.Bus.DropArm=true;});
         for(int i=0;i<40;i++)replyLoss.Tick();
         Check(status.StartsWith("ABORT:")&&replyLoss.Paths().Count==1&&!Enabled(Core(replyLoss.Arm,"Arm 1")),"Reply loss kept ownership alive or launched another arm.");
+        EncounterCases(armType,benchType);
         Console.WriteLine("Head-only two-arm runner protocol: PASS ("+Tests.Assertions+" assertions; mock poses, not a physics simulation).");
+    }
+    static void EncounterCases(Type armType,Type benchType)
+    {
+        var f=new BenchRig(armType,benchType){MockSpeed=.5};
+        string status=f.Finish("PreviewCross");
+        Check(status.StartsWith("PREVIEW:")&&f.Paths().Count==0&&f.Report.Contains("ENCOUNTER Arm 2"),"Cross preview sent motion or omitted the second arm.");
+        var preview=f.Report.Split('\n').Where(l=>l.StartsWith("WAYPOINT ")).ToArray();
+        Check(preview.Length==4,"Cross preview needs outbound and return poses for both arms.");
+        var start1=PCFrame(preview[1].Split('|')[1]);var start2=PCFrame(preview[3].Split('|')[1]);
+        var goal1=PCFrame(preview[0].Split('|')[1]);var goal2=PCFrame(preview[2].Split('|')[1]);
+        var d=start2.Translation-start1.Translation;d.Z=0;
+        Check(Vector3D.Dot(goal1.Translation-start2.Translation,d)>0&&Vector3D.Dot(goal2.Translation-start1.Translation,d)<0,"Cross targets did not pass the opposite starting head.");
+        Check(goal1.Translation.Z==start1.Translation.Z&&goal2.Translation.Z==start2.Translation.Z,"Cross used unsupported depth translation.");
+        Check(goal1.Forward==start1.Forward&&goal2.Up==start2.Up,"Cross changed requested orientation.");
+        status=f.Finish("PreviewBases");
+        Check(status.StartsWith("PREVIEW:")&&f.Paths().Count==0,"Base preview sent motion.");
+        var baseRows=f.Report.Split('\n').Where(l=>l.StartsWith("WAYPOINT ")).ToArray();
+        Check(baseRows.Length==12&&f.Report.Contains("BASE TARGET Arm 1 | opposite=Arm 2"),"Bases omitted approach/sweep/retrace geometry.");
+        foreach(int offset in new[]{0,6}) {
+            var low=PCFrame(baseRows[offset+1].Split('|')[1]);var across=PCFrame(baseRows[offset+2].Split('|')[1]);
+            Check(Math.Abs(low.Translation.Y-7.5)<1e-8&&low.Translation.Y==across.Translation.Y,"Base sweep height was incorrect.");
+            Check(Math.Abs(low.Translation.X-across.Translation.X)==6,"Base sweep did not pass across the base.");
+        }
+        var data=new MyIni();data.TryParse(f.Client.PB.CustomData);data.Set("Bench","EncounterSpeed",.5);RecordProxy.Of(f.Client.PB).Values["CustomData"]=data.ToString();
+        status=f.Finish("Cross",12000);
+        Check(status.StartsWith("PASS:"),"Concurrent encounter protocol did not complete: "+status);
+        var paths=f.Paths();Check(paths.Count==2,"Encounter did not submit exactly two paths.");
+        Check(paths.All(p=>p.Get("Link","Lines").ToString()=="false|false"),"Encounter imposed docking/line tracking.");
+        Check(paths[0].Get("Link","Moves").ToString()=="0.5|0.5"&&paths[1].Get("Link","Moves").ToString()=="0.35|0.35","Encounter did not inherit lower per-arm head cap.");
+        Check(f.Report.Contains("RETURN Arm 1 encounter")&&f.Report.Contains("RETURN Arm 2 encounter"),"Concurrent completion omitted measured returns.");
+        HostFrame(f.Bench,f.Client,"Page 1");Check(f.Client.Log.Last().StartsWith("REPORT PAGE 1/"),"Paginated report unavailable.");
+        foreach(var block in f.Rig.Blocks.Where(b=>b!=f.Client.PB))Check(RecordProxy.Of(block).ActorWrites.All(w=>w.Actor!="Bench"),"Encounter wrote joint properties.");
+        var cancel=new BenchRig(armType,benchType);cancel.Tick("Bases");for(int i=0;i<45;i++)cancel.Tick();
+        status=cancel.Finish("Cancel");
+        Check(status.StartsWith("ABORT:")&&cancel.Paths().Count==2&&!Enabled(Core(cancel.Arm,"Arm 1"))&&!Enabled(Core(cancel.Arm,"Arm 2")),"Concurrent cancel left an arm moving.");
+        var loss=new BenchRig(armType,benchType);status=loss.Finish("Cross",step:i=>{if(i==35)loss.Guides=false;});
+        Check(status.StartsWith("ABORT:")&&loss.Paths().Count==2&&!Enabled(Core(loss.Arm,"Arm 1"))&&!Enabled(Core(loss.Arm,"Arm 2")),"Safety loss left an encounter path moving.");
+        var rejection=new BenchRig(armType,benchType);status=rejection.Finish("Cross",step:i=>{if(i==35)HostFrame(rejection.Arm,rejection.Rig,"Stop(Arm 2)");});
+        Check(status.StartsWith("ABORT:")&&!Enabled(Core(rejection.Arm,"Arm 1"))&&!Enabled(Core(rejection.Arm,"Arm 2")),"One arm stopping failed to cancel its partner.");
+        var invalid=new BenchRig(armType,benchType);data=new MyIni();data.TryParse(invalid.Client.PB.CustomData);data.Set("Bench","EncounterSpeed",double.NaN);RecordProxy.Of(invalid.Client.PB).Values["CustomData"]=data.ToString();
+        status=invalid.Finish("Cross");Check(status.Contains("Invalid Bench.EncounterSpeed")&&invalid.Paths().Count==0,"Malformed encounter cap sent movement.");
     }
     static MatrixD PCFrame(string row)
     {var v=row.Split(' ',StringSplitOptions.RemoveEmptyEntries).Select(x=>double.Parse(x,System.Globalization.CultureInfo.InvariantCulture)).ToArray();return MatrixD.CreateWorld(new Vector3D(v[0],v[1],v[2]),new Vector3D(v[3],v[4],v[5]),new Vector3D(v[6],v[7],v[8]));}

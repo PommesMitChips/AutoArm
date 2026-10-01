@@ -8,7 +8,7 @@ internal static partial class Scenarios
 {
     // Import a read-only survey into proxy grids so the actual topology and
     // clearance implementations can consume its geometry. No game is touched.
-    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false)
+    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false,bool encounters=false)
     {
         string[] lines=File.ReadAllLines(path);
         Check(lines.Any(l=>l.StartsWith("RESULT STABLE ENDPOINTS")),"Survey endpoints were not stable.");
@@ -138,10 +138,18 @@ internal static partial class Scenarios
         HostReady(arm,rig,"Arm 1");HostReady(arm,rig,"Arm 2");
         for(int i=0;i<100;i++){HostFrame(arm,rig);CollisionFrame(collision);}
         var bench=Tests.Create(Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_Bench.txt"))),benchRig);
-        foreach(string command in new[]{"Smoke","Run"})
+        foreach(string command in encounters?new[]{"Cross","Bases"}:new[]{"Smoke","Run"})
         {
+            if(encounters) {
+                HostFrame(arm,rig,"StopAll");
+                foreach(var j in joints)RecordProxy.Of(j).Values[j is IMyMotorStator?"Angle":"CurrentPosition"]=(float)initial[j.EntityId];
+                Kinematics();HostReady(arm,rig,"Arm 1");HostReady(arm,rig,"Arm 2");CollisionFrame(collision,"Reload");
+                for(int i=0;i<150;i++){HostFrame(arm,rig);CollisionFrame(collision);}
+                benchRig.Storage=((TestHost)bench).Storage;
+                bench=Tests.Create(bench.GetType(),benchRig);
+            }
             HostFrame(bench,benchRig,command);
-            for(int i=0;i<22000&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();HostFrame(arm,rig);CollisionFrame(collision);HostFrame(bench,benchRig);}
+            for(int i=0;i<(encounters?216100:22000)&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();HostFrame(arm,rig);CollisionFrame(collision);HostFrame(bench,benchRig);}
             Console.WriteLine("Imported ideal kinematic "+command+": "+benchRig.Log.Last());
             if(!benchRig.Log.Last().StartsWith("PASS:"))
             {
@@ -153,8 +161,13 @@ internal static partial class Scenarios
                 Check(passed||benchRig.Log.Last().StartsWith("ABORT:"),"Full run neither completed nor aborted within its bound.");
                 if(!passed) {
                     Check(Get(Core(arm,"Arm 1"),"LocalPath")==null&&Get(Core(arm,"Arm 2"),"LocalPath")==null,"Full-run abort left a path active.");
-                    Console.WriteLine("KNOWN LIMIT: full shared-plane Run remains conservative/uncompleted in the ideal plant; this is NOT a passing full motion test.");
+                    Console.WriteLine("KNOWN LIMIT: "+command+" remains conservative/uncompleted in the ideal plant; this is NOT a passing avoidance/completion test.");
                 }
+            }
+            if(encounters) {
+                var report=new MyIni();report.TryParse(benchRig.PB.CustomData);
+                File.WriteAllText(Path.Combine(Tests.Workspace,"tools/ArmTests/obj/encounter-"+command.ToLowerInvariant()+".txt"),report.EndContent);
+                Console.WriteLine("Encounter report recorded for "+command+"; model results do not establish live physics clearance.");
             }
         }
         Console.WriteLine("Imported survey geometry consumed by actual topology/collision scripts; stationary proxy frames, not physics.");
