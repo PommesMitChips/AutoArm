@@ -50,6 +50,15 @@ $toolSource = Build-HostScript $toolSource $true
 [IO.File]::WriteAllText($toolSourcePath, $toolSource, [Text.UTF8Encoding]::new($false))
 Specialize-Source $toolSourcePath
 & (Join-Path $PSScriptRoot 'Build.ps1') -Source $toolSourcePath -Output $toolOutputPath -GameBin $GameBin
+$rewriteCliHome = $env:DOTNET_CLI_HOME
+$rewriteGameBin = $env:SE_BIN
+try {
+    $env:DOTNET_CLI_HOME = Join-Path $PSScriptRoot '.dotnet'
+    $env:SE_BIN = $GameBin
+    & dotnet run --project (Join-Path $PSScriptRoot 'PBCompileChecks') "-p:GameBin=$GameBin" -- $sourcePath $outputPath $toolSourcePath $toolOutputPath
+    if ($LASTEXITCODE -ne 0) { throw 'Installed SE memory-safe rewriting failed.' }
+}
+finally { $env:DOTNET_CLI_HOME = $rewriteCliHome; $env:SE_BIN = $rewriteGameBin }
 if ($Test) {
     $oldCliHome = $env:DOTNET_CLI_HOME
     $oldGameBin = $env:SE_BIN

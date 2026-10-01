@@ -1,3 +1,22 @@
+AutoArm 4.0.8 — Fix programmable-block compilation after compression
+
+The v4.0.7 alias compressor was incompatible with SE's memory-safety rewrite.
+StringBuilder aliases produced nonexistent MemorySafe<alias> type names. Closed
+collection aliases could bypass memory instrumentation without a compile error.
+Both were reproduced with the installed game's TypeSafetyAndBlockRewriter.
+
+The packer now retains StringBuilder and collection type spellings, including
+types containing them. Safe API/type aliases and repetition compression remain.
+The build runs the installed game rewriter using the game's Roslyn assemblies,
+then compiles all four source/compact artifacts at C#6. Regression fixtures
+reproduce the original error and silent bypass and verify normal instrumentation.
+This tests the type-rewriting stage, not the full game whitelist or live physics.
+
+Update BOTH PB scripts, keep current Format 7/2 Custom Data, and run On once.
+PID, merge approach/capture, commands, settings and protocol are unchanged.
+All 194,866 simulated assertions, including actual compact-host tests, pass.
+Arm: 90,797 characters, 9,203 free. ToolSwap: 57,795, 42,205 free.
+
 AutoArm 4.0.7 — Merge while approaching, stop on actual capture
 
 Parking now enables the selected tool's head merges during approach, after the

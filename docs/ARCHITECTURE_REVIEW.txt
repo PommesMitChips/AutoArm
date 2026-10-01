@@ -1,5 +1,15 @@
 AutoArm architecture review — 2026-10-01
 
+v4.0.8 compatibility correction: the v4.0.7 measurements below record ordinary
+C# checks, not successful PB compilation. The installed game type rewriter
+reproduced MemorySafe<alias> errors for StringBuilder and silent memory-tracking
+bypass for closed collection aliases. Those aliases are now excluded recursively.
+The installed SE rewrite/compilation gate passes all four generated artifacts;
+actual compact-host integration retains 194,866 assertions. Corrected output:
+Arm 90,797 (9,127 below baseline); ToolSwap 57,795 (7,473 below baseline).
+The additional 424 characters restore native memory instrumentation. Safe type
+aliases, repetition compression and all runtime capabilities remain.
+
 Two independent GPT-6.1 Sol reviews and the shared automated packer work were
 incorporated after the early-merge fix passed its isolated baseline gates.
 No pivot probe, service peers, tool swapping, multi-arm support, diagnostics,

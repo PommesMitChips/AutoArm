@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.7";
+const string ControllerBuildVersion = "4.0.8";
 
 const int HostFormat = 7;
 const string WireTag = "AutoArm/5", GlobalSection = "global";
@@ -336,7 +336,7 @@ public void Update(string argument, UpdateType source, double elapsed)
 readonly string ArmName;
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.7";
+const string ControllerBuildVersion = "4.0.8";
 
 
 // C# 6 programmable-block fragment. Paste inside ArmCore.

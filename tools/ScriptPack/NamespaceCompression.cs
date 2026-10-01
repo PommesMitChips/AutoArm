@@ -7,7 +7,13 @@ internal static class NamespaceCompression
     internal sealed record Result(string Source, List<RepetitionCompression.Decision> Report);
     static string Compact(string source) => ScriptPack.Compact(SyntaxFactory.ParseTokens(source, options: ScriptPack.ParseOptions).Where(t=>!t.IsKind(SyntaxKind.EndOfFileToken)).ToArray());
     static string Compact(SyntaxNode node) => ScriptPack.Compact(node.DescendantTokens().ToArray());
-    static bool Unavailable(ITypeSymbol type) => type is ITypeParameterSymbol || type.Locations.Any(l=>l.IsInSource) || type is INamedTypeSymbol named && named.TypeArguments.Any(Unavailable) || type is IArrayTypeSymbol array && Unavailable(array.ElementType);
+    // SE's memory-safety pass uses the source spelling to build MemorySafe<T> names.
+    // Aliased StringBuilder becomes a nonexistent MemorySafe<alias>; closed collection
+    // aliases can instead silently bypass rewriting. Keep their spelling, recursively.
+    static bool Unavailable(ITypeSymbol type) => type is ITypeParameterSymbol || type.Locations.Any(l=>l.IsInSource) ||
+        type.ContainingNamespace?.ToDisplayString() is string ns && (ns=="System.Collections" || ns.StartsWith("System.Collections.",StringComparison.Ordinal) || type.ToDisplayString()=="System.Text.StringBuilder") ||
+        type is INamedTypeSymbol named && (named.TypeArguments.Any(Unavailable) || named.ContainingType!=null && Unavailable(named.ContainingType)) ||
+        type is IArrayTypeSymbol array && Unavailable(array.ElementType);
     internal static Result Run(string source)
     {
         var compilation=ScriptPack.Compile(source,"namespace alias discovery");

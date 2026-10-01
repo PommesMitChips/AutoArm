@@ -24,6 +24,7 @@ internal static class CompressionChecks
         for(int i=0;i<80;i++)types+=$"static IMyMechanicalConnectionBlock Block{i}=null;static Vector3D Pose{i}=Vector3D.Zero;static System.Collections.Generic.List<IMyProgrammableBlock> Peers{i}=null;";
         var aliases=NamespaceCompression.Run(types);
         if(aliases.Source.Length>=types.Length || !aliases.Report.Any(r=>r.Kind=="namespace layout"&&r.Accepted))throw new Exception("Namespace alias overhead/nameof/IL fixture failed.");
+        if(aliases.Report.Any(r=>r.Kind=="namespace type"&&r.Accepted&&r.Symbol.StartsWith("System.Collections",StringComparison.Ordinal)))throw new Exception("Collection aliases bypass SE memory-safety rewriting.");
         Console.WriteLine("Compression regressions: PASS (cost rejection, escaped strings, conversions, overloads, nested calls, side effects, null receivers, namespace aliases and nameof).");
     }
     static Assembly? Resolve(AssemblyLoadContext context,AssemblyName name)
