@@ -22,7 +22,7 @@ Intermediate pistons, rotors and hinges do not need special names. Use only the 
 
 ### Optional collision avoidance
 
-Install the [Collision script](https://github.com/PommesMitChips/AutoArm/blob/v5.0.1/AutoArm_Collision_Compact.txt) in another PB on the same construct and name it **`Collision PB`**. Add this key to the Arm PB's existing `[global]` section, retaining any other peer rows:
+Install the [Collision script](https://github.com/PommesMitChips/AutoArm/blob/v5.0.2/AutoArm_Collision_Compact.txt) in another PB on the same construct and name it **`Collision PB`**. Add this key to the Arm PB's existing `[global]` section, retaining any other peer rows:
 
 ```ini
 Peers=

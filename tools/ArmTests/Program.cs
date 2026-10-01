@@ -46,6 +46,31 @@ internal static class Tests
                 var path=Path.Combine(GameBin,name.Name+".dll");
                 return File.Exists(path)?AssemblyLoadContext.Default.LoadFromAssemblyPath(path):null;
             };
+            if(args.Length>0&&args[0]=="--model-types")
+            {
+                foreach(string dll in new[]{"VRage.Library.dll","VRage.Render.dll","VRage.Render11.dll","VRage.Game.dll"})
+                {
+                    var asm=Assembly.LoadFrom(Path.Combine(GameBin,dll));
+                    Type[] types;try{types=asm.GetTypes();}catch(ReflectionTypeLoadException e){types=e.Types.Where(t=>t!=null).Cast<Type>().ToArray();}
+                    foreach(var t in types.Where(t=>t.Name.Contains("ModelImporter")||t.Name.Contains("ModelReader")))
+                    {Console.WriteLine(t.FullName+" / "+dll);foreach(var m in t.GetMethods(BindingFlags.Public|BindingFlags.Instance|BindingFlags.Static|BindingFlags.DeclaredOnly))Console.WriteLine(m);}
+                }
+                return 0;
+            }
+            if(args.Length>1&&args[0]=="--model-bounds")
+            {
+                var importerType=Assembly.LoadFrom(Path.Combine(GameBin,"VRage.Render.dll")).GetType("VRageRender.Import.MyModelImporter",true)!;
+                var importer=Activator.CreateInstance(importerType)!;
+                foreach(string file in args.Skip(1))
+                {
+                    if(!File.Exists(file))throw new FileNotFoundException("Model asset not found.",file);
+                    importerType.GetMethod("ImportData")!.Invoke(importer,new object?[]{file,new[]{"BoundingBox","BoundingSphere","Dummies"}});
+                    Console.WriteLine(file);
+                    foreach(System.Collections.DictionaryEntry tag in (System.Collections.IDictionary)importerType.GetMethod("GetTagData")!.Invoke(importer,null)!)Console.WriteLine(tag.Key+" = "+tag.Value);
+                    importerType.GetMethod("Clear")!.Invoke(importer,null);
+                }
+                return 0;
+            }
             if(args.Length==2&&args[1]=="--control-audit")
             { Scenarios.ControlAudit(Script(File.ReadAllText(args[0]))); return 0; }
             if(args.Length==3&&args[2]=="--control-compare")

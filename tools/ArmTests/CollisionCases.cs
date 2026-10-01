@@ -14,6 +14,7 @@ internal static partial class Scenarios
         CollisionScopeCases(armType);
         CollisionGeometryCases(armType, collisionType);
         CollisionContactCases(collisionType);
+        CollisionModelsCases(collisionType);
         Console.WriteLine($"Collision service: authenticated fresh overlays, bounded null-space preference, blocked advancement, Home/loss/replay refusal, occupied-cell geometry, closing limits and outward escape. PASS ({Tests.Assertions} total assertions).");
     }
     static MyIni LastCheck(ModuleBus bus,long arm,long service)

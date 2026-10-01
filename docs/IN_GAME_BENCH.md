@@ -28,7 +28,7 @@ Run these commands on **Arm Bench**:
 
 1. **`Check`** verifies both arms are ON and idle, their poses match the survey within 3 cm / 0.5°, and ArmService reports fresh Safety permission. It sends no motion.
 2. **`Smoke`** moves Arm 1 outward **10 cm** and back, waits one second, then repeats for Arm 2. Each successful path returns to the pose captured immediately before the test.
-3. After a successful smoke test, **`Run`** performs the shared-plane sequence below, first for Arm 1 and then Arm 2.
+3. **`Run`** performs the shared-plane sequence below, first for Arm 1 and then Arm 2. For the current collision-interface validation, stop after `Smoke` and submit its report first: the larger sequence remains conservative/uncompleted in the imported ideal model.
 
 | Waypoint | Outward displacement | Sideways displacement |
 | --- | ---: | ---: |
@@ -44,7 +44,7 @@ All movements are straight head paths with orientation held. Speed is at most **
 
 Copy **all Arm Bench Custom Data** after completion or an abort and send it back. Its report follows `---`. It includes requested waypoints, sampled head poses, control errors, Safety holds/limits, solver budget observations, return errors and elapsed time. Sampling is approximately 10 Hz per arm; it can miss faster vibration. Control error is the controller's tracking error, not a claim about physical clearance.
 
-Replaying the supplied survey through the conservative occupied-cell geometry flags each base rotor against the following hinge. This is a replay result, not a live physics observation. `Check` may therefore report an overlapping-geometry hold on this build before any movement. Send that Check report with the overlapping block IDs; the runner keeps Safety enabled and does not exempt those volumes. Establishing suitable mechanical-interface geometry remains separate from running the motion test.
+Collision **v5.0.2** addresses the reported base-rotor/following-hinge false overlap using guarded vanilla-model bounds at identified mechanical interfaces, together with corrected self-clearance gradients. Only Collision PB needs updating from v5.0.1; keep Arm and Bench code and settings. After installing it, run `Reload` on Collision PB, `On(Arm 1)` and `On(Arm 2)` on the Arm PB, then `Check` and `Smoke` on Arm Bench. Send the full report after Smoke, or after any hold. The imported ideal kinematic model completes both Smoke paths; the larger sideways Run still encounters conservative constraints/timeouts. Neither model result establishes live SE physics or instruction performance.
 
 For repeat testing, leave all Arm/Collision settings unchanged. `Run` captures one start per arm and replays those same paths when `Repeats` is increased. Comparing runs after different PID, speed, geometry or clearance changes is a separate experiment. Returning a head pose does not guarantee that redundant joints return to their original angles.
 
