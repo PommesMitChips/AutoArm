@@ -2,7 +2,7 @@
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
 const string ControllerBuildVersion = "4.0";
-const bool ToolHost = true;
+readonly bool ToolHost = true;
 const int HostFormat = 2;
 const string WireTag = "AutoArm/5";
 readonly Dictionary<string, ArmCore> Arms = new Dictionary<string, ArmCore>(StringComparer.Ordinal);

@@ -24,6 +24,9 @@ Use BOTH current scripts. External schemas are Arm [global] Format=7 and ToolSwa
 [global] Format=2, protocol AutoArm/5. Older PB Custom Data must be deleted; there
 is no migration. Tool marker metadata is AutoArm Tool Format=1.
 
-Arm: 99,319 characters, 681 free. ToolSwap: 68,170, 31,830 free. Installed SE API /
+Shared host role checks and integral unwind expressions no longer produce
+unreachable-code warnings. The build reports CS0162 diagnostics explicitly.
+
+Arm: 99,315 characters, 685 free. ToolSwap: 68,173, 31,827 free. Installed SE API /
 C#6 compilation, exact source-method IL after packing and 179,770 simulated
 assertions pass. Actual instruction timing and live game physics remain unverified.

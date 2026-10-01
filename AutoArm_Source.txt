@@ -2,7 +2,7 @@
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
 const string ControllerBuildVersion = "4.0";
-const bool ToolHost = false;
+readonly bool ToolHost = false;
 const int HostFormat = 7;
 const string WireTag = "AutoArm/5";
 readonly Dictionary<string, ArmCore> Arms = new Dictionary<string, ArmCore>(StringComparer.Ordinal);
@@ -1908,8 +1908,7 @@ void UpdateIntegral(ref Vector3D integral, Vector3D error, double deadband,
     Vector3D outside = Outside(error, deadband);
     if (ki <= 0 || !permit || error.Length() > capture)
     {
-        if (IntegralUnwindSeconds <= 0) integral = Vector3D.Zero;
-        else integral /= 1 + dt / IntegralUnwindSeconds;
+        integral = IntegralUnwindSeconds <= 0 ? Vector3D.Zero : integral / (1 + dt / IntegralUnwindSeconds);
         return;
     }
     // A held pose still needs the learned load bias. Reaching the deadband is
