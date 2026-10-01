@@ -98,7 +98,7 @@ internal static partial class Scenarios
             string? field=phase=="ApproachDock"?"Approach":phase=="Dock"?"Dock":phase=="Retreat"?"Retreat":phase=="ApproachTop"?"TopApproach":phase=="AlignTop"?"Attach":null;
             int source=Get(SwapController(d.Tool),"Source") is object s?Array.IndexOf(d.F.Markers,(IMyTerminalBlock)Get(s,"Marker")!):0;
             if(field!=null && phaseTicks>8)
-            { var goal=SwapGoal(d.Tool,field); if(phase=="ApproachDock" || phase=="Dock") d.F.MoveSource(goal,source); else d.F.MoveArm(goal); }
+            { var goal=SwapMotionGoal(d.Tool,field); if(phase=="ApproachDock" || phase=="Dock") d.F.MoveSource(goal,source); else d.F.MoveArm(goal); }
             else if(phase=="Lock") d.F.LockSource(source:source);
             else if(phase=="Release") d.F.SplitTool(Array.IndexOf(d.F.Markers,(IMyTerminalBlock)Get(Get(SwapController(d.Tool),"Destination")!,"Marker")!));
             d.Tick(); previous=phase;
@@ -110,6 +110,7 @@ internal static partial class Scenarios
         BareManualFrames(armType,toolType);
         SwapPhaseGuards(armType,toolType);
         SwapTransitionCases(armType,toolType);
+        DockArrivalCases(armType,toolType);
         foreach(bool bare in new[]{false,true})
         {
             var d=new DualRig(armType,toolType,bare,bare); DualStart(d);

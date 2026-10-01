@@ -24,9 +24,11 @@ internal sealed class ToolSwapFixture
     internal TestHost? Host;
     internal IMyMotorRotor? AttachResult;
     internal bool AutoAttach = true, AutoDetach = true;
+    int PhysicalTool;
     readonly Dictionary<IMyCubeGrid,Dictionary<Vector3I,IMySlimBlock>> Cells = new();
     internal ToolSwapFixture(bool ports=true,bool explicitOnly=false,bool headless=false,double destinationAngle=0)
     {
+        PhysicalTool=headless?-1:0;
         var shoulder=Grid(Vector3D.Zero); ArmGrid=Grid(new Vector3D(0,.4208642244338989,-10));
         Base=Rig.Rotor("Arm 1 - Base - Rotor",Rig.Root,shoulder); Put(Base.Top,shoulder,Vector3I.Zero);
         Piston=Rig.Piston("Reach piston",shoulder,ArmGrid,new Vector3D(0,0,-2),Vector3D.Forward);
@@ -69,6 +71,7 @@ internal sealed class ToolSwapFixture
                         if(top!=null) RecordProxy.Of(top).Values["Base"]=null;
                         proxy.Values["Top"]=null; proxy.Values["TopGrid"]=null;
                         proxy.Values["IsAttached"]=false; proxy.Values["PendingAttachment"]=false;
+                        if(PhysicalTool==index)PhysicalTool=-1;
                     }
                     return null;
                 }
@@ -80,6 +83,7 @@ internal sealed class ToolSwapFixture
                     {
                         var top=AttachResult ?? ArmTip; proxy.Values["Top"]=top; proxy.Values["TopGrid"]=top.CubeGrid;
                         proxy.Values["IsAttached"]=true; proxy.Values["PendingAttachment"]=false; RecordProxy.Of(top).Values["Base"]=Couplers[index];
+                        if(top==ArmTip)PhysicalTool=index;
                     }
                     else proxy.Values["PendingAttachment"]=true;
                     return null;
@@ -152,6 +156,14 @@ internal sealed class ToolSwapFixture
     internal void ShiftIncoming(Vector3D shift) { var delta=MatrixD.Identity; delta.Translation=shift; TransformGrid(Markers[1].CubeGrid,delta); }
     internal void LockSource(int count=2,int source=0)
     {
+        if(count>0&&Stands[source][0].CubeGrid!=Markers[source].CubeGrid)
+        {
+            // Model the native merge's cell snap, rather than requiring motors
+            // to push adjacent collision shapes into exact face contact.
+            var delta=MatrixD.Identity;
+            delta.Translation=Stands[source][0].GetPosition()+Stands[source][0].WorldMatrix.Right*Markers[source].CubeGrid.GridSize-Heads[source][0].GetPosition();
+            TransformGrid(Markers[source].CubeGrid,delta);if(PhysicalTool==source)TransformGrid(ArmTip.CubeGrid,delta);
+        }
         foreach(var stand in Stands[source]) { var pose=stand.WorldMatrix; Put(stand,Markers[source].CubeGrid,stand.Position,true); RecordProxy.Of(stand).Values["WorldMatrix"]=pose; }
         for(int j=0;j<Heads[source].Length;j++) { RecordProxy.Of(Heads[source][j]).Values["IsConnected"]=j<count; RecordProxy.Of(Stands[source][j]).Values["IsConnected"]=j<count; }
     }

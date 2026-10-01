@@ -40,6 +40,8 @@ For parking, `Tools.PositionTolerance` defaults to 0.01 metres and `Tools.AngleT
 
 Travel uses the arm's HeadSpeed/HeadTurnSpeed. ToolSwap's slower defaults apply to final docking/insertion and withdrawal. Joint speed, acceleration, limits and actual physics still bound achievable movement. Multiple arms share one PB instruction budget; distribute larger arms over more PBs if the reserve guard stops them.
 
+If `Tools ApproachDock` hovers around 0.010 m with PositionTolerance=0.005, the clearance point was previously held to final docking precision and near-zero velocity. Current paired scripts give that point a separate arrival tolerance and continue into insertion at low speed. They retain your final tolerance settings. Parking also leaves a small capture gap before enabling the head merges, rather than pushing disabled merge faces into contact. Update both PBs and run On; no configuration reset is needed.
+
 ## Tool return orientation
 
 Keep tools merged to their intended stands for initial scanning. The actual parked orientation is saved on the named reference block. Returning to that unchanged rack reuses it; a different rack or unobserved parked pose may require the first geometric alignment. Choose clear routes: collision avoidance is not included.

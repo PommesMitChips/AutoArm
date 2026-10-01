@@ -25,6 +25,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v4.0.3` | Pose-only Arm descriptor removes unassigned live field, unused branches and endpoint inventory enumeration | Arm 98,886; ToolSwap 64,369 |
 | `v4.0.4` | Bare socket control axes, tolerance-aware docking, continuous insertion, parking settling and relevant wrapped mount phase checks; zero default damping | Arm 99,161; ToolSwap 64,661 |
 | `v4.0.5` | Stopped merge/unmerge settling, continuous connection confirmation and acknowledged idempotent resume with bounded failures | Arm 99,449; ToolSwap 65,142 |
+| `v4.0.6` | Separate low-speed approach admission, graded insertion alignment, tolerance-aware final settling and merge capture gap | Arm 99,843; ToolSwap 65,240 |
 
 Read a previous script without changing your working tree:
 

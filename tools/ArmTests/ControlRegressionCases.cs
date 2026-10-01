@@ -66,7 +66,7 @@ internal static partial class Scenarios
             var pose=head.WorldMatrix; pose.Translation+=pose.Forward*sample.Position;
             var spin=Vector3D.Up*(sample.Angle*Math.PI/180);
             pose=MatrixD.CreateWorld(pose.Translation,RotateVector(pose.Forward,spin),RotateVector(pose.Up,spin));
-            var args=new object?[]{pose,1d/60,1d/60,.05,2d,sample.PosTol,sample.AngTol,false,""};
+            var args=new object?[]{pose,1d/60,1d/60,.05,2d,sample.PosTol,sample.AngTol,false,"",0d};
             Check((bool)script.GetType().GetMethod("ToolPoseStep",All)!.Invoke(script,args)!,"Tool tolerance feedback stopped motion.");
             if(sample.Inside)
             {
@@ -78,7 +78,7 @@ internal static partial class Scenarios
         }
         var held=VCStart(type,out _,out _,out _,out var marker,out _);
         held.GetType().GetField("PositionI",All)!.SetValue(held,new Vector3D(.02,0,0));
-        var holdArgs=new object?[]{marker.WorldMatrix,1d/60,1d/60,.05,2d,.01,1d,false,""};
+        var holdArgs=new object?[]{marker.WorldMatrix,1d/60,1d/60,.05,2d,.01,1d,false,"",0d};
         held.GetType().GetMethod("ToolPoseStep",All)!.Invoke(held,holdArgs);
         VCNear(VCVector(held,"LastFeedbackLinear"),new Vector3D(.02,0,0),"Tool precision band erased retained load bias");
     }

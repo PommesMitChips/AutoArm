@@ -11,6 +11,13 @@ internal static partial class Scenarios
         var tools=SwapController(script); string anchor=field=="Dock" || field=="Approach"?"DockAnchor":field=="Retreat"?"RetreatAnchor":"AttachAnchor";
         return (MatrixD)Get(tools,field)! * (MatrixD)Get(Get(tools,anchor)!,"WorldMatrix")!;
     }
+    static MatrixD SwapMotionGoal(object tool,string field)
+    {
+        if(field!="Dock")return SwapGoal(tool,field);
+        string row=((string)Get(tool,"SentPath")!).Split('|').Last();
+        var v=row.Split(new[]{' ','\t','\r','\n'},StringSplitOptions.RemoveEmptyEntries).Select(s=>double.Parse(s,System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+        return MatrixD.CreateWorld(new Vector3D(v[0],v[1],v[2]),new Vector3D(v[3],v[4],v[5]),new Vector3D(v[6],v[7],v[8]))*(MatrixD)Get(Get(SwapController(tool),"DockAnchor")!,"WorldMatrix")!;
+    }
     static void NativeReverseGeometry(Type type)
     {
         string[] bases={"LargeStator","SmallStator","LargeAdvancedStator","SmallAdvancedStator","SmallAdvancedStatorSmall"};

@@ -113,7 +113,7 @@ bool SettleToolTopology(out string why)
 
 bool ToolPoseStep(MatrixD world, double dt, double observationDt, double moveCap,
     double turnCap, double positionTolerance, double angleTolerance,
-    out bool settled, out string why)
+    out bool settled, out string why, double settleScale = 0)
 {
     settled = false; why = "";
     if (!Topology.Ready || !ConfigValid) { why = "Tool topology is not ready."; return false; }
@@ -132,6 +132,6 @@ bool ToolPoseStep(MatrixD world, double dt, double observationDt, double moveCap
     finally { ToolDriving = false; }
     if (!TargetValid || !Topology.Ready) { why = LastFault.Length > 0 ? LastFault : "Tool motion stopped."; return false; }
     settled = LastPositionError <= positionTolerance && LastOrientationErrorDeg <= angleTolerance &&
-        FilteredV.Length() <= .005 && FilteredW.Length() * 180 / Math.PI <= .2;
+        FilteredV.Length() <= Math.Max(.005, positionTolerance * settleScale) && FilteredW.Length() * 180 / Math.PI <= Math.Max(.2, angleTolerance * settleScale);
     return true;
 }

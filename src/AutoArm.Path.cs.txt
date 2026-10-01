@@ -13,6 +13,7 @@ sealed class ArmPath
     public bool[] Lines;
     public Vector3D LineStart;
     public bool LineStarted;
+    public bool Docking;
     public double CurrentMove => Moves == null ? Move : Moves[Completed];
     public double CurrentTurn => Turns == null ? Turn : Turns[Completed];
     public bool Linear => Lines != null && Lines[Completed];
@@ -40,6 +41,7 @@ ArmPath ReadPath(string text, long anchor, long id, double move, double turn, do
 }
 void ConfigurePathStages(ArmPath path, MyIni ini)
 {
+    path.Docking = ini.Get(LinkSection, "Docking").ToBoolean();
     path.Moves = PathSpeeds(ini, "Moves", path.Waypoints.Count, path.Move, MoveMps, 5);
     path.Turns = PathSpeeds(ini, "Turns", path.Waypoints.Count, path.Turn, TurnDeg, 30);
     string text = ini.Get(LinkSection, "Lines").ToString();
@@ -76,6 +78,9 @@ bool StepPath(ArmPath path, double dt, double observed, out string why)
     path.Elapsed += observed;
     if (path.Elapsed > path.Budget) { why = "Path waypoint timeout: " + (path.Completed + 1); return false; }
     MatrixD goal = path.Current, demand = goal;
+    bool entry = path.Docking && path.Completed + 1 < path.Waypoints.Count;
+    double pt = entry ? Math.Max(.001, Math.Min(.02, Vector3D.Distance(path.Waypoints[path.Completed].Translation, path.Waypoints[path.Completed + 1].Translation) * .25)) : path.PositionTolerance;
+    double at = entry ? Math.Max(1, path.AngleTolerance) : path.AngleTolerance;
     PathRemainingDistance = Vector3D.Distance(goal.Translation, Topology.EndPosition);
     if (path.Linear)
     {
@@ -87,20 +92,22 @@ bool StepPath(ArmPath path, double dt, double observed, out string why)
         // Align before insertion/withdrawal, then hold one orientation and steer
         // to a lookahead point on the captured Cartesian line, never a shortcut.
         double angle = RotationError(Topology.EndPose.Forward, Topology.EndPose.Up, goal.Forward, goal.Up).Length() * 180 / Math.PI;
+        double gate = path.Docking ? Math.Max(at, Math.Min(1, PathRemainingDistance * 10)) : at;
         if (length > 1e-10)
         {
             var direction = delta / length; double progress = Vector3D.Dot(position - path.LineStart, direction);
             // Losing alignment pauses at current progress, never back at the
             // insertion start. Retain perpendicular correction onto the line.
-            reference += direction * Clamp(progress + (path.CurrentMove / PositionKp + path.PositionTolerance * .5) * Clamp(2 - angle / path.AngleTolerance, 0, 1), 0, length);
+            reference += direction * Clamp(progress + (path.CurrentMove / PositionKp + pt * .5) * Clamp(2 - angle / gate, 0, 1), 0, length);
         }
         demand.Translation = Vector3D.Transform(reference, basis);
     }
     bool settled;
-    if (!ToolPoseStep(demand, dt, observed, path.CurrentMove, path.CurrentTurn, path.PositionTolerance, path.AngleTolerance, out settled, out why)) return false;
-    settled &= PathRemainingDistance <= path.PositionTolerance;
+    if (!ToolPoseStep(demand, dt, observed, path.CurrentMove, path.CurrentTurn, pt, at, out settled, out why, path.Docking ? 2 : 0)) return false;
+    if (entry) settled = LastPositionError <= pt && LastOrientationErrorDeg <= at && FilteredV.Length() <= Math.Max(.005, Math.Min(path.Move, pt * 2.5)) && FilteredW.Length() * 180 / Math.PI <= Math.Max(.2, path.Turn);
+    settled &= PathRemainingDistance <= pt;
     path.Stable = settled ? path.Stable + 1 : 0;
-    if (path.Stable >= 2) { Topology.ZeroOwned(); Tools.ZeroMount(); path.Completed++; path.Elapsed = path.Budget = 0; path.Stable = 0; path.LineStarted = false; Say("Path " + path.Id + ": " + path.Completed + "/" + path.Waypoints.Count); }
+    if (path.Stable >= 2) { if (!entry) { Topology.ZeroOwned(); Tools.ZeroMount(); } path.Completed++; path.Elapsed = path.Budget = 0; path.Stable = 0; path.LineStarted = false; Say("Path " + path.Id + ": " + path.Completed + "/" + path.Waypoints.Count); }
     return true;
 }
 void PathCommand(string command)

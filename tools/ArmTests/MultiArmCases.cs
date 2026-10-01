@@ -180,7 +180,7 @@ internal static partial class Scenarios
                 if(i>30&&phase=="Idle"&&Enabled(Core(Owner(target.Name),target.Name))) break;
                 string? field=phase=="ApproachDock"?"Approach":phase=="Dock"?"Dock":phase=="Retreat"?"Retreat":phase=="ApproachTop"?"TopApproach":phase=="AlignTop"?"Attach":null;
                 int source=Get(SwapController(core),"Source") is object s?Array.IndexOf(target.Fixture.Markers,(IMyTerminalBlock)Get(s,"Marker")!):0;
-                if(field!=null&&phaseTicks>8) { var pose=SwapGoal(core,field); if(phase=="ApproachDock"||phase=="Dock") target.Fixture.MoveSource(pose,source); else target.Fixture.MoveArm(pose); }
+                if(field!=null&&phaseTicks>8) { var pose=SwapMotionGoal(core,field); if(phase=="ApproachDock"||phase=="Dock") target.Fixture.MoveSource(pose,source); else target.Fixture.MoveArm(pose); }
                 else if(phase=="Lock")
                 {
                     target.Fixture.LockSource(phaseTicks<4?1:2,source);

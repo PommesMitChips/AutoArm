@@ -592,6 +592,7 @@ sealed partial class ToolSwapController
         {
             bool docking = Phase == ApproachDockPhase || Phase == "Dock";
             MatrixD first = docking ? Approach : TopApproach, second = docking ? Dock : Attach;
+            if (docking) second.Translation += (Approach.Translation - Dock.Translation) * (Math.Min(.03, Clearance * .25) / Clearance);
             if (Focus != null) { first = Tip.Local * first; second = Tip.Local * second; }
             return P.ToolPathStep(first, second, docking ? DockAnchor : AttachAnchor,
                 Phase == ApproachDockPhase || Phase == ApproachTopPhase ? 0 : 1, Move, Turn,
