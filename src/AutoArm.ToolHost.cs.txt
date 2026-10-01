@@ -1,6 +1,6 @@
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "4.0.9";
+const string ControllerBuildVersion = "5.0";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -265,6 +265,7 @@ bool SubmitPath(string rows, long anchor, int waypoint, double moveCap, double t
     packet.Set(LinkSection, "PosTol", positionTolerance); packet.Set(LinkSection, "AngleTol", angleTolerance);
     packet.Set(LinkSection, "Docking", true);
     packet.Set(LinkSection, "Capture", Tools.Parking);
+    packet.Set(LinkSection, "Contacts", Tools.CollisionContacts);
     packet.Set(LinkSection, "Moves", travel ? "0|" + AutoSettings.Number(moveCap) : AutoSettings.Number(moveCap));
     packet.Set(LinkSection, "Turns", travel ? "0|" + AutoSettings.Number(turnCap) : AutoSettings.Number(turnCap));
     packet.Set(LinkSection, "Lines", travel ? "false|true" : "true");

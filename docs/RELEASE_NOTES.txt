@@ -1,3 +1,46 @@
+AutoArm 5.0 — Optional shared collision service
+
+Install AutoArm_Collision_Compact.txt in a same-construct PB named Collision PB.
+Add `Collision PB | Safety` to the Arm PB's Peers table, globally or per arm,
+retaining other peer rows, and run On. One Collision PB serves several arms
+across several owners. Basic arms need no Safety entry or extra PB. Existing
+Arm Format7, ToolSwap Format2 and wire Version5 remain; Collision Format is1.
+Update ToolSwap too when using it: this version supplies scoped contact pairs.
+
+Collision caches occupied construct cells, including non-terminal blocks,
+coalesces tagged runs and uses spatial tiles/SAT gap tests. It derives point
+clearance gradients through generalized signed joint groups. Preferred rates
+are capped/smoothed, and the existing bounded solver prioritizes the head task.
+Linearized clearance rows limit final rates; blocked motion cannot advance the
+head target or bypass anti-windup. Home receives a veto/filter, not reshaping.
+Fresh request-bound guidance is mandatory once Safety is configured. No peer
+means zero preference and the original controller objective. Native writes
+remain exclusively in Arm PB. ToolSwap owns its existing equipment lease.
+
+Sessions bind source, arm, epochs, generation, physical topology/contact identity
+and consumed acknowledgements. Loss, restart, stale or malformed replies cannot
+silently remove protection. Incomplete geometry, scan/query bounds, deep overlap
+and excess independent constraints hold. Native joint and declared merge/socket
+contacts are narrowly exempted; small merge normals and explicit axes match the
+ToolSwap setting. Coalesced socket armour is split to keep nearby cells protected.
+
+This is local assistance, not a global route planner or a full physical braking
+model. Voxel volumes can reject valid irregular shapes. Rescan after editing
+interior ship occupancy. Terrain and unrelated constructs are not included.
+Live SE physical/instruction behaviour remains to be confirmed on actual builds.
+
+Validation: Build-AutoArm.ps1 -Test passes C#6, installed type-safety/memory-safe
+rewrite on all six artifacts, packing/specialization proofs and 195,101 simulated
+assertions, including all compact programs. New tests verify null-space piston
+reshaping, held-head delivery, closing limits, outward escape, blocked target
+advance, replay/malformed/topology rejection, stale Home holds, shared-arm
+isolation, cell rescans, service Off and narrow contact exceptions. A separate
+15-actuator, 1800-tick frozen-geometry replay against v4.0.9 produces exactly
+identical native joint commands with Safety absent.
+
+Arm 92,657 characters (7,343 free); ToolSwap 57,901 (42,099 free);
+Collision 18,496 (81,504 free). The Arm integration adds 3,709 versus v4.0.9.
+
 AutoArm 4.0.9 — Consolidate configuration, weights and startup recovery
 
 Three GPT-6.1 Sol medium workers implemented separate refactors with a coordinated

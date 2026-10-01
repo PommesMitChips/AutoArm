@@ -1,0 +1,33 @@
+# Optional shared collision service
+
+Arm Format 7, ToolSwap Format 2 and wire version 5 remain. Collision PB has its own `[Collision] Format=1`. `Peers` gains one `Safety` role per arm. The role can observe, provide guidance and stop; it cannot acquire a planner path, mutate equipment, write native actuator velocities or grant restart authority. A Collision PB registers up to 32 `(Arm PB EntityId, arm name)` sessions from explicitly authorised same-construct owners. Arm PB retains the only actuator writer.
+
+## Control boundary
+
+The head task and existing bounded damped least-squares allocator remain. In normalized joint coordinates the objective becomes `||B*x - task||² + ridge*||x - preferred||²`. Free-variable right-hand sides subtract `B*preferred`, free solutions add `preferred`, and active-bound release gradients use `ridge*(x-preferred)`. The unconstrained delivery reference uses the same preference. With no Safety peer, preferences are zero and the old objective/control path remains.
+
+Collision supplies preferred native group rates, capped at 25% of current joint speed limits. Geometric gradients refer to points on rigid pieces, not only the head. Group topology establishes each grid's upstream influence mask; signed parallel members retain their existing single generalized coordinate. Mounted rigid tool geometry inherits the arm influence. The geometry service uses the same rotary centre/axis convention as the arm's physical Jacobian.
+
+Each clearance row is `gradient · nativeRates >= minimum`. The Arm validates finite sizes/ranges and checks the whole candidate. It finds a common uniform rate scale satisfying the received rows; if the scale interval is empty, output is zero. Safety limiting can supersede command acceleration during a veto. This is a conservative filter, not a general inequality-constrained QP. It can hold despite another feasible joint solution. Positive moving-obstacle escape requirements may require explicit retreat; zero output cannot stop the other object.
+
+Accepted rates determine achieved head motion, the allocation anti-windup reference and pilot target advancement. Advancement is additionally bounded by the safety fraction, preventing opposing feedback from advancing a blocked target. Missing/blocked guidance freezes control updates and zeros owned outputs without releasing motion ownership. Home is vetoed/limited at commit; it does not use redundant posture reshaping. ToolSwap keeps its existing movement lease and equipment fences. Long blocked operations can still reach their existing path/tool deadlines.
+
+## Protocol and freshness
+
+Arm sends `CHECK` at approximately 10 Hz after topology is ready, reusing its authenticated `Service=1` envelope, independently for each arm. Fields include `Fingerprint`, `Groups`, `Hull`, `ToolGrid`, native `Caps`/`Rates`, the bare socket cell/frame and permitted docking pairs. `Fingerprint` includes physical group identities, head grid and contact permissions.
+
+Collision initially responds `HELLO` with its persisted restart epoch, then `GUIDE` carrying matching epochs, generation, arm, fingerprint, `Ack` and `Seen`. Guidance contains `Bias`, up to eight `Rows`, `Scale`, `Hold` and a diagnostic reason. The receiver binds acknowledgement to its own outstanding request clock. Total request-to-use age must not exceed 0.25 s. Consumed acknowledgements cannot renew freshness, even with a newer packet sequence. Collision reload advances its durable epoch; a mismatched remote epoch elicits HELLO so owners rehandshake automatically. Restart, reload, topology/contact change and revocation invalidate guidance; malformed packets do not replace a valid overlay.
+
+One collision service can coexist with ToolSwap and other Plan/Observe/Stop peers. Mandatory Safety loss holds a supervised arm; absent Safety configuration preserves basic operation without collision traffic. Client state, epochs and replay counters are per arm, rather than per shared service. Expired arm registrations remain conservative obstacles until service reload rather than being silently forgotten. Deterministic owner/name order provides a yielding preference between moving registered arms, while each arm retains geometric limits.
+
+## Geometry and limits
+
+The service caches construct grids discovered through terminal/mechanical references. Incremental `CubeExists` scans include non-terminal occupied cells. Tagged cells distinguish mechanical bases/tops and merge ports. Adjacent X cells with matching tags are coalesced into boxes and indexed into eight-cell spatial tiles. SAT separation of oriented boxes supplies conservative gap estimates and outward normals; supporting points provide local Jacobian gradients. Equivalent rows retain the stricter minimum; too many distinct constraints cause hold, not dropped constraints.
+
+Grid world transforms and relative point motion are observed live. Point velocity is relative to the arm hull, so translating/rotating the whole ship does not count as an approaching obstacle. Search range grows with current arm point motion and the configured prediction horizon. At a clearance pair, allowed closing motion diminishes with gap; outward motion remains available. Repulsion preferences ramp by distance and are smoothed between matched frames.
+
+Grid identity/bounds and topology changes rebuild geometry. Interior occupancy changes require `Rescan`; periodic construct inventory refresh does not rescan unchanged interiors. Scans and collision queries are budgeted. Incomplete geometry, missing bodies, budget overflow, deep overlap or more than eight independent rows cause hold/no fresh permission. Default limits: 65,536 cells per grid and 8,192 coalesced boxes per grid. Native instruction costs still require live profiling.
+
+Mechanical-base/top contact exceptions apply to the actual tagged pair, not an entire adjacent grid. ToolSwap alone supplies merge-port and socket/rotor allowances. Merge normals must oppose; socket axes must align, and only the declared socket cell may be exempted from its selected rotor-base volume. A coalesced socket row is split at that cell so neighbouring armour remains protected. Contact metadata persists for departure and is included in the freshness identity. These are occupied-cell approximations; exact mesh/coupler physics remains a live validation requirement.
+
+No terrain cameras, unrelated-construct discovery, full route planner or rigorous physical braking model is included. The service is local clearance assistance with supervised holds. Communication bounds, voxel approximations, physical joint flex and inertia prevent a universal collision-free guarantee.

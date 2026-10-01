@@ -5,12 +5,12 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 ## Installation
 
 1. Stop your existing arm controller before replacing it.
-2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.9/AutoArm_Compact.txt) into an arm programmable block.
-3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.9/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
+2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v5.0/AutoArm_Compact.txt) into an arm programmable block.
+3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v5.0/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
 4. Name the parts as shown below. You do not need to edit the code or enter configuration for a quick start.
 5. Run `On` on the Arm PB. For another arm, use `On(Arm 2)`. Then use `Select Arm 2` to give it cockpit control.
 
-When upgrading an older setup, delete the old PB Custom Data and let this version generate the new layout. Arm PBs use `[global] Format=7`; ToolSwap PBs use `[global] Format=2`. Incorrect formats produce an error; they are not converted.
+Keep existing Custom Data when its format matches: Arm PBs use `[global] Format=7`; ToolSwap PBs use `[global] Format=2`. If a format error asks you to delete old data, let this version generate the new layout. Incorrect formats are not converted.
 
 ## Choose a setup
 
@@ -19,6 +19,23 @@ When upgrading an older setup, delete the old PB Custom Data and let this versio
 Name the first attached joint **`Arm 1 - Base - Rotor`** (or `Arm 1 - Base - Piston` / `Arm 1 - Base - Hinge`). Name exactly one terminal block on the moving end **`Arm 1 - Head - Drill`**, or another description after `Head -`.
 
 Intermediate pistons, rotors and hinges do not need special names. Use only the Arm PB. Run `On` and pilot from your active cockpit.
+
+### Optional collision avoidance
+
+Install the [Collision script](https://github.com/PommesMitChips/AutoArm/blob/v5.0/AutoArm_Collision_Compact.txt) in another PB on the same construct and name it **`Collision PB`**. Add this key to the Arm PB's existing `[global]` section, retaining any other peer rows:
+
+```ini
+Peers=
+|Collision PB | Safety
+```
+
+Run `On` on the Arm PB. Collision PB generates its own settings and scans the ship and arm grids automatically. One Collision PB can supervise several arms across several Arm PBs; add the same peer entry to each owner. To supervise only one arm, put `Peers` in that arm's section instead of `[global]`.
+
+AutoArm uses spare joint movement to improve clearance while tracking the head. When necessary it limits motion toward obstacles or holds. Moving away remains allowed. An enabled Safety service must remain running; lost or stale guidance holds the arm until fresh guidance returns. Basic arms need no Collision PB and no Safety peer entry.
+
+Collision PB commands are `Info`, `Rescan`, `On`, `Reload` and `Off`. Run `Rescan` after adding or removing ship blocks. Adjust `Clearance`, `Influence` and `AwaySpeed` in its Custom Data, then `Reload`. If `Info` reports a scan limit, increase `MaxCells` or `MaxShapes` within the accepted range.
+
+This first version uses conservative occupied-block volumes, rather than exact model shapes. Intended joint and docking contacts have limited allowances. It covers construct geometry and registered arms; terrain, unrelated ships and automatic routes around traps are not covered. Clearance checks do not model every SE physics effect, so begin with low movement speeds and confirm clearance on your build.
 
 ### Tool parking and swapping
 

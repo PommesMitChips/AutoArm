@@ -12,6 +12,7 @@ sealed class ToolSwapLink
     ArmTipInfo Tip;
     IMyTerminalBlock End;
     string PeerName = "", Queued = "", Error = "";
+    public string Contacts = "";
     long Ignore, Request, MoveRequest;
     bool Lease, Rebuilding, Driving, Permitted, Settled, Changing, Transition, ResumePending;
     bool RecoverBare, Resumed;
@@ -31,7 +32,7 @@ sealed class ToolSwapLink
         why = ""; MyIni ini;
         if (!AutoConfig.ReadCurrent(P, P.Me.CustomData, out ini, out why)) return false;
         PeerName = ini.Get("Modules", "ToolSwapPB").ToString().Trim();
-        Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = Transition = ResumePending = false; Error = "";
+        Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = Transition = ResumePending = false; Error = ""; Contacts = "";
         RecoverBare = Resumed = false;
         if (!Configured) { Link.Peer = null; End = null; Frame = null; Tip = null; Couplers.Clear(); Markers.Clear(); Tops.Clear(); Merges.Clear(); return true; }
         Link.Resolve(PeerName); Link.Generation++; Link.RemoteEpoch = Link.Received = 0; Link.Age = 0;
@@ -159,6 +160,8 @@ sealed class ToolSwapLink
                     Path = P.ReadPath(ini.Get(LinkSection, "Waypoints").ToString(), ini.Get(LinkSection, "Anchor").ToInt64(), seq, Move, Turn, PosTol, AngleTol);
                     P.ConfigurePathStages(Path, ini);
                     Path.Capture = ini.Get(LinkSection, "Capture").ToBoolean();
+                    Contacts = ini.Get(LinkSection, "Contacts").ToString();
+                    if (Contacts.Length > 2048) throw new Exception("Docking contact limit.");
                     Driving = true; Settled = false; MoveRequest = seq;
                 }
                 else if (op == "RESUME" || op == "RELEASE")

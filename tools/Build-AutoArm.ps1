@@ -1,10 +1,12 @@
 param(
     [string]$GameBin = 'C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64',
-    [switch]$Test
+    [switch]$Test,
+    [switch]$SourceOnly
 )
 $ErrorActionPreference = 'Stop'
+if ($Test -and $SourceOnly) { throw 'Run focused source tests separately; full -Test requires packed artifacts.' }
 $workspace = Split-Path -Parent $PSScriptRoot
-$parts = @('AutoArm.Prefix.cs.txt', 'AutoArm.Topology.cs.txt', 'AutoArm.Config.cs.txt', 'AutoArm.Control.cs.txt', 'AutoArm.SavedDrives.cs.txt', 'AutoArm.Math.cs.txt', 'AutoArm.Pivot.cs.txt', 'AutoArm.ArmTip.cs.txt', 'AutoArm.ToolControl.cs.txt', 'AutoArm.Link.cs.txt', 'AutoArm.Path.cs.txt', 'AutoArm.ToolClient.cs.txt', 'AutoArm.Services.cs.txt')
+$parts = @('AutoArm.Prefix.cs.txt', 'AutoArm.Topology.cs.txt', 'AutoArm.Config.cs.txt', 'AutoArm.Control.cs.txt', 'AutoArm.SavedDrives.cs.txt', 'AutoArm.Math.cs.txt', 'AutoArm.Pivot.cs.txt', 'AutoArm.ArmTip.cs.txt', 'AutoArm.ToolControl.cs.txt', 'AutoArm.Link.cs.txt', 'AutoArm.Path.cs.txt', 'AutoArm.ToolClient.cs.txt', 'AutoArm.Services.cs.txt', 'AutoArm.Safety.cs.txt')
 $sourcePath = Join-Path $workspace 'AutoArm_Source.txt'
 $outputPath = Join-Path $workspace 'AutoArm_Compact.txt'
 function Specialize-Source([string]$path) {
@@ -42,7 +44,7 @@ $engineDir = Join-Path $PSScriptRoot 'ScriptPack/obj'
 $source = Build-HostScript $source $false
 [IO.File]::WriteAllText($sourcePath, $source, [Text.UTF8Encoding]::new($false))
 Specialize-Source $sourcePath
-& (Join-Path $PSScriptRoot 'Build.ps1') -Source $sourcePath -Output $outputPath -GameBin $GameBin
+if (!$SourceOnly) { & (Join-Path $PSScriptRoot 'Build.ps1') -Source $sourcePath -Output $outputPath -GameBin $GameBin }
 $toolParts = @('AutoArm.ToolPrefix.cs.txt', 'AutoArm.ToolHost.cs.txt', 'AutoArm.SavedDrives.cs.txt', 'AutoArm.TopInfo.cs.txt', 'AutoArm.ToolGeometry.cs.txt', 'AutoArm.Tools.cs.txt', 'AutoArm.ToolDiscovery.cs.txt', 'AutoArm.ParkPoses.cs.txt', 'AutoArm.Math.cs.txt', 'AutoArm.Link.cs.txt')
 $toolSourcePath = Join-Path $workspace 'AutoArm_ToolSwap_Source.txt'
 $toolOutputPath = Join-Path $workspace 'AutoArm_ToolSwap_Compact.txt'
@@ -51,13 +53,19 @@ $toolSource = ($toolParts | ForEach-Object { [IO.File]::ReadAllText((Join-Path $
 $toolSource = Build-HostScript $toolSource $true
 [IO.File]::WriteAllText($toolSourcePath, $toolSource, [Text.UTF8Encoding]::new($false))
 Specialize-Source $toolSourcePath
-& (Join-Path $PSScriptRoot 'Build.ps1') -Source $toolSourcePath -Output $toolOutputPath -GameBin $GameBin
+if (!$SourceOnly) { & (Join-Path $PSScriptRoot 'Build.ps1') -Source $toolSourcePath -Output $toolOutputPath -GameBin $GameBin }
+$collisionSourcePath = Join-Path $workspace 'AutoArm_Collision_Source.txt'
+$collisionOutputPath = Join-Path $workspace 'AutoArm_Collision_Compact.txt'
+[IO.File]::WriteAllText($collisionSourcePath, [IO.File]::ReadAllText((Join-Path $workspace 'src/AutoArm.Collision.cs.txt')), [Text.UTF8Encoding]::new($false))
+if (!$SourceOnly) { & (Join-Path $PSScriptRoot 'Build.ps1') -Source $collisionSourcePath -Output $collisionOutputPath -GameBin $GameBin }
 $rewriteCliHome = $env:DOTNET_CLI_HOME
 $rewriteGameBin = $env:SE_BIN
 try {
     $env:DOTNET_CLI_HOME = Join-Path $PSScriptRoot '.dotnet'
     $env:SE_BIN = $GameBin
-    & dotnet run --project (Join-Path $PSScriptRoot 'PBCompileChecks') "-p:GameBin=$GameBin" -- $sourcePath $outputPath $toolSourcePath $toolOutputPath
+    $rewritePaths = @($sourcePath, $toolSourcePath, $collisionSourcePath)
+    if (!$SourceOnly) { $rewritePaths += @($outputPath, $toolOutputPath, $collisionOutputPath) }
+    & dotnet run --project (Join-Path $PSScriptRoot 'PBCompileChecks') "-p:GameBin=$GameBin" -- @rewritePaths
     if ($LASTEXITCODE -ne 0) { throw 'Installed SE memory-safe rewriting failed.' }
 }
 finally { $env:DOTNET_CLI_HOME = $rewriteCliHome; $env:SE_BIN = $rewriteGameBin }

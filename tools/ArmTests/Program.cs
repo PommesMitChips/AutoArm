@@ -59,6 +59,8 @@ internal static class Tests
                 CheckPackedPrograms();
                 return 0;
             }
+            if(args.Length==2&&args[1]=="--collision")
+            { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.CollisionCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))));return 0; }
             if(args.Length!=1) throw new Exception("Usage: ArmTests <script.txt> [--control-audit|--servo-compare]");
             Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
             EngineSource=File.ReadAllText(Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm.Engine.txt"));
@@ -69,6 +71,7 @@ internal static class Tests
             Scenarios.WeightRepresentationCases(type);
             Scenarios.RunHosts(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_ToolSwap_Source.txt"))));
             CheckPackedPrograms();
+            Scenarios.CollisionCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))));
             return 0;
         }
         catch(Exception e){Console.Error.WriteLine(e);return 1;}
@@ -80,6 +83,9 @@ internal static class Tests
             PackedProgramChecks.Register(packedArm,Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm_Compact.names.json"));
             PackedProgramChecks.Register(packedTool,Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm_ToolSwap_Compact.names.json"));
             Scenarios.RunHosts(packedArm,packedTool);
+            var packedCollision=Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Compact.txt")));
+            PackedProgramChecks.Register(packedCollision,Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm_Collision_Compact.names.json"));
+            Scenarios.CollisionCases(packedArm,packedCollision);
             Console.WriteLine("Actual compressed programs: PASS (namespace entry points, aliases, strings and forwarding helpers).");
     }
 }

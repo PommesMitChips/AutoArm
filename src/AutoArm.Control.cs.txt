@@ -97,7 +97,7 @@ int LastSolverPasses, LastActiveBounds;
 bool LastSolverConverged, LastSolverBudgetLimited;
 
 double[,] J, B, Gram, Chol;
-double[] Scale, Lo, Hi, X, Trial, Task, Residual, Rhs, Temp, Solution, LastQdot;
+double[] Scale, Lo, Hi, X, Trial, Task, Residual, Rhs, Temp, Solution, LastQdot, Bias;
 int[] BoundState;
 readonly Dictionary<long, double> Home = new Dictionary<long, double>();
 string HomeFingerprint = "";
@@ -295,7 +295,7 @@ void Allocate(int n)
     Gram = new double[6, 6];
     Chol = new double[6, 6];
     Scale = new double[n]; Lo = new double[n]; Hi = new double[n];
-    X = new double[n]; Trial = new double[n]; LastQdot = new double[n];
+    X = new double[n]; Trial = new double[n]; LastQdot = new double[n]; Bias = new double[n];
     BoundState = new int[n];
     Task = new double[6]; Residual = new double[6]; Rhs = new double[6];
     Temp = new double[6]; Solution = new double[6];
@@ -415,6 +415,8 @@ void UpdateControl(double dt, double observationDt)
         FilteredW += (measuredW - FilteredW) * blend;
     }
     PreviousP = p; PreviousF = f; PreviousU = u; ObservationValid = true;
+    var safety = Services == null ? null : Services.Safety;
+    if (safety != null && (!safety.Ready || safety.Blocked)) { safety.Hold(); return; }
 
     Vector3D pe = TargetP - p;
     Vector3D oe = RotationError(f, u, TargetF, TargetU);
@@ -452,9 +454,12 @@ void UpdateControl(double dt, double observationDt)
     LastCounterCorrectionLimited |= angularLimited;
 
     // Core invariant: tracking correction is added to live pilot demand. Pose error,
-    // recovery state and target advancement never multiply or suppress pilot input.
+    // recovery state and target advancement never suppress pilot input. Explicit
+    // collision supervision can restrict accepted motion after demand formation.
     LastRequestedLinear = LastPilotLinear + LastFeedbackLinear;
     LastRequestedAngular = LastPilotAngular + LastFeedbackAngular;
+    double motionScale = safety == null ? 1 : safety.Scale;
+    LastRequestedLinear *= motionScale; LastRequestedAngular *= motionScale;
     if (!Solve(p, dt, LastRequestedLinear, LastRequestedAngular, out LastAchievedLinear,
         out LastAchievedAngular, out why))
     {
@@ -463,8 +468,8 @@ void UpdateControl(double dt, double observationDt)
     }
     if (!Commit()) return;
 
-    Vector3D positionClipResidual = rawPositionFeedback - LastFeedbackLinear;
-    Vector3D orientationClipResidual = rawOrientationFeedback - LastFeedbackAngular;
+    Vector3D positionClipResidual = rawPositionFeedback - LastFeedbackLinear * motionScale;
+    Vector3D orientationClipResidual = rawOrientationFeedback - LastFeedbackAngular * motionScale;
     // Only loss caused by command bounds inhibits bias learning. Damping and
     // unreachable task components exist even in the unconstrained reference.
     Vector3D positionAllocationResidual = LastUnconstrainedLinear - LastAchievedLinear;
@@ -475,8 +480,9 @@ void UpdateControl(double dt, double observationDt)
         Math.Min(OrientationIntegralCapDeg * Math.PI / 180, ToolDriving ? ToolDriveTurnCap : Math.Min(TurnDeg, OrientationCorrectionCapDeg) * Math.PI / 180), ToolDriving ? double.MaxValue : 10.0 * Math.PI / 180,
         dt, LastSolverConverged && !LastSolverBudgetLimited);
 
-    LastLinearAdvance = PilotAdvance(LastPilotLinear, LastAchievedLinear - LastFeedbackLinear);
-    LastAngularAdvance = PilotAdvance(LastPilotAngular, LastAchievedAngular - LastFeedbackAngular);
+    LastLinearAdvance = PilotAdvance(LastPilotLinear, LastAchievedLinear - LastFeedbackLinear * motionScale);
+    LastAngularAdvance = PilotAdvance(LastPilotAngular, LastAchievedAngular - LastFeedbackAngular * motionScale);
+    if (safety != null) { LastLinearAdvance = Math.Min(LastLinearAdvance, motionScale * safety.Fraction); LastAngularAdvance = Math.Min(LastAngularAdvance, motionScale * safety.Fraction); }
     // Allocation is a kinematic prediction, not measured delivery. Bound newly
     // requested target lead even when physical contact prevents predicted motion.
     LastLinearAdvance *= TargetLeadAdvance(pe, LastPilotLinear * (dt * LastLinearAdvance), MaximumPilotTargetLeadM);
@@ -538,6 +544,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         double preference = demand > 1e-9 ? (moveDemand * g.MoveW + turnDemand * g.TurnW) / demand :
             0.5 * (g.MoveW + g.TurnW);
         double s = Scale[i] = preference > 0 ? cap * Math.Sqrt(preference) : 0;
+        Bias[i] = s > 1e-12 && Services != null && Services.Safety != null ? Services.Safety.Preferred(i) / s : 0;
         Lo[i] = s > 1e-12 ? lo / s : 0;
         Hi[i] = s > 1e-12 ? hi / s : 0;
         X[i] = s > 1e-12 ? Clamp(LastQdot[i] / s, Lo[i], Hi[i]) : 0;
@@ -575,7 +582,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         {
             Trial[i] = X[i];
             if (BoundState[i] != 0) continue;
-            double value = 0;
+            double value = Bias[i];
             for (int r = 0; r < 6; r++) value += B[r, i] * Solution[r];
             Trial[i] = value;
             double delta = value - X[i];
@@ -606,7 +613,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         for (int i = 0; i < n; i++)
         {
             if (BoundState[i] == 0 || BoundState[i] == 2) continue;
-            double gradient = ridge * X[i];
+            double gradient = ridge * (X[i] - Bias[i]);
             for (int r = 0; r < 6; r++) gradient += B[r, i] * Residual[r];
             double violation = BoundState[i] < 0 ? -gradient : gradient;
             if (violation > worst) { worst = violation; release = i; }
@@ -622,11 +629,12 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         if (!Finite(velocity)) { why = "non-finite group velocity"; return false; }
         LastQdot[i] = velocity;
         if (BoundState[i] != 0) LastActiveBounds++;
-        achievedLinear += Topology.Groups[i].Lin * velocity;
-        achievedAngular += Topology.Groups[i].Ang * velocity;
     }
+    var protection = Services == null ? null : Services.Safety;
+    if (protection != null) protection.Limit(LastQdot);
+    for (int i = 0; i < n; i++) { achievedLinear += Topology.Groups[i].Lin * LastQdot[i]; achievedAngular += Topology.Groups[i].Ang * LastQdot[i]; }
     LastUnconstrainedLinear = achievedLinear; LastUnconstrainedAngular = achievedAngular;
-    if (LastActiveBounds > 0 && LastSolverConverged && !LastSolverBudgetLimited)
+    if ((LastActiveBounds > 0 || protection != null && protection.Limited) && LastSolverConverged && !LastSolverBudgetLimited)
     {
         if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.68) LastSolverBudgetLimited = true;
         else if (!UnconstrainedTask(n, ridge, out LastUnconstrainedLinear, out LastUnconstrainedAngular))
@@ -646,6 +654,7 @@ void BuildTaskMatrix(int n, double ridge, bool bounded)
     {
         Rhs[r] = Task[r];
         if (bounded) for (int i = 0; i < n; i++) if (BoundState[i] != 0) Rhs[r] -= B[r, i] * X[i];
+        for (int i = 0; i < n; i++) if (!bounded || BoundState[i] == 0) Rhs[r] -= B[r, i] * Bias[i];
         for (int c = 0; c <= r; c++)
         {
             double total = r == c ? ridge : 0;
@@ -662,7 +671,7 @@ bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D an
     if (!Cholesky(Gram, Rhs, Chol, Temp, Solution)) return false;
     for (int i = 0; i < n; i++)
     {
-        double rate = 0;
+        double rate = Bias[i];
         for (int r = 0; r < 6; r++) rate += B[r, i] * Solution[r];
         rate *= Scale[i];
         linear += Topology.Groups[i].Lin * rate; angular += Topology.Groups[i].Ang * rate;
@@ -672,6 +681,8 @@ bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D an
 
 bool Commit()
 {
+    if (GoingHome && Services != null && Services.Safety != null)
+    { if (!Services.Safety.Ready || Services.Safety.Blocked) { Services.Safety.Hold(); return false; } Services.Safety.Limit(LastQdot); }
     if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.88)
     {
         Fault("Instruction budget exhausted before output commit.");

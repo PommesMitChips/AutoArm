@@ -15,6 +15,7 @@ sealed class ArmServices
     Client Owner;
     string Config = "";
     long Revision = 1;
+    public SafetyOverlay Safety;
     public ArmServices(Program p) { P = p; }
     public void Load(MyIni ini)
     {
@@ -24,14 +25,16 @@ sealed class ArmServices
         {
             if (row.Trim().Length == 0) continue;
             string[] cells = row.Split('|');
-            if (cells.Length != 2 || peers.Count >= 16) throw new Exception("Modules.Peers needs PB name | Observe, Plan or Stop (max 16).");
+            if (cells.Length != 2 || peers.Count >= 16) throw new Exception("Modules.Peers needs PB name | Observe, Plan, Stop or Safety (max 16).");
             string name = cells[0].Trim(), role = cells[1].Trim();
-            if (role != "Observe" && role != "Plan" && role != "Stop" || name == ini.Get("Modules", "ToolSwapPB").ToString().Trim()) throw new Exception("Invalid/duplicate module role.");
+            if (role != "Observe" && role != "Plan" && role != "Stop" && role != "Safety" || name == ini.Get("Modules", "ToolSwapPB").ToString().Trim()) throw new Exception("Invalid/duplicate module role.");
             var link = new ModuleLink(P); link.Resolve(name);
             if (peers.ContainsKey(link.Peer.EntityId)) throw new Exception("Duplicate module PB.");
             peers.Add(link.Peer.EntityId, new Client { Link = link, Role = role });
         }
-        Revoke("Configuration reloaded."); Peers.Clear();
+        SafetyOverlay safety = null;
+        foreach (var pair in peers) if (pair.Value.Role == "Safety") { if (safety != null) throw new Exception("One Safety service per arm."); safety = new SafetyOverlay(P, pair.Value.Link); }
+        Revoke("Configuration reloaded."); Peers.Clear(); Safety = safety;
         foreach (var pair in peers) Peers.Add(pair.Key, pair.Value);
         Config = text;
     }
@@ -39,10 +42,12 @@ sealed class ArmServices
     public void Revoke(string reason)
     {
         Revision++;
+        if (Safety != null) Safety.Reset();
         if (Owner != null) { Owner.State = "Canceled"; Owner.Error = reason; Owner = null; }
     }
     public void Tick(double elapsed)
     {
+        if (Safety != null) Safety.Tick(elapsed, Revision);
         if (Owner == null) return;
         var client = Owner;
         if (Finite(elapsed) && elapsed > 0) client.Link.Age += elapsed;
@@ -70,6 +75,7 @@ sealed class ArmServices
             if (epoch < link.RemoteEpoch || remote != 0 && remote != link.Epoch) return true;
             if (epoch != link.RemoteEpoch)
             {
+                if (client.Role == "Safety") Safety.Reset();
                 if (Owner == client) P.StopMotion("Planner restarted.");
                 link.RemoteEpoch = epoch; link.Received = 0;
                 client.Seen = 0;
@@ -87,11 +93,13 @@ sealed class ArmServices
             if (op == "HELLO" || op == "STATUS" || op == "PING") { }
             else if (op == "STOP")
             {
-                if (client.Role != "Stop" && Owner != client) throw new Exception("Module has no stop authority.");
+                if (client.Role != "Stop" && client.Role != "Safety" && Owner != client) throw new Exception("Module has no stop authority.");
                 P.Tools.InhibitRecovery();
                 if (P.Tools.Busy) P.Tools.Cancel("Module emergency stop.");
                 P.StopMotion("Module stop: " + link.Peer.CustomName); P.Say(P.Status);
             }
+            else if (op == "GUIDE")
+            { if (client.Role != "Safety" || seen == 0) throw new Exception("No collision authority/acknowledgement."); Safety.Read(ini); }
             else if (op == "PATH")
             {
                 string why;
@@ -113,7 +121,7 @@ sealed class ArmServices
             else throw new Exception("Unsupported service operation.");
         }
         catch (Exception e) { client.Error = e.Message; }
-        Reply(client, seq); return true;
+        if (op != "GUIDE") Reply(client, seq); return true;
     }
     void Reply(Client client, long ack)
     {

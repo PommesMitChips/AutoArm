@@ -48,6 +48,17 @@ sealed partial class ToolSwapController
     public bool Automatic => Busy && Last == "Change";
     public bool Configured => EnabledTools;
     public bool Parking => Source != null && (Phase == ApproachDockPhase || Phase == "Dock");
+    public string CollisionContacts
+    {
+        get
+        {
+            var rows = new List<string>();
+            foreach (var pair in Pairs) rows.Add(pair.Head.EntityId + "," + pair.Stand.EntityId + "," + Axis);
+            var head = Phase == RetreatPhase ? Source : Destination;
+            if (head != null && head.Coupler != null) rows.Add("0," + head.Coupler.EntityId);
+            return string.Join("|", rows);
+        }
+    }
     public IMyTerminalBlock Endpoint
     {
         get
