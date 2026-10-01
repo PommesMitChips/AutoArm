@@ -21,6 +21,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v3.2` | Additional direct PB peers, one-pass active joint validation and stale tool-weight pruning | Arm 84,975; ToolSwap 51,414 |
 | `v4.0` | Multiple arm instances, inherited layout templates, scoped commands/sessions and marker-stored automatic tool setup | Arm 99,319; ToolSwap 68,170 |
 | `v4.0.1` | Docking progress stability, configurable damping, generated settings, remote configuration reload and startup input recovery | Arm 98,238; ToolSwap 64,193 |
+| `v4.0.2` | Known manual tool detachment returns to bare-arm control, with failed-swap cancellation and explicit-stop inhibition | Arm 99,119; ToolSwap 64,369 |
 
 Read a previous script without changing your working tree:
 

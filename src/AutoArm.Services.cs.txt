@@ -88,6 +88,7 @@ sealed class ArmServices
             else if (op == "STOP")
             {
                 if (client.Role != "Stop" && Owner != client) throw new Exception("Module has no stop authority.");
+                P.Tools.InhibitRecovery();
                 if (P.Tools.Busy) P.Tools.Cancel("Module emergency stop.");
                 P.StopMotion("Module stop: " + link.Peer.CustomName); P.Say(P.Status);
             }

@@ -978,8 +978,8 @@ void RunCommand(string command)
     {
         case "version": Say(Banner()); break;
         case "on": StartControl(); break;
-        case "off": case "stop": if (Tools != null && Tools.Busy) Tools.Cancel(c); StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
-        case "toggle": if (Enabled) { StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
+        case "off": case "stop": if (Tools != null) { Tools.InhibitRecovery(); if (Tools.Busy) Tools.Cancel(c); } StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
+        case "toggle": if (Enabled) { if (Tools != null) Tools.InhibitRecovery(); StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
         case "onoff": case "-oo":
             c = w.Length < 2 ? "" : w[1].ToLowerInvariant();
             if (c != "on" && c != "off" && c != "toggle") throw new Exception("OnOff expects On, Off or Toggle.");

@@ -52,7 +52,7 @@ internal static partial class Scenarios
             var invalid=MultiFixture(out _,out _,out _,paired:!differentKind,wrongKind:differentKind); var scoped=Tests.Create(armType,invalid); for(int i=0;i<20;i++) HostFrame(scoped,invalid); HostReady(scoped,invalid,"Arm 1"); HostFrame(scoped,invalid,"On(Arm 2)"); for(int i=0;i<30;i++) HostFrame(scoped,invalid);
             Check(Enabled(Core(scoped,"Arm 1"))&&!Enabled(Core(scoped,"Arm 2")),"Nonconforming shared layout silently enabled or stopped a valid neighbor.");
         }
-        HostStartupInput(armType); MultiHostInput(armType); HostServices(armType); MultiToolHost(armType,toolType); MultiToolHost(armType,toolType,true); MultiToolHost(armType,toolType,true,true);
+        HostStartupInput(armType); MultiHostInput(armType); HostServices(armType); MultiToolHost(armType,toolType); MultiToolHost(armType,toolType,true); MultiToolHost(armType,toolType,true,true); MultiToolHost(armType,toolType,true,false,true);
         File.WriteAllText(Path.Combine(Tests.Workspace,"examples/CustomData.ini"),rig.PB.CustomData);
         Console.WriteLine("Multi-arm hosts: selected-only input, scoped/implicit commands, global inheritance and overrides, joint-kind/parallel rejection, independent Home/restart, cross-PB input selection and shared ToolSwap routing.");
     }
@@ -82,7 +82,7 @@ internal static partial class Scenarios
         HostFrame(a,rig,"Select Arm 1"); for(int i=0;i<10;i++) { HostFrame(a,rig); HostFrame(b,peerRig); }
         Check((bool)Get(Core(a,"Arm 1"),"PilotSelected")!&&!(bool)Get(Core(b,"Arm 2"),"PilotSelected")!,"Construct-wide selection did not transfer input ownership.");
     }
-    static void MultiToolHost(Type armType,Type toolType,bool automatic=false,bool split=false)
+    static void MultiToolHost(Type armType,Type toolType,bool automatic=false,bool split=false,bool manual=false)
     {
         var f=new ToolSwapFixture(headless:automatic); f.NoNamedArmReference(); var g=new ToolSwapFixture(headless:automatic); g.NoNamedArmReference();
         if(automatic) { f.LockSource(); g.LockSource(); }
@@ -187,6 +187,14 @@ internal static partial class Scenarios
             }
             Check(Enabled(Core(Owner(target.Name),target.Name))&&target.Fixture.Couplers[chosen-1].Top==target.Fixture.ArmTip,"Shared ToolSwap failed to mount/resume "+target.Name+": "+string.Join(" | ",toolRig.Log.TakeLast(3)));
             string neighbor=target.Name=="Arm 1"?"Arm 2":"Arm 1"; Check(Enabled(Core(Owner(neighbor),neighbor)),"Scoped tool change stopped the other hosted arm.");
+            if(manual&&target.Name=="Arm 1")
+            {
+                target.Fixture.LockSource(source:chosen-1); target.Fixture.Couplers[chosen-1].Detach();
+                for(int i=0;i<400;i++) Tick();
+                Check(Enabled(Core(arm,"Arm 1"))&&((VRage.Game.ModAPI.Ingame.IMyCubeBlock)Get(Get(Core(arm,"Arm 1"),"Topology")!,"End")!).CubeGrid==f.ArmGrid,
+                    "Actual multi-arm host did not rediscover and resume a manually detached bare arm.");
+                Check(Enabled(Core(arm,"Arm 2"))&&g.ArmTip.Base==null,"Bare recovery disturbed another arm or resumed the old pickup.");
+            }
             if(!split&&target.Name=="Arm 1")
             {
                 var cockpit=f.Rig.Blocks.OfType<IMyShipController>().First();

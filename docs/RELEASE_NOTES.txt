@@ -1,4 +1,16 @@
-AutoArm 4.0.1 — Docking, damping and configuration recovery
+AutoArm 4.0.2 — Manual tool detachment recovery
+
+A known mounted tool that becomes fully detached can trigger a stopped rebuild
+and fresh bare-arm hold, including after a failed swap. All known couplers must
+be bare and non-pending, upstream joints must remain attached/functional, the
+peer must be current, and full discovery/settling must pass before re-enabling.
+The old tool path is revoked. Explicit Stop/Off/SwapCancel and module stops
+inhibit recovery. Tool-side commands reacquire released motion leases. Tests
+cover manual recovery, failed swaps, stop inhibition, missing/pending parts,
+broken upstream joints and isolation in the actual multi-arm host.
+External formats and protocol remain unchanged. Update both PB scripts.
+
+Docking, damping and configuration recovery:
 
 Final insertion now pauses at its current line progress when orientation loses
 alignment. It no longer commands a return to the insertion start on each angular
@@ -47,6 +59,6 @@ fallback are absent from generated code. No unreachable-code warnings remain;
 the build reports CS0162 diagnostics explicitly. Specialization checks preserve
 scopes, expression types, callbacks and initializer/short-circuit effects.
 
-Arm: 98,238 characters, 1,762 free. ToolSwap: 64,193, 35,807 free. Installed SE API /
-C#6 compilation, exact source-method IL after packing and 191,378 simulated
+Arm: 99,119 characters, 881 free. ToolSwap: 64,369, 35,631 free. Installed SE API /
+C#6 compilation, exact source-method IL after packing and 191,475 simulated
 assertions pass. Actual instruction timing and live game physics remain unverified.

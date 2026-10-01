@@ -14,6 +14,7 @@ sealed class ToolSwapLink
     string PeerName = "", Queued = "", Error = "";
     long Ignore, Request, MoveRequest;
     bool Lease, Rebuilding, Driving, Permitted, Settled, Changing, Transition, ResumePending;
+    bool RecoverBare;
     ArmPath Path;
     double Move, Turn, PosTol, AngleTol, ReportElapsed;
     public bool Busy => Lease || ResumePending || Queued.Length > 0;
@@ -31,6 +32,7 @@ sealed class ToolSwapLink
         if (!AutoConfig.ReadCurrent(P, P.Me.CustomData, out ini, out why)) return false;
         PeerName = ini.Get("Modules", "ToolSwapPB").ToString().Trim();
         Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = Transition = ResumePending = false; Error = "";
+        RecoverBare = false;
         if (!Configured) { Link.Peer = null; End = null; Frame = null; Tip = null; Couplers.Clear(); Markers.Clear(); Tops.Clear(); Merges.Clear(); return true; }
         Link.Resolve(PeerName); Link.Generation++; Link.RemoteEpoch = Link.Received = 0; Link.Age = 0;
         Queued = "Reload"; return true;
@@ -42,7 +44,7 @@ sealed class ToolSwapLink
         string verb = command.Trim().Split(' ')[0].ToLowerInvariant();
         if (verb != "tool" && verb != "toolswap" && verb != "toolscan" && verb != "toolinfo" && verb != "park" && verb != "swapcancel") return false;
         if (!Configured) { P.Say("Configure Modules.ToolSwapPB."); return true; }
-        if (verb == "swapcancel") { P.StopMotion(""); Cancel("Swap canceled; inspect, then On."); P.Say("Swap canceled; arm OFF."); return true; }
+        if (verb == "swapcancel") { InhibitRecovery(); P.StopMotion(""); Cancel("Swap canceled; inspect, then On."); P.Say("Swap canceled; arm OFF."); return true; }
         if (verb != "toolinfo")
         {
             if (Lease) { P.Say("ToolSwap busy; Stop first."); return true; }
@@ -53,7 +55,7 @@ sealed class ToolSwapLink
         SendCommand(command); return true;
     }
     void SendCommand(string command)
-    { var packet = Link.Packet("COMMAND"); packet.Set(LinkSection, "Command", command); packet.Set(LinkSection, "Stopped", !Driving); Link.Send(packet); }
+    { var packet = Link.Packet("COMMAND"); packet.Set(LinkSection, "Command", command); packet.Set(LinkSection, "Stopped", !Driving); packet.Set(LinkSection, "RecoverBare", RecoverBare); Link.Send(packet); }
     public void Cancel(string why)
     {
         Driving = Rebuilding = Lease = Permitted = Transition = ResumePending = false; Queued = ""; Error = why; Link.Generation++;
@@ -62,6 +64,28 @@ sealed class ToolSwapLink
     }
     public void ZeroMount()
     { foreach (var rotor in Couplers) if (!rotor.Closed) rotor.TargetVelocityRad = 0; }
+    public void InhibitRecovery() { RecoverBare = false; }
+    bool Detached()
+    {
+        if (!RecoverBare || !Configured || Busy || Link.Age > .5 || P.Topology.Groups.Count == 0) return false;
+        int changed = 0;
+        for (int i = 0; i < Couplers.Count; i++)
+        {
+            var rotor = Couplers[i]; var marker = Markers[i];
+            if (rotor.Closed || marker.Closed || !rotor.IsFunctional || rotor.IsAttached || rotor.Top != null || rotor.PendingAttachment ||
+                rotor.CubeGrid.EntityId != marker.CubeGrid.EntityId || !rotor.IsSameConstructAs(P.Me)) return false;
+            if (Tops[i] != 0) changed++;
+        }
+        if (changed != 1) return false;
+        foreach (var group in P.Topology.Groups)
+        {
+            bool tool = false; foreach (var member in group.M) if (IsToolJoint(member.B)) tool = true;
+            if (tool) break;
+            foreach (var member in group.M) if (member.B.Closed || !member.B.IsFunctional || !member.B.IsAttached ||
+                member.B.Top == null || member.B.TopGrid == null || !member.B.IsSameConstructAs(P.Me)) return false;
+        }
+        return true;
+    }
     public bool AllowManual(out string why)
     {
         why = ""; if (!Configured) return true;
@@ -117,8 +141,8 @@ sealed class ToolSwapLink
                 else if (op == "TRANSITION")
                 { Driving = false; Path = null; Transition = true; P.StopMotion(""); P.Topology.Ready = false; }
                 else if (op == "ABORT")
-                { Driving = Rebuilding = Lease = Permitted = false; Path = null; Error = ini.Get(LinkSection, "Reason").ToString(); P.StopMotion(Error); P.Say("ToolSwap stopped: " + Error); }
-                else if (op == "STOP" || op == "PAUSE") { Driving = false; Path = null; P.StopMotion(""); }
+                { Driving = Rebuilding = Lease = Permitted = false; if (ini.Get(LinkSection, "ExplicitStop").ToBoolean()) InhibitRecovery(); Path = null; Error = ini.Get(LinkSection, "Reason").ToString(); P.StopMotion(Error); P.Say("ToolSwap stopped: " + Error); }
+                else if (op == "STOP" || op == "PAUSE") { Driving = false; Path = null; if (ini.Get(LinkSection, "ExplicitStop").ToBoolean()) InhibitRecovery(); P.StopMotion(""); }
                 else if (op == "BUILD")
                 {
                     if (!P.ConfigValid) throw new Exception("Arm configuration invalid; run On on arm PB.");
@@ -138,7 +162,9 @@ sealed class ToolSwapLink
                 else if (op == "RESUME" || op == "RELEASE")
                 {
                     Driving = false; P.StopMotion(""); ApplyEquipment(ini); Permitted = ini.Get(LinkSection, "Permit").ToBoolean();
+                    if (ini.Get(LinkSection, "ExplicitStop").ToBoolean()) InhibitRecovery();
                     Lease = false; ResumePending = op == "RESUME";
+                    RecoverBare |= ResumePending;
                 }
                 else throw new Exception("Unknown module operation.");
                 Reply("STATE");
@@ -147,6 +173,8 @@ sealed class ToolSwapLink
         }
         if (Configured && Link.Age > .5 && (P.Enabled || Lease))
         { Driving = Rebuilding = false; P.Fault("ToolSwap communication timeout."); }
+        if (Detached())
+        { RecoverBare = false; P.StopMotion("Tool detached; rediscovering bare arm."); P.StartControl(); }
     }
     static double Number(MyIni ini, string key, double lo, double hi)
     { double v; if (!ini.Get(LinkSection, key).TryGetDouble(out v) || !Finite(v) || v < lo || v > hi) throw new Exception("Bad module " + key); return v; }

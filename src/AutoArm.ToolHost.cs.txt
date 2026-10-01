@@ -1,6 +1,6 @@
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "4.0.1";
+const string ControllerBuildVersion = "4.0.2";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -41,6 +41,7 @@ long SentAnchor, ReportedPath;
 long TransitionRequest;
 string TransitionKind = "";
 bool ResumeRequested;
+bool ExplicitStop;
 int CompletedWaypoints;
 bool ReadKeyboard = true, ReadMouse, ReadRoll = true;
 bool PilotSelected = true;
@@ -124,7 +125,7 @@ public void Main(string argument, UpdateType source)
         if (!Tools.Busy && Acquired && !Released)
         {
             if (!Initialised || Tools.Recovery || Tools.Endpoint == null)
-            { var abort = Link.Packet("ABORT"); abort.Set(LinkSection, "Reason", CancelReason); Link.Send(abort); }
+            { var abort = Link.Packet("ABORT"); abort.Set(LinkSection, "Reason", CancelReason); abort.Set(LinkSection, "ExplicitStop", ExplicitStop); Link.Send(abort); }
             else { var release = EquipmentPacket("RELEASE"); release.Set(LinkSection, "Permit", Permit()); Link.Send(release); }
             Released = true;
         }
@@ -143,6 +144,8 @@ void Queue(string command)
 {
     string verb = command.Split(' ')[0].ToLowerInvariant();
     if (Tools.Busy && Tools.Automatic && verb != "stop" && verb != "off" && verb != "swapcancel") { Say("ToolSwap busy; Stop first."); return; }
+    if (Released) { Acquired = false; HelloRequest = 0; }
+    ExplicitStop = verb == "stop" || verb == "off" || verb == "swapcancel";
     PendingCommand = command; Released = false;
     if (!Acquired) HelloRequest = 0;
 }
@@ -169,7 +172,7 @@ void Receive()
             string command = ini.Get(LinkSection, "Command").ToString();
             if (command.Equals("ToolInfo", StringComparison.OrdinalIgnoreCase)) { Tools.Handle("ToolInfo"); var info = Link.Packet("INFO"); info.Set(LinkSection, "Text", DisplayText); Link.Send(info); continue; }
             if (command.Equals("Stop", StringComparison.OrdinalIgnoreCase))
-            { PendingCommand = ""; Acquired = false; Tools.Cancel("Arm stopped; inspect, then On."); continue; }
+            { ExplicitStop = !ini.Get(LinkSection, "RecoverBare").ToBoolean(); PendingCommand = ""; Acquired = false; Tools.Cancel("Arm stopped; inspect, then On."); continue; }
             if (Tools.Busy) Tools.Cancel("Arm requested new setup; inspect equipment.");
             Queue(command); Acquired = false; continue;
         }
@@ -203,7 +206,7 @@ void Say(string text) { DisplayText = text; }
 void StopMotion(string reason)
 {
     if (RemoteStopped && (StopRequest == 0 || Ack >= StopRequest)) { StopRequest = 0; MoveRequest = 0; return; }
-    if (StopRequest == 0) { var stop = Link.Packet("STOP"); StopRequest = Link.Sequence; Link.Send(stop); }
+    if (StopRequest == 0) { var stop = Link.Packet("STOP"); stop.Set(LinkSection, "ExplicitStop", ExplicitStop); StopRequest = Link.Sequence; Link.Send(stop); }
     throw new RemoteWait();
 }
 void CancelMotion(string reason)
@@ -261,7 +264,7 @@ MyIni EquipmentPacket(string operation)
     ini.Set(LinkSection, "Endpoint", endpoint.EntityId); ini.Set(LinkSection, "AnchorOwner", owner.EntityId); ini.Set(LinkSection, "Anchor", frame.EntityId); ini.Set(LinkSection, "Ignore", Tools.IgnoredMount);
     var focus = Tools.Focus; ini.Set(LinkSection, "Focus", focus != null);
     if (focus != null) { ini.Set(LinkSection, "Part", focus.EntityId); WriteFrame(ini, "Local", focus.Local); }
-    Tools.WriteEquipment(ini); return ini;
+    ini.Set(LinkSection, "ExplicitStop", ExplicitStop); Tools.WriteEquipment(ini); return ini;
 }
 bool HasPilotInput()
 {
