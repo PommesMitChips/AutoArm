@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.3";
+const string ControllerBuildVersion = "4.0.4";
 
 const int HostFormat = 7;
 const string WireTag = "AutoArm/5";
@@ -336,7 +336,7 @@ public void Update(string argument, UpdateType source, double elapsed)
 readonly string ArmName;
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.3";
+const string ControllerBuildVersion = "4.0.4";
 
 
 // C# 6 programmable-block fragment. Paste inside ArmCore.
@@ -969,7 +969,7 @@ enum PilotMode { HEAD, HRZ, VRT }
 sealed class AutoSettings
 {
     public static readonly string[] Keys = { "HeadSpeed", "HeadTurnSpeed", "StepAngle", "JointSpeed", "PistonSpeed", "HomeJointSpeed", "HomePistonSpeed", OrientationToleranceKey, "JointAcceleration", "PistonAcceleration", "PositionCorrectionCap", "OrientationCorrectionCap", "TargetLead", "PositionIntegralGain", "OrientationIntegralGain", "PositionIntegralCap", "OrientationIntegralCap", "MouseSensitivity", "PositionDamping", "OrientationDamping" };
-    public static readonly double[] Defaults = { .20, 5, 5, .50, .20, .50, .20, 3, 1, .40, .20, 5, 1.50, .50, .25, .20, 5, .025, .2, .2 };
+    public static readonly double[] Defaults = { .20, 5, 5, .50, .20, .50, .20, 3, 1, .40, .20, 5, 1.50, .50, .25, .20, 5, .025, 0, 0 };
     static readonly double[] Min = { 0, .01, .01, .01, .01, .01, .01, 0, .01, .01, 0, 0, .01, 0, 0, 0, 0, 0, 0, 0 };
     static readonly double[] Max = { 5, 30, 180, 5, 2, 5, 2, 30, 20, 10, 5, 30, 10, 5, 5, 5, 30, 10, 3, 3 };
     static readonly string[] Units = { "Head translation m/s", "Head rotation deg/s", "Toolbar step deg", "Rotor/hinge RPM cap", "Piston m/s cap", "Home RPM cap", "Home m/s cap", "Idle orientation band deg", "Rotor RPM/s cap", "Piston m/s^2 cap", "Correction m/s cap", "Correction deg/s cap", "Target lead m", "Bias gain 1/s^2; 0=off", "Angular bias gain 1/s^2; 0=off", "Bias m/s cap", "Bias deg/s cap", "Mouse scale; total rotation capped", "Velocity error damping; 0=off", "Angular velocity error damping; 0=off" };
@@ -1238,7 +1238,7 @@ const double ManualCounterCorrectionFraction = 0.50;
 double MaximumPilotTargetLeadM = 1.50;
 double PositionIntegralCap = 0.20;
 double OrientationIntegralCapDeg = 5.0;
-double PositionDamping = .2, OrientationDamping = .2;
+double PositionDamping, OrientationDamping;
 const double IntegralUnwindSeconds = 2.0;
 double JointAccelerationRpmPerSec = 1.0;
 double PistonAccelerationMps2 = 0.40;
@@ -1256,7 +1256,7 @@ bool PilotSelected = true;
 bool ReadKeyboard = true, ReadRoll = true, AimingTarget, LastCounterCorrectionLimited;
 bool ReadMouse;
 bool ToolDriving, SwapBatchLock;
-double ToolDriveMoveCap, ToolDriveTurnCap;
+double ToolDriveMoveCap, ToolDriveTurnCap, ToolPositionBand, ToolOrientationBand;
 readonly Dictionary<string, double[]> ToolWeights = new Dictionary<string, double[]>();
 bool ToolWeightsLoaded;
 PilotMode MovementMode = PilotMode.HEAD;
@@ -1647,8 +1647,8 @@ void UpdateControl(double dt, double observationDt)
     if (manualTurn) AimingTarget = false;
     if (AimingTarget && LastOrientationErrorDeg <= AimToleranceDeg) AimingTarget = false;
     bool aiming = ToolDriving || manualTurn || AimingTarget;
-    double orientationBand = ToolDriving ? 0 : (aiming ? 0.5 * AimToleranceDeg : OrientationToleranceDeg) * Math.PI / 180;
-    Vector3D positionDemand = Outside(pe, ToolDriving ? 0 : PositionDeadbandM) * PositionKp;
+    double orientationBand = ToolDriving ? ToolOrientationBand : (aiming ? 0.5 * AimToleranceDeg : OrientationToleranceDeg) * Math.PI / 180;
+    Vector3D positionDemand = Outside(pe, ToolDriving ? ToolPositionBand : PositionDeadbandM) * PositionKp;
     Vector3D orientationDemand = Outside(oe, orientationBand) * OrientationKp;
     if (ToolDriving)
     {
@@ -1971,12 +1971,19 @@ static Vector3D Outside(Vector3D error, double deadband)
     return n > deadband && n > 1e-12 ? error * ((n - deadband) / n) : Vector3D.Zero;
 }
 
+bool BareControl => Tools != null && Tools.Focus != null;
+void ManualAxes(ref Vector3D f, ref Vector3D u)
+{ if (BareControl) { var a = f; f = -u; u = a; } }
+void NativeAim(ref Vector3D f, ref Vector3D u)
+{ if (BareControl) { var a = f; f = u; u = -a; } }
+
 void ReadPilot(Vector3D headForward, Vector3D headUp, out Vector3D linear, out Vector3D angular)
 {
     linear = angular = Vector3D.Zero;
     Vector3D input; Vector2 mouse; double roll;
     IMyShipController c = PilotInputs(out input, out mouse, out roll);
     if (c == null) return;
+    ManualAxes(ref headForward, ref headUp);
     Vector3D forward, left, up;
     if (MovementMode == PilotMode.HEAD)
     {
@@ -2106,6 +2113,7 @@ void PoseCommand(string[] w, int parts)
     if ((parts & 1) != 0 && !Finite(p.LengthSquared()) || (parts & 2) != 0 && !Orthonormalise(ref f, ref u)) throw new Exception("Invalid pose target.");
     if (GoingHome) HoldCurrent();
     if (!Enabled) return;
+    if ((parts & 2) != 0) NativeAim(ref f, ref u);
     SetPoseTarget(p, f, u, parts);
     if ((parts & 2) != 0) AimingTarget = true;
 }
@@ -2129,6 +2137,7 @@ void Face(string direction)
     }
     if (GoingHome) HoldCurrent();
     if (!Enabled) return;
+    NativeAim(ref targetForward, ref targetUp);
     SetPoseTarget(TargetP, targetForward, targetUp, 2);
     AimingTarget = true;
 }
@@ -2149,7 +2158,7 @@ void Step(string axis, double degrees)
     {
         case "yaw": a = MovementMode == PilotMode.HEAD ? new Vector3D(0, 0, 1) : viewUp; break;
         case "pitch": a = MovementMode == PilotMode.HEAD ? -Unit(Vector3D.Cross(TargetU, TargetF)) : -viewLeft; break;
-        default: a = TargetF; break;
+        default: a = BareControl ? -TargetU : TargetF; break;
     }
     Vector3D step = Unit(a) * (degrees * Math.PI / 180);
     SetPoseTarget(TargetP, Rotate(TargetF, step), Rotate(TargetU, step), 2);
@@ -2923,13 +2932,15 @@ bool ToolPoseStep(MatrixD world, double dt, double observationDt, double moveCap
     settled = false; why = "";
     if (!Topology.Ready || !ConfigValid) { why = "Tool topology is not ready."; return false; }
     if (!Finite(dt) || dt <= 0 || !Finite(observationDt) || observationDt <= 0 ||
-        !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0)
-    { why = "Invalid tool movement interval or cap."; return false; }
+        !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0 ||
+        !Finite(positionTolerance) || positionTolerance <= 0 || !Finite(angleTolerance) || angleTolerance <= 0)
+    { why = "Invalid tool interval, cap or tolerance."; return false; }
     MatrixD basis = Topology.Base.WorldMatrix;
     if (!SetPoseTarget(InFrame(world.Translation - Topology.Base.GetPosition(), basis),
         InFrame(world.Forward, basis), InFrame(world.Up, basis), 3))
     { why = "Invalid tool target frame."; return false; }
     ToolDriveMoveCap = moveCap; ToolDriveTurnCap = turnCap * Math.PI / 180;
+    ToolPositionBand = positionTolerance * .5; ToolOrientationBand = angleTolerance * Math.PI / 360;
     ToolDriving = true;
     try { UpdateControl(Math.Min(dt, .1), observationDt); }
     finally { ToolDriving = false; }
@@ -3124,7 +3135,7 @@ bool StepPath(ArmPath path, double dt, double observed, out string why)
             var direction = delta / length; double progress = Vector3D.Dot(position - path.LineStart, direction);
             // Losing alignment pauses at current progress, never back at the
             // insertion start. Retain perpendicular correction onto the line.
-            reference += direction * Clamp(progress + (angle <= path.AngleTolerance ? path.CurrentMove / PositionKp : 0), 0, length);
+            reference += direction * Clamp(progress + (path.CurrentMove / PositionKp + path.PositionTolerance * .5) * Clamp(2 - angle / path.AngleTolerance, 0, 1), 0, length);
         }
         demand.Translation = Vector3D.Transform(reference, basis);
     }

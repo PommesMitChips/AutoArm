@@ -1,72 +1,44 @@
-AutoArm 4.0.3 — Remove unused arm-side rotor reference
+AutoArm 4.0.4 — Socket controls and docking stability
 
-Arm focus uses a pose-only ArmTipInfo descriptor. The ToolSwap-only live rotor
-reference and its unused Arm branches are removed, resolving CS0649. Building
-an Arm endpoint no longer enumerates terminals to fill an unused inventory.
-The compiler gate now reports CS0649 explicitly. Control behavior, gains and
-external schemas/protocol are unchanged.
+Bare-arm manual facing and HEAD controls now use the exposed rotor socket as
+forward. Q/E and Roll steps rotate around its shaft. Native observation and
+ToolSwap coupling frames are unchanged.
 
-Manual tool detachment recovery:
+Automatic pose correction now has a precision band equal to half the active
+position/angular tolerance, preserving retained load compensation. Linear
+lookahead includes that band so even minimum-speed paths continue moving.
+Forward insertion demand blends continuously as alignment worsens rather than
+switching abruptly on/off at the tolerance boundary. Full endpoint distance,
+measured settling and attachment proofs still govern completion.
 
-A known mounted tool that becomes fully detached can trigger a stopped rebuild
-and fresh bare-arm hold, including after a failed swap. All known couplers must
-be bare and non-pending, upstream joints must remain attached/functional, the
-peer must be current, and full discovery/settling must pass before re-enabling.
-The old tool path is revoked. Explicit Stop/Off/SwapCancel and module stops
-inhibit recovery. Tool-side commands reacquire released motion leases. Tests
-cover manual recovery, failed swaps, stop inhibition, missing/pending parts,
-broken upstream joints and isolation in the actual multi-arm host.
-External formats and protocol remain unchanged. Update both PB scripts.
+Parking defaults are 0.01 metres and 1 degree. Rotor pickup retains 0.003 metres
+and 0.2 degrees. Existing Custom Data overrides remain in force: change
+Tools.PositionTolerance=0.01 and Tools.AngleTolerance=1 in the ToolSwap PB's
+[global] or target arm section if it still contains the older tighter values.
 
-Docking, damping and configuration recovery:
+Parking enables support, observes locked support and the correct source mount
+on consecutive timed observations, then detaches. A temporarily missing source
+attachment after proven merge support waits stopped for at most two seconds.
+Permanent loss, wrong top/owner or lost support cancels. Pickup confirms the
+correct attachment before disabling support merges.
 
-Final insertion now pauses at its current line progress when orientation loses
-alignment. It no longer commands a return to the insertion start on each angular
-tolerance crossing. Measured-motion damping is configurable with PositionDamping
-and OrientationDamping, defaulting to 0.2; 0 restores the previous undamped law.
-P/I gains are unchanged. Additive manual priority, gravity bias, speed/acceleration
-bounds and idle deadbands remain enforced. Delayed velocity-plant tests reduce
-peak release overshoot; live SE flex, contact and actuator dynamics are unverified.
+Detached mount phase checks now apply only to the relevant non-axial incoming
+cached target and compare wrapped angles. Source/inactive mounts and expected
+attachment transitions no longer trigger the broad mount-angle error.
 
-Arm and ToolSwap settings are generated even for a headless ToolSwap setup.
-Defaults fill missing fields without shadowing global values with generated arm
-overrides. A remote On reloads the ToolSwap PB's current public configuration.
-Recovery from invalid startup claims input only if no owner was established;
-another Arm PB's selection is preserved. Status explains inactive cockpit input.
-External formats/protocol are unchanged; existing v4.0 Custom Data can be retained.
+History audit found a retained-integral/damping conflict at input release.
+New damping defaults return to zero; explicit user values remain unchanged.
+Manual PI gains remain unchanged. The user's zero-damping trial did not improve
+severe shaking; lowering PositionCorrectionCap to 0.05 reduced manual shaking
+but did not help parking. Automatic motion has its own caps. The docking repairs
+above still require live in-game confirmation on that arm.
 
-Multiple arms and tool quick start:
+Update BOTH PBs, retaining current formats (Arm 7, ToolSwap 2) and protocol 5.
+Run On; it reloads configuration and scans equipment automatically.
 
-The Arm PB now hosts up to eight independent arm instances within one shared
-instruction budget. Select <arm name> assigns live cockpit input. All commands
-accept a final arm target, for example MoveTo(2,0,1,Arm 2), or use the selected
-arm when omitted. Stop is scoped; StopAll stops every arm in that PB. Selection
-announcements coordinate cockpit ownership across multiple Arm PBs.
-
-Configuration uses [global] plus one section per arm. Local settings override
-shared defaults. Global stage preferences validate ordered joint kinds and
-parallel/split/rejoin layout, while each arm uses its own geometry and solver.
-Home, pose/PID state, faults, equipment, queues and link sessions are per instance.
-A ToolSwap PB can serve several hosted arms or several separate Arm PB owners.
-
-Quick start: name each base and one reference block per tool, such as
-Arm 1 - Head 1 - Drill and Arm 1 - Head 2 - Welder. Start tools securely merged
-onto stands. Their rotor bases and merge blocks are discovered inside facing-
-merge-delimited regions. Verified hardware and parked pose are stored on the
-named reference block, preserving unrelated Custom Data and surviving ToolSwap
-PB Storage loss. No setup mount or teaching is required. Generic PB names are
-supported through detected entity-ID pairing. Ambiguous regions/partners refuse.
-
-Use BOTH current scripts. External schemas are Arm [global] Format=7 and ToolSwap
-[global] Format=2, protocol AutoArm/5. Older PB Custom Data must be deleted; there
-is no migration. Tool marker metadata is AutoArm Tool Format=1.
-
-The build removes inactive Arm/ToolSwap branches and unreferenced helpers from
-both readable and compact scripts. The fixed role flag and disabled integral
-fallback are absent from generated code. No unreachable-code warnings remain;
-the build reports CS0162 diagnostics explicitly. Specialization checks preserve
-scopes, expression types, callbacks and initializer/short-circuit effects.
-
-Arm: 98,886 characters, 1,114 free. ToolSwap: 64,369, 35,631 free. Installed SE API /
-C#6 compilation, exact source-method IL after packing and 191,475 simulated
-assertions pass. Actual instruction timing and live game physics remain unverified.
+Arm: 99,161 characters, 839 free. ToolSwap: 64,661, 35,339 free.
+Installed SE API / C#6 compilation and identical method IL after packing pass.
+193,526 simulated assertions pass, including socket frames, precision bands,
+minimum-speed actual line motion, support/attachment transitions and independent
+multi-arm operation. Live SE joint flex, contact and instruction timing remain
+unverified. Detailed comparison: docs/CONTROL_AUDIT.txt.

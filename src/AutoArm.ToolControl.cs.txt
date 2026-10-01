@@ -118,13 +118,15 @@ bool ToolPoseStep(MatrixD world, double dt, double observationDt, double moveCap
     settled = false; why = "";
     if (!Topology.Ready || !ConfigValid) { why = "Tool topology is not ready."; return false; }
     if (!Finite(dt) || dt <= 0 || !Finite(observationDt) || observationDt <= 0 ||
-        !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0)
-    { why = "Invalid tool movement interval or cap."; return false; }
+        !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0 ||
+        !Finite(positionTolerance) || positionTolerance <= 0 || !Finite(angleTolerance) || angleTolerance <= 0)
+    { why = "Invalid tool interval, cap or tolerance."; return false; }
     MatrixD basis = Topology.Base.WorldMatrix;
     if (!SetPoseTarget(InFrame(world.Translation - Topology.Base.GetPosition(), basis),
         InFrame(world.Forward, basis), InFrame(world.Up, basis), 3))
     { why = "Invalid tool target frame."; return false; }
     ToolDriveMoveCap = moveCap; ToolDriveTurnCap = turnCap * Math.PI / 180;
+    ToolPositionBand = positionTolerance * .5; ToolOrientationBand = angleTolerance * Math.PI / 360;
     ToolDriving = true;
     try { UpdateControl(Math.Min(dt, .1), observationDt); }
     finally { ToolDriving = false; }

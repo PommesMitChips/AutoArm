@@ -34,7 +34,7 @@ const double ManualCounterCorrectionFraction = 0.50;
 double MaximumPilotTargetLeadM = 1.50;
 double PositionIntegralCap = 0.20;
 double OrientationIntegralCapDeg = 5.0;
-double PositionDamping = .2, OrientationDamping = .2;
+double PositionDamping, OrientationDamping;
 const double IntegralUnwindSeconds = 2.0;
 double JointAccelerationRpmPerSec = 1.0;
 double PistonAccelerationMps2 = 0.40;
@@ -52,7 +52,7 @@ bool PilotSelected = true;
 bool ReadKeyboard = true, ReadRoll = true, AimingTarget, LastCounterCorrectionLimited;
 bool ReadMouse;
 bool ToolDriving, SwapBatchLock;
-double ToolDriveMoveCap, ToolDriveTurnCap;
+double ToolDriveMoveCap, ToolDriveTurnCap, ToolPositionBand, ToolOrientationBand;
 readonly Dictionary<string, double[]> ToolWeights = new Dictionary<string, double[]>();
 bool ToolWeightsLoaded;
 PilotMode MovementMode = PilotMode.HEAD;
@@ -447,8 +447,8 @@ void UpdateControl(double dt, double observationDt)
     if (manualTurn) AimingTarget = false;
     if (AimingTarget && LastOrientationErrorDeg <= AimToleranceDeg) AimingTarget = false;
     bool aiming = ToolDriving || manualTurn || AimingTarget;
-    double orientationBand = ToolDriving ? 0 : (aiming ? 0.5 * AimToleranceDeg : OrientationToleranceDeg) * Math.PI / 180;
-    Vector3D positionDemand = Outside(pe, ToolDriving ? 0 : PositionDeadbandM) * PositionKp;
+    double orientationBand = ToolDriving ? ToolOrientationBand : (aiming ? 0.5 * AimToleranceDeg : OrientationToleranceDeg) * Math.PI / 180;
+    Vector3D positionDemand = Outside(pe, ToolDriving ? ToolPositionBand : PositionDeadbandM) * PositionKp;
     Vector3D orientationDemand = Outside(oe, orientationBand) * OrientationKp;
     if (ToolDriving)
     {
@@ -771,12 +771,19 @@ static Vector3D Outside(Vector3D error, double deadband)
     return n > deadband && n > 1e-12 ? error * ((n - deadband) / n) : Vector3D.Zero;
 }
 
+bool BareControl => Tools != null && Tools.Focus != null;
+void ManualAxes(ref Vector3D f, ref Vector3D u)
+{ if (BareControl) { var a = f; f = -u; u = a; } }
+void NativeAim(ref Vector3D f, ref Vector3D u)
+{ if (BareControl) { var a = f; f = u; u = -a; } }
+
 void ReadPilot(Vector3D headForward, Vector3D headUp, out Vector3D linear, out Vector3D angular)
 {
     linear = angular = Vector3D.Zero;
     Vector3D input; Vector2 mouse; double roll;
     IMyShipController c = PilotInputs(out input, out mouse, out roll);
     if (c == null) return;
+    ManualAxes(ref headForward, ref headUp);
     Vector3D forward, left, up;
     if (MovementMode == PilotMode.HEAD)
     {
@@ -906,6 +913,7 @@ void PoseCommand(string[] w, int parts)
     if ((parts & 1) != 0 && !Finite(p.LengthSquared()) || (parts & 2) != 0 && !Orthonormalise(ref f, ref u)) throw new Exception("Invalid pose target.");
     if (GoingHome) HoldCurrent();
     if (!Enabled) return;
+    if ((parts & 2) != 0) NativeAim(ref f, ref u);
     SetPoseTarget(p, f, u, parts);
     if ((parts & 2) != 0) AimingTarget = true;
 }
@@ -929,6 +937,7 @@ void Face(string direction)
     }
     if (GoingHome) HoldCurrent();
     if (!Enabled) return;
+    NativeAim(ref targetForward, ref targetUp);
     SetPoseTarget(TargetP, targetForward, targetUp, 2);
     AimingTarget = true;
 }
@@ -949,7 +958,7 @@ void Step(string axis, double degrees)
     {
         case "yaw": a = MovementMode == PilotMode.HEAD ? new Vector3D(0, 0, 1) : viewUp; break;
         case "pitch": a = MovementMode == PilotMode.HEAD ? -Unit(Vector3D.Cross(TargetU, TargetF)) : -viewLeft; break;
-        default: a = TargetF; break;
+        default: a = BareControl ? -TargetU : TargetF; break;
     }
     Vector3D step = Unit(a) * (degrees * Math.PI / 180);
     SetPoseTarget(TargetP, Rotate(TargetF, step), Rotate(TargetU, step), 2);

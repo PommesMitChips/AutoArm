@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.3";
+const string ControllerBuildVersion = "4.0.4";
 
 const int HostFormat = 2;
 const string WireTag = "AutoArm/5";
@@ -265,7 +265,7 @@ readonly string ArmName;
 
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "4.0.3";
+const string ControllerBuildVersion = "4.0.4";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -899,7 +899,7 @@ sealed partial class ToolSwapController
     bool Scanned, AxialPickup, StartAfterScan;
     string MountName = "", Axis = "Auto", Phase = "Idle", Last = "Tools disabled";
     bool EnabledTools, ScanHead = true, ScanStand = true, ScanPark = true, ParkOnly, DockMoved, PassiveScan;
-    double Clearance = .5, Move = .05, Turn = 2, PosTol = .005, AngleTol = .2, Timeout = 30, Elapsed;
+    double Clearance = .5, Move = .05, Turn = 2, PosTol = .01, AngleTol = 1, Timeout = 30, Elapsed;
     int CellLimit = 4096, ScanIndex, Stable, ParkIndex;
     double PhaseBudget;
     ToolRegionScan Scan;
@@ -962,7 +962,7 @@ sealed partial class ToolSwapController
         MyIni ini;
         if (!AutoConfig.ReadCurrent(P, P.CustomData, out ini, out why)) return false;
         bool enabled = false, sh = true, ss = true, sp = true;
-        var values = new double[] { .5, .05, 2, .005, .2, 30 };
+        var values = new double[] { .5, .05, 2, .01, 1, 30 };
         if (!Bool(ini, EnabledKey, ref enabled, out why) || !Bool(ini, "ScanHeadMerges", ref sh, out why) ||
             !Bool(ini, "ScanStandMerges", ref ss, out why) || !Bool(ini, "ScanParkMerges", ref sp, out why)) return false;
         var minimum = new double[] { .01, .001, .01, .001, .01, 1 }; var maximum = new double[] { 10, 1, 30, .05, 2, 600 };
@@ -1290,8 +1290,14 @@ sealed partial class ToolSwapController
     {
         why = ""; var owner = Tip == null ? null : Tip.Base;
         if (owner == null) return true;
-        foreach (var h in Profiles) if (h.Coupler != null && h.Coupler.EntityId == owner.EntityId && (Mounted(h) || (h == Source && Phase == "Detach") || (h == Destination && Phase == "Attach"))) return true;
+        foreach (var h in Profiles) if (h.Coupler != null && h.Coupler.EntityId == owner.EntityId && (Mounted(h) || (h == Source && (Phase == "Detach" || MergeRefresh(h))) || (h == Destination && Phase == "Attach"))) return true;
         why = "Unknown arm-tip owner."; return false;
+    }
+    bool MergeRefresh(Profile h)
+    {
+        if (h != Source || Phase != "Lock" || !DockMoved || Elapsed > 2 || !AllLocked()) return false;
+        var top = h.Coupler.Top as IMyMotorRotor;
+        return top == null || top.EntityId == Tip.EntityId && (top.Base == null || top.Base.EntityId == h.Coupler.EntityId);
     }
     bool Guard(out string why)
     {
@@ -1308,9 +1314,10 @@ sealed partial class ToolSwapController
         {
             if (h.Automatic && Phase == "Scan" && h.Coupler == null) continue;
             foreach (var merge in h.SafetyMerges) if (merge.Closed || merge.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId) { why = "Tool support body split."; return false; }
-            if (h.Coupler.IsAttached && !Mounted(h)) { why = "Tool attached elsewhere."; return false; }
-            if (Last == "Change" && Phase != "Scan" && Phase != "ScanSettle" && !(h == Source && Phase == "Detach") && !h.Coupler.IsAttached && Math.Abs(h.Coupler.Angle - h.Angle) > .002)
-            { why = "Tool Mount angle changed."; return false; }
+            if (h.Coupler.IsAttached && !Mounted(h) && !MergeRefresh(h)) { why = "Tool attached elsewhere."; return false; }
+            if (h == Destination && !AxialPickup && (Phase == ApproachTopPhase || Phase == AlignTopPhase || Phase == "PrepareAttach") &&
+                (!Finite(h.Coupler.Angle) || Math.Abs(Wrap(h.Coupler.Angle - h.Angle)) > .002))
+            { why = h.Name + " mount phase changed during " + Phase + "; ToolScan."; return false; }
         }
         if (Reference.Closed) { why = "Arm anchor unavailable."; return false; }
         if (Tip != null && (Tip.Closed || Tip.CubeGrid.EntityId != Reference.CubeGrid.EntityId || !Reference.CubeGrid.CubeExists(Tip.Position)))
@@ -1420,6 +1427,7 @@ sealed partial class ToolSwapController
     {
         why = "";
         if (!ToolGeometry.TryTopPose(Destination.Coupler, Tip, out Attach, out why, AxialPickup)) return false;
+        Destination.Angle = Destination.Coupler.Angle;
         TopApproach = Attach; TopApproach.Translation += Destination.Coupler.WorldMatrix.Up * Clearance;
         AttachAnchor = Destination.Marker;
         var inverse = MatrixD.Invert(AttachAnchor.WorldMatrix); Attach *= inverse; TopApproach *= inverse;
@@ -1523,7 +1531,7 @@ sealed partial class ToolSwapController
                     Go("Lock"); return;
                 case "Lock":
                     P.StopMotion("Support wait OFF");
-                    if (!Mounted(Source)) { Cancel("Source detached prematurely."); return; }
+                    if (!Mounted(Source)) { Stable = 0; if (!MergeRefresh(Source)) Cancel("Source detached prematurely."); return; }
                     if (!Observe(AllLocked())) return;
                     P.CaptureParkPose(Source, Axis);
                     if (DockMoved) SetRetreat();
@@ -1788,7 +1796,7 @@ static Vector3D Unit(Vector3D value)
 
 static double Clamp(double value, double lo, double hi) => Math.Max(lo, Math.Min(hi, value));
 
-
+static double Wrap(double angle) => angle - Math.Floor((angle + Math.PI) / (2 * Math.PI)) * (2 * Math.PI);
 
 static bool Finite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
 

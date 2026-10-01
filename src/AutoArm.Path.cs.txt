@@ -92,7 +92,7 @@ bool StepPath(ArmPath path, double dt, double observed, out string why)
             var direction = delta / length; double progress = Vector3D.Dot(position - path.LineStart, direction);
             // Losing alignment pauses at current progress, never back at the
             // insertion start. Retain perpendicular correction onto the line.
-            reference += direction * Clamp(progress + (angle <= path.AngleTolerance ? path.CurrentMove / PositionKp : 0), 0, length);
+            reference += direction * Clamp(progress + (path.CurrentMove / PositionKp + path.PositionTolerance * .5) * Clamp(2 - angle / path.AngleTolerance, 0, 1), 0, length);
         }
         demand.Translation = Vector3D.Transform(reference, basis);
     }

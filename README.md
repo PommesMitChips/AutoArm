@@ -5,8 +5,8 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 ## Installation
 
 1. Stop your existing arm controller before replacing it.
-2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.3/AutoArm_Compact.txt) into an arm programmable block.
-3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.3/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
+2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.4/AutoArm_Compact.txt) into an arm programmable block.
+3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.4/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
 4. Name the parts as shown below. You do not need to edit the code or enter configuration for a quick start.
 5. Run `On` on the Arm PB. For another arm, use `On(Arm 2)`. Then use `Select Arm 2` to give it cockpit control.
 
@@ -108,6 +108,8 @@ Use a programmable block **Run** action with one of these arguments. The optiona
 
 Directional actions include `Forward`, `Back`, `Left`, `Right`, `Up`, `Down`, `PitchUp`, `PitchDown`, `YawLeft`, `YawRight`, `RollLeft` and `RollRight`.
 
+Without a tool, these actions aim the exposed rotor socket. HEAD movement follows that socket's facing direction, and Q/E rolls around it. With a tool attached, controls use the named tool reference block.
+
 `MoveTo` positions are metres from that arm's base in its Forward, Left and Up directions. Orientation commands use those same base directions. `Path` rows use world position, forward and up: nine numbers per pose, separated by `|`. AutoArm reaches each waypoint in order and holds the final pose.
 
 Pilot input cancels an automatic path or tool operation only for the arm receiving that input. `Stop` also cancels it; inspect the equipment, then run `On` to resume. `Reload`, `Check` and `ToolScan` remain available but are not prerequisites for `On`.
@@ -118,7 +120,9 @@ Custom Data is divided into `[global]` and one section per arm, such as `[Arm 1]
 
 Use `HeadSpeed` / `HeadTurnSpeed` for movement, `JointSpeed` / `PistonSpeed` for actuator caps, and their acceleration settings to control changes in speed. ToolSwap settings use names such as `Tools.ApproachDistance`, `Tools.MoveSpeed` and `Tools.TurnSpeed`. Travel inherits arm speed; final insertion/withdrawal defaults to 0.05 m/s and 2 degrees/s.
 
-`PositionDamping` and `OrientationDamping` resist unwanted movement and default to `0.2`. Setting either to `0` disables that damping. Pilot input remains additive, and idle deadbands ignore small movement jitter. If the display says cockpit input is inactive, run `Select <arm name>`; `On` does not take input ownership from another selected arm.
+Parking alignment defaults to `Tools.PositionTolerance=0.01` metres and `Tools.AngleTolerance=1` degree. Rotor pickup uses tighter alignment automatically. Parking confirms support before detaching; pickup confirms attachment before releasing support. Existing values in Custom Data take priority over these defaults.
+
+`PositionDamping` and `OrientationDamping` are optional and default to `0` (off). Existing explicit values remain unchanged. Pilot input remains additive, and idle deadbands ignore small movement jitter. If the display says cockpit input is inactive, run `Select <arm name>`; `On` does not take input ownership from another selected arm.
 
 The `Actuators` table gives stage Translation/Orientation preferences from 0 to 10. Put it under `[global]` to share it across structurally identical arms. AutoArm checks joint kinds, parallel member counts and split/rejoin layout; a nonconforming arm reports an error and stays OFF. Different lengths and mounting geometry are allowed and checked separately for each arm. Use local `Actuators` and `Structure` overrides for a different arrangement. Detachable tool couplers are excluded from the shared arm-body template.
 

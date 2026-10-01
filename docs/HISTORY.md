@@ -23,6 +23,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v4.0.1` | Docking progress stability, configurable damping, generated settings, remote configuration reload and startup input recovery | Arm 98,238; ToolSwap 64,193 |
 | `v4.0.2` | Known manual tool detachment returns to bare-arm control, with failed-swap cancellation and explicit-stop inhibition | Arm 99,119; ToolSwap 64,369 |
 | `v4.0.3` | Pose-only Arm descriptor removes unassigned live field, unused branches and endpoint inventory enumeration | Arm 98,886; ToolSwap 64,369 |
+| `v4.0.4` | Bare socket control axes, tolerance-aware docking, continuous insertion, parking settling and relevant wrapped mount phase checks; zero default damping | Arm 99,161; ToolSwap 64,661 |
 
 Read a previous script without changing your working tree:
 

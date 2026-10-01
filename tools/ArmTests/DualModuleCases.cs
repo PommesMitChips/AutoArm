@@ -107,6 +107,8 @@ internal static partial class Scenarios
     }
     static void DualModuleCases(Type armType,Type toolType)
     {
+        BareManualFrames(armType,toolType);
+        SwapPhaseGuards(armType,toolType);
         foreach(bool bare in new[]{false,true})
         {
             var d=new DualRig(armType,toolType,bare,bare); DualStart(d);
