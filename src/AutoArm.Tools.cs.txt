@@ -47,6 +47,7 @@ sealed partial class ToolSwapController
     public bool Busy => Phase != "Idle";
     public bool Automatic => Busy && Last == "Change";
     public bool Configured => EnabledTools;
+    public bool Parking => Source != null && (Phase == ApproachDockPhase || Phase == "Dock");
     public IMyTerminalBlock Endpoint
     {
         get
@@ -530,8 +531,7 @@ sealed partial class ToolSwapController
         DockAnchor = Pairs[0].Stand;
         var inverse = MatrixD.Invert(DockAnchor.WorldMatrix); Dock *= inverse; Approach *= inverse;
         Supported = Source;
-        // Prevent native merge snap from closing the chain during the docking
-        // path. Support is enabled only after the arm confirms stopped output.
+        // Arm-side capture monitoring is acknowledged before magnets enable.
         foreach (var head in Source.Heads) head.Enabled = false;
         Go(ApproachDockPhase); return true;
     }
@@ -609,6 +609,11 @@ sealed partial class ToolSwapController
         {
             if (dt > 1 || observationDt > 1) { Cancel("Tool observation gap."); return; }
             Elapsed += observationDt; string why;
+            if (Parking)
+            {
+                if (!DockMoved && P.CaptureReady) { Journal("CaptureApproach"); foreach (var pair in Pairs) pair.Head.Enabled = true; DockMoved = true; }
+                if (Connected(Source.SafetyMerges)) { DockMoved = true; Go("Lock"); }
+            }
             if (!Guard(out why)) { Cancel(why); return; }
             if (Elapsed > PhaseBudget) { Cancel("Tool phase timeout: " + Phase); return; }
             bool done, settled;
@@ -665,12 +670,7 @@ sealed partial class ToolSwapController
                 case ApproachDockPhase:
                     Go("Dock"); return;
                 case "Dock":
-                    Go("Support"); return;
-                case "Support":
-                    P.ExpectTransition("MergeSupport"); Journal("EnableSupport");
-                    foreach (var pair in Pairs) pair.Head.Enabled = true;
-                    DockMoved = true;
-                    Go("Lock"); return;
+                    P.StopMotion("Capture wait OFF"); return;
                 case "Lock":
                     P.StopMotion("Support wait OFF");
                     bool locked = AllLocked();

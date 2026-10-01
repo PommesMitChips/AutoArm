@@ -1,10 +1,10 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.6";
+const string ControllerBuildVersion = "4.0.7";
 const bool ToolHost = @@TOOL@@;
 const int HostFormat = @@FORMAT@@;
-const string WireTag = "AutoArm/5";
+const string WireTag = "AutoArm/5", GlobalSection = "global";
 readonly Dictionary<string, ArmCore> Arms = new Dictionary<string, ArmCore>(StringComparer.Ordinal);
 readonly List<string> Order = new List<string>();
 readonly Dictionary<long, ArmCore> Owners = new Dictionary<long, ArmCore>();
@@ -69,7 +69,7 @@ void LoadHost()
     var ini = new MyIni();
     if (string.IsNullOrWhiteSpace(Me.CustomData))
     {
-        ini.Set("global", "Format", HostFormat); ini.Set("global", "SelectedArm", DefaultArm);
+        ini.Set(GlobalSection, "Format", HostFormat); ini.Set(GlobalSection, "SelectedArm", DefaultArm);
         var bases = new List<IMyMechanicalConnectionBlock>(); GridTerminalSystem.GetBlocksOfType(bases); var detected = new List<string>();
         foreach (var block in bases)
         {
@@ -86,18 +86,18 @@ void LoadHost()
         foreach (string name in detected) ini.Set(name, ToolHost ? "Tools.Enabled" : "ToolSwapPB", ToolHost ? "true" : "");
         Me.CustomData = ini.ToString();
     }
-    if (!ini.TryParse(Me.CustomData) || ini.Get("global", "Format").ToInt32() != HostFormat)
+    if (!ini.TryParse(Me.CustomData) || ini.Get(GlobalSection, "Format").ToInt32() != HostFormat)
         throw new Exception("Custom Data requires [global] Format=" + HostFormat + ". Delete Custom Data.");
-    var names = new List<string>(); ini.GetSections(names); names.Remove("global");
+    var names = new List<string>(); ini.GetSections(names); names.Remove(GlobalSection);
     if (names.Count < 1 || names.Count > 8) throw new Exception("Configure 1..8 named arm sections.");
-    foreach (string name in names) if (name.Trim() != name || name.Length == 0 || name.IndexOfAny(new char[] { ',', '|', '(', ')', ';', '\r', '\n' }) >= 0 || name.Equals("global", StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid arm section name.");
+    foreach (string name in names) if (name.Trim() != name || name.Length == 0 || name.IndexOfAny(new char[] { ',', '|', '(', ')', ';', '\r', '\n' }) >= 0 || name.Equals(GlobalSection, StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid arm section name.");
     if (!ToolHost)
     {
         var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
         foreach (var peer in peers)
         {
             if (peer == Me || peer.Closed || !peer.IsSameConstructAs(Me)) continue;
-            var data = new MyIni(); if (!data.TryParse(peer.CustomData) || data.Get("global", "Format").ToInt32() != 7) continue;
+            var data = new MyIni(); if (!data.TryParse(peer.CustomData) || data.Get(GlobalSection, "Format").ToInt32() != 7) continue;
             foreach (string name in names) if (data.ContainsSection(name)) throw new Exception("Arm already assigned to another PB: " + name);
         }
     }
@@ -111,12 +111,12 @@ void LoadHost()
         Arms.Add(name, new ArmCore(this, name, InternalConfig(name), state));
     }
     if (!Arms.ContainsKey(Selected))
-    { string configured = ini.Get("global", "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
+    { string configured = ini.Get(GlobalSection, "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
     if (!ToolHost) foreach (var core in Arms.Values) core.Select(core.Name == Selected && InputOwner == Me.EntityId);
     HostError = "";
 }
 string Effective(string arm, string key)
-{ return Configuration.Get(Configuration.ContainsKey(arm, key) ? arm : "global", key).ToString().Replace("{arm}", arm); }
+{ return Configuration.Get(Configuration.ContainsKey(arm, key) ? arm : GlobalSection, key).ToString().Replace("{arm}", arm); }
 void AutoLinks()
 {
     var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
@@ -129,8 +129,8 @@ void AutoLinks()
         {
             if (peer == Me || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me)) continue;
             var data = new MyIni();
-            if (!data.TryParse(peer.CustomData) || data.Get("global", "Format").ToInt32() != (ToolHost ? 7 : 2) || !data.ContainsSection(name)) continue;
-            if (!ToolHost && !data.Get(data.ContainsKey(name, "Tools.Enabled") ? name : "global", "Tools.Enabled").ToBoolean(true)) continue;
+            if (!data.TryParse(peer.CustomData) || data.Get(GlobalSection, "Format").ToInt32() != (ToolHost ? 7 : 2) || !data.ContainsSection(name)) continue;
+            if (!ToolHost && !data.Get(data.ContainsKey(name, "Tools.Enabled") ? name : GlobalSection, "Tools.Enabled").ToBoolean(true)) continue;
             if (found != null) throw new Exception("Multiple module PBs for " + name + ". Set " + key + ".");
             found = peer;
         }
@@ -141,7 +141,7 @@ void AutoLinks()
 string InternalConfig(string name)
 {
     var ini = new MyIni(); ini.Set("AutoArm", "Format", ToolHost ? 1 : 6); ini.Set("AutoArm", "Arm", name);
-    var keys = new List<MyIniKey>(); Configuration.GetKeys("global", keys);
+    var keys = new List<MyIniKey>(); Configuration.GetKeys(GlobalSection, keys);
     var own = new List<MyIniKey>(); Configuration.GetKeys(name, own); keys.AddRange(own);
     var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     foreach (var item in keys)
@@ -162,13 +162,13 @@ string InternalConfig(string name)
 bool Layout(ArmCore core, out string why)
 {
     why = ""; string name = core.Name, table = Effective(name, "Actuators"), expected = Effective(name, "Structure");
-    bool shared = !Configuration.ContainsKey(name, "Actuators") && Configuration.ContainsKey("global", "Actuators") && table.Trim().Length > 0;
+    bool shared = !Configuration.ContainsKey(name, "Actuators") && Configuration.ContainsKey(GlobalSection, "Actuators") && table.Trim().Length > 0;
     if (shared && Configuration.ContainsKey(name, "Structure")) { why = "A local Structure requires local Actuators; clear it to inherit the global template."; return false; }
     if (shared && expected.Length == 0)
     {
         ArmCore prototype;
         if (!Arms.TryGetValue(Order[0], out prototype) || !prototype.HasLayout) { why = "Waiting for global structure prototype: " + Order[0]; return false; }
-        expected = prototype.Shape; Configuration.Set("global", "Structure", expected);
+        expected = prototype.Shape; Configuration.Set(GlobalSection, "Structure", expected);
     }
     string shape = core.Shape;
     if (expected.Length > 0 && expected != shape) { why = name + " does not match configured joint kinds/parallel layout."; return false; }
@@ -188,7 +188,7 @@ bool Layout(ArmCore core, out string why)
 void PublishConfig()
 {
     // Generated values only fill missing keys. Preserve edits made while running.
-    var live = new MyIni(); if (!live.TryParse(Me.CustomData) || live.Get("global", "Format").ToInt32() != HostFormat) return;
+    var live = new MyIni(); if (!live.TryParse(Me.CustomData) || live.Get(GlobalSection, "Format").ToInt32() != HostFormat) return;
     var keys = new List<MyIniKey>(); Configuration.GetKeys(keys);
     foreach (var key in keys) if (!live.ContainsKey(key.Section, key.Name)) live.Set(key.Section, key.Name, Configuration.Get(key).ToString());
     string text = live.ToString(); if (text != Me.CustomData) Me.CustomData = text;
@@ -255,7 +255,7 @@ void ReceiveSelection(double elapsed)
         string[] cells = text.Split('|');
         if (cells.Length != 2 || !long.TryParse(cells[0], out clock) || clock <= 0 || clock < InputClock || clock == InputClock && message.Source <= InputOwner) continue;
         var peer = GridTerminalSystem.GetBlockWithId(message.Source) as IMyProgrammableBlock; var config = new MyIni();
-        if (peer == null || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me) || !config.TryParse(peer.CustomData) || config.Get("global", "Format").ToInt32() != 7 || !config.ContainsSection(cells[1])) continue;
+        if (peer == null || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me) || !config.TryParse(peer.CustomData) || config.Get(GlobalSection, "Format").ToInt32() != 7 || !config.ContainsSection(cells[1])) continue;
         InputClock = clock; InputOwner = message.Source;
         foreach (var core in Arms.Values) core.Select(false);
     }
@@ -272,8 +272,8 @@ void CaptureDefaults(ArmCore core)
     {
         if (key.Section == "AutoArm" || key.Name == "Actuators") continue;
         string field = key.Section == "Config" || key.Section == "Modules" ? key.Name : key.Section + "." + key.Name;
-        if (!Configuration.ContainsKey(core.Name, field) && !Configuration.ContainsKey("global", field))
-            Configuration.Set(core.SharedSetting(field) ? "global" : core.Name, field, ini.Get(key).ToString());
+        if (!Configuration.ContainsKey(core.Name, field) && !Configuration.ContainsKey(GlobalSection, field))
+            Configuration.Set(core.SharedSetting(field) ? GlobalSection : core.Name, field, ini.Get(key).ToString());
     }
     PublishConfig();
 }

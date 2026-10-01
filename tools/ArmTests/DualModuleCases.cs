@@ -101,6 +101,7 @@ internal static partial class Scenarios
             { var goal=SwapMotionGoal(d.Tool,field); if(phase=="ApproachDock" || phase=="Dock") d.F.MoveSource(goal,source); else d.F.MoveArm(goal); }
             else if(phase=="Lock") d.F.LockSource(source:source);
             else if(phase=="Release") d.F.SplitTool(Array.IndexOf(d.F.Markers,(IMyTerminalBlock)Get(Get(SwapController(d.Tool),"Destination")!,"Marker")!));
+            if(phase=="ApproachDock"||phase=="Dock")d.F.CaptureSource(source);
             d.Tick(); previous=phase;
         }
         throw new Exception("Dual operation failed to reach "+until+": "+SwapPhase(d.Tool)+" / "+string.Join(" | ",d.ToolRig.Log.TakeLast(4)));
@@ -111,6 +112,7 @@ internal static partial class Scenarios
         SwapPhaseGuards(armType,toolType);
         SwapTransitionCases(armType,toolType);
         DockArrivalCases(armType,toolType);
+        MergeCaptureCases(armType,toolType);
         foreach(bool bare in new[]{false,true})
         {
             var d=new DualRig(armType,toolType,bare,bare); DualStart(d);

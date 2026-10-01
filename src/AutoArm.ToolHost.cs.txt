@@ -1,6 +1,6 @@
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "4.0.6";
+const string ControllerBuildVersion = "4.0.7";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -210,6 +210,7 @@ void Receive()
     }
 }
 bool Permit() { string why; return Initialised && Tools.AllowManual(out why); }
+bool CaptureReady => MoveRequest != 0 && ReportedPath == MoveRequest && Ack >= MoveRequest;
 void Say(string text) { DisplayText = text; }
 void StopMotion(string reason)
 {
@@ -252,6 +253,7 @@ bool SubmitPath(string rows, long anchor, int waypoint, double moveCap, double t
     var packet = Link.Packet("PATH"); packet.Set(LinkSection, "Waypoints", rows); packet.Set(LinkSection, "Anchor", anchor); packet.Set(LinkSection, "Move", moveCap); packet.Set(LinkSection, "Turn", turnCap);
     packet.Set(LinkSection, "PosTol", positionTolerance); packet.Set(LinkSection, "AngleTol", angleTolerance);
     packet.Set(LinkSection, "Docking", true);
+    packet.Set(LinkSection, "Capture", Tools.Parking);
     packet.Set(LinkSection, "Moves", travel ? "0|" + AutoSettings.Number(moveCap) : AutoSettings.Number(moveCap));
     packet.Set(LinkSection, "Turns", travel ? "0|" + AutoSettings.Number(turnCap) : AutoSettings.Number(turnCap));
     packet.Set(LinkSection, "Lines", travel ? "false|true" : "true");

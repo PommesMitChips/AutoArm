@@ -23,7 +23,7 @@ internal sealed class ToolSwapFixture
     internal readonly List<(int Tool,string Kind,string Journal,bool Stopped,bool Supported)> Mutations = new();
     internal TestHost? Host;
     internal IMyMotorRotor? AttachResult;
-    internal bool AutoAttach = true, AutoDetach = true;
+    internal bool AutoAttach = true, AutoDetach = true, AutoMerge = true;
     int PhysicalTool;
     readonly Dictionary<IMyCubeGrid,Dictionary<Vector3I,IMySlimBlock>> Cells = new();
     internal ToolSwapFixture(bool ports=true,bool explicitOnly=false,bool headless=false,double destinationAngle=0)
@@ -154,6 +154,17 @@ internal sealed class ToolSwapFixture
     }
     internal void MoveArm(MatrixD target) => TransformGrid(ArmTip.CubeGrid,MatrixD.Invert(MotionReference.WorldMatrix)*target);
     internal void ShiftIncoming(Vector3D shift) { var delta=MatrixD.Identity; delta.Translation=shift; TransformGrid(Markers[1].CubeGrid,delta); }
+    internal bool CaptureSource(int source=0)
+    {
+        if(!AutoMerge||Heads[source].Length==0)return false;
+        for(int i=0;i<Heads[source].Length;i++)
+        {
+            var h=Heads[source][i];var s=Stands[source][i];
+            if(!h.Enabled||!s.Enabled||Vector3D.Distance(h.GetPosition(),s.GetPosition())>h.CubeGrid.GridSize+.17||
+                (h.WorldMatrix.Right+s.WorldMatrix.Right).Length()>.1||(h.WorldMatrix.Up-s.WorldMatrix.Up).Length()>.08)return false;
+        }
+        LockSource(source:source);return true;
+    }
     internal void LockSource(int count=2,int source=0)
     {
         if(count>0&&Stands[source][0].CubeGrid!=Markers[source].CubeGrid)

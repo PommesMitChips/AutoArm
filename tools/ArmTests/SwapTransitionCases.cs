@@ -14,7 +14,7 @@ internal static partial class Scenarios
     static void SwapField(object value,string key,object setting)=>value.GetType().GetField(key,All)!.SetValue(value,setting);
     static void SwapTransitionCases(Type armType,Type toolType)
     {
-        var park=new DualRig(armType,toolType);DualStart(park);park.Command("Tool 2");DualPlant(park,"Lock");
+        var park=new DualRig(armType,toolType);DualStart(park);park.Command("Tool 2");DualPlant(park,"Dock");park.F.LockSource(1);
         SwapLostPointer(park,0,true);
         for(int i=0;i<5;i++)park.Tick();
         Check(SwapPhase(park.Tool)=="Lock"&&!park.F.AnyDrive&&!park.F.Mutations.Any(m=>m.Kind=="Detach"),"Initial merge pointer gap required premature support flags.");

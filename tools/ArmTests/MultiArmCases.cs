@@ -183,7 +183,7 @@ internal static partial class Scenarios
                 if(field!=null&&phaseTicks>8) { var pose=SwapMotionGoal(core,field); if(phase=="ApproachDock"||phase=="Dock") target.Fixture.MoveSource(pose,source); else target.Fixture.MoveArm(pose); }
                 else if(phase=="Lock")
                 {
-                    target.Fixture.LockSource(phaseTicks<4?1:2,source);
+                    target.Fixture.LockSource(2,source);
                     if(phaseTicks<4)SwapFixturePointer(target.Fixture,source,true);
                     else if(phaseTicks==4)SwapFixturePointer(target.Fixture,source,false);
                 }
@@ -194,6 +194,7 @@ internal static partial class Scenarios
                     if(phaseTicks<4)SwapFixturePointer(target.Fixture,destination,true);
                     else if(phaseTicks==4)SwapFixturePointer(target.Fixture,destination,false);
                 }
+                if(phase=="ApproachDock"||phase=="Dock")target.Fixture.CaptureSource(source);
                 Tick(); previous=phase;
             }
             Check(Enabled(Core(Owner(target.Name),target.Name))&&target.Fixture.Couplers[chosen-1].Top==target.Fixture.ArmTip,"Shared ToolSwap failed to mount/resume "+target.Name+": "+string.Join(" | ",toolRig.Log.TakeLast(3)));

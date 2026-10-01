@@ -1,10 +1,10 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.6";
+const string ControllerBuildVersion = "4.0.7";
 
 const int HostFormat = 2;
-const string WireTag = "AutoArm/5";
+const string WireTag = "AutoArm/5", GlobalSection = "global";
 readonly Dictionary<string, ArmCore> Arms = new Dictionary<string, ArmCore>(StringComparer.Ordinal);
 readonly List<string> Order = new List<string>();
 
@@ -46,7 +46,7 @@ void LoadHost()
     var ini = new MyIni();
     if (string.IsNullOrWhiteSpace(Me.CustomData))
     {
-        ini.Set("global", "Format", HostFormat); ini.Set("global", "SelectedArm", DefaultArm);
+        ini.Set(GlobalSection, "Format", HostFormat); ini.Set(GlobalSection, "SelectedArm", DefaultArm);
         var bases = new List<IMyMechanicalConnectionBlock>(); GridTerminalSystem.GetBlocksOfType(bases); var detected = new List<string>();
         foreach (var block in bases)
         {
@@ -62,11 +62,11 @@ void LoadHost()
         foreach (string name in detected) ini.Set(name, "Tools.Enabled", "true");
         Me.CustomData = ini.ToString();
     }
-    if (!ini.TryParse(Me.CustomData) || ini.Get("global", "Format").ToInt32() != HostFormat)
+    if (!ini.TryParse(Me.CustomData) || ini.Get(GlobalSection, "Format").ToInt32() != HostFormat)
         throw new Exception("Custom Data requires [global] Format=" + HostFormat + ". Delete Custom Data.");
-    var names = new List<string>(); ini.GetSections(names); names.Remove("global");
+    var names = new List<string>(); ini.GetSections(names); names.Remove(GlobalSection);
     if (names.Count < 1 || names.Count > 8) throw new Exception("Configure 1..8 named arm sections.");
-    foreach (string name in names) if (name.Trim() != name || name.Length == 0 || name.IndexOfAny(new char[] { ',', '|', '(', ')', ';', '\r', '\n' }) >= 0 || name.Equals("global", StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid arm section name.");
+    foreach (string name in names) if (name.Trim() != name || name.Length == 0 || name.IndexOfAny(new char[] { ',', '|', '(', ')', ';', '\r', '\n' }) >= 0 || name.Equals(GlobalSection, StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid arm section name.");
     var removed = new List<string>(); foreach (string name in Order) if (!names.Contains(name)) removed.Add(name);
     foreach (string name in removed) { Arms[name].Stop("Arm removed from configuration."); Saved.Set("State " + name, "Data", Arms[name].Storage); Arms.Remove(name); }
     Configuration = ini; Order.Clear(); Order.AddRange(names);
@@ -77,11 +77,11 @@ void LoadHost()
         Arms.Add(name, new ArmCore(this, name, InternalConfig(name), state));
     }
     if (!Arms.ContainsKey(Selected))
-    { string configured = ini.Get("global", "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
+    { string configured = ini.Get(GlobalSection, "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
     HostError = "";
 }
 string Effective(string arm, string key)
-{ return Configuration.Get(Configuration.ContainsKey(arm, key) ? arm : "global", key).ToString().Replace("{arm}", arm); }
+{ return Configuration.Get(Configuration.ContainsKey(arm, key) ? arm : GlobalSection, key).ToString().Replace("{arm}", arm); }
 void AutoLinks()
 {
     var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
@@ -94,7 +94,7 @@ void AutoLinks()
         {
             if (peer == Me || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me)) continue;
             var data = new MyIni();
-            if (!data.TryParse(peer.CustomData) || data.Get("global", "Format").ToInt32() != (7) || !data.ContainsSection(name)) continue;
+            if (!data.TryParse(peer.CustomData) || data.Get(GlobalSection, "Format").ToInt32() != (7) || !data.ContainsSection(name)) continue;
             if (found != null) throw new Exception("Multiple module PBs for " + name + ". Set " + key + ".");
             found = peer;
         }
@@ -105,7 +105,7 @@ void AutoLinks()
 string InternalConfig(string name)
 {
     var ini = new MyIni(); ini.Set("AutoArm", "Format", 1); ini.Set("AutoArm", "Arm", name);
-    var keys = new List<MyIniKey>(); Configuration.GetKeys("global", keys);
+    var keys = new List<MyIniKey>(); Configuration.GetKeys(GlobalSection, keys);
     var own = new List<MyIniKey>(); Configuration.GetKeys(name, own); keys.AddRange(own);
     var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     foreach (var item in keys)
@@ -126,7 +126,7 @@ string InternalConfig(string name)
 void PublishConfig()
 {
     // Generated values only fill missing keys. Preserve edits made while running.
-    var live = new MyIni(); if (!live.TryParse(Me.CustomData) || live.Get("global", "Format").ToInt32() != HostFormat) return;
+    var live = new MyIni(); if (!live.TryParse(Me.CustomData) || live.Get(GlobalSection, "Format").ToInt32() != HostFormat) return;
     var keys = new List<MyIniKey>(); Configuration.GetKeys(keys);
     foreach (var key in keys) if (!live.ContainsKey(key.Section, key.Name)) live.Set(key.Section, key.Name, Configuration.Get(key).ToString());
     string text = live.ToString(); if (text != Me.CustomData) Me.CustomData = text;
@@ -191,8 +191,8 @@ void CaptureDefaults(ArmCore core)
     {
         if (key.Section == "AutoArm" || key.Name == "Actuators") continue;
         string field = key.Section == "Config" || key.Section == "Modules" ? key.Name : key.Section + "." + key.Name;
-        if (!Configuration.ContainsKey(core.Name, field) && !Configuration.ContainsKey("global", field))
-            Configuration.Set(core.SharedSetting(field) ? "global" : core.Name, field, ini.Get(key).ToString());
+        if (!Configuration.ContainsKey(core.Name, field) && !Configuration.ContainsKey(GlobalSection, field))
+            Configuration.Set(core.SharedSetting(field) ? GlobalSection : core.Name, field, ini.Get(key).ToString());
     }
     PublishConfig();
 }
@@ -265,7 +265,7 @@ readonly string ArmName;
 
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "4.0.6";
+const string ControllerBuildVersion = "4.0.7";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -474,6 +474,7 @@ void Receive()
     }
 }
 bool Permit() { string why; return Initialised && Tools.AllowManual(out why); }
+bool CaptureReady => MoveRequest != 0 && ReportedPath == MoveRequest && Ack >= MoveRequest;
 void Say(string text) { DisplayText = text; }
 void StopMotion(string reason)
 {
@@ -516,6 +517,7 @@ bool SubmitPath(string rows, long anchor, int waypoint, double moveCap, double t
     var packet = Link.Packet("PATH"); packet.Set(LinkSection, "Waypoints", rows); packet.Set(LinkSection, "Anchor", anchor); packet.Set(LinkSection, "Move", moveCap); packet.Set(LinkSection, "Turn", turnCap);
     packet.Set(LinkSection, "PosTol", positionTolerance); packet.Set(LinkSection, "AngleTol", angleTolerance);
     packet.Set(LinkSection, "Docking", true);
+    packet.Set(LinkSection, "Capture", Tools.Parking);
     packet.Set(LinkSection, "Moves", travel ? "0|" + AutoSettings.Number(moveCap) : AutoSettings.Number(moveCap));
     packet.Set(LinkSection, "Turns", travel ? "0|" + AutoSettings.Number(turnCap) : AutoSettings.Number(turnCap));
     packet.Set(LinkSection, "Lines", travel ? "false|true" : "true");
@@ -924,6 +926,7 @@ sealed partial class ToolSwapController
     public bool Busy => Phase != "Idle";
     public bool Automatic => Busy && Last == "Change";
     public bool Configured => EnabledTools;
+    public bool Parking => Source != null && (Phase == ApproachDockPhase || Phase == "Dock");
     public IMyTerminalBlock Endpoint
     {
         get
@@ -1407,8 +1410,7 @@ sealed partial class ToolSwapController
         DockAnchor = Pairs[0].Stand;
         var inverse = MatrixD.Invert(DockAnchor.WorldMatrix); Dock *= inverse; Approach *= inverse;
         Supported = Source;
-        // Prevent native merge snap from closing the chain during the docking
-        // path. Support is enabled only after the arm confirms stopped output.
+        // Arm-side capture monitoring is acknowledged before magnets enable.
         foreach (var head in Source.Heads) head.Enabled = false;
         Go(ApproachDockPhase); return true;
     }
@@ -1486,6 +1488,11 @@ sealed partial class ToolSwapController
         {
             if (dt > 1 || observationDt > 1) { Cancel("Tool observation gap."); return; }
             Elapsed += observationDt; string why;
+            if (Parking)
+            {
+                if (!DockMoved && P.CaptureReady) { Journal("CaptureApproach"); foreach (var pair in Pairs) pair.Head.Enabled = true; DockMoved = true; }
+                if (Connected(Source.SafetyMerges)) { DockMoved = true; Go("Lock"); }
+            }
             if (!Guard(out why)) { Cancel(why); return; }
             if (Elapsed > PhaseBudget) { Cancel("Tool phase timeout: " + Phase); return; }
             bool done, settled;
@@ -1542,12 +1549,7 @@ sealed partial class ToolSwapController
                 case ApproachDockPhase:
                     Go("Dock"); return;
                 case "Dock":
-                    Go("Support"); return;
-                case "Support":
-                    P.ExpectTransition("MergeSupport"); Journal("EnableSupport");
-                    foreach (var pair in Pairs) pair.Head.Enabled = true;
-                    DockMoved = true;
-                    Go("Lock"); return;
+                    P.StopMotion("Capture wait OFF"); return;
                 case "Lock":
                     P.StopMotion("Support wait OFF");
                     bool locked = AllLocked();

@@ -6,9 +6,9 @@ internal static partial class Scenarios
 {
     static void DockArrivalCases(Type armType,Type toolType)
     {
-        foreach(var trial in new (bool Docking,double Speed,double Span)[]{(false,.019,.5),(true,.019,.5),(true,.12,.5),(true,.019,.005)})
+        foreach(var trial in new (bool Docking,double Speed,double Span,bool Capture)[]{(false,.019,.5,false),(true,.019,.5,false),(true,.12,.5,false),(true,.019,.005,false),(true,.12,.5,true)})
         {
-            bool docking=trial.Docking;bool admitted=docking&&trial.Speed<.05&&trial.Span>.01;
+            bool docking=trial.Docking;bool admitted=docking&&(trial.Speed<.05||trial.Capture)&&trial.Span>.01;
             var rig=new Rig();var moving=rig.Grid();var piston=rig.Piston("Arm 1 - Base - Piston",rig.Root,moving,Vector3D.Zero,Vector3D.Forward);
             var head=rig.Block<IMyShipDrill>("Arm 1 - Head - Drill",moving,Vector3D.Forward*5);rig.Cockpit();
             var script=Start(armType,rig);Run(script,"On");var initial=head.WorldMatrix;
@@ -19,6 +19,7 @@ internal static partial class Scenarios
             var path=Get(script,"LocalPath")!;var options=new MyIni();options.Set("Link","Docking",docking);
             options.Set("Link","Moves","0|0.05");options.Set("Link","Turns","0|2");options.Set("Link","Lines","false|true");
             Tests.Call(script,"ConfigurePathStages",path,options);
+            SwapField(path,"Capture",trial.Capture);
             SwapField(script,"FilteredV",VCInFrame(Vector3D.Forward,piston.WorldMatrix)*trial.Speed);
             SwapField(script,"FilteredW",VCInFrame(Vector3D.Up,piston.WorldMatrix)*(.35*Math.PI/180));
             SwapField(script,"LastQdot",new double[]{.019});
@@ -55,14 +56,15 @@ internal static partial class Scenarios
         }
         foreach(double clearance in new[]{.01,.5})
         {
-            var d=new DualRig(armType,toolType);var config=new MyIni();config.TryParse(d.ToolRig.PB.CustomData);
+            var d=new DualRig(armType,toolType);d.F.AutoMerge=false;var config=new MyIni();config.TryParse(d.ToolRig.PB.CustomData);
             config.Set("Tools","ApproachDistance",clearance);config.Set("Tools","PositionTolerance",.005);config.Set("Tools","AngleTolerance",.2);RecordProxy.Of(d.ToolRig.PB).Values["CustomData"]=config.ToString();
             DualStart(d);d.Command("Tool 2");DualPlant(d,"Dock");
             var exact=SwapGoal(d.Tool,"Dock");var stop=SwapMotionGoal(d.Tool,"Dock");var outward=Vector3D.Normalize(SwapGoal(d.Tool,"Approach").Translation-exact.Translation);
             var gap=stop.Translation-exact.Translation;
             Check(gap.Length()>0&&gap.Length()<=.0300001&&gap.Length()<clearance&&Vector3D.Dot(gap,outward)>0,"Parking did not leave a bounded capture gap along the stand normal.");
             VCNear(stop.Forward,exact.Forward,"Capture gap changed recorded parking orientation");
-            Check(d.F.Heads[0].All(m=>!m.Enabled),"Support enabled before motion completed and stopped acknowledgement.");
+            Check(d.F.Heads[0].All(m=>m.Enabled),"Capture magnets were not enabled on the acknowledged approach path.");
+            d.F.AutoMerge=true;
             DualPlant(d,"Idle");for(int i=0;i<20;i++)d.Tick();
             Check(Enabled(d.Arm)&&d.F.Couplers[1].Top==d.F.ArmTip&&d.F.Mutations.All(m=>m.Stopped&&m.Supported),"Capture-gap parking broke safe swap completion.");
         }

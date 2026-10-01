@@ -13,7 +13,7 @@ sealed class ArmPath
     public bool[] Lines;
     public Vector3D LineStart;
     public bool LineStarted;
-    public bool Docking;
+    public bool Docking, Capture;
     public double CurrentMove => Moves == null ? Move : Moves[Completed];
     public double CurrentTurn => Turns == null ? Turn : Turns[Completed];
     public bool Linear => Lines != null && Lines[Completed];
@@ -104,7 +104,7 @@ bool StepPath(ArmPath path, double dt, double observed, out string why)
     }
     bool settled;
     if (!ToolPoseStep(demand, dt, observed, path.CurrentMove, path.CurrentTurn, pt, at, out settled, out why, path.Docking ? 2 : 0)) return false;
-    if (entry) settled = LastPositionError <= pt && LastOrientationErrorDeg <= at && FilteredV.Length() <= Math.Max(.005, Math.Min(path.Move, pt * 2.5)) && FilteredW.Length() * 180 / Math.PI <= Math.Max(.2, path.Turn);
+    if (entry) settled = LastPositionError <= pt && LastOrientationErrorDeg <= at && (path.Capture || FilteredV.Length() <= Math.Max(.005, Math.Min(path.Move, pt * 2.5)) && FilteredW.Length() * 180 / Math.PI <= Math.Max(.2, path.Turn));
     settled &= PathRemainingDistance <= pt;
     path.Stable = settled ? path.Stable + 1 : 0;
     if (path.Stable >= 2) { if (!entry) { Topology.ZeroOwned(); Tools.ZeroMount(); } path.Completed++; path.Elapsed = path.Budget = 0; path.Stable = 0; path.LineStarted = false; Say("Path " + path.Id + ": " + path.Completed + "/" + path.Waypoints.Count); }
