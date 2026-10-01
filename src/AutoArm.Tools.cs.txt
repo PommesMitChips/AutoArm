@@ -156,7 +156,7 @@ sealed partial class ToolSwapController
         for (int i = 0; i < values.Length; i++) ini.Set(ToolsSection, NumberKeys[i], values[i]);
         ini.Set(ToolsSection, "ScanHeadMerges", sh); ini.Set(ToolsSection, "ScanStandMerges", ss); ini.Set(ToolsSection, "ScanParkMerges", sp);
         ini.Set(ToolsSection, "MergeNormal", axis); ini.Set(ToolsSection, "CellLimit", limit);
-        P.Me.CustomData = ini.ToString();
+        P.WriteConfig(ini);
         Last = "Tools disabled";
         if (enabled)
         {

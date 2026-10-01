@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.8";
+const string ControllerBuildVersion = "4.0.9";
 const bool ToolHost = @@TOOL@@;
 const int HostFormat = @@FORMAT@@;
 const string WireTag = "AutoArm/5", GlobalSection = "global";
@@ -36,6 +36,7 @@ public Program()
 }
 public void Save()
 {
+    if (Order.Count == 0) return;
     bool changed = Saved.Get("AutoArm Host", "PB").ToInt64() != Me.EntityId || Saved.Get("AutoArm Host", "Selected").ToString() != Selected || Saved.Get("AutoArm Host", "InputClock").ToInt64() != InputClock || Saved.Get("AutoArm Host", "InputOwner").ToInt64() != InputOwner;
     if (changed) { Saved.Set("AutoArm Host", "Format", 1); Saved.Set("AutoArm Host", "PB", Me.EntityId); Saved.Set("AutoArm Host", "Selected", Selected); Saved.Set("AutoArm Host", "InputClock", InputClock); Saved.Set("AutoArm Host", "InputOwner", InputOwner); }
     foreach (var pair in Arms) if (pair.Value.Storage != pair.Value.SavedData) { Saved.Set("State " + pair.Key, "Data", pair.Value.Storage); pair.Value.SavedData = pair.Value.Storage; changed = true; }
@@ -49,19 +50,7 @@ void StopSaved()
     {
         if (!section.StartsWith("State ", StringComparison.Ordinal)) continue;
         var state = new MyIni(); if (!state.TryParse(Saved.Get(section, "Data").ToString())) continue;
-        if (state.Get("AutoArm Config", "PB").ToInt64() != Me.EntityId || state.Get("AutoArm Config", "Arm").ToString() != section.Substring(6)) continue;
-        foreach (string row in (state.Get("AutoArm Config", "Rows").ToString() + "\n" + state.Get("AutoArm Tool Weights", "Rows").ToString()).Split('\n'))
-        {
-            string[] cells = row.Split('|'); string key = cells.Length == 2 ? cells[1] : cells.Length == 3 ? cells[0] : "";
-            foreach (string part in key.Split(':'))
-            {
-                string token = part.Split('@')[0]; long id;
-                if (token.Length < 2 || !long.TryParse(token.Substring(0, token.Length - 1), out id)) continue;
-                var block = GridTerminalSystem.GetBlockWithId(id); if (block == null || block.Closed || !block.IsSameConstructAs(Me)) continue;
-                var piston = block as IMyPistonBase; var rotor = block as IMyMotorStator;
-                if (piston != null) piston.Velocity = 0; else if (rotor != null && !(rotor is IMyMotorSuspension)) rotor.TargetVelocityRad = 0;
-            }
-        }
+        ArmCore.SavedDrives.Stop(state, section.Substring(6), Me, GridTerminalSystem);
     }
 }
 void LoadHost()
@@ -108,7 +97,7 @@ void LoadHost()
     foreach (string name in names) if (!Arms.ContainsKey(name))
     {
         string state = Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId ? Saved.Get("State " + name, "Data").ToString() : "";
-        Arms.Add(name, new ArmCore(this, name, InternalConfig(name), state));
+        Arms.Add(name, new ArmCore(this, name, ConfigFor(name), state));
     }
     if (!Arms.ContainsKey(Selected))
     { string configured = ini.Get(GlobalSection, "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
@@ -136,20 +125,19 @@ void AutoLinks()
         }
         if (found != null) Configuration.Set(name, key, "@" + found.EntityId);
     }
-    PublishConfig();
 }
-string InternalConfig(string name)
+MyIni ConfigFor(string name)
 {
-    var ini = new MyIni(); ini.Set("AutoArm", "Format", ToolHost ? 1 : 6); ini.Set("AutoArm", "Arm", name);
+    var ini = new MyIni();
     var keys = new List<MyIniKey>(); Configuration.GetKeys(GlobalSection, keys);
     var own = new List<MyIniKey>(); Configuration.GetKeys(name, own); keys.AddRange(own);
     var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     foreach (var item in keys)
     {
-        string key = item.Name; if (!seen.Add(key) || key == "Format" || key == "SelectedArm" || key == "Structure" || key == "Actuators") continue;
+        string key = item.Name; if (!seen.Add(key) || key.Equals("Format", StringComparison.OrdinalIgnoreCase) || key.Equals("SelectedArm", StringComparison.OrdinalIgnoreCase) || key.Equals("Structure", StringComparison.OrdinalIgnoreCase) || key.Equals("Actuators", StringComparison.OrdinalIgnoreCase)) continue;
         string section = "Config", field = key; int dot = key.IndexOf('.');
         if (dot > 0) { section = key.Substring(0, dot); field = key.Substring(dot + 1); }
-        else if (key == "ToolSwapPB" || key == "Peers") section = "Modules";
+        else if (key.Equals("ToolSwapPB", StringComparison.OrdinalIgnoreCase) || key.Equals("Peers", StringComparison.OrdinalIgnoreCase)) section = "Modules";
         ini.Set(section, field, Effective(name, key));
     }
     if (ToolHost)
@@ -157,7 +145,7 @@ string InternalConfig(string name)
         if (!ini.ContainsKey("Link", "ArmPB")) ini.Set("Link", "ArmPB", name + " - Arm PB");
         if (!ini.ContainsKey("Tools", "Enabled")) ini.Set("Tools", "Enabled", true);
     }
-    return ini.ToString();
+    return ini;
 }
 bool Layout(ArmCore core, out string why)
 {
@@ -226,7 +214,7 @@ void Command(string raw)
     ArmCore target; if (!Arms.TryGetValue(name, out target)) throw new Exception("Unknown arm: " + name);
     string action = command.Split(' ')[0].ToLowerInvariant();
     if (action == "on" || action == "reload" || action == "rescan")
-    { target.CustomData = InternalConfig(name); }
+    { target.Config = ConfigFor(name); target.ConfigChanged = false; }
     target.Update(command, UpdateType.Terminal, 0);
     CaptureDefaults(target);
 }
@@ -264,9 +252,9 @@ void ReceiveSelection(double elapsed)
 }
 void CaptureDefaults(ArmCore core)
 {
-    if (core.ExportedData == core.CustomData) return;
-    core.ExportedData = core.CustomData;
-    var ini = new MyIni(); if (!ini.TryParse(core.CustomData)) return;
+    if (!core.ConfigChanged) return;
+    core.ConfigChanged = false;
+    var ini = core.Config;
     var keys = new List<MyIniKey>(); ini.GetKeys(keys);
     foreach (var key in keys)
     {

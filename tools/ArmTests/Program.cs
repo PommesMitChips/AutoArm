@@ -66,6 +66,7 @@ internal static class Tests
             var type=Script(EngineSource);
             Console.WriteLine("Full script compiles against installed interfaces in the simulated PB host.");
             Scenarios.RunAll(type);
+            Scenarios.WeightRepresentationCases(type);
             Scenarios.RunHosts(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_ToolSwap_Source.txt"))));
             CheckPackedPrograms();
             return 0;

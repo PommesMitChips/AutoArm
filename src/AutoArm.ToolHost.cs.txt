@@ -1,6 +1,6 @@
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "4.0.8";
+const string ControllerBuildVersion = "4.0.9";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -15,17 +15,32 @@ sealed class AutoTopology
 }
 static class AutoSettings
 { public static string Number(double value) { return value.ToString("R", System.Globalization.CultureInfo.InvariantCulture); } }
+// BEGIN STANDALONE CONFIG
+bool ReadConfig(string text, out MyIni ini, out string why)
+{
+    ini = new MyIni(); why = "";
+    if (string.IsNullOrWhiteSpace(text))
+    {
+        ini.Set(ArmSection, "Arm", ArmName); ini.Set(ArmSection, "Format", 1);
+        ini.Set(LinkSection, "ArmPB", ArmName + " - Arm PB"); ini.Set(ToolsSection, EnabledKey, true);
+        WriteConfig(ini); return true;
+    }
+    if (!ini.TryParse(text)) { why = "Invalid Custom Data INI."; return false; }
+    if (ini.Get(ArmSection, "Format").ToInt32() != 1 || ini.Get(ArmSection, "Arm").ToString() != ArmName)
+    { why = "ToolSwap Custom Data requires Format 1 and this arm name. Delete Custom Data."; return false; }
+    return true;
+}
+void WriteConfig(MyIni ini) { Me.CustomData = ini.ToString(); }
+string ConfigText(MyIni ini) { return ini.ToString(); }
+// END STANDALONE CONFIG
+
 static class AutoConfig
 {
     public const int Format = 1;
     public static MyIni Saved(string text) { return LinkSaved(text); }
     public static bool ReadCurrent(Program p, string text, out MyIni ini, out string why)
     {
-        ini = new MyIni(); why = "";
-        if (!ini.TryParse(text ?? "")) { why = "Invalid Custom Data INI."; return false; }
-        if (ini.Get(ArmSection, "Format").ToInt32() != Format || ini.Get(ArmSection, "Arm").ToString() != p.ArmName)
-        { why = "ToolSwap Custom Data requires Format 1 and this arm name. Delete Custom Data."; return false; }
-        return true;
+        return p.ReadConfig(text, out ini, out why);
     }
 }
 ModuleLink Link;
@@ -60,11 +75,6 @@ public Program()
 public void Save() { }
 void ConfigureLink()
 {
-    if (string.IsNullOrWhiteSpace(Me.CustomData))
-    {
-        var defaults = new MyIni(); defaults.Set(ArmSection, "Arm", ArmName); defaults.Set(ArmSection, "Format", 1);
-        defaults.Set(LinkSection, "ArmPB", ArmName + " - Arm PB"); defaults.Set(ToolsSection, EnabledKey, true); defaults.Set(ToolsSection, "Heads", ""); Me.CustomData = defaults.ToString();
-    }
     MyIni ini; string why; if (!AutoConfig.ReadCurrent(this, Me.CustomData, out ini, out why)) throw new Exception(why);
     Link.Resolve(ini.Get(LinkSection, "ArmPB").ToString());
 }
@@ -102,7 +112,8 @@ public void Main(string argument, UpdateType source)
             {
                 string why; if (!Tools.Load(out why)) throw new Exception(why);
                 if (!Tools.Configured) throw new Exception("Tools.Enabled must be true in the ToolSwap PB.");
-                var ini = new MyIni(); ini.TryParse(Me.CustomData); Tools.WriteConfig(ini); Me.CustomData = ini.ToString(); Initialised = true;
+                MyIni ini; if (!AutoConfig.ReadCurrent(this, Me.CustomData, out ini, out why)) throw new Exception(why);
+                Tools.WriteConfig(ini); WriteConfig(ini); Initialised = true;
                 if (verb == "on") Tools.StartOn();
             }
             else if (verb == "stop" || verb == "off" || verb == "swapcancel") { Tools.Cancel("Stopped; inspect, then On."); }

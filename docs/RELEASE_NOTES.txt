@@ -1,3 +1,33 @@
+AutoArm 4.0.9 — Consolidate configuration, weights and startup recovery
+
+Three GPT-6.1 Sol medium workers implemented separate refactors with a coordinated
+config/weight boundary. Hosted cores now consume a direct MyIni effective view;
+private configuration serialization and private-format validators are removed
+from playable scripts. Dirty default publication preserves live edits and keeps
+ordinary ticks free of configuration enumeration. Public inheritance, explicit
+empty overrides, arm substitution and strict Formats 7/2 remain.
+
+One Stage/Kind parser and renderer handles body templates. Signed physical
+preferences persist across parked tools, merges, restart and topology changes.
+Saved identity rows remain for startup recovery; corrupt metadata and malformed
+weights refuse atomically. Parked preferences survive explicit body resets.
+
+One startup helper zeros saved current and parked actuators through direct block
+ID lookups. It runs both before host config loading and during each new core's
+construction, including arms added later. PB/arm/format/signed-ID guards remain;
+individual lookup, construct-check or write failures do not prevent other stops.
+
+Validation: installed SE C#6/type-safety rewrite for all four artifacts, packing
+and specialization proofs, and 194,995 simulated assertions including actual
+compact scripts. Tests cover the new boundary, live edits, empty overrides,
+public format refusal, saved identity/cache faults, stage ordering/bounds,
+restart, both startup timing points and existing multi-arm/tool-swap behavior.
+PID, solver and docking motion are unchanged; live physics is not retested here.
+
+Update both PB scripts, retain current Format 7/2 Custom Data, and run On.
+Arm: 88,948 characters, 11,052 free (1,849 saved versus v4.0.8).
+ToolSwap: 57,720, 42,280 free (75 saved); combined saving 1,924.
+
 AutoArm 4.0.8 — Fix programmable-block compilation after compression
 
 The v4.0.7 alias compressor was incompatible with SE's memory-safety rewrite.

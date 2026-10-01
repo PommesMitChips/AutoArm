@@ -23,7 +23,8 @@ void RememberToolWeights(bool capture = true)
                 !Finite(m) || !Finite(r) || m < 0 || m > 10 || r < 0 || r > 10)
                 throw new Exception("Invalid saved tool actuator preferences.");
             ToolWeightIds(cells[0]);
-            loaded[cells[0]] = new double[] { m, r };
+            if (loaded.ContainsKey(cells[0])) throw new Exception("Duplicate saved tool actuator preferences.");
+            loaded.Add(cells[0], new double[] { m, r });
         }
         foreach (var pair in loaded) ToolWeights[pair.Key] = pair.Value;
         ToolWeightsLoaded = true;
@@ -77,7 +78,9 @@ void WriteToolWeights()
         if (text.Length > 0) text.Append('\n');
         text.Append(key).Append('|').Append(AutoSettings.Number(ToolWeights[key][0])).Append('|').Append(AutoSettings.Number(ToolWeights[key][1]));
     }
-    var ini = AutoConfig.Saved(Storage); ini.Set(ToolWeightsSection, "Rows", text.ToString()); Storage = ini.ToString();
+    var ini = AutoConfig.Saved(Storage);
+    if (ini.Get(ToolWeightsSection, "Rows").ToString() == text.ToString()) return;
+    ini.Set(ToolWeightsSection, "Rows", text.ToString()); Storage = ini.ToString();
 }
 
 bool RebuildToolTopology(out string why)

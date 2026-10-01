@@ -128,26 +128,7 @@ public void Save()
 // identities scoped to this PB/arm, before configuration can fail discovery.
 void ZeroSavedDrives()
 {
-    var ini = AutoConfig.Saved(Storage); var ids = new HashSet<long>();
-    string section = "AutoArm Config";
-    if (ini.Get(section, "PB").ToInt64() == Me.EntityId && ini.Get(section, "Arm").ToString() == ArmName && ini.Get(section, "Format").ToInt32() == 1)
-        foreach (string row in (ini.Get(section, "Rows").ToString() + "\n" + ini.Get(ToolWeightsSection, "Rows").ToString()).Split('\n'))
-        {
-            string[] cells = row.Split('|'); string key = cells.Length == 2 ? cells[1] : cells.Length == 3 ? cells[0] : "";
-            foreach (string part in key.Split(':'))
-            {
-                string token = part.Split('@')[0]; long id;
-                if (token.Length > 1 && (token.EndsWith("+") || token.EndsWith("-")) && long.TryParse(token.Substring(0, token.Length - 1), out id)) ids.Add(id);
-            }
-        }
-    var blocks = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(blocks);
-    foreach (var b in blocks)
-    {
-        if (b.Closed || !b.IsSameConstructAs(Me) || !ids.Contains(b.EntityId)) continue;
-        try { var piston = b as IMyPistonBase; var rotor = b as IMyMotorStator;
-            if (piston != null) piston.Velocity = 0; else if (rotor != null && !(rotor is IMyMotorSuspension)) rotor.TargetVelocityRad = 0;
-        } catch { }
-    }
+    SavedDrives.Stop(AutoConfig.Saved(Storage), ArmName, Me, GridTerminalSystem);
 }
 
 public void Main(string argument, UpdateType source)

@@ -28,6 +28,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v4.0.6` | Separate low-speed approach admission, graded insertion alignment, tolerance-aware final settling and merge capture gap | Arm 99,843; ToolSwap 65,240 |
 | `v4.0.7` | Live merge magnets during acknowledged parking approach, Arm-side capture stop before topology validation and no quiet-motion parking admission | Arm 90,452; ToolSwap 57,716 |
 | `v4.0.8` | PB memory-safe rewrite compatibility: retain collection/StringBuilder spellings and validate both roles with the installed game rewriter | Arm 90,797; ToolSwap 57,795 |
+| `v4.0.9` | Direct per-arm config views, shared stage-weight parsing with durable signed preferences and consolidated startup stopping | Arm 88,948; ToolSwap 57,720 |
 
 Read a previous script without changing your working tree:
 

@@ -1,5 +1,11 @@
 readonly Program Host;
-public string CustomData, Storage, ExportedData, SavedData, Report = "";
+public string CustomData = "", Storage, SavedData, Report = "";
+public MyIni Config;
+public bool ConfigChanged;
+bool ConfigDefaultsNeeded => false;
+bool ReadConfig(string text, out MyIni ini, out string why) { ini = Config; why = ""; return true; }
+void WriteConfig(MyIni ini) { Config = ini; ConfigChanged = true; }
+string ConfigText(MyIni ini) { return ""; }
 public UpdateFrequency Frequency = UpdateFrequency.Update10;
 public readonly Queue<MyIGCMessage> Inbox = new Queue<MyIGCMessage>();
 double Elapsed;

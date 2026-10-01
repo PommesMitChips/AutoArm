@@ -2,7 +2,7 @@ public string Summary => Tools.Busy ? "TOOLS" : Tools.Recovery ? "RECOVERY" : "I
 public void Stop(string why) { PendingCommand = ""; Tools.Cancel(why); }
 public void Select(bool selected) { }
 public bool SharedSetting(string field) { return Tools.SharedSetting(field); }
-void RefreshConfig() { Host.LoadHost(); if (!Host.Arms.ContainsKey(Name)) throw new Exception("Arm removed from configuration."); CustomData = Host.InternalConfig(Name); }
+void RefreshConfig() { Host.LoadHost(); if (!Host.Arms.ContainsKey(Name)) throw new Exception("Arm removed from configuration."); Config = Host.ConfigFor(Name); }
 public string Shape => "";
 public bool HasLayout => false;
 public string WeightTable => "";

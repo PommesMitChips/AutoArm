@@ -65,25 +65,36 @@ sealed class AutoSettings
     public static string Number(double v) { return v.ToString("R", System.Globalization.CultureInfo.InvariantCulture); }
 }
 
+// BEGIN STANDALONE CONFIG
+bool ConfigDefaultsNeeded => string.IsNullOrWhiteSpace(Me.CustomData);
+bool ReadConfig(string text, out MyIni ini, out string why)
+{
+    ini = new MyIni(); why = ""; MyIniParseResult error;
+    if (!ini.TryParse(text ?? "", out error))
+    { why = "Custom Data is not valid INI (" + error + "). Fix it or delete Custom Data."; return false; }
+    if (string.IsNullOrWhiteSpace(text))
+    { ini.Set(ArmSection, "Arm", ArmName); ini.Set(ArmSection, "Format", AutoConfig.Format); ini.Set(ConfigSection, "Actuators", ""); return true; }
+    int format;
+    if (!int.TryParse(ini.Get(ArmSection, "Format").ToString(), out format) || format != AutoConfig.Format)
+    { why = "Custom Data Format must be " + AutoConfig.Format + ". Delete Custom Data."; return false; }
+    if (ini.Get(ArmSection, "Arm").ToString() != ArmName)
+    { why = "Custom Data belongs to a different arm. Delete Custom Data and regenerate it for " + ArmName + "."; return false; }
+    // Linked raw fixtures mirror the host's separate public stage template.
+    if (ini.Get("Modules", "ToolSwapPB").ToString().Trim().Length > 0) ini.Delete(ConfigSection, "Actuators");
+    return true;
+}
+void WriteConfig(MyIni ini) { Me.CustomData = ini.ToString(); }
+string ConfigText(MyIni ini) { return ini.ToString(); }
+// END STANDALONE CONFIG
+
 static class AutoConfig
 {
     public const int Format = 6;
     const string Identity = "AutoArm Config";
-    const string Header = "Name | Kind | Translation | Orientation";
 
     public static bool ReadCurrent(Program p, string text, out MyIni ini, out string why)
     {
-        ini = new MyIni(); why = ""; MyIniParseResult error;
-        if (!ini.TryParse(text ?? "", out error))
-        { why = "Custom Data is not valid INI (" + error + "). Fix it or delete Custom Data."; return false; }
-        if (string.IsNullOrWhiteSpace(text))
-        { ini.Set(ArmSection, "Arm", p.ArmName); ini.Set(ArmSection, "Format", Format); return true; }
-        int format;
-        if (!int.TryParse(ini.Get(ArmSection, "Format").ToString(), out format) || format != Format)
-        { why = "Custom Data Format must be " + Format + ". Delete Custom Data."; return false; }
-        if (ini.Get(ArmSection, "Arm").ToString() != p.ArmName)
-        { why = "Custom Data belongs to a different arm. Delete Custom Data and regenerate it for " + p.ArmName + "."; return false; }
-        return true;
+        return p.ReadConfig(text, out ini, out why);
     }
 
     public static MyIni Saved(string text)
@@ -95,15 +106,56 @@ static class AutoConfig
 
     public static void EnsureDefaults(Program p)
     {
-        if (!string.IsNullOrWhiteSpace(p.Me.CustomData)) return;
+        if (!p.ConfigDefaultsNeeded) return;
         MyIni ini; string why;
         if (!ReadCurrent(p, "", out ini, out why)) throw new Exception(why);
-        new AutoSettings().Write(ini); ini.DeleteSection("Instructions");
-        if (p.Tools != null) p.Tools.WriteConfig(ini);
-        ini.Set(ConfigSection, "Actuators", "");
-        p.Me.CustomData = ini.ToString();
+        if (!new AutoSettings().Read(ini, out why)) throw new Exception(why);
+        var defaults = new MyIni(); new AutoSettings().Write(defaults);
+        if (p.Tools != null) p.Tools.WriteConfig(defaults);
+        var keys = new List<MyIniKey>(); defaults.GetKeys(keys);
+        foreach (var key in keys) if (!ini.ContainsKey(key.Section, key.Name)) ini.Set(key.Section, key.Name, defaults.Get(key).ToString());
+        p.WriteConfig(ini);
     }
 
+    public const string StageHeader = "Stage | Kind | Translation | Orientation";
+    public static string GroupKind(AutoGroup group)
+    {
+        int piston = 0, rotor = 0, hinge = 0;
+        foreach (var member in group.M)
+            if (member.B is IMyPistonBase) piston++;
+            else if ((member.B.BlockDefinition.SubtypeName ?? "").IndexOf("Hinge", StringComparison.OrdinalIgnoreCase) >= 0) hinge++;
+            else rotor++;
+        var kinds = new List<string>();
+        if (piston > 0) kinds.Add("Piston x" + piston);
+        if (rotor > 0) kinds.Add("Rotor x" + rotor);
+        if (hinge > 0) kinds.Add("Hinge x" + hinge);
+        return string.Join(" + ", kinds);
+    }
+    public static string Weights(List<AutoGroup> groups)
+    {
+        var text = new System.Text.StringBuilder(StageHeader); int stage = 0;
+        foreach (var g in groups) text.Append('\n').Append((++stage).ToString("00")).Append(" | ").Append(GroupKind(g)).Append(" | ").Append(AutoSettings.Number(g.MoveW)).Append(" | ").Append(AutoSettings.Number(g.TurnW));
+        return text.ToString();
+    }
+    public static bool ReadWeights(string table, List<AutoGroup> groups, out List<double[]> values, out string why)
+    {
+        values = new List<double[]>(); why = "";
+        for (int i = 0; i < groups.Count; i++) values.Add(new double[] { 1, 1 });
+        if (string.IsNullOrWhiteSpace(table)) return true;
+        var seen = new HashSet<int>(); bool header = false;
+        foreach (string raw in table.Split('\n'))
+        {
+            string line = raw.Trim(); if (line.Length == 0) continue;
+            if (!header) { if (line != StageHeader) { why = "Actuators requires: " + StageHeader; return false; } header = true; continue; }
+            string[] cells = line.Split('|'); int stage; double m, r;
+            if (cells.Length != 4 || !int.TryParse(cells[0].Trim(), out stage) || stage < 1 || stage > groups.Count || !seen.Add(stage) ||
+                cells[1].Trim() != GroupKind(groups[stage - 1]) || !ReadDouble(cells[2].Trim(), out m) || !ReadDouble(cells[3].Trim(), out r) || !Valid(m) || !Valid(r))
+            { why = "Malformed or nonconforming actuator stage."; return false; }
+            values[stage - 1] = new double[] { m, r };
+        }
+        if (seen.Count != groups.Count) { why = "Actuator stage count does not match configuration."; return false; }
+        return true;
+    }
     public static bool LoadOrGenerate(Program p, AutoTopology t, string customData,
         out string updated, out bool changed, out string why, bool captureToolWeights = false)
     {
@@ -114,109 +166,56 @@ static class AutoConfig
             return Refuse(t, "Discover a valid arm before loading actuator settings.", out why);
         var settings = new AutoSettings();
         if (!settings.Read(ini, out why)) return Refuse(t, why, out why);
-        var move = new Dictionary<string, double>(); var turn = new Dictionary<string, double>();
-        var current = new HashSet<string>(); foreach (var g in t.Groups) current.Add(g.Sig);
         var saved = Saved(p.Storage);
-        string table = ini.Get(ConfigSection, "Actuators").ToString("").Trim();
-        if (table.Length > 0)
+        if (saved.ContainsSection(Identity))
         {
-            var map = new Dictionary<string, string>(); var signatures = new HashSet<string>();
             if (saved.Get(Identity, "Arm").ToString() != t.Arm || saved.Get(Identity, "PB").ToInt64() != p.Me.EntityId || saved.Get(Identity, "Format").ToInt32() != 1)
-                return Refuse(t, "Actuator identity cache is missing. Clear Actuators and Reload to regenerate defaults.", out why);
-            foreach (string raw in saved.Get(Identity, "Rows").ToString().Split('\n'))
+                return Refuse(t, "Actuator identity cache belongs to a different arm/PB or format.", out why);
+            var names = new HashSet<string>(); var signatures = new HashSet<string>();
+            foreach (string row in saved.Get(Identity, "Rows").ToString().Split('\n'))
             {
-                string[] row = raw.Trim().Split('|');
-                if (row.Length != 2 || row[0].Trim().Length == 0 || map.ContainsKey(row[0]) || !Signature(row[1]) || !signatures.Add(row[1]))
-                    return Refuse(t, "Actuator identity cache is corrupt. Clear Actuators and Reload.", out why);
-                map.Add(row[0], row[1]);
-            }
-            var seen = new HashSet<string>(); bool header = false;
-            foreach (string raw in table.Split('\n'))
-            {
-                string line = raw.Trim(); if (line.Length == 0) continue;
-                if (!header) { if (line != Header) return Refuse(t, "Actuators needs its four-column header.", out why); header = true; continue; }
-                string[] row = line.Split('|'); string sig; double m, r;
-                for (int i = 0; i < row.Length; i++) row[i] = row[i].Trim();
-                if (row.Length != 4 || !map.TryGetValue(row[0], out sig) || !seen.Add(row[0]))
-                    return Refuse(t, "Unknown, duplicate or malformed actuator row. Edit only the two weights.", out why);
-                if (row[1] != Kind(sig) || !ReadDouble(row[2], out m) ||
-                    !ReadDouble(row[3], out r) || !Valid(m) || !Valid(r))
-                    return Refuse(t, "Actuator " + row[0] + " needs finite Translation/Orientation in 0..10 and its generated Kind.", out why);
-                move.Add(sig, m); turn.Add(sig, r);
-            }
-            foreach (var pair in map) if (current.Contains(pair.Value) && !seen.Contains(pair.Key))
-                return Refuse(t, "Missing actuator row: " + pair.Key + ". Restore it or clear Actuators.", out why);
-        }
-        if (captureToolWeights)
-        {
-            p.RememberToolWeights(false);
-            if (table.Length == 0) p.ToolWeights.Clear();
-            foreach (var item in move)
-            {
-                string[] parts = item.Key.Split(':'); string key = parts[0];
-                for (int i = 1; i < parts.Length; i++) key += ":" + parts[i].Substring(0, parts[i].IndexOf('@'));
-                p.ToolWeights[key] = new double[] { item.Value, turn[item.Key] };
+                if (row.Length == 0) continue;
+                string[] cells = row.Split('|');
+                if (cells.Length != 2 || cells[0].Trim().Length == 0 || !names.Add(cells[0]) || !Signature(cells[1]) || !signatures.Add(cells[1]))
+                    return Refuse(t, "Actuator identity cache is corrupt.", out why);
             }
         }
+        else if (saved.Get("AutoArm Tool Weights", "Rows").ToString().Length > 0 || !string.IsNullOrWhiteSpace(ini.Get(ConfigSection, "Actuators").ToString()))
+            return Refuse(t, "Actuator identity cache is missing.", out why);
+        List<double[]> values = null;
+        bool explicitWeights = ini.ContainsKey(ConfigSection, "Actuators");
+        if (explicitWeights && !ReadWeights(ini.Get(ConfigSection, "Actuators").ToString(), t.Groups, out values, out why)) return Refuse(t, why, out why);
+        p.RememberToolWeights(false);
+        if (values != null)
+            for (int i = 0; i < t.Groups.Count; i++) p.ToolWeights[p.ToolGroupKey(t.Groups[i])] = values[i];
         settings.Write(ini); ini.DeleteSection("Instructions");
         if (p.Tools != null) p.Tools.WriteConfig(ini);
-        if (captureToolWeights)
+        if (!captureToolWeights)
         {
-            updated = ini.ToString(); changed = updated != customData;
-            if (changed) p.Me.CustomData = updated;
-            return true;
+            foreach (var g in t.Groups)
+            {
+                double[] old;
+                if (p.ToolWeights.TryGetValue(p.ToolGroupKey(g), out old)) { g.MoveW = old[0]; g.TurnW = old[1]; }
+                else { g.MoveW = g.TurnW = 1; }
+            }
+            UpdateGroups(p);
+            p.ApplySettings(settings); t.Ready = false; t.ZeroOwned(); why = "Configuration loaded; arm remains Off until On.";
         }
-        var values = new List<double[]>();
-        foreach (var g in t.Groups)
-        {
-            double m, r; double[] old;
-            if (p.Tools != null && p.Tools.Configured && p.ToolWeights.TryGetValue(p.ToolGroupKey(g), out old)) { m = old[0]; r = old[1]; }
-            else { if (!move.TryGetValue(g.Sig, out m)) m = 1; if (!turn.TryGetValue(g.Sig, out r)) r = 1; }
-            values.Add(new double[] { m, r });
-        }
-        string state; string text = Render(p, t, ini, saved, values, out state);
-        if (text != updated) p.Me.CustomData = text;
-        if (state != p.Storage) p.Storage = state;
-        for (int i = 0; i < t.Groups.Count; i++) { t.Groups[i].MoveW = values[i][0]; t.Groups[i].TurnW = values[i][1]; }
-        p.ApplySettings(settings); changed = text != updated; updated = text;
-        t.Ready = false; t.ZeroOwned(); why = "Configuration loaded; arm remains Off until On."; return true;
+        else p.WriteToolWeights();
+        if (explicitWeights || p.ConfigText(ini).Length > 0) ini.Set(ConfigSection, "Actuators", Weights(t.Groups));
+        updated = p.ConfigText(ini); changed = updated != customData;
+        p.WriteConfig(ini); return true;
     }
 
-    // Expected swap boundaries already validated the physical groups and copied
-    // their preferences. Rewrite identity rows without reloading runtime defaults.
+    // Keep startup stop identities and durable signed preferences together.
     public static void UpdateGroups(Program p)
     {
-        MyIni ini; string why;
-        if (!ReadCurrent(p, p.Me.CustomData, out ini, out why)) throw new Exception(why);
-        var values = new List<double[]>();
-        foreach (var g in p.Topology.Groups) values.Add(new double[] { g.MoveW, g.TurnW });
-        string state; string text = Render(p, p.Topology, ini, Saved(p.Storage), values, out state);
-        if (text != p.Me.CustomData) p.Me.CustomData = text;
-        if (state != p.Storage) p.Storage = state;
+        var saved = Saved(p.Storage); var rows = new System.Text.StringBuilder(); int stage = 0;
+        foreach (var g in p.Topology.Groups)
+        { if (stage > 0) rows.Append('\n'); rows.Append((++stage).ToString("00")).Append('|').Append(g.Sig); }
+        saved.Set(Identity, "Format", 1); saved.Set(Identity, "Arm", p.Topology.Arm); saved.Set(Identity, "PB", p.Me.EntityId); saved.Set(Identity, "Rows", rows.ToString());
+        p.Storage = saved.ToString(); p.RememberToolWeights();
     }
-
-    static string Render(Program p, AutoTopology t, MyIni ini, MyIni saved, List<double[]> values, out string state)
-    {
-        ini.Set(ArmSection, "Arm", t.Arm); ini.Set(ArmSection, "Format", Format);
-        var table = new System.Text.StringBuilder(Header); var identities = new System.Text.StringBuilder();
-        for (int i = 0; i < t.Groups.Count; i++)
-        {
-            var g = t.Groups[i]; string name = (i + 1).ToString("00") + ". ";
-            for (int j = 0; j < g.M.Count; j++)
-            {
-                if (j > 0) name += " + ";
-                name += g.M[j].B.CustomName.Replace('|', '/').Replace('\r', ' ').Replace('\n', ' ').Trim();
-            }
-            name = name.TrimEnd();
-            table.Append('\n').Append(name).Append(" | ").Append(Kind(g.Sig)).Append(" | ").Append(AutoSettings.Number(values[i][0])).Append(" | ").Append(AutoSettings.Number(values[i][1]));
-            if (i > 0) identities.Append('\n'); identities.Append(name).Append('|').Append(g.Sig);
-        }
-        ini.Set(ConfigSection, "Actuators", table.ToString()); ini.SetComment(ConfigSection, "Actuators", "Edit only weights (0..10), then On.");
-        saved.DeleteSection(Identity); saved.Set(Identity, "Format", 1); saved.Set(Identity, "Arm", t.Arm); saved.Set(Identity, "PB", p.Me.EntityId); saved.Set(Identity, "Rows", identities.ToString());
-        state = saved.ToString(); return ini.ToString();
-    }
-
-    static string Kind(string sig) { return sig.StartsWith("R", StringComparison.Ordinal) ? "Rotor/Hinge" : "Piston"; }
     static bool Signature(string sig)
     {
         string[] parts = sig.Split(':');

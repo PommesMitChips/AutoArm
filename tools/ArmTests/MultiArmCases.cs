@@ -5,7 +5,7 @@ using VRageMath;
 
 internal static partial class Scenarios
 {
-    internal static void RunHosts(Type armType,Type toolType) { MultiArmCases(armType,toolType); Console.WriteLine($"Full host integration: PASS ({Tests.Assertions} assertions)."); }
+    internal static void RunHosts(Type armType,Type toolType) { StartupSavedDriveCases(armType); ConfigurationViewCases(armType,toolType); MultiArmCases(armType,toolType); Console.WriteLine($"Full host integration: PASS ({Tests.Assertions} assertions)."); }
     static object Core(object host,string name)=>((IDictionary)Get(host,"Arms")!)[name]!;
     static void HostFrame(object host,Rig rig,string command="",double dt=1d/60,UpdateType? kind=null)
     { InvokeFrame(host,rig,command,kind??(command.Length==0?UpdateType.Update1:UpdateType.Terminal),command.Length==0?dt:0); }

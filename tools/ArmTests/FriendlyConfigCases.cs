@@ -71,12 +71,12 @@ internal static partial class Scenarios
 
         var parallel=Fixtures.Parallel(false,out var a,out var b);RecordProxy.Of(a).Values["CustomName"]="Arm 1 - Base | Main\r\nA";RecordProxy.Of(b).Values["CustomName"]="Partner|B\nC";
         Start(type,parallel);string tableText=FCIni(parallel.PB.CustomData).Get("Config","Actuators").ToString();
-        Check(tableText.Contains("/")&&!tableText.Contains("\r")&&FCRows(FCIni(parallel.PB.CustomData)).Skip(1).All(x=>x.Split('|').Length==4),"Parallel member names were not sanitized into a four-column table.");
+        Check(tableText.Contains("Rotor x2")&&!tableText.Contains("\r")&&FCRows(FCIni(parallel.PB.CustomData)).Skip(1).All(x=>x.Split('|').Length==4),"Parallel stage layout was not rendered into a four-column table.");
 
         var changed=Fixtures.Serial(out _,out var oldPiston,out var head,out _);var oldScript=Start(type,changed);var oldGroups=Groups(oldScript);
         string rootSig=FCSig(oldGroups[0]);var ini=FCIni(changed.PB.CustomData);var rows=FCRows(ini);rows[1]=FCRow(rows[1],.37,2.7);ini.Set("Config","Actuators",string.Join("\n",rows));
         RecordProxy.Of(changed.PB).Values["CustomData"]=ini.ToString();Run(oldScript,"Reload");
-        changed.Storage=((TestHost)oldScript).Storage;var middle=changed.Grid();RecordProxy.Of(oldPiston).Values["TopGrid"]=middle;
+        ini=FCIni(changed.PB.CustomData);ini.Delete("Config","Actuators");RecordProxy.Of(changed.PB).Values["CustomData"]=ini.ToString(); changed.Storage=((TestHost)oldScript).Storage;var middle=changed.Grid();RecordProxy.Of(oldPiston).Values["TopGrid"]=middle;
         changed.Piston("new distal stage",middle,head.CubeGrid,new VRageMath.Vector3D(0,0,-7),VRageMath.Vector3D.Forward);
         var rebuilt=Start(type,changed);var rebuiltGroups=Groups(rebuilt);var root=rebuiltGroups.Single(g=>FCSig(g)==rootSig);
         Check(FCWeight(root,"MoveW")==.37&&FCWeight(root,"TurnW")==2.7,"Changed topology lost the unchanged exact-signature row.");
@@ -123,7 +123,6 @@ internal static partial class Scenarios
         FCMetadataRefusal(type,"corrupt signature",s=>{var i=FCStorageIni(s);var rows=i.Get("AutoArm Config","Rows").ToString().Split('\n');rows[0]=rows[0].Split('|')[0]+"|Rgarbage";i.Set("AutoArm Config","Rows",string.Join("\n",rows));return i.ToString();});
         FCMetadataRefusal(type,"other PB",s=>{var i=FCStorageIni(s);i.Set("AutoArm Config","PB",-77);return i.ToString();});
         FCMetadataRefusal(type,"other Arm",s=>{var i=FCStorageIni(s);i.Set("AutoArm Config","Arm","Arm 2");return i.ToString();});
-
         var rig=Fixtures.Serial(out _,out _,out _,out _);var script=Start(type,rig);var ini=FCIni(rig.PB.CustomData);var rows=FCRows(ini);rows[1]=FCRow(rows[1],.2,4);ini.Set("Config","Actuators",string.Join("\n",rows));
         RecordProxy.Of(rig.PB).Values["CustomData"]=ini.ToString();Run(script,"Reload");Check(FCWeight(Groups(script)[0],"MoveW")==.2,"Reset precondition did not apply.");
         ini=FCIni(rig.PB.CustomData);ini.Set("Config","Actuators","");RecordProxy.Of(rig.PB).Values["CustomData"]=ini.ToString();Run(script,"Reload");
