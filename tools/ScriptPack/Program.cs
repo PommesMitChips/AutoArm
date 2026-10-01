@@ -42,7 +42,7 @@ internal static class ScriptPack
     {
         try
         {
-            if (args.Length < 2) throw new Exception("Usage: ScriptPack check|inspect|specialize|pack <source.txt> [output.txt]");
+            if (args.Length < 2) throw new Exception("Usage: ScriptPack check|inspect|specialize|pack|pack-fast <source.txt> [output.txt]");
             var source = File.ReadAllText(args[1]);
             var compilation = Compile(source, args[1]);
             if (args[0] == "specialize" && args.Length == 3)
@@ -59,9 +59,9 @@ internal static class ScriptPack
             if (args[0] == "check") return;
             if (args[0] == "inspect") { Inspect(compilation); return; }
             if (args[0] == "test") { Regression.Run(args[1], args[2]); return; }
-            if (args[0] != "pack" || args.Length != 3) throw new Exception("Unknown command or missing output path.");
+            if (args[0] != "pack" && args[0] != "pack-fast" || args.Length != 3) throw new Exception("Unknown command or missing output path.");
             CompressionChecks.Run();
-            Pack(source, compilation, args[2]);
+            Pack(source, compilation, args[2], args[0] == "pack-fast");
         }
         catch (Exception e) { Console.Error.WriteLine(e); Environment.ExitCode = 1; }
     }
@@ -88,7 +88,7 @@ internal static class ScriptPack
             Console.WriteLine($"{m.Span.Length,6} {m.Identifier.Text}");
     }
 
-    static void Pack(string source, CSharpCompilation compilation, string output)
+    static void Pack(string source, CSharpCompilation compilation, string output, bool fast = false)
     {
         var originalCompilation = compilation;
         source = ShortDeclarations(source, compilation);
@@ -225,7 +225,7 @@ internal static class ScriptPack
             "// Starts OFF. Stop before replacing; Check, then On. No collision avoidance.\n" +
             "// Settings remain editable. Full source: " + Path.GetFileName(tree.FilePath) + ".\n" + settings +
             "// Generated implementation: edit the readable source and run tools/" + (automaticArm ? "Build-AutoArm.ps1" : "Build.ps1") + ".\n" + compact + "\n";
-        if (automaticArm) packed = "// AutoArm " + version.Trim('"') + "\n// OFF. Check/On. No collision avoidance.\n" + settings + compact + "\n";
+        if (automaticArm) packed = "// AutoArm " + version.Trim('"') + "\n// PB script. Settings: Custom Data.\n" + settings + compact + "\n";
         var packedCompilation = Compile(packed, output);
         Check(packedCompilation);
         CompareIL(originalCompilation, packedCompilation);
@@ -242,11 +242,12 @@ internal static class ScriptPack
             }
             if (restored != tokens[i].Text) throw new Exception("Source token round-trip failed.");
         }
-        var repetitions = RepetitionCompression.Run(packed, packed.Length - compact.Length - 1);
+        var repetitions = fast ? new RepetitionCompression.Result(packed, new List<RepetitionCompression.Decision>()) : RepetitionCompression.Run(packed, packed.Length - compact.Length - 1);
         packed = repetitions.Source;
-        var namespaceAliases = NamespaceCompression.Run(packed);
+        var namespaceAliases = fast ? new NamespaceCompression.Result(packed, new List<RepetitionCompression.Decision>()) : NamespaceCompression.Run(packed);
         packed = namespaceAliases.Source;
         repetitions.Report.AddRange(namespaceAliases.Report);
+        if (fast) repetitions.Report.Add(new RepetitionCompression.Decision("mode", "token-only", 0, 0, true, "No forwarding helpers; preserve runtime call structure."));
         Check(Compile(packed, output));
         if (packed.Length > 100000) throw new Exception($"Packed script still exceeds 100,000 characters: {packed.Length}.");
         File.WriteAllText(output, packed, new UTF8Encoding(false));

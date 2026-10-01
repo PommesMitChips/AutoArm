@@ -32,6 +32,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v5.0` | Optional shared Collision PB, fresh Safety overlays, bounded posture preferences, clearance velocity filters and scoped docking allowances | Arm 92,657; ToolSwap 57,901; Collision 18,496 |
 | `v5.0.1` | Read-only arm survey, scoped head-path test runner, live Safety telemetry and overlap block IDs; control gains unchanged | Arm 93,047; ToolSwap 57,907; Collision 18,543 |
 | `v5.0.2` | Collision-only mechanical-interface geometry correction, common-ancestor cancellation and conservative row reduction | Arm 93,047; ToolSwap 57,907; Collision 22,037 |
+| `v5.0.3` | Collision spatial prefilter, request headroom, query diagnostics and runtime-efficient token packing | Arm 93,047; ToolSwap 57,907; Collision 24,240 |
 
 Read a previous script without changing your working tree:
 

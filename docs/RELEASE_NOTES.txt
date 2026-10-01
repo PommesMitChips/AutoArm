@@ -1,33 +1,35 @@
-AutoArm 5.0.2 — Collision PB mechanical-interface correction
+AutoArm 5.0.3 — Collision PB spatial-query instruction cost
 
 Replace only AutoArm_Collision_Compact.txt. Keep Collision Custom Data and
-existing Arm 5.0.1 / Bench code. Run Reload on Collision PB, then On(Arm 1)
-and On(Arm 2) on the Arm PB, then Check and Smoke on Arm Bench. Submit the
-full Smoke report before the larger sideways test.
+current Arm / Bench code and PID settings. Run Reload on Collision PB,
+On(Arm 1) and On(Arm 2) on Arm PB, then Check and Smoke on Arm Bench.
+Submit the Smoke report and Collision Info if a hold remains.
 
-The live report confirmed occupied-cell false overlap between each base rotor
-and following hinge. Identified mechanical interfaces now intersect cell boxes
-with outward-rounded/padded vanilla MWM part bounds. Native WorldAABB must fit
-that envelope; unsupported, changed or invalid models retain original cells.
-Main-grid armour and unrelated arm/grid comparisons do not receive refinement.
-No whole-grid or whole-arm collision exclusion is added. Interface padding is
-compensated within the physical-contact band, and those interfaces do not push
-posture apart; closing constraints and deep-overlap holds remain.
+The captured two-arm/column/overhead fixture remains the minimum test case;
+no obstacles are removed. Distant shapes sharing 20 m spatial tiles are now
+rejected against the conservative projected search box before detailed SAT.
+Outward numerical slack preserves coverage near projection boundaries. Budget
+checks also run inside long candidate lists. Another request starts only with
+fresh instruction headroom; pending requests continue on Update1. The 65% work
+guard, incomplete-query holds and request-bound freshness limits remain.
 
-Self-clearance gradients cancel shared ancestor joints, including rotation of
-the contact normal. Cap-bounded nonbinding rows are omitted. Positively scaled
-rows are normalised, and near matches merge with a worst-case cap-bounded
-lower-bound tightening that implies both source constraints. More than eight
-independent rows still holds. A later shape cannot overwrite the first hold
-reason. Arm PID, solver code, configuration formats and wire version are unchanged.
+Collision packing now uses symbol/token/literal minification with exact method
+IL checks, without compression-generated forwarding methods or host bridges.
+Those helpers saved characters but added substantial counted runtime calls.
+Arm and ToolSwap packing remain unchanged. Collision Info includes tile,
+candidate and detailed-check counts plus instruction-use diagnostics.
 
-Collision compact size: 22,037 UTF-16 characters (77,963 free). Full suite:
-197,175 assertions, including actual compact scripts and installed-asset/profile
-checks. Both Collision artifacts pass installed SE C#6/type-safety/memory-safe
-rewriting. The imported six/nine-stage geometry is fresh/unheld and completes
-both Smoke paths in an ideal articulated plant. The larger sideways Run remains
-conservative/uncompleted and aborts within its bounds; it is NOT a passing full
-motion test. Imported model-AABBs are emulated from installed assets because
-the original survey omitted them. Live SE mesh/physics, API bounds and native
-instruction cost remain to be checked. Complete animated telescoping-subpart
-coverage is not introduced by this targeted interface correction.
+Validation: installed ResourceMonitoringRewriter and IlInjector reproduced the
+v5.0.2 spatial-budget refusal at 33,195 instructions on the captured stationary
+proxy scene. An intermediate forwarding-packed update also failed at 35,241.
+The exact shipped compact script peaks at 17,165 stationary and 17,428 across
+4,354 ideal-plant invocations under a 50,000-instruction cap; both arms complete
+Smoke. Source and compact files pass installed SE C#6/type-safety/memory-safe
+rewrite checks. Full suite: 198,267 assertions, including actual packed scripts,
+crowded-tile rejection, 70 rotated/coalesced SAT-oracle fixtures and in-list
+budget refusal. Model AABBs and terminal APIs remain emulated in this replay;
+these counts do not establish live SE physics, API or wall-clock performance.
+The larger sideways Run remains conservatively aborted in the ideal model.
+
+Collision compact: 24,240 UTF-16 characters, 75,760 free. Formats and wire
+version remain unchanged. No manual geometry/configuration reduction is needed.

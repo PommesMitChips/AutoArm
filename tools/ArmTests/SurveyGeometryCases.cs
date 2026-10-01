@@ -2,12 +2,13 @@ using Sandbox.ModAPI.Ingame;
 using VRage.Game.ModAPI.Ingame;
 using VRage.Game.ModAPI.Ingame.Utilities;
 using VRageMath;
+using System.Reflection;
 
 internal static partial class Scenarios
 {
     // Import a read-only survey into proxy grids so the actual topology and
     // clearance implementations can consume its geometry. No game is touched.
-    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path)
+    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false)
     {
         string[] lines=File.ReadAllLines(path);
         Check(lines.Any(l=>l.StartsWith("RESULT STABLE ENDPOINTS")),"Survey endpoints were not stable.");
@@ -65,16 +66,37 @@ internal static partial class Scenarios
         foreach(var joint in blocks.Values.OfType<IMyMechanicalConnectionBlock>())if(joint.Top!=null)SetModelAabb(joint.Top);
         var collisionPB=(IMyProgrammableBlock)blocks.Values.Single(b=>b.CustomName=="Collision PB");
         var collisionRig=new Rig(rig,"Collision import host");rig.Blocks.Remove(collisionRig.PB);
+        object? counter=null;int peak=0;var costs=new List<int>();
+        var injector=profile?Assembly.LoadFrom(Path.Combine(Tests.GameBin,"VRage.Library.dll")).GetType("VRage.Library.Compiler.IlInjector",true):null;
+        object CreateCollision()
+        {
+            if(!profile)return Tests.Create(collisionType,collisionRig);
+            counter=injector!.GetMethod("BeginRunBlock")!.Invoke(null,new object[]{50000,10000,false})!;
+            try{return Tests.Create(collisionType,collisionRig);}finally{((IDisposable)counter).Dispose();counter=null;}
+        }
+        void CollisionFrame(object host,string command="")
+        {
+            if(!profile){HostFrame(host,collisionRig,command);return;}
+            counter=injector!.GetMethod("BeginRunBlock")!.Invoke(null,new object[]{50000,10000,false})!;
+            try{HostFrame(host,collisionRig,command);}
+            finally{int cost=(int)counter.GetType().GetProperty("InstructionCount")!.GetValue(counter)!;peak=Math.Max(peak,cost);costs.Add(cost);((IDisposable)counter).Dispose();counter=null;}
+        }
+        if(profile)
+        {
+            var rp=RecordProxy.Of(collisionRig.Runtime);rp.Values.Remove("CurrentInstructionCount");
+            rp.Call=(m,args)=>m.Name=="get_CurrentInstructionCount"?(counter==null?0:(int)counter.GetType().GetProperty("InstructionCount")!.GetValue(counter)!):m.ReturnType.IsValueType?Activator.CreateInstance(m.ReturnType):null;
+        }
         // The proxy host exposes a settable Me, so use the exact imported PB.
-        var collision=Tests.Create(collisionType,collisionRig);((TestHost)collision).Me=collisionPB;
+        var collision=CreateCollision();((TestHost)collision).Me=collisionPB;
         // Bind an IGC endpoint under the imported ID while preserving the shared construct.
         RecordProxy.Of(collisionRig.PB).Values["EntityId"]=collisionPB.EntityId;RecordProxy.Of(collisionRig.PB).Values["CustomName"]="Collision PB";
         RecordProxy.Of(collisionRig.PB).Values["CustomData"]=collisionPB.CustomData;RecordProxy.Of(collisionRig.PB).Values["CubeGrid"]=collisionPB.CubeGrid;
         var bus=new ModuleBus();bus.Bind(rig);bus.Bind(collisionRig);((TestHost)collision).IGC=collisionRig.IGC;
         var arm=Tests.Create(armType,rig);HostReady(arm,rig,"Arm 1");HostReady(arm,rig,"Arm 2");
         // Reload after substituting Me to ensure the imported config is authoritative.
-        HostFrame(collision,collisionRig,"Reload");
-        for(int i=0;i<150;i++){HostFrame(arm,rig);HostFrame(collision,collisionRig);}
+        CollisionFrame(collision,"Reload");
+        for(int i=0;i<150;i++){HostFrame(arm,rig);CollisionFrame(collision);}
+        if(profile)Console.WriteLine("Stationary counted runs: peak="+peak+" / 50000; last="+collisionRig.Log.Last());
         foreach(string name in new[]{"Arm 1","Arm 2"})
         {
             var core=Core(arm,name);Check(Enabled(core),"Imported arm stopped: "+name);
@@ -114,12 +136,12 @@ internal static partial class Scenarios
         var benchRig=new Rig(rig,"Arm Bench");RecordProxy.Of(benchRig.PB).Values["CubeGrid"]=rig.PB.CubeGrid;bus.Bind(benchRig);
         var config=new MyIni();config.TryParse(rig.PB.CustomData);config.Set("global","Peers",config.Get("global","Peers").ToString()+"\nArm Bench | Plan");RecordProxy.Of(rig.PB).Values["CustomData"]=config.ToString();
         HostReady(arm,rig,"Arm 1");HostReady(arm,rig,"Arm 2");
-        for(int i=0;i<100;i++){HostFrame(arm,rig);HostFrame(collision,collisionRig);}
+        for(int i=0;i<100;i++){HostFrame(arm,rig);CollisionFrame(collision);}
         var bench=Tests.Create(Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_Bench.txt"))),benchRig);
         foreach(string command in new[]{"Smoke","Run"})
         {
             HostFrame(bench,benchRig,command);
-            for(int i=0;i<22000&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();HostFrame(arm,rig);HostFrame(collision,collisionRig);HostFrame(bench,benchRig);}
+            for(int i=0;i<22000&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();HostFrame(arm,rig);CollisionFrame(collision);HostFrame(bench,benchRig);}
             Console.WriteLine("Imported ideal kinematic "+command+": "+benchRig.Log.Last());
             if(!benchRig.Log.Last().StartsWith("PASS:"))
             {
@@ -136,5 +158,6 @@ internal static partial class Scenarios
             }
         }
         Console.WriteLine("Imported survey geometry consumed by actual topology/collision scripts; stationary proxy frames, not physics.");
+        if(profile)Console.WriteLine("Installed resource-monitoring rewrite: "+costs.Count+" runs, peak "+peak+" / 50000 instructions; median "+costs.Order().ElementAt(costs.Count/2)+".");
     }
 }

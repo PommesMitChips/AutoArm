@@ -1,6 +1,6 @@
 // Shared optional collision service. Paste the generated script into a third PB.
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "5.0.2";
+const string ControllerBuildVersion = "5.0.3";
 const string Tag = "AutoArm/5", Section = "Link";
 sealed class Shape
 {
@@ -58,6 +58,7 @@ long Epoch;
 double Clock, ScanAge;
 double Clearance = .10, Influence = .75, AwaySpeed = .05, Horizon = .35;
 int MaxCells = 65536, MaxShapes = 8192;
+int TilesVisited, CandidatesSeen, NarrowChecks, LastCost, PeakCost;
 string Status = "Collision service starting.";
 bool Ready;
 public Program()
@@ -117,17 +118,21 @@ public void Main(string argument, UpdateType source)
         if (Ready && ScanAge >= 2) RefreshScene(false);
         if (Ready) { ScanStep(); ObserveScene(); }
         int count = 0;
-        while (IGC.UnicastListener.HasPendingMessage && count++ < 8 && Budget())
+        // Leave a fresh evaluation enough headroom; queued requests continue on
+        // Update1 rather than starting a second arm near the budget ceiling.
+        while (IGC.UnicastListener.HasPendingMessage && count++ < 8 && (Runtime.MaxInstructionCount <= 0 || Runtime.CurrentInstructionCount < Runtime.MaxInstructionCount * .15))
         {
             var message = IGC.UnicastListener.AcceptMessage();
             try { Receive(message); } catch (Exception e) { Status = "Collision request refused: " + e.Message; }
+            LastCost = Runtime.CurrentInstructionCount; PeakCost = Math.Max(PeakCost, LastCost);
         }
         // Keep expired ownership until explicit reload: never silently classify a
         // formerly moving arm as static after its communication disappears.
     }
     catch (Exception e) { Ready = false; Status = "Collision service stopped: " + e.Message; }
     foreach (var grid in Scene.Values) if (Clock - grid.Observed > .000001) { grid.Previous = grid.Grid.WorldMatrix; grid.Observed = Clock; }
-    Echo("AutoArm " + ControllerBuildVersion + " Collision | " + Arms.Count + " arms / " + Scene.Count + " grids\n" + Status);
+    Echo("AutoArm " + ControllerBuildVersion + " Collision | " + Arms.Count + " arms / " + Scene.Count + " grids\n" + Status +
+        "\nQuery: " + TilesVisited + " tiles / " + CandidatesSeen + " candidates / " + NarrowChecks + " checks; instructions " + LastCost + " / peak " + PeakCost + "/" + Runtime.MaxInstructionCount);
 }
 bool Budget() { return Runtime.MaxInstructionCount <= 0 || Runtime.CurrentInstructionCount < Runtime.MaxInstructionCount * .65; }
 void RefreshScene(bool force)
@@ -309,6 +314,7 @@ static string Row(double[] values) { var text = new System.Text.StringBuilder();
 void Evaluate(Arm arm, MyIni response)
 {
     Models.Clear();
+    TilesVisited = CandidatesSeen = NarrowChecks = 0;
     int n = arm.Groups.Count; var bias = new double[n]; var rows = new List<double[]>(); bool hold = !Ready; string reason = hold ? "Collision service OFF." : "Clear."; double scale = 1;
     foreach (var grid in Scene.Values) if (!grid.Ready) { hold = true; reason = "Geometry scanning/limit; run Info on Collision PB."; }
     foreach (var grid in Scene.Values) if (grid.Min != grid.Grid.Min || grid.Max != grid.Grid.Max) { RefreshScene(false); hold = true; reason = "Grid bounds changed; rebuilding geometry."; break; }
@@ -335,6 +341,7 @@ void Evaluate(Arm arm, MyIni response)
                     bool assembly = InterfacePair(body, a, obstacle, b);
                     if (assembly && (!ClipModel(body, a, out x, out knownX) || !ClipModel(obstacle, b, out y, out knownY))) continue;
                     double clearance = knownX && knownY ? -.075 : knownX || knownY ? -.04 : Clearance;
+                    NarrowChecks++;
                     Vector3D axis; double d = Separation(body, x, obstacle, y, out axis);
                     if (d >= range) continue;
                     if (d < -Clearance) { hold = true; reason = "Overlapping geometry: grids " + body.Grid.EntityId + "/" + obstacle.Grid.EntityId + ", blocks " + a.Tag + "/" + b.Tag + "; inspect contact setup."; break; }
@@ -432,14 +439,27 @@ List<Shape> Candidates(GridShape body, Shape shape, GridShape obstacle, double r
         int i = axis == obstacle.Grid.WorldMatrix.Right ? 0 : axis == obstacle.Grid.WorldMatrix.Up ? 1 : 2;
         if (i == 0) half.X = extent; else if (i == 1) half.Y = extent; else half.Z = extent;
     }
+    // Outward slack for native float orientations and coordinate projection.
+    half += new Vector3D(1e-6 * (1 + half.Length() + centre.Length()));
     double size = obstacle.Grid.GridSize;
     var min = new Vector3I(Tile((int)Math.Floor((centre.X - half.X) / size)), Tile((int)Math.Floor((centre.Y - half.Y) / size)), Tile((int)Math.Floor((centre.Z - half.Z) / size)));
     var max = new Vector3I(Tile((int)Math.Ceiling((centre.X + half.X) / size)), Tile((int)Math.Ceiling((centre.Y + half.Y) / size)), Tile((int)Math.Ceiling((centre.Z + half.Z) / size)));
     var found = new HashSet<Shape>();
+    Vector3D low = centre - half, high = centre + half;
     for (int z = min.Z; z <= max.Z; z++) for (int y = min.Y; y <= max.Y; y++) for (int x = min.X; x <= max.X; x++)
     {
         if (!Budget()) throw new Exception("Collision spatial query budget."); List<Shape> list;
-        if (obstacle.Tiles.TryGetValue(new Vector3I(x, y, z), out list)) foreach (var candidate in list) found.Add(candidate);
+        TilesVisited++;
+        if (obstacle.Tiles.TryGetValue(new Vector3I(x, y, z), out list)) foreach (var candidate in list)
+        {
+            if ((++CandidatesSeen & 31) == 0 && !Budget()) throw new Exception("Collision candidate query budget.");
+            // Tiles are 20 m wide on large grids. Reject their distant contents
+            // against the conservative projected search box before SAT.
+            if (candidate.Centre.X + candidate.Half.X < low.X || candidate.Centre.X - candidate.Half.X > high.X ||
+                candidate.Centre.Y + candidate.Half.Y < low.Y || candidate.Centre.Y - candidate.Half.Y > high.Y ||
+                candidate.Centre.Z + candidate.Half.Z < low.Z || candidate.Centre.Z - candidate.Half.Z > high.Z) continue;
+            found.Add(candidate);
+        }
     }
     return new List<Shape>(found);
 }
