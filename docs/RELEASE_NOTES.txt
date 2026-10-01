@@ -1,32 +1,82 @@
-AutoArm 3.2 — Direct PB peers and leaner validation
+AutoArm 4.0.9 — Consolidate configuration, weights and startup recovery
 
-Optional Modules.Peers accepts up to 16 additional exact PB names with Observe,
-Plan or Stop permissions. Each peer talks directly to the Arm PB. A shared helper
-can maintain independent sessions with several arm owners; no ToolSwap relay is
-required. Planners submit complete paths with inherited arm speeds and optional
-per-point policies; observers read live pose/state/progress; safety peers can stop
-manual control, Home, planner paths and ToolSwap. The Arm PB remains the only
-joint writer. Numerical solving is not distributed across PBs.
+Three GPT-6.1 Sol medium workers implemented separate refactors with a coordinated
+config/weight boundary. Hosted cores now consume a direct MyIni effective view;
+private configuration serialization and private-format validators are removed
+from playable scripts. Dirty default publication preserves live edits and keeps
+ordinary ticks free of configuration enumeration. Public inheritance, explicit
+empty overrides, arm substitution and strict Formats 7/2 remain.
 
-Independent authenticated sessions, bounded traffic, exclusive path ownership,
-revocable revisions and a 0.5-second active-planner watchdog fence stale traffic
-and competing clients. Extra peers cannot change topology or attach equipment.
-The specialized ToolSwap protocol and automatic resume behavior are preserved.
+One Stage/Kind parser and renderer handles body templates. Signed physical
+preferences persist across parked tools, merges, restart and topology changes.
+Saved identity rows remain for startup recovery; corrupt metadata and malformed
+weights refuse atomically. Parked preferences survive explicit body resets.
 
-Active topology validation checks only a precomputed list of unowned edges.
-Owned availability/endpoints/names/synchronization are checked once by each
-mandatory Refresh before output. Singleton position validation comes from Bounds.
-A ten-rotary simulated active pass now has one attachment check and one Angle
-read per joint. Owned disconnect and paired desynchronization remain immediate;
-full snapshots still run every 30 active passes and on explicit full checks.
+One startup helper zeros saved current and parked actuators through direct block
+ID lookups. It runs both before host config loading and during each new core's
+construction, including arms added later. PB/arm/format/signed-ID guards remain;
+individual lookup, construct-check or write failures do not prevent other stops.
 
-Saved tool preferences prune absent, closed or wrong-family actuator identities
-after successful stopped discovery/setup, including cold load. Parked/live weights
-and unrelated Storage survive. Failed discovery and low-budget cleanup do not
-commit removals. No terminal enumeration is added to active ticks.
+Validation: installed SE C#6/type-safety rewrite for all four artifacts, packing
+and specialization proofs, and 194,995 simulated assertions including actual
+compact scripts. Tests cover the new boundary, live edits, empty overrides,
+public format refusal, saved identity/cache faults, stage ordering/bounds,
+restart, both startup timing points and existing multi-arm/tool-swap behavior.
+PID, solver and docking motion are unchanged; live physics is not retested here.
 
-Arm Format 6 and ToolSwap Format 1 are unchanged; Peers is optional. Both current
-PB scripts are supplied. Arm: 84,975 characters, 15,025 free. ToolSwap: 51,414,
-48,586 free. C#6/installed SE API, token reversal, original-source identical IL
-and 179,678 simulated assertions pass. Live game physics and instruction timing
-remain unverified.
+Update both PB scripts, retain current Format 7/2 Custom Data, and run On.
+Arm: 88,948 characters, 11,052 free (1,849 saved versus v4.0.8).
+ToolSwap: 57,720, 42,280 free (75 saved); combined saving 1,924.
+
+AutoArm 4.0.8 — Fix programmable-block compilation after compression
+
+The v4.0.7 alias compressor was incompatible with SE's memory-safety rewrite.
+StringBuilder aliases produced nonexistent MemorySafe<alias> type names. Closed
+collection aliases could bypass memory instrumentation without a compile error.
+Both were reproduced with the installed game's TypeSafetyAndBlockRewriter.
+
+The packer now retains StringBuilder and collection type spellings, including
+types containing them. Safe API/type aliases and repetition compression remain.
+The build runs the installed game rewriter using the game's Roslyn assemblies,
+then compiles all four source/compact artifacts at C#6. Regression fixtures
+reproduce the original error and silent bypass and verify normal instrumentation.
+This tests the type-rewriting stage, not the full game whitelist or live physics.
+
+Update BOTH PB scripts, keep current Format 7/2 Custom Data, and run On once.
+PID, merge approach/capture, commands, settings and protocol are unchanged.
+All 194,866 simulated assertions, including actual compact-host tests, pass.
+Arm: 90,797 characters, 9,203 free. ToolSwap: 57,795, 42,205 free.
+
+AutoArm 4.0.7 — Merge while approaching, stop on actual capture
+
+Parking now enables the selected tool's head merges during approach, after the
+Arm PB acknowledges the path with capture monitoring installed. It does not
+wait for measured vibration to die away before allowing the merge to happen.
+The parking clearance waypoint also uses geometric admission without a quiet
+velocity prerequisite. Pickup and generic path admission retain their policies.
+
+The Arm PB checks safety merges of the previously mounted tool before every
+path solve and topology validation. Any connection immediately zeros drives,
+cancels the path and pauses stale topology. This does not depend on the next
+ToolSwap callback, endpoint settling, or a timeout.
+
+ToolSwap independently observes capture and waits stopped for all intended
+reciprocal stand pairs. Partial/unproven support cannot detach the rotor. The
+existing continuous connection proofs, stopped mutation acknowledgements,
+rebuild and confirmed resume remain. Wrong upstream attachments still fail.
+
+Update BOTH scripts, keep existing Custom Data, and run On once. Formats and
+protocol are unchanged. Capture is optional metadata on the scoped ToolSwap
+lease; other planner paths do not enable this behavior. Manual control/PID
+is unchanged. The final capture-gap fallback and saved mating pose remain.
+
+Validation: C#6 against installed SE interfaces, source specialization, committed
+baseline packing with exact token/compilation/method-IL checks, and 194,723
+standard simulated assertions. Capture tests connect while the path is moving
+and filtered velocity is above old thresholds, run the Arm alone to prove local
+stopping, refuse partial/unproven support, and complete automatic swap/resume.
+The reviewed repetition/namespace packer also passes compact-host tests via the
+integrated test adapter (194,866 total assertions). Live SE capture/contact
+still requires confirmation. No features or diagnostics were removed.
+
+Arm: 90,452 characters, 9,548 free. ToolSwap: 57,716, 42,284 free.

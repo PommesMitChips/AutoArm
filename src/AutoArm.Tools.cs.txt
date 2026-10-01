@@ -1,9 +1,11 @@
 // Tool changes use timed observations and journal every mechanical mutation.
-sealed class ToolSwapController
+sealed partial class ToolSwapController
 {
     public sealed class Profile
     {
         public string Name, Prefix, MarkerName, CouplerName;
+        public int Number;
+        public bool Automatic;
         public readonly List<string> HeadNames = new List<string>(), StandNames = new List<string>();
         public IMyTerminalBlock Marker;
         public IMyMotorStator Coupler;
@@ -11,7 +13,10 @@ sealed class ToolSwapController
         public readonly List<IMyShipMergeBlock> Heads = new List<IMyShipMergeBlock>(), Stands = new List<IMyShipMergeBlock>(), SafetyMerges = new List<IMyShipMergeBlock>();
     }
     readonly Program P;
+    string ArmName => P.ArmName;
     static readonly string[] NumberKeys = { "ApproachDistance", "MoveSpeed", "TurnSpeed", "PositionTolerance", "AngleTolerance", "PhaseTimeout" };
+    public bool SharedSetting(string field)
+    { return field.StartsWith("Tools.", StringComparison.Ordinal) && (Array.IndexOf(NumberKeys, field.Substring(6)) >= 0 || "|Tools.ScanHeadMerges|Tools.ScanStandMerges|Tools.ScanParkMerges|Tools.MergeNormal|Tools.CellLimit|".Contains("|" + field + "|")); }
     readonly List<Profile> Profiles = new List<Profile>();
     readonly List<IMyTerminalBlock> Inventory = new List<IMyTerminalBlock>();
     readonly List<string> ParkNames = new List<string>();
@@ -25,12 +30,12 @@ sealed class ToolSwapController
     readonly List<long> ArmOrder = new List<long>();
     int ArmIndex; ToolTopInfo Found;
     ToolTopInfo Tip;
-    bool Scanned, AxialPickup, StartAfterScan;
+    bool Scanned, AxialPickup, StartAfterScan, SupportProven;
     string MountName = "", Axis = "Auto", Phase = "Idle", Last = "Tools disabled";
     bool EnabledTools, ScanHead = true, ScanStand = true, ScanPark = true, ParkOnly, DockMoved, PassiveScan;
-    double Clearance = .5, Move = .05, Turn = 2, PosTol = .005, AngleTol = .2, Timeout = 30, Elapsed;
+    double Clearance = .5, Move = .05, Turn = 2, PosTol = .01, AngleTol = 1, Timeout = 30, Elapsed;
     int CellLimit = 4096, ScanIndex, Stable, ParkIndex;
-    double PhaseBudget;
+    double PhaseBudget, StableSeconds;
     ToolRegionScan Scan;
     Profile Source, Destination;
     Profile Supported;
@@ -42,6 +47,7 @@ sealed class ToolSwapController
     public bool Busy => Phase != "Idle";
     public bool Automatic => Busy && Last == "Change";
     public bool Configured => EnabledTools;
+    public bool Parking => Source != null && (Phase == ApproachDockPhase || Phase == "Dock");
     public IMyTerminalBlock Endpoint
     {
         get
@@ -89,9 +95,9 @@ sealed class ToolSwapController
     {
         StartAfterScan = false;
         MyIni ini;
-        if (!AutoConfig.ReadCurrent(P.Me.CustomData, out ini, out why)) return false;
+        if (!AutoConfig.ReadCurrent(P, P.Me.CustomData, out ini, out why)) return false;
         bool enabled = false, sh = true, ss = true, sp = true;
-        var values = new double[] { .5, .05, 2, .005, .2, 30 };
+        var values = new double[] { .5, .05, 2, .01, 1, 30 };
         if (!Bool(ini, EnabledKey, ref enabled, out why) || !Bool(ini, "ScanHeadMerges", ref sh, out why) ||
             !Bool(ini, "ScanStandMerges", ref ss, out why) || !Bool(ini, "ScanParkMerges", ref sp, out why)) return false;
         var minimum = new double[] { .01, .001, .01, .001, .01, 1 }; var maximum = new double[] { 10, 1, 30, .05, 2, 600 };
@@ -102,28 +108,32 @@ sealed class ToolSwapController
         int limit = 4096;
         if (ini.ContainsKey(ToolsSection, "CellLimit") && (!ini.Get(ToolsSection, "CellLimit").TryGetInt32(out limit) || limit < 64 || limit > 4096))
         { why = "Tools.CellLimit: 64..4096."; return false; }
+        if (!ScanBudget(out why)) return false;
+        Inventory.Clear(); P.GridTerminalSystem.GetBlocks(Inventory);
         var heads = Names(ini.Get(ToolsSection, "Heads").ToString()); var profiles = new List<Profile>(); var seen = new HashSet<string>();
+        AutoProfiles = enabled && heads.Count == 0;
+        if (AutoProfiles && !AutoHeads(heads, out why)) return false;
         if (heads.Count > 16) { why = "Tools.Heads: maximum 16."; return false; }
         for (int n = 0; n < heads.Count; n++)
         {
             string section = "Tool" + (n + 1).ToString("00");
-            string name = ini.Get(section, "Name").ToString(heads[n]).Trim();
+            int number = AutoProfiles ? HeadNumber(heads[n]) : n + 1;
+            string name = ini.Get(section, "Name").ToString(AutoProfiles ? "Head " + number : heads[n]).Trim();
             if (name.Length == 0 || !seen.Add(heads[n])) { why = "Empty or duplicate tool marker."; return false; }
-            var h = new Profile { Name = name, MarkerName = heads[n], CouplerName = ini.Get(section, "Mount").ToString().Trim(), Prefix = ini.Get(section, "StandPrefix").ToString("") };
+            var h = new Profile { Number = number, Automatic = AutoProfiles, Name = name, MarkerName = heads[n], CouplerName = ini.Get(section, "Mount").ToString().Trim(), Prefix = ini.Get(section, "StandPrefix").ToString("") };
             h.Marker = null;
             h.HeadNames.AddRange(Names(ini.Get(section, "HeadMerges").ToString()));
             h.StandNames.AddRange(Names(ini.Get(section, "StandMerges").ToString()));
             profiles.Add(h);
         }
         if (enabled && heads.Count == 0) { why = "Tools require Heads."; return false; }
-        if (!ScanBudget(out why)) return false;
-        Inventory.Clear(); P.GridTerminalSystem.GetBlocks(Inventory);
         for (int n = 0; n < heads.Count; n++)
         {
             IMyTerminalBlock marker;
             if (!Exact(heads[n], out marker, out why)) return false;
             profiles[n].Marker = marker;
-            if (profiles[n].CouplerName.Length > 0 || enabled)
+            if (AutoProfiles) HeadHint(profiles[n]);
+            else if (profiles[n].CouplerName.Length > 0 || enabled)
             {
                 IMyTerminalBlock block;
                 if (!Exact(profiles[n].CouplerName, out block, out why)) return false;
@@ -143,6 +153,10 @@ sealed class ToolSwapController
         Profiles.Clear(); Profiles.AddRange(profiles); ParkNames.Clear(); ParkNames.AddRange(Names(ini.Get(ToolsSection, "ParkMerges").ToString()));
         ZeroMount(); Scanned = false; Tip = null;
         if (!BuildArm(out why) || !RefreshTip(out why)) return false;
+        for (int i = 0; i < values.Length; i++) ini.Set(ToolsSection, NumberKeys[i], values[i]);
+        ini.Set(ToolsSection, "ScanHeadMerges", sh); ini.Set(ToolsSection, "ScanStandMerges", ss); ini.Set(ToolsSection, "ScanParkMerges", sp);
+        ini.Set(ToolsSection, "MergeNormal", axis); ini.Set(ToolsSection, "CellLimit", limit);
+        P.WriteConfig(ini);
         Last = "Tools disabled";
         if (enabled)
         {
@@ -166,16 +180,25 @@ sealed class ToolSwapController
     {
         ini.Set(ToolsSection, EnabledKey, EnabledTools); ini.Delete(ToolsSection, "Mount"); ini.Delete(ToolsSection, "ArmTip");
         var names = new List<string>(); foreach (var h in Profiles) names.Add(h.MarkerName);
-        ini.Set(ToolsSection, "Heads", string.Join("\n", names)); ini.Set(ToolsSection, "ScanHeadMerges", ScanHead); ini.Set(ToolsSection, "ScanStandMerges", ScanStand); ini.Set(ToolsSection, "ScanParkMerges", ScanPark);
+        if (!AutoProfiles) ini.Set(ToolsSection, "Heads", string.Join("\n", names)); ini.Set(ToolsSection, "ScanHeadMerges", ScanHead); ini.Set(ToolsSection, "ScanStandMerges", ScanStand); ini.Set(ToolsSection, "ScanParkMerges", ScanPark);
         ini.Set(ToolsSection, "ParkMerges", string.Join("\n", ParkNames)); ini.Set(ToolsSection, "MergeNormal", Axis);
         var values = new double[] { Clearance, Move, Turn, PosTol, AngleTol, Timeout };
         for (int n = 0; n < values.Length; n++) ini.Set(ToolsSection, NumberKeys[n], AutoSettings.Number(values[n])); ini.Set(ToolsSection, "CellLimit", CellLimit);
-        ini.SetComment(ToolsSection, "Heads", "Exact markers, one per line; ToolNN order. Tool <name/index>; Park [number]; ToolScan; SwapCancel.");
-        for (int n = 0; n < Profiles.Count; n++)
+        if (!AutoProfiles) ini.SetComment(ToolsSection, "Heads", "Exact markers, one per line; ToolNN order. Tool <name/index>; Park [number]; ToolScan; SwapCancel.");
+        for (int n = 0; !AutoProfiles && n < Profiles.Count; n++)
         {
             var h = Profiles[n]; string s = "Tool" + (n + 1).ToString("00");
             ini.Set(s, "Name", h.Name); ini.Set(s, "Mount", h.CouplerName); ini.Set(s, "HeadMerges", string.Join("\n", h.HeadNames)); ini.Set(s, "StandMerges", string.Join("\n", h.StandNames)); ini.Set(s, "StandPrefix", h.Prefix);
         }
+    }
+
+    public bool NamesForArm(out string why)
+    {
+        why = ""; var names = new List<string>(ParkNames);
+        names.Clear(); foreach (var profile in Profiles) names.Add(profile.MarkerName);
+        foreach (string name in names) if (!name.StartsWith(ArmName + " - ", StringComparison.Ordinal))
+        { why = "Tool block names must start with '" + ArmName + " - ': " + name; return false; }
+        return true;
     }
     bool Mounted(Profile h)
     {
@@ -221,6 +244,8 @@ sealed class ToolSwapController
             long a = b.CubeGrid.EntityId, z = b.TopGrid.EntityId;
             long next = a == ArmOrder[n] ? z : z == ArmOrder[n] ? a : 0;
             if (next == 0 || next == hull || ArmGrids.ContainsKey(next)) continue;
+            bool headGrid = false; foreach (var profile in Profiles) if (profile.Marker.CubeGrid.EntityId == next) headGrid = true;
+            if (headGrid) continue;
             if (ArmOrder.Count >= 128) { why = "Arm graph exceeds 128 grids."; return false; }
             ArmGrids.Add(next, b); ArmOrder.Add(next);
         }
@@ -284,7 +309,7 @@ sealed class ToolSwapController
         if (verb == "tool" || verb == "toolswap")
         {
             int index;
-            if (int.TryParse(arg, out index) && index >= 1 && index <= Profiles.Count) Destination = Profiles[index - 1];
+            if (int.TryParse(arg, out index)) { foreach (var h in Profiles) if (h.Number == index) Destination = h; }
             else foreach (var h in Profiles) if (h.Name == arg || h.MarkerName == arg)
             { if (Destination != null) { P.Say("Ambiguous name; use index."); return true; } Destination = h; }
             if (Destination == null) { P.Say("Unknown tool name/index."); return true; }
@@ -327,15 +352,17 @@ sealed class ToolSwapController
             if (Scan == null) Scan = new ToolRegionScan(P, h.Marker, CellLimit, Axis);
             bool finished; if (!Scan.Step(out finished, out why)) { why = h.MarkerName + ": " + why; return false; }
             if (!finished) return true;
+            if (h.Automatic && !DiscoverHardware(h, out why)) return false;
             if (!Scan.Blocks.Contains(h.Coupler.EntityId)) { why = "Tool Mount outside marker region."; return false; }
             foreach (var other in Profiles) if (other != h && Scan.Blocks.Contains(other.Marker.EntityId)) { why = "Tool regions overlap."; return false; }
             h.SafetyMerges.AddRange(Scan.Merges);
-            if (ScanHead) h.Heads.AddRange(Scan.Merges);
+            if (ScanHead && !h.Automatic) h.Heads.AddRange(Scan.Merges);
             if (!MergeNames(h.HeadNames, h.Heads, out why) || !MergeNames(h.StandNames, h.Stands, out why)) return false;
             foreach (var merge in h.Heads) if (!Scan.Blocks.Contains(merge.EntityId)) { why = "Foreign head merge: " + merge.CustomName; return false; }
-            if (ScanStand) Prefix(h.Prefix, h.Stands);
+            if (ScanStand && !h.Automatic) Prefix(h.Prefix, h.Stands);
             foreach (var merge in h.Stands) if (h.Heads.Contains(merge)) { why = "Stand is on head: " + merge.CustomName; return false; }
             P.CaptureParkPose(h, Axis);
+            if (h.Automatic) SaveHead(h);
             ScanIndex++; Scan = null; return true;
         }
         if (Tip == null)
@@ -361,7 +388,8 @@ sealed class ToolSwapController
     }
     void Go(string phase)
     {
-        Phase = phase; Elapsed = 0; Stable = 0; PhaseBudget = Timeout;
+        Phase = phase; Elapsed = StableSeconds = 0; Stable = 0; PhaseBudget = Timeout;
+        if (phase == "Lock") SupportProven = false;
         if (phase == ApproachDockPhase || phase == "Dock" || phase == RetreatPhase || phase == ApproachTopPhase || phase == AlignTopPhase)
         {
             MatrixD target = phase == ApproachDockPhase ? Approach : phase == "Dock" ? Dock : phase == RetreatPhase ? Retreat : phase == ApproachTopPhase ? TopApproach : Attach;
@@ -393,13 +421,25 @@ sealed class ToolSwapController
         if (start) P.EnableControl(); else P.Say(message + " On required.");
     }
     public void StartOn() { PassiveScan = false; StartAfterScan = true; P.Say("On: scanning tools."); }
-    bool Observe(bool condition) { if (!condition) { Stable = 0; return false; } return ++Stable >= 2; }
+    bool Observe(bool condition, double seconds = 0)
+    {
+        if (!condition) { Stable = 0; StableSeconds = 0; return false; }
+        if (++Stable > 1) StableSeconds += seconds;
+        return seconds > 0 ? StableSeconds >= .2 : Stable >= 2;
+    }
     bool TipOwned(out string why)
     {
         why = ""; var owner = Tip == null ? null : Tip.Base;
         if (owner == null) return true;
-        foreach (var h in Profiles) if (h.Coupler.EntityId == owner.EntityId && (Mounted(h) || (h == Source && Phase == "Detach") || (h == Destination && Phase == "Attach"))) return true;
+        foreach (var h in Profiles) if (h.Coupler != null && h.Coupler.EntityId == owner.EntityId && (Mounted(h) || ConnectionRefresh(h) || (h == Source && Phase == "Detach") || (h == Destination && Phase == "Attach"))) return true;
         why = "Unknown arm-tip owner."; return false;
+    }
+    bool ConnectionRefresh(Profile h)
+    {
+        if (Elapsed > 2 || Tip == null || Tip.EntityId == 0 ||
+            !(h == Source && Phase == "Lock" && DockMoved && (!SupportProven || AllLocked()) || h == Destination && Phase == "Release")) return false;
+        var top = h.Coupler.Top as IMyMotorRotor;
+        return top == null || top.EntityId == Tip.EntityId && (top.Base == null || top.Base.EntityId == h.Coupler.EntityId);
     }
     bool Guard(out string why)
     {
@@ -409,14 +449,17 @@ sealed class ToolSwapController
         {
             var b = Upstream[n]; if (b.Closed || !b.IsAttached || b.Top == null || b.Top.EntityId != UpstreamTops[n]) { why = "Upstream attachment changed."; return false; }
         }
-        foreach (var h in Profiles) if (h.Marker == null || h.Marker.Closed || h.Marker.CustomName != h.MarkerName || h.Coupler == null || h.Coupler.Closed || !h.Coupler.IsFunctional || h.Coupler.CustomName != h.CouplerName || h.Coupler.CubeGrid.EntityId == Reference.CubeGrid.EntityId || h.Coupler.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId)
+        foreach (var h in Profiles) if (h.Marker == null || h.Marker.Closed || h.Marker.CustomName != h.MarkerName ||
+            !(h.Automatic && Phase == "Scan" && h.Coupler == null) && (h.Coupler == null || h.Coupler.Closed || !h.Coupler.IsFunctional || !h.Automatic && h.Coupler.CustomName != h.CouplerName || h.Coupler.CubeGrid.EntityId == Reference.CubeGrid.EntityId || h.Coupler.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId))
         { why = "Tool block changed."; return false; }
         foreach (var h in Profiles)
         {
+            if (h.Automatic && Phase == "Scan" && h.Coupler == null) continue;
             foreach (var merge in h.SafetyMerges) if (merge.Closed || merge.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId) { why = "Tool support body split."; return false; }
-            if (h.Coupler.IsAttached && !Mounted(h)) { why = "Tool attached elsewhere."; return false; }
-            if (Last == "Change" && Phase != "Scan" && Phase != "ScanSettle" && !(h == Source && Phase == "Detach") && !h.Coupler.IsAttached && Math.Abs(h.Coupler.Angle - h.Angle) > .002)
-            { why = "Tool Mount angle changed."; return false; }
+            if (h.Coupler.IsAttached && !Mounted(h) && !ConnectionRefresh(h)) { why = "Tool attached elsewhere."; return false; }
+            if (h == Destination && !AxialPickup && (Phase == ApproachTopPhase || Phase == AlignTopPhase || Phase == "PrepareAttach") &&
+                (!Finite(h.Coupler.Angle) || Math.Abs(Wrap(h.Coupler.Angle - h.Angle)) > .002))
+            { why = h.Name + " mount phase changed during " + Phase + "; ToolScan."; return false; }
         }
         if (Reference.Closed) { why = "Arm anchor unavailable."; return false; }
         if (Tip != null && (Tip.Closed || Tip.CubeGrid.EntityId != Reference.CubeGrid.EntityId || !Reference.CubeGrid.CubeExists(Tip.Position)))
@@ -488,8 +531,7 @@ sealed class ToolSwapController
         DockAnchor = Pairs[0].Stand;
         var inverse = MatrixD.Invert(DockAnchor.WorldMatrix); Dock *= inverse; Approach *= inverse;
         Supported = Source;
-        // Prevent native merge snap from closing the chain during the docking
-        // path. Support is enabled only after the arm confirms stopped output.
+        // Arm-side capture monitoring is acknowledged before magnets enable.
         foreach (var head in Source.Heads) head.Enabled = false;
         Go(ApproachDockPhase); return true;
     }
@@ -526,6 +568,7 @@ sealed class ToolSwapController
     {
         why = "";
         if (!ToolGeometry.TryTopPose(Destination.Coupler, Tip, out Attach, out why, AxialPickup)) return false;
+        Destination.Angle = Destination.Coupler.Angle;
         TopApproach = Attach; TopApproach.Translation += Destination.Coupler.WorldMatrix.Up * Clearance;
         AttachAnchor = Destination.Marker;
         var inverse = MatrixD.Invert(AttachAnchor.WorldMatrix); Attach *= inverse; TopApproach *= inverse;
@@ -549,6 +592,7 @@ sealed class ToolSwapController
         {
             bool docking = Phase == ApproachDockPhase || Phase == "Dock";
             MatrixD first = docking ? Approach : TopApproach, second = docking ? Dock : Attach;
+            if (docking) second.Translation += (Approach.Translation - Dock.Translation) * (Math.Min(.03, Clearance * .25) / Clearance);
             if (Focus != null) { first = Tip.Local * first; second = Tip.Local * second; }
             return P.ToolPathStep(first, second, docking ? DockAnchor : AttachAnchor,
                 Phase == ApproachDockPhase || Phase == ApproachTopPhase ? 0 : 1, Move, Turn,
@@ -565,6 +609,11 @@ sealed class ToolSwapController
         {
             if (dt > 1 || observationDt > 1) { Cancel("Tool observation gap."); return; }
             Elapsed += observationDt; string why;
+            if (Parking)
+            {
+                if (!DockMoved && P.CaptureReady) { Journal("CaptureApproach"); foreach (var pair in Pairs) pair.Head.Enabled = true; DockMoved = true; }
+                if (Connected(Source.SafetyMerges)) { DockMoved = true; Go("Lock"); }
+            }
             if (!Guard(out why)) { Cancel(why); return; }
             if (Elapsed > PhaseBudget) { Cancel("Tool phase timeout: " + Phase); return; }
             bool done, settled;
@@ -621,16 +670,15 @@ sealed class ToolSwapController
                 case ApproachDockPhase:
                     Go("Dock"); return;
                 case "Dock":
-                    Go("Support"); return;
-                case "Support":
-                    P.ExpectTransition("MergeSupport"); Journal("EnableSupport");
-                    foreach (var pair in Pairs) pair.Head.Enabled = true;
-                    DockMoved = true;
-                    Go("Lock"); return;
+                    P.StopMotion("Capture wait OFF"); return;
                 case "Lock":
                     P.StopMotion("Support wait OFF");
-                    if (!Mounted(Source)) { Cancel("Source detached prematurely."); return; }
-                    if (!Observe(AllLocked())) return;
+                    bool locked = AllLocked();
+                    if (SupportProven && !locked) { Cancel("Support lost."); return; }
+                    SupportProven |= locked;
+                    if (!Mounted(Source) || Source.Coupler.PendingAttachment)
+                    { Observe(false); if (!ConnectionRefresh(Source)) Cancel("Source detached prematurely."); return; }
+                    if (!Observe(locked, observationDt)) return;
                     P.CaptureParkPose(Source, Axis);
                     if (DockMoved) SetRetreat();
                     ParkedPairs = new List<ToolPortPair>(Pairs);
@@ -639,7 +687,7 @@ sealed class ToolSwapController
                 case "Detach":
                     P.StopMotion("Detach wait OFF");
                     if (!AllLocked()) { Cancel("Support lost."); return; }
-                    if (!Observe(!Source.Coupler.IsAttached && !Source.Coupler.PendingAttachment && Source.Coupler.Top == null && Tip.Base == null)) return;
+                    if (!Observe(!Source.Coupler.IsAttached && !Source.Coupler.PendingAttachment && Source.Coupler.Top == null && Tip.Base == null, observationDt)) return;
                     Source.Angle = Source.Coupler.Angle;
                     if (!P.RebuildToolTopology(out why)) { Cancel(why); return; } Go("BareSettle"); return;
                 case "BareSettle":
@@ -662,17 +710,18 @@ sealed class ToolSwapController
                     if (!ToolGeometry.TryTopPose(Destination.Coupler, Tip, out expected, out why, AxialPickup)) { Cancel(why); return; }
                     bool aligned = Vector3D.DistanceSquared(Reference.GetPosition(), expected.Translation) < .000025 &&
                         Vector3D.Dot(Reference.WorldMatrix.Up, expected.Up) > .9999939 && Vector3D.Dot(Reference.WorldMatrix.Forward, expected.Forward) > .9999939;
-                    if (!Observe(Mounted(Destination) && !Destination.Coupler.PendingAttachment && aligned)) return;
+                    if (!Observe(Mounted(Destination) && !Destination.Coupler.PendingAttachment && aligned, observationDt)) return;
                     if (Destination.Relock) { Destination.Coupler.RotorLock = true; Destination.Relock = false; }
                     P.ExpectTransition("MergeRelease");
                     P.CaptureParkPose(Destination, Axis);
                     Journal("ReleaseSupport"); foreach (var pair in Pairs) pair.Head.Enabled = false; Go("Release"); return;
                 case "Release":
                     P.StopMotion("Split wait OFF");
-                    if (!Mounted(Destination)) { Cancel("Attachment lost."); return; }
+                    if (!Mounted(Destination) || Destination.Coupler.PendingAttachment)
+                    { Observe(false); if (!ConnectionRefresh(Destination)) Cancel("Attachment lost after support release."); return; }
                     bool split = !Connected(Destination.SafetyMerges);
                     foreach (var pair in Pairs) if (pair.Head.Closed || pair.Stand.Closed || pair.Stand.IsConnected || Destination.Marker.CubeGrid.EntityId == pair.Stand.CubeGrid.EntityId) split = false;
-                    if (!Observe(split)) return;
+                    if (!Observe(split, observationDt)) return;
                     if (!P.RebuildToolTopology(out why)) { Cancel(why); return; } Go("FullSettle"); return;
                 case "FullSettle":
                     if (!Mounted(Destination) || Connected(Destination.SafetyMerges)) { Cancel("Attachment/support changed."); return; }

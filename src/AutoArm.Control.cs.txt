@@ -34,6 +34,7 @@ const double ManualCounterCorrectionFraction = 0.50;
 double MaximumPilotTargetLeadM = 1.50;
 double PositionIntegralCap = 0.20;
 double OrientationIntegralCapDeg = 5.0;
+double PositionDamping, OrientationDamping;
 const double IntegralUnwindSeconds = 2.0;
 double JointAccelerationRpmPerSec = 1.0;
 double PistonAccelerationMps2 = 0.40;
@@ -47,10 +48,11 @@ ToolSwapLink Tools;
 ArmServices Services;
 PivotProbeTool PivotProbe;
 bool Enabled, GoingHome, PendingOn, ConfigValid;
+bool PilotSelected = true;
 bool ReadKeyboard = true, ReadRoll = true, AimingTarget, LastCounterCorrectionLimited;
 bool ReadMouse;
 bool ToolDriving, SwapBatchLock;
-double ToolDriveMoveCap, ToolDriveTurnCap;
+double ToolDriveMoveCap, ToolDriveTurnCap, ToolPositionBand, ToolOrientationBand;
 readonly Dictionary<string, double[]> ToolWeights = new Dictionary<string, double[]>();
 bool ToolWeightsLoaded;
 PilotMode MovementMode = PilotMode.HEAD;
@@ -69,6 +71,7 @@ void ApplySettings(AutoSettings s)
     PositionCorrectionCap = s.V[10]; OrientationCorrectionCapDeg = s.V[11]; MaximumPilotTargetLeadM = s.V[12];
     PositionKi = s.V[13]; OrientationKi = s.V[14]; PositionIntegralCap = s.V[15]; OrientationIntegralCapDeg = s.V[16];
     ReadKeyboard = s.Keyboard; ReadRoll = s.Roll; ReadMouse = s.Mouse; MovementMode = s.Mode; MouseSensitivity = s.V[17];
+    PositionDamping = s.V[18]; OrientationDamping = s.V[19];
     InputController = null; InputScan = 10;
 }
 Vector3D TargetP, TargetF, TargetU, PreviousP, PreviousF, PreviousU;
@@ -125,26 +128,7 @@ public void Save()
 // identities scoped to this PB/arm, before configuration can fail discovery.
 void ZeroSavedDrives()
 {
-    var ini = AutoConfig.Saved(Storage); var ids = new HashSet<long>();
-    string section = "AutoArm Config";
-    if (ini.Get(section, "PB").ToInt64() == Me.EntityId && ini.Get(section, "Arm").ToString() == ArmName && ini.Get(section, "Format").ToInt32() == 1)
-        foreach (string row in (ini.Get(section, "Rows").ToString() + "\n" + ini.Get(ToolWeightsSection, "Rows").ToString()).Split('\n'))
-        {
-            string[] cells = row.Split('|'); string key = cells.Length == 2 ? cells[1] : cells.Length == 3 ? cells[0] : "";
-            foreach (string part in key.Split(':'))
-            {
-                string token = part.Split('@')[0]; long id;
-                if (token.Length > 1 && (token.EndsWith("+") || token.EndsWith("-")) && long.TryParse(token.Substring(0, token.Length - 1), out id)) ids.Add(id);
-            }
-        }
-    var blocks = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(blocks);
-    foreach (var b in blocks)
-    {
-        if (b.Closed || !b.IsSameConstructAs(Me) || !ids.Contains(b.EntityId)) continue;
-        try { var piston = b as IMyPistonBase; var rotor = b as IMyMotorStator;
-            if (piston != null) piston.Velocity = 0; else if (rotor != null && !(rotor is IMyMotorSuspension)) rotor.TargetVelocityRad = 0;
-        } catch { }
-    }
+    SavedDrives.Stop(AutoConfig.Saved(Storage), ArmName, Me, GridTerminalSystem);
 }
 
 public void Main(string argument, UpdateType source)
@@ -248,7 +232,7 @@ void Discover(bool explicitRequest)
     string why;
     AutoConfig.EnsureDefaults(this);
     MyIni toolConfig; var options = new AutoSettings();
-    if (!AutoConfig.ReadCurrent(Me.CustomData, out toolConfig, out why) || !options.Read(toolConfig, out why)) throw new Exception(why);
+    if (!AutoConfig.ReadCurrent(this, Me.CustomData, out toolConfig, out why) || !options.Read(toolConfig, out why)) throw new Exception(why);
     if (Tools != null && !Tools.Load(out why)) throw new Exception(why);
     Services.Load(toolConfig);
     if (Tools != null && Tools.Configured)
@@ -296,9 +280,13 @@ void MaintainSetup()
         return;
     }
     Status = "Ready and OFF. Run On.";
+    if (!CheckArmLayout(out why)) { Topology.Ready = false; if (why.StartsWith("Waiting", StringComparison.Ordinal)) { Status = why; return; } ConfigValid = false; Fault(why); return; }
     PruneToolWeights();
     Say(Banner() + "\n" + Status);
 }
+
+// The host supplies per-arm shared-layout validation in the multi-arm build.
+bool CheckArmLayout(out string why) { why = ""; return true; }
 
 void Allocate(int n)
 {
@@ -334,7 +322,7 @@ void EnableControl()
         return;
     }
     string why;
-    if (!Topology.Validate(out why, true)) { Fault("On refused: " + why); return; }
+    if (!CheckArmLayout(out why) || !Topology.Validate(out why, true)) { Fault("On refused: " + why); return; }
     Vector3D p, f, u;
     if (!ReadPose(out p, out f, out u)) { Fault("On refused: Base/Head markers unavailable."); return; }
     CapturePose(p, f, u);
@@ -440,16 +428,20 @@ void UpdateControl(double dt, double observationDt)
     if (manualTurn) AimingTarget = false;
     if (AimingTarget && LastOrientationErrorDeg <= AimToleranceDeg) AimingTarget = false;
     bool aiming = ToolDriving || manualTurn || AimingTarget;
-    double orientationBand = ToolDriving ? 0 : (aiming ? 0.5 * AimToleranceDeg : OrientationToleranceDeg) * Math.PI / 180;
-    Vector3D positionDemand = Outside(pe, ToolDriving ? 0 : PositionDeadbandM) * PositionKp;
+    double orientationBand = ToolDriving ? ToolOrientationBand : (aiming ? 0.5 * AimToleranceDeg : OrientationToleranceDeg) * Math.PI / 180;
+    Vector3D positionDemand = Outside(pe, ToolDriving ? ToolPositionBand : PositionDeadbandM) * PositionKp;
     Vector3D orientationDemand = Outside(oe, orientationBand) * OrientationKp;
     if (ToolDriving)
     {
         positionDemand = ClampLength(positionDemand, ToolDriveMoveCap);
         orientationDemand = ClampLength(orientationDemand, ToolDriveTurnCap);
     }
-    Vector3D rawPositionFeedback = positionDemand + PositionI - FilteredV * 0.0;
-    Vector3D rawOrientationFeedback = orientationDemand + OrientationI - FilteredW * 0.0;
+    // Measured-motion damping stays inside additive, bounded correction.
+    // Preserve the idle deadbands rather than chase measurement jitter.
+    double pd = ToolDriving || LastPilotLinear.LengthSquared() > 1e-12 || LastPositionError > PositionDeadbandM ? PositionDamping : 0;
+    double od = ToolDriving || manualTurn || oe.Length() > orientationBand ? OrientationDamping : 0;
+    Vector3D rawPositionFeedback = positionDemand + PositionI - FilteredV * pd;
+    Vector3D rawOrientationFeedback = orientationDemand + OrientationI - FilteredW * od;
     Vector3D boundedPositionFeedback = ClampLength(rawPositionFeedback, ToolDriving ? ToolDriveMoveCap : PositionCorrectionCap);
     LastFeedbackLinear = BlendManualCorrection(LastPilotLinear, boundedPositionFeedback,
         ManualCounterCorrectionFraction, out LastCounterCorrectionLimited);
@@ -697,8 +689,7 @@ void UpdateIntegral(ref Vector3D integral, Vector3D error, double deadband,
     Vector3D outside = Outside(error, deadband);
     if (ki <= 0 || !permit || error.Length() > capture)
     {
-        if (IntegralUnwindSeconds <= 0) integral = Vector3D.Zero;
-        else integral /= 1 + dt / IntegralUnwindSeconds;
+        integral = IntegralUnwindSeconds <= 0 ? Vector3D.Zero : integral / (1 + dt / IntegralUnwindSeconds);
         return;
     }
     // A held pose still needs the learned load bias. Reaching the deadband is
@@ -761,12 +752,19 @@ static Vector3D Outside(Vector3D error, double deadband)
     return n > deadband && n > 1e-12 ? error * ((n - deadband) / n) : Vector3D.Zero;
 }
 
+bool BareControl => Tools != null && Tools.Focus != null;
+void ManualAxes(ref Vector3D f, ref Vector3D u)
+{ if (BareControl) { var a = f; f = -u; u = a; } }
+void NativeAim(ref Vector3D f, ref Vector3D u)
+{ if (BareControl) { var a = f; f = u; u = -a; } }
+
 void ReadPilot(Vector3D headForward, Vector3D headUp, out Vector3D linear, out Vector3D angular)
 {
     linear = angular = Vector3D.Zero;
     Vector3D input; Vector2 mouse; double roll;
     IMyShipController c = PilotInputs(out input, out mouse, out roll);
     if (c == null) return;
+    ManualAxes(ref headForward, ref headUp);
     Vector3D forward, left, up;
     if (MovementMode == PilotMode.HEAD)
     {
@@ -789,6 +787,7 @@ void ReadPilot(Vector3D headForward, Vector3D headUp, out Vector3D linear, out V
 IMyShipController PilotInputs(out Vector3D move, out Vector2 mouse, out double roll)
 {
     move = Vector3D.Zero; mouse = Vector2.Zero; roll = 0;
+    if (!PilotSelected) return null;
     var c = FindInputController(); if (c == null) return null;
     if (ReadKeyboard) move = c.MoveIndicator;
     if (ReadMouse) mouse = c.RotationIndicator;
@@ -895,6 +894,7 @@ void PoseCommand(string[] w, int parts)
     if ((parts & 1) != 0 && !Finite(p.LengthSquared()) || (parts & 2) != 0 && !Orthonormalise(ref f, ref u)) throw new Exception("Invalid pose target.");
     if (GoingHome) HoldCurrent();
     if (!Enabled) return;
+    if ((parts & 2) != 0) NativeAim(ref f, ref u);
     SetPoseTarget(p, f, u, parts);
     if ((parts & 2) != 0) AimingTarget = true;
 }
@@ -918,6 +918,7 @@ void Face(string direction)
     }
     if (GoingHome) HoldCurrent();
     if (!Enabled) return;
+    NativeAim(ref targetForward, ref targetUp);
     SetPoseTarget(TargetP, targetForward, targetUp, 2);
     AimingTarget = true;
 }
@@ -938,7 +939,7 @@ void Step(string axis, double degrees)
     {
         case "yaw": a = MovementMode == PilotMode.HEAD ? new Vector3D(0, 0, 1) : viewUp; break;
         case "pitch": a = MovementMode == PilotMode.HEAD ? -Unit(Vector3D.Cross(TargetU, TargetF)) : -viewLeft; break;
-        default: a = TargetF; break;
+        default: a = BareControl ? -TargetU : TargetF; break;
     }
     Vector3D step = Unit(a) * (degrees * Math.PI / 180);
     SetPoseTarget(TargetP, Rotate(TargetF, step), Rotate(TargetU, step), 2);
@@ -967,8 +968,8 @@ void RunCommand(string command)
     {
         case "version": Say(Banner()); break;
         case "on": StartControl(); break;
-        case "off": case "stop": if (Tools != null && Tools.Busy) Tools.Cancel(c); StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
-        case "toggle": if (Enabled) { StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
+        case "off": case "stop": if (Tools != null) { Tools.InhibitRecovery(); if (Tools.Busy) Tools.Cancel(c); } StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
+        case "toggle": if (Enabled) { if (Tools != null) Tools.InhibitRecovery(); StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
         case "onoff": case "-oo":
             c = w.Length < 2 ? "" : w[1].ToLowerInvariant();
             if (c != "on" && c != "off" && c != "toggle") throw new Exception("OnOff expects On, Off or Toggle.");
@@ -1060,7 +1061,7 @@ void Reload()
     bool changed;
     ConfigValid = false;
     MyIni configIni;
-    if (!AutoConfig.ReadCurrent(Me.CustomData, out configIni, out why)) throw new Exception(why);
+    if (!AutoConfig.ReadCurrent(this, Me.CustomData, out configIni, out why)) throw new Exception(why);
     Services.Load(configIni);
     if (Topology.Groups.Count == 0 || (Tools != null && Tools.Configured) || configIni.Get(ToolsSection, EnabledKey).ToBoolean(false)) { Discover(true); return; }
     if (Topology.Groups.Count > 0 && !Topology.Validate(out why, true))

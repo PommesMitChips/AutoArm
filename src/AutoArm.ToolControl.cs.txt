@@ -23,7 +23,8 @@ void RememberToolWeights(bool capture = true)
                 !Finite(m) || !Finite(r) || m < 0 || m > 10 || r < 0 || r > 10)
                 throw new Exception("Invalid saved tool actuator preferences.");
             ToolWeightIds(cells[0]);
-            loaded[cells[0]] = new double[] { m, r };
+            if (loaded.ContainsKey(cells[0])) throw new Exception("Duplicate saved tool actuator preferences.");
+            loaded.Add(cells[0], new double[] { m, r });
         }
         foreach (var pair in loaded) ToolWeights[pair.Key] = pair.Value;
         ToolWeightsLoaded = true;
@@ -77,7 +78,9 @@ void WriteToolWeights()
         if (text.Length > 0) text.Append('\n');
         text.Append(key).Append('|').Append(AutoSettings.Number(ToolWeights[key][0])).Append('|').Append(AutoSettings.Number(ToolWeights[key][1]));
     }
-    var ini = AutoConfig.Saved(Storage); ini.Set(ToolWeightsSection, "Rows", text.ToString()); Storage = ini.ToString();
+    var ini = AutoConfig.Saved(Storage);
+    if (ini.Get(ToolWeightsSection, "Rows").ToString() == text.ToString()) return;
+    ini.Set(ToolWeightsSection, "Rows", text.ToString()); Storage = ini.ToString();
 }
 
 bool RebuildToolTopology(out string why)
@@ -105,6 +108,7 @@ bool SettleToolTopology(out string why)
 {
     if (!ConfigValid) { why = "Tool topology is not configured."; return false; }
     if (!Topology.StableSetup(out why)) return false;
+    if (!CheckArmLayout(out why)) { Topology.Ready = false; if (why.StartsWith("Waiting", StringComparison.Ordinal)) return false; ConfigValid = false; Fault(why); return false; }
     PruneToolWeights();
     AutoConfig.UpdateGroups(this); LoadHome();
     return true;
@@ -112,23 +116,25 @@ bool SettleToolTopology(out string why)
 
 bool ToolPoseStep(MatrixD world, double dt, double observationDt, double moveCap,
     double turnCap, double positionTolerance, double angleTolerance,
-    out bool settled, out string why)
+    out bool settled, out string why, double settleScale = 0)
 {
     settled = false; why = "";
     if (!Topology.Ready || !ConfigValid) { why = "Tool topology is not ready."; return false; }
     if (!Finite(dt) || dt <= 0 || !Finite(observationDt) || observationDt <= 0 ||
-        !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0)
-    { why = "Invalid tool movement interval or cap."; return false; }
+        !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0 ||
+        !Finite(positionTolerance) || positionTolerance <= 0 || !Finite(angleTolerance) || angleTolerance <= 0)
+    { why = "Invalid tool interval, cap or tolerance."; return false; }
     MatrixD basis = Topology.Base.WorldMatrix;
     if (!SetPoseTarget(InFrame(world.Translation - Topology.Base.GetPosition(), basis),
         InFrame(world.Forward, basis), InFrame(world.Up, basis), 3))
     { why = "Invalid tool target frame."; return false; }
     ToolDriveMoveCap = moveCap; ToolDriveTurnCap = turnCap * Math.PI / 180;
+    ToolPositionBand = positionTolerance * .5; ToolOrientationBand = angleTolerance * Math.PI / 360;
     ToolDriving = true;
     try { UpdateControl(Math.Min(dt, .1), observationDt); }
     finally { ToolDriving = false; }
     if (!TargetValid || !Topology.Ready) { why = LastFault.Length > 0 ? LastFault : "Tool motion stopped."; return false; }
     settled = LastPositionError <= positionTolerance && LastOrientationErrorDeg <= angleTolerance &&
-        FilteredV.Length() <= .005 && FilteredW.Length() * 180 / Math.PI <= .2;
+        FilteredV.Length() <= Math.Max(.005, positionTolerance * settleScale) && FilteredW.Length() * 180 / Math.PI <= Math.Max(.2, angleTolerance * settleScale);
     return true;
 }

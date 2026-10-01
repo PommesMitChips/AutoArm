@@ -19,6 +19,16 @@ The working tree contains the current script, source fragments, examples and dev
 | `v3.0` | Separate arm/ToolSwap PBs, acknowledged ordered paths, movement leases and restart/timeout fences | Arm 78,266; ToolSwap 48,330 |
 | `v3.1` | Recorded parked orientation, inherited travel speeds, linear insertion/withdrawal and expected-topology continuation | Arm 79,911; ToolSwap 51,414 |
 | `v3.2` | Additional direct PB peers, one-pass active joint validation and stale tool-weight pruning | Arm 84,975; ToolSwap 51,414 |
+| `v4.0` | Multiple arm instances, inherited layout templates, scoped commands/sessions and marker-stored automatic tool setup | Arm 99,319; ToolSwap 68,170 |
+| `v4.0.1` | Docking progress stability, configurable damping, generated settings, remote configuration reload and startup input recovery | Arm 98,238; ToolSwap 64,193 |
+| `v4.0.2` | Known manual tool detachment returns to bare-arm control, with failed-swap cancellation and explicit-stop inhibition | Arm 99,119; ToolSwap 64,369 |
+| `v4.0.3` | Pose-only Arm descriptor removes unassigned live field, unused branches and endpoint inventory enumeration | Arm 98,886; ToolSwap 64,369 |
+| `v4.0.4` | Bare socket control axes, tolerance-aware docking, continuous insertion, parking settling and relevant wrapped mount phase checks; zero default damping | Arm 99,161; ToolSwap 64,661 |
+| `v4.0.5` | Stopped merge/unmerge settling, continuous connection confirmation and acknowledged idempotent resume with bounded failures | Arm 99,449; ToolSwap 65,142 |
+| `v4.0.6` | Separate low-speed approach admission, graded insertion alignment, tolerance-aware final settling and merge capture gap | Arm 99,843; ToolSwap 65,240 |
+| `v4.0.7` | Live merge magnets during acknowledged parking approach, Arm-side capture stop before topology validation and no quiet-motion parking admission | Arm 90,452; ToolSwap 57,716 |
+| `v4.0.8` | PB memory-safe rewrite compatibility: retain collection/StringBuilder spellings and validate both roles with the installed game rewriter | Arm 90,797; ToolSwap 57,795 |
+| `v4.0.9` | Direct per-arm config views, shared stage-weight parsing with durable signed preferences and consolidated startup stopping | Arm 88,948; ToolSwap 57,720 |
 
 Read a previous script without changing your working tree:
 
@@ -35,6 +45,6 @@ git switch --detach v2.4
 
 Run `git switch -` to return to your previous branch. Tags retain their original notes and configuration examples as well as the top-level source and compact script. Historical folder names exist only in those snapshots. Earlier versions preserve combined source; the full maintainable fragments and current toolchain were introduced with v2.5.
 
-Historical notes describe configuration and behavior at their own version. The current arm PB requires Format 6 and the ToolSwap PB requires Format 1. Re-enter previous preferences in the current examples after deleting older Custom Data; there is no migration.
+Historical notes describe configuration and behavior at their own version. The current arm PB requires [global] Format 7 and the ToolSwap PB requires [global] Format 2. Re-enter previous preferences in the current examples after deleting older Custom Data; there is no migration.
 
 The supplied `reference/MiningArm_v2_0_HeadOnly.txt` remains a behavior-comparison fixture required by the tests; it is not a parallel AutoArm release.

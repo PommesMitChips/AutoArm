@@ -1,0 +1,213 @@
+AutoArm movement/control audit — 2026-10-01
+
+Reviewers: root and GPT-6.1 Sol agent control_history_audit (read-only).
+Scope: v2.5, v2.8.1, v3.0, v3.1, v3.2, v4.0, v4.0.2 and v4.0.3.
+Trigger: severe reported shaking during manual movement in v4.0.2; v2.5
+remembered as smooth. Supplied configuration has 18 body stages, all weights
+1/1, standard speeds/accelerations/PI settings, and both damping gains 0.2.
+The initial audit was read-only. The subsequent v4.0.4 repairs are listed below.
+
+PROVEN CONTROL CHANGE
+
+v4.0.1 introduced measured-velocity damping, defaulting to 0.2. The feedback
+law subtracts filtered velocity while manual input is active or pose error is
+outside the relevant deadband. Integral compensation remains retained inside
+the deadband. These policies conflict at input release: the integral can learn
+to cancel damping during sustained movement, then the damping term switches
+off while that integral bias remains. The requested velocity need not become
+zero when the pilot releases control.
+
+The angular idle band is 3 degrees, versus 0.075 degrees while turning. This
+leaves substantial space for the retained bias to cause unwanted movement.
+This is a confirmed release/hold regression. It does not, by itself, establish
+the cause of severe multi-joint shaking while input remains held.
+
+FULL C# CONTROLLER REPRODUCTION
+
+The optional ControlAudit probe compiles the complete script in the existing
+simulated PB host. It uses ideal velocity actuators without SE flex/contact,
+30 seconds of steady input followed by 30 seconds of release, and matched
+configuration applied with Reload then On (v2.5 On alone does not reload).
+
+Rotary case: isolated achievable roll axis, requested 1 degree/s, existing
+3 degree/s native cap and 6 degree/s^2 acceleration cap.
+
+Version/setting       Release I     Release request   Peak travel after release
+v2.5                  0 deg/s       0 deg/s           0.074992 degrees
+Current, damping 0    0 deg/s       0 deg/s           0.074992 degrees
+Current, damping 0.2  0.200205 deg/s 0.200205 deg/s    3.214587 degrees
+
+Linear case: isolated piston, requested 0.05 m/s, existing 0.2 m/s native cap
+and 0.4 m/s^2 acceleration cap.
+
+Version/setting       Release I     Release request   Peak travel after release
+v2.5                  0 m/s         0 m/s             0.002722 m
+Current, damping 0    0 m/s         0 m/s             0.002722 m
+Current, damping 0.2  0.009999 m/s   0.009999 m/s      0.010805 m
+
+The agent's independent scalar reproduction agrees with the angular result.
+The tiny scalar/full-controller difference is consistent with matrix damping.
+The earlier DampingCases tests used delayed pistons and short input pulses;
+they did not cover long angular motion followed by release inside the idle
+deadband. Their passing results were insufficient evidence for making the
+new gains the default on a long real arm.
+
+HISTORY COMPARISON
+
+v2.5 through v4.0 retain equivalent manual P/I gains, deadbands, integral
+retention and antiwindup, pilot target advancement, task weights, bounded
+solver equations, speed caps and acceleration bounds. Constant inlining and
+helper extraction are not gain changes. Rotary signs remain axis*(-dir),
+piston signs axis*dir, and the rotary linear column Cross(ang, head-origin).
+
+The v3.0 PB split adds transport, equipment supervision and arm-owned paths.
+It does not change the ordinary manual controller equations. ControlElapsed
+accumulation, timed-only solving, capped integration dt and uncapped velocity
+observation dt already exist in v2.5. Additional callbacks/instruction work
+may affect real cadence/budget; actual game telemetry is needed to assess it.
+
+v2.8 changes the general endpoint abstraction from Head position/matrix to
+EndPosition/EndPose, supporting a bare rotor-part frame. A healthy mounted
+tool still uses its named marker, so this path can match v2.5. The actual
+endpoint, orientation and joint list should be compared in-game, particularly
+the tool coupler beyond the supplied 18 body stages. The coupling layout was
+reversed in v2.6 (base on tool, top on arm); the graph-direction sign handles
+the reverse edge, but different physical geometry/reference is not ruled out.
+
+No legitimate continuous second velocity writer was found in ToolSwap.
+ToolSwap StopMotion sends acknowledged STOP messages. Routine manual PING and
+control do not call Arm-side ZeroMount. An old script running in another PB
+could still fight the controller; the user has not confirmed its absence.
+
+Schema replacement can lose older preferences. The v4 internal projection
+omits Actuators and can clear cached tool weights; Host.Layout restores body
+weights. The supplied body table is all 1/1, so this does not explain changed
+body allocation, but the actual tool-coupler/downstream weights need checking.
+
+IN-GAME EVIDENCE AND REMAINING QUESTION
+
+1. The user tested PositionDamping=0 and OrientationDamping=0, then On:
+   NO IMPROVEMENT. The proven damping regression does not explain the observed
+   severe shaking on this arm by itself.
+2. No tool is attached. Info reports 18 groups, one converged solver pass,
+   no budget shortage, roughly 0.14m position error and saturated 0.2m/s
+   linear feedback at zero pilot demand. Angular error is inside the 3 degree
+   idle band. This is a snapshot, not a physical-motion trace.
+3. Verify that no old arm controller still runs on these actuators.
+4. If shaking persists, collect per-tick elapsed/control time, pilot demand,
+   feedback, filtered velocity, integral, applied damping gates, signed joint
+   commands, actual joint motion, endpoint/frame and solver convergence/budget.
+   A static Echo screenshot or total assertion count cannot establish these.
+
+Matched v2.5/current command comparison over 1,800 frames with 15 native
+actuators and damping zero gives maximum output difference zero. Geometry is
+held fixed in that comparison; this does not simulate a flexible SE arm.
+The next isolated game check reduced PositionCorrectionCap to 0.05m/s while
+keeping pilot HeadSpeed=0.2 and other gains unchanged. User reports reduced
+manual shaking, but no improvement while Tool 2 parks the current tool.
+Automatic motion uses separate caps; its strict pose feedback remains distinct.
+
+Do not retune several gains without distinguishing geometry, allocation,
+physical flex/contact and cadence problems. A future damping law
+must handle retained load bias and deadband transitions coherently, with
+angular, long-input/release and coupled-arm regression coverage.
+
+VERIFIED V4.0.4 REPAIRS
+
+Bare manual aim used native rotor Forward (a tangent), although the socket
+points along -native Up. That caused Left to point down and Forward/Right to
+rotate azimuth without aiming the socket. Manual facing, HEAD translation,
+Q/E, Roll steps and explicit orientation commands now convert at the input
+boundary. Observation, Jacobian and native docking frames are unchanged.
+
+The detached-angle guard originated before the PB split and checked every
+profile with an unwrapped phase difference. Detached Angle is retained in the
+installed SDK; it is not generally undefined. The check now applies only to
+the non-axial incoming tool while its full-phase approach is cached. It uses
+wrapped differences and captures the destination phase with its target.
+Inactive/source angles and expected attachment phases do not invalidate it.
+
+The insertion lookahead previously jumped between Move/Kp and zero as angular
+error crossed the tolerance: 33.3mm at .05m/s. It now blends continuously from
+full advance at the tolerance to zero at twice the tolerance. Automatic pose
+feedback uses half-tolerance precision bands instead of chasing zero error;
+its velocity integral retains load compensation. Linear lookahead includes
+the position band, avoiding a minimum-speed stall. Completion and rotor
+attachment proofs retain their tighter thresholds.
+
+Installed SDK merge capture allows approximately 5.732 degrees opposing-normal
+error and 4.585 degrees tangent error. Its center-distance check is GridSize
+plus .17m, not unrestricted Cartesian position error. Parking defaults are now
+.01m/1 degree; rotor insertion remains capped at .003m/.2 degree. Explicit
+Custom Data overrides remain authoritative.
+
+Native physics-change machinery can reattach a stator by Detach then TryAttach.
+Lock formerly canceled immediately on a missing source attachment. After
+verified merge support it now waits stopped for at most two seconds, accepting
+only absent observations or the known top/owner. Wrong identities and support
+loss remain fatal. Detach requires correct source attachment and locked support
+on consecutive timed observations. Attach likewise precedes support release.
+
+The optional damping settings remain, but new defaults are zero to restore the
+older release behavior. Explicit user values are not rewritten. This does not
+claim to fix the user's broader shaking; live feedback/physics remains open.
+
+Compilation, packing IL equivalence and 193,526 simulated assertions pass.
+These tests cover all manual socket directions, native-frame preservation,
+continuous alignment demand, relevant/axial/wrapped phase checks, merge grid-ID
+change, temporary/permanent source loss and hostile top/owner/support changes.
+Static precision bands, retained bias and actual .001m/s line completion are
+covered. The agent caught the initial slow-lookahead/deadband interaction;
+the final implementation includes the band offset and a physical-progress test.
+
+REPRODUCTION TOOL
+
+FOLLOW-UP: SMOOTH AUTOMATIC MOVEMENT, MANUAL SHAKING/DRIFT
+
+The user clarified that ToolSwap travel is completely smooth; manual travel
+retains slight shaking and drift. Final docking is a separate previously
+reported problem. This narrows the investigation to manual target tracking,
+correction and release behavior; it does not prove a general solver or physics
+fault. Different paths, speeds and reference poses still limit the comparison.
+
+Manual bias learns pose error; tool bias learns velocity error. Manual targets
+advance from solver-predicted pilot delivery, not measured physical movement.
+Tracking lag can therefore remain in the manual target/bias state. This is an
+identified algorithm difference, not a verified sole cause of the live issue.
+
+An experimental shared estimator used unconstrained predicted task velocity
+minus existing bias minus filtered measured velocity, with original capture,
+clipping and allocation protections. Projection avoids learning nonexistent
+delivery of unreachable pilot input; including the actual requested feedback
+also avoids treating intentional damping as an unknown load.
+
+Full-controller release tests REJECTED this blanket replacement. After 30s of
+1 degree/s input, these are travel over seconds 2..30 after release at damping0:
+
+Actuator lag       Current control     Experimental control
+0 seconds          0.000000 degrees    0.069690 degrees
+0.25 seconds       0.000191 degrees    0.235443 degrees
+0.75 seconds       0.056237 degrees    0.651473 degrees
+
+Filtered velocity and physical coasting during release make the alternative
+learn a temporary opposing bias inside the idle angular band. It improves the
+opt-in damping0.2 release problem but regresses the already undamped case.
+The existing frozen-pose responsiveness check also refused that candidate.
+No production control code was changed or new release created for this trial.
+The user subsequently accepted manual movement, with some stopping vibration.
+Further manual tuning was deferred. The v4.0.5 work changes only swap lifecycle
+and communication; the manual movement/PID source is unchanged from v4.0.4.
+The remaining manual issue requires separating movement tracking from the
+transition to held-pose load compensation; simply copying the tool learner is
+not established as safe. These synthetic results do not diagnose SE physics.
+
+Reproduce the rejected comparison with the raw engine:
+dotnet run --project tools/ArmTests -- tools/ScriptPack/obj/AutoArm.Engine.txt --servo-compare
+
+From the repository, run:
+dotnet run --project tools/ArmTests -- <complete single-instance script> --control-audit
+
+The current raw engine is generated at tools/ScriptPack/obj/AutoArm.Engine.txt
+by tools/Build-AutoArm.ps1. The historical complete v2.5 script can be read from
+git show v2.5:AutoArm_Source.txt and saved to an ignored scratch file. Use the
+existing DOTNET_CLI_HOME and SE_BIN conventions from the build scripts.

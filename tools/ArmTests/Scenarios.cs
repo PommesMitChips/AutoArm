@@ -7,7 +7,16 @@ using VRageMath;
 internal static partial class Scenarios
 {
     const BindingFlags All = BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic;
-    static object? Get(object o,string name) => o.GetType().GetField(name,All)?.GetValue(o) ?? o.GetType().GetProperty(name,All)?.GetValue(o);
+    static object? Get(object o,string name)
+    {
+        o=PackedProgramChecks.Unwrap(o);
+        string member=PackedProgramChecks.Name(o.GetType(),name);
+        var field=o.GetType().GetField(member,All); if(field!=null) return field.GetValue(o);
+        var property=o.GetType().GetProperty(member,All); if(property!=null) return property.GetValue(o);
+        var arms=o.GetType().GetField(PackedProgramChecks.Name(o.GetType(),"Arms"),All)?.GetValue(o) as IDictionary;
+        var selected=o.GetType().GetField(PackedProgramChecks.Name(o.GetType(),"Selected"),All)?.GetValue(o) as string;
+        return arms!=null&&selected!=null&&arms.Contains(selected)?Get(arms[selected]!,name):null;
+    }
     static object[] Groups(object script) => ((IEnumerable?)Get(Get(script,"Topology")!,"Groups"))?.Cast<object>().ToArray() ?? Array.Empty<object>();
     static object[] Members(object group) => ((IEnumerable)Get(group,"M")!).Cast<object>().ToArray();
     static bool Enabled(object script) => (bool)Get(script,"Enabled")!;
@@ -67,10 +76,11 @@ internal static partial class Scenarios
         PivotProbeCases(type);
         FriendlyConfigCases(type);
         GravityHoldCases(type);
+        DampingCases(type);
         ViewControlCases(type);
         PoseCommandsCases(type);
         PathCases(type);
-        var toolType=Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_ToolSwap_Source.txt")));
+        var toolType=Tests.Script(Tests.ToolEngineSource);
         NativeReverseGeometry(toolType);
         DualModuleCases(type,toolType);
         ServiceCases(type,toolType);
@@ -168,7 +178,7 @@ internal static partial class Scenarios
                 Check(Enabled(script),"Tracking correction disabled manual control.");
                 var pilot=(Vector3D)Get(script,"LastPilotLinear")!;var feedback=(Vector3D)Get(script,"LastFeedbackLinear")!;var request=(Vector3D)Get(script,"LastRequestedLinear")!;
                 Check(pilot.LengthSquared()>1e-8,"Tracking error muted pilot input.");
-                Check(feedback.LengthSquared()>1e-8,"Pose correction disappeared under pilot input.");
+                Check(feedback.LengthSquared()>1e-8,"Pose correction disappeared under pilot input: tick="+tick+", offset="+offset+", pose error="+Get(script,"LastPositionError")+", bias="+Get(script,"PositionI")+", feedback="+feedback);
                 Check((request-pilot-feedback).Length()<1e-10,"Pilot and feedback are not additive.");
                 Check(Convert.ToDouble(Get(script,"LastLinearAdvance"))>0,"Opposing correction froze pilot target advancement.");
                 Check(Math.Abs(piston.Velocity)<=.200001,"Piston cap exceeded.");

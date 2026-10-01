@@ -1,7 +1,6 @@
 // AutoArm: auto-discovered mixed mechanical arm controller.
-// Change only this value in code. All detected group participation settings are
-// generated in this programmable block's Custom Data.
-const string ArmName = "Arm 1";
+// The host supplies the arm section name. This initializer supports engine tests.
+readonly string ArmName = "Arm 1";
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "3.2";
+const string ControllerBuildVersion = "4.0.9";

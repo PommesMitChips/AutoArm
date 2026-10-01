@@ -6,6 +6,7 @@ internal sealed class ModuleBus
 {
     internal readonly Dictionary<long,Queue<MyIGCMessage>> Queues=new();
     internal readonly List<(long Source,long Target,string Data)> Sent=new();
+    internal readonly Dictionary<(long Id,string Tag),Queue<MyIGCMessage>> Broadcasts=new();
     internal bool DropArm,DropTool;
     internal long ArmId,ToolId;
     internal void Bind(Rig rig)
@@ -21,6 +22,18 @@ internal sealed class ModuleBus
         RecordProxy.Of(rig.IGC).Values["UnicastListener"]=listener;
         RecordProxy.Of(rig.IGC).Call=(m,a)=>
         {
+            if(m.Name=="RegisterBroadcastListener")
+            {
+                string tag=(string)a![0]!; var messages=new Queue<MyIGCMessage>(); Broadcasts[(rig.PB.EntityId,tag)]=messages;
+                var receiver=RecordProxy.Make<IMyBroadcastListener>(); RecordProxy.Of(receiver).Call=(method,args)=>method.Name=="get_HasPendingMessage"?messages.Count>0:method.Name=="AcceptMessage"?messages.Dequeue():null;
+                return receiver;
+            }
+            if(m.Name=="SendBroadcastMessage")
+            {
+                string tag=(string)a![0]!,data=(string)a[1]!;
+                foreach(var pair in Broadcasts) if(pair.Key.Tag==tag) pair.Value.Enqueue(new MyIGCMessage(data,tag,rig.PB.EntityId));
+                return null;
+            }
             if(m.Name=="SendUnicastMessage")
             {
                 long target=(long)a![0]!; string tag=(string)a[1]!,data=(string)a[2]!; Sent.Add((rig.PB.EntityId,target,data));
@@ -85,15 +98,21 @@ internal static partial class Scenarios
             string? field=phase=="ApproachDock"?"Approach":phase=="Dock"?"Dock":phase=="Retreat"?"Retreat":phase=="ApproachTop"?"TopApproach":phase=="AlignTop"?"Attach":null;
             int source=Get(SwapController(d.Tool),"Source") is object s?Array.IndexOf(d.F.Markers,(IMyTerminalBlock)Get(s,"Marker")!):0;
             if(field!=null && phaseTicks>8)
-            { var goal=SwapGoal(d.Tool,field); if(phase=="ApproachDock" || phase=="Dock") d.F.MoveSource(goal,source); else d.F.MoveArm(goal); }
+            { var goal=SwapMotionGoal(d.Tool,field); if(phase=="ApproachDock" || phase=="Dock") d.F.MoveSource(goal,source); else d.F.MoveArm(goal); }
             else if(phase=="Lock") d.F.LockSource(source:source);
             else if(phase=="Release") d.F.SplitTool(Array.IndexOf(d.F.Markers,(IMyTerminalBlock)Get(Get(SwapController(d.Tool),"Destination")!,"Marker")!));
+            if(phase=="ApproachDock"||phase=="Dock")d.F.CaptureSource(source);
             d.Tick(); previous=phase;
         }
         throw new Exception("Dual operation failed to reach "+until+": "+SwapPhase(d.Tool)+" / "+string.Join(" | ",d.ToolRig.Log.TakeLast(4)));
     }
     static void DualModuleCases(Type armType,Type toolType)
     {
+        BareManualFrames(armType,toolType);
+        SwapPhaseGuards(armType,toolType);
+        SwapTransitionCases(armType,toolType);
+        DockArrivalCases(armType,toolType);
+        MergeCaptureCases(armType,toolType);
         foreach(bool bare in new[]{false,true})
         {
             var d=new DualRig(armType,toolType,bare,bare); DualStart(d);
@@ -148,8 +167,40 @@ internal static partial class Scenarios
         canceled.Command("On"); for(int i=0;i<400 && !Enabled(canceled.Arm);i++) canceled.Tick();
         Check(Enabled(canceled.Arm) && !canceled.F.Couplers[1].PendingAttachment && canceled.F.Couplers[1].RotorLock,"One On failed to reconcile a bare pending attachment after Tool PB restart.");
         DualAdversarialCases(armType,toolType);
+        ManualBareRecovery(armType,toolType);
         ToolPathRevisionCases(armType,toolType);
         Console.WriteLine("Two-PB integration: mounted/bare On, final hinge, motion ownership, stopped attachment fence, automatic resume, parking, heartbeat timeout and in-flight Stop.");
+    }
+    static void ManualBareRecovery(Type armType,Type toolType)
+    {
+        foreach(string mode in new[]{"Active","FailedSwap","Stop","Off","SwapCancel","ToolStop","BodyBroken","Pending","MissingPart"})
+        {
+            var d=new DualRig(armType,toolType); DualStart(d);
+            if(mode=="FailedSwap")
+            {
+                d.Command("Tool 2"); for(int i=0;i<8;i++) d.Tick(); DualPlant(d,"ApproachDock");
+                Tests.Call(d.Arm,"Fault","Tool operation failed."); for(int i=0;i<20;i++) d.Tick();
+            }
+            else if(mode=="Stop"||mode=="Off"||mode=="SwapCancel") { d.Command(mode); for(int i=0;i<20;i++) d.Tick(); }
+            else if(mode=="ToolStop") { d.Frame(d.Tool,d.ToolRig,"Stop",false,0); for(int i=0;i<50;i++) d.Tick(); }
+            d.F.LockSource(); d.F.Couplers[0].Detach();
+            if(mode=="BodyBroken") { RecordProxy.Of(d.F.Piston).Values["IsAttached"]=false; RecordProxy.Of(d.F.Piston).Values["Top"]=null; }
+            if(mode=="Pending") RecordProxy.Of(d.F.Couplers[0]).Values["PendingAttachment"]=true;
+            if(mode=="MissingPart") d.F.NoPart();
+            for(int i=0;i<400;i++) d.Tick();
+            bool expected=mode=="Active"||mode=="FailedSwap";
+            Check(Enabled(d.Arm)==expected,"Manual bare-arm recovery mishandled "+mode+": "+string.Join(" | ",d.F.Rig.Log.TakeLast(3)));
+            Check(d.F.Couplers[1].Top==null&&!d.F.Mutations.Any(m=>m.Kind=="Attach"),"Manual recovery resumed the canceled tool pickup.");
+            if(expected)
+            {
+                Check(((VRage.Game.ModAPI.Ingame.IMyCubeBlock)Get(Get(d.Arm,"Topology")!,"End")!).CubeGrid==d.F.ArmGrid,"Bare recovery retained the parked tool endpoint.");
+                var pilot=d.F.Rig.Blocks.OfType<IMyShipController>().Single(); RecordProxy.Of(pilot).Values["MoveIndicator"]=new Vector3(0,0,-1);
+                for(int i=0;i<12;i++) d.Tick();
+                Check(((Vector3D)Get(d.Arm,"LastPilotLinear")!).Length()>.01,"Bare recovery lost cockpit responsiveness.");
+                RecordProxy.Of(pilot).Values["MoveIndicator"]=Vector3.Zero; d.Command("Stop");
+            }
+            NoVelocity(d.F.Rig);
+        }
     }
     static void DualAdversarialCases(Type armType,Type toolType)
     {

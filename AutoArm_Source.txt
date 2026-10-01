@@ -1,13 +1,339 @@
+// One PB hosts isolated arm instances. Block prefixes are the section names.
+const string DefaultArm = "Arm 1";
+// ===== IMPLEMENTATION =====
+const string ControllerBuildVersion = "4.0.9";
+
+const int HostFormat = 7;
+const string WireTag = "AutoArm/5", GlobalSection = "global";
+readonly Dictionary<string, ArmCore> Arms = new Dictionary<string, ArmCore>(StringComparer.Ordinal);
+readonly List<string> Order = new List<string>();
+readonly Dictionary<long, ArmCore> Owners = new Dictionary<long, ArmCore>();
+MyIni Configuration = new MyIni(), Saved = new MyIni();
+string Selected = "", HostError = "";
+int Next;
+IMyBroadcastListener Selection;
+long InputClock, InputOwner;
+double InputAge;
+const string SelectionTag = "AutoArm/Select/1";
+public Program()
+{
+    Runtime.UpdateFrequency = UpdateFrequency.Update10;
+    IGC.UnicastListener.SetMessageCallback(WireTag);
+    try
+    {
+        if (!Saved.TryParse(Storage)) { Saved.Clear(); Saved.EndContent = Storage; }
+        if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId) { InputClock = Saved.Get("AutoArm Host", "InputClock").ToInt64(); InputOwner = Saved.Get("AutoArm Host", "InputOwner").ToInt64(); }
+        { Selection = IGC.RegisterBroadcastListener(SelectionTag); if (Selection != null) Selection.SetMessageCallback(WireTag); }
+        {StopSaved();
+}
+        LoadHost();
+        string prior = Saved.Get("AutoArm Host", "Selected").ToString();
+        if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Arms.ContainsKey(prior)) Selected = prior;
+        SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
+        Save();
+    }
+    catch (Exception e) { StopAll(e.Message); }
+    Display();
+}
+public void Save()
+{
+    if (Order.Count == 0) return;
+    bool changed = Saved.Get("AutoArm Host", "PB").ToInt64() != Me.EntityId || Saved.Get("AutoArm Host", "Selected").ToString() != Selected || Saved.Get("AutoArm Host", "InputClock").ToInt64() != InputClock || Saved.Get("AutoArm Host", "InputOwner").ToInt64() != InputOwner;
+    if (changed) { Saved.Set("AutoArm Host", "Format", 1); Saved.Set("AutoArm Host", "PB", Me.EntityId); Saved.Set("AutoArm Host", "Selected", Selected); Saved.Set("AutoArm Host", "InputClock", InputClock); Saved.Set("AutoArm Host", "InputOwner", InputOwner); }
+    foreach (var pair in Arms) if (pair.Value.Storage != pair.Value.SavedData) { Saved.Set("State " + pair.Key, "Data", pair.Value.Storage); pair.Value.SavedData = pair.Value.Storage; changed = true; }
+    if (!changed) return;
+    string text = Saved.ToString(); if (text != Storage) Storage = text;
+}
+void StopSaved()
+{
+    var sections = new List<string>(); Saved.GetSections(sections);
+    foreach (string section in sections)
+    {
+        if (!section.StartsWith("State ", StringComparison.Ordinal)) continue;
+        var state = new MyIni(); if (!state.TryParse(Saved.Get(section, "Data").ToString())) continue;
+        ArmCore.SavedDrives.Stop(state, section.Substring(6), Me, GridTerminalSystem);
+    }
+}
+void LoadHost()
+{
+    var ini = new MyIni();
+    if (string.IsNullOrWhiteSpace(Me.CustomData))
+    {
+        ini.Set(GlobalSection, "Format", HostFormat); ini.Set(GlobalSection, "SelectedArm", DefaultArm);
+        var bases = new List<IMyMechanicalConnectionBlock>(); GridTerminalSystem.GetBlocksOfType(bases); var detected = new List<string>();
+        foreach (var block in bases)
+        {
+            int split = block.CustomName.IndexOf(" - Base", StringComparison.Ordinal);
+            if (split > 0 && !block.Closed && block.IsSameConstructAs(Me) && !detected.Contains(block.CustomName.Substring(0, split))) detected.Add(block.CustomName.Substring(0, split));
+        }
+        if (detected.Count == 0) detected.Add(DefaultArm); detected.Sort(StringComparer.Ordinal);
+        foreach (string name in detected) ini.Set(name, "ToolSwapPB", "");
+        Me.CustomData = ini.ToString();
+    }
+    if (!ini.TryParse(Me.CustomData) || ini.Get(GlobalSection, "Format").ToInt32() != HostFormat)
+        throw new Exception("Custom Data requires [global] Format=" + HostFormat + ". Delete Custom Data.");
+    var names = new List<string>(); ini.GetSections(names); names.Remove(GlobalSection);
+    if (names.Count < 1 || names.Count > 8) throw new Exception("Configure 1..8 named arm sections.");
+    foreach (string name in names) if (name.Trim() != name || name.Length == 0 || name.IndexOfAny(new char[] { ',', '|', '(', ')', ';', '\r', '\n' }) >= 0 || name.Equals(GlobalSection, StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid arm section name.");
+    {
+        var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
+        foreach (var peer in peers)
+        {
+            if (peer == Me || peer.Closed || !peer.IsSameConstructAs(Me)) continue;
+            var data = new MyIni(); if (!data.TryParse(peer.CustomData) || data.Get(GlobalSection, "Format").ToInt32() != 7) continue;
+            foreach (string name in names) if (data.ContainsSection(name)) throw new Exception("Arm already assigned to another PB: " + name);
+        }
+    }
+    var removed = new List<string>(); foreach (string name in Order) if (!names.Contains(name)) removed.Add(name);
+    foreach (string name in removed) { Arms[name].Stop("Arm removed from configuration."); Saved.Set("State " + name, "Data", Arms[name].Storage); Arms.Remove(name); }
+    Configuration = ini; Order.Clear(); Order.AddRange(names);
+    AutoLinks();
+    foreach (string name in names) if (!Arms.ContainsKey(name))
+    {
+        string state = Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId ? Saved.Get("State " + name, "Data").ToString() : "";
+        Arms.Add(name, new ArmCore(this, name, ConfigFor(name), state));
+    }
+    if (!Arms.ContainsKey(Selected))
+    { string configured = ini.Get(GlobalSection, "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
+    {foreach (var core in Arms.Values) core.Select(core.Name == Selected && InputOwner == Me.EntityId);
+}
+    HostError = "";
+}
+string Effective(string arm, string key)
+{ return Configuration.Get(Configuration.ContainsKey(arm, key) ? arm : GlobalSection, key).ToString().Replace("{arm}", arm); }
+void AutoLinks()
+{
+    var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
+    foreach (string name in Order)
+    {
+        string key = "ToolSwapPB";
+        if (Effective(name, key).Length > 0) continue;
+        IMyProgrammableBlock found = null;
+        foreach (var peer in peers)
+        {
+            if (peer == Me || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me)) continue;
+            var data = new MyIni();
+            if (!data.TryParse(peer.CustomData) || data.Get(GlobalSection, "Format").ToInt32() != (2) || !data.ContainsSection(name)) continue;
+            if ((!data.Get(data.ContainsKey(name, "Tools.Enabled") ? name : GlobalSection, "Tools.Enabled").ToBoolean(true))) continue;
+            if (found != null) throw new Exception("Multiple module PBs for " + name + ". Set " + key + ".");
+            found = peer;
+        }
+        if (found != null) Configuration.Set(name, key, "@" + found.EntityId);
+    }
+}
+MyIni ConfigFor(string name)
+{
+    var ini = new MyIni();
+    var keys = new List<MyIniKey>(); Configuration.GetKeys(GlobalSection, keys);
+    var own = new List<MyIniKey>(); Configuration.GetKeys(name, own); keys.AddRange(own);
+    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var item in keys)
+    {
+        string key = item.Name; if (!seen.Add(key) || key.Equals("Format", StringComparison.OrdinalIgnoreCase) || key.Equals("SelectedArm", StringComparison.OrdinalIgnoreCase) || key.Equals("Structure", StringComparison.OrdinalIgnoreCase) || key.Equals("Actuators", StringComparison.OrdinalIgnoreCase)) continue;
+        string section = "Config", field = key; int dot = key.IndexOf('.');
+        if (dot > 0) { section = key.Substring(0, dot); field = key.Substring(dot + 1); }
+        else if (key.Equals("ToolSwapPB", StringComparison.OrdinalIgnoreCase) || key.Equals("Peers", StringComparison.OrdinalIgnoreCase)) section = "Modules";
+        ini.Set(section, field, Effective(name, key));
+    }
+    return ini;
+}
+bool Layout(ArmCore core, out string why)
+{
+    why = ""; string name = core.Name, table = Effective(name, "Actuators"), expected = Effective(name, "Structure");
+    bool shared = !Configuration.ContainsKey(name, "Actuators") && Configuration.ContainsKey(GlobalSection, "Actuators") && table.Trim().Length > 0;
+    if (shared && Configuration.ContainsKey(name, "Structure")) { why = "A local Structure requires local Actuators; clear it to inherit the global template."; return false; }
+    if (shared && expected.Length == 0)
+    {
+        ArmCore prototype;
+        if (!Arms.TryGetValue(Order[0], out prototype) || !prototype.HasLayout) { why = "Waiting for global structure prototype: " + Order[0]; return false; }
+        expected = prototype.Shape; Configuration.Set(GlobalSection, "Structure", expected);
+    }
+    string shape = core.Shape;
+    if (expected.Length > 0 && expected != shape) { why = name + " does not match configured joint kinds/parallel layout."; return false; }
+    if (!core.ApplyWeights(table, out why)) return false;
+    foreach (var joint in core.Joints())
+    {
+        ArmCore owner;
+        if (Owners.TryGetValue(joint.EntityId, out owner) && owner != core && Arms.ContainsKey(owner.Name))
+        { owner.Stop("Actuator also claimed by " + name); why = "Actuator shared with " + owner.Name + ": " + joint.CustomName; return false; }
+    }
+    var release = new List<long>(); foreach (var pair in Owners) if (pair.Value == core) release.Add(pair.Key);
+    foreach (long id in release) Owners.Remove(id);
+    foreach (var joint in core.Joints()) Owners[joint.EntityId] = core;
+    if (!shared && table.Trim().Length == 0) Configuration.Set(name, "Actuators", core.WeightTable);
+    PublishConfig(); return true;
+}
+void PublishConfig()
+{
+    // Generated values only fill missing keys. Preserve edits made while running.
+    var live = new MyIni(); if (!live.TryParse(Me.CustomData) || live.Get(GlobalSection, "Format").ToInt32() != HostFormat) return;
+    var keys = new List<MyIniKey>(); Configuration.GetKeys(keys);
+    foreach (var key in keys) if (!live.ContainsKey(key.Section, key.Name)) live.Set(key.Section, key.Name, Configuration.Get(key).ToString());
+    string text = live.ToString(); if (text != Me.CustomData) Me.CustomData = text;
+}
+void SelectArm(string name, bool claim = true)
+{
+    if (!Arms.ContainsKey(name)) throw new Exception("Unknown arm: " + name);
+    Selected = name;
+    { if (claim) { InputClock++; InputOwner = Me.EntityId; } foreach (var core in Arms.Values) core.Select(core.Name == name && InputOwner == Me.EntityId); if (InputOwner == Me.EntityId) AnnounceInput(); }
+    Save();
+}
+void Command(string raw)
+{
+    string text = raw.Trim(); if (text.Length == 0) return;
+    if (text.StartsWith("Select ", StringComparison.OrdinalIgnoreCase)) { SelectArm(text.Substring(7).Trim()); return; }
+    if (text.Equals("StopAll", StringComparison.OrdinalIgnoreCase)) { StopAll("StopAll command."); return; }
+    int end = text.IndexOfAny(new char[] { ' ', '(', ',' }); string first = (end < 0 ? text : text.Substring(0, end)).ToLowerInvariant();
+    if (first == "on" || first == "reload" || first == "rescan")
+    { try { LoadHost(); if ((InputOwner == 0)) SelectArm(Selected); } catch (Exception e) { StopAll(e.Message); throw; } }
+    string name = Selected, command = text; int open = text.IndexOf('(');
+    if (open > 0)
+    {
+        if (!text.EndsWith(")", StringComparison.Ordinal)) throw new Exception("Command needs closing parenthesis.");
+        string verb = text.Substring(0, open).Trim(); var values = new List<string>();
+        foreach (string value in text.Substring(open + 1, text.Length - open - 2).Split(',')) if (value.Trim().Length > 0) values.Add(value.Trim());
+        if (values.Count > 0 && Arms.ContainsKey(values[values.Count - 1])) { name = values[values.Count - 1]; values.RemoveAt(values.Count - 1); }
+        else if (values.Count > Arity(verb)) throw new Exception("Unknown arm argument.");
+        command = verb + (values.Count == 0 ? "" : " " + string.Join(" ", values));
+    }
+    else
+    {
+        int comma = text.LastIndexOf(',');
+        if (comma >= 0) { name = text.Substring(comma + 1).Trim(); command = text.Substring(0, comma).Trim(); }
+    }
+    ArmCore target; if (!Arms.TryGetValue(name, out target)) throw new Exception("Unknown arm: " + name);
+    string action = command.Split(' ')[0].ToLowerInvariant();
+    if (action == "on" || action == "reload" || action == "rescan")
+    { target.Config = ConfigFor(name); target.ConfigChanged = false; }
+    target.Update(command, UpdateType.Terminal, 0);
+    CaptureDefaults(target);
+}
+static int Arity(string verb)
+{
+    switch (verb.ToLowerInvariant())
+    {
+        case "on": case "off": case "stop": case "hold": case "check": case "info": case "joints": case "reload": case "rescan": case "sethome": case "gohome": case "toolscan": case "toolinfo": case "swapcancel": case "version": case "status": case "bindings": case "homeinfo": case "forward": case "back": case "left": case "right": case "up": case "down": case "yawleft": case "yawright": case "pitchup": case "pitchdown": case "rollleft": case "rollright": return 0;
+        case "moveto": return 3;
+        case "orientto": return 6;
+        case "movetoposori": return 9;
+        case "homespeed": case "step": return 2;
+        default: return 1;
+    }
+}
+void AnnounceInput()
+{ if (Selection != null) IGC.SendBroadcastMessage(SelectionTag, InputClock + "|" + Selected, TransmissionDistance.CurrentConstruct); }
+void ReceiveSelection(double elapsed)
+{
+    if (Selection == null) return;
+    int read = 0;
+    while (Selection.HasPendingMessage && read++ < 8)
+    {
+        var message = Selection.AcceptMessage(); string text = message.Data as string; long clock;
+        if (message.Tag != SelectionTag || message.Source == Me.EntityId || text == null || text.Length > 512) continue;
+        string[] cells = text.Split('|');
+        if (cells.Length != 2 || !long.TryParse(cells[0], out clock) || clock <= 0 || clock < InputClock || clock == InputClock && message.Source <= InputOwner) continue;
+        var peer = GridTerminalSystem.GetBlockWithId(message.Source) as IMyProgrammableBlock; var config = new MyIni();
+        if (peer == null || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me) || !config.TryParse(peer.CustomData) || config.Get(GlobalSection, "Format").ToInt32() != 7 || !config.ContainsSection(cells[1])) continue;
+        InputClock = clock; InputOwner = message.Source;
+        foreach (var core in Arms.Values) core.Select(false);
+    }
+    if (elapsed > 0 && !double.IsInfinity(elapsed) && !double.IsNaN(elapsed)) InputAge += elapsed;
+    if (InputAge >= .1 && InputOwner == Me.EntityId) { InputAge = 0; AnnounceInput(); }
+}
+void CaptureDefaults(ArmCore core)
+{
+    if (!core.ConfigChanged) return;
+    core.ConfigChanged = false;
+    var ini = core.Config;
+    var keys = new List<MyIniKey>(); ini.GetKeys(keys);
+    foreach (var key in keys)
+    {
+        if (key.Section == "AutoArm" || key.Name == "Actuators") continue;
+        string field = key.Section == "Config" || key.Section == "Modules" ? key.Name : key.Section + "." + key.Name;
+        if (!Configuration.ContainsKey(core.Name, field) && !Configuration.ContainsKey(GlobalSection, field))
+            Configuration.Set(core.SharedSetting(field) ? GlobalSection : core.Name, field, ini.Get(key).ToString());
+    }
+    PublishConfig();
+}
+public void Main(string argument, UpdateType source)
+{
+    double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
+    try { {ReceiveSelection(elapsed); } } catch (Exception e) { StopAll(e.Message); }
+    try
+    {
+        if (!string.IsNullOrWhiteSpace(argument) && !((source & UpdateType.IGC) != 0 && argument == WireTag))
+            foreach (string raw in argument.Split(new char[] { ';', '\n' }, StringSplitOptions.RemoveEmptyEntries)) Command(raw);
+    }
+    catch (Exception e) { HostError = e.Message; }
+    try
+    {
+        int read = 0;
+        while (IGC.UnicastListener.HasPendingMessage && read++ < 16)
+        {
+            if (Runtime.MaxInstructionCount > 0 && Runtime.CurrentInstructionCount >= Runtime.MaxInstructionCount * .4) break;
+            var message = IGC.UnicastListener.AcceptMessage(); var data = message.Data as string; var ini = new MyIni(); ArmCore core;
+            if (message.Tag != WireTag || data == null || data.Length > 16000 || !ini.TryParse(data) || !Arms.TryGetValue(ini.Get("Link", "Arm").ToString(), out core)) continue;
+            if (core.Inbox.Count < 32) core.Inbox.Enqueue(message);
+        }
+        int count = Order.Count;
+        for (int i = 0; i < count; i++)
+        {
+            if (Runtime.MaxInstructionCount > 0 && Runtime.CurrentInstructionCount >= Runtime.MaxInstructionCount * .7) { StopAll("Shared PB instruction budget exhausted."); break; }
+            var core = Arms[Order[(Next + i) % count]]; core.Update("", source, elapsed); CaptureDefaults(core);
+        }
+        if (count > 0) Next = (Next + 1) % count;
+        Save();
+    }
+    catch (Exception e) { StopAll(e.Message); }
+    finally
+    {
+        UpdateFrequency frequency = UpdateFrequency.Update10;
+        foreach (var core in Arms.Values) if ((core.Frequency & UpdateFrequency.Update1) != 0) frequency = UpdateFrequency.Update1;
+        Runtime.UpdateFrequency = frequency; Display();
+    }
+}
+void StopAll(string why)
+{ HostError = why; foreach (var core in Arms.Values) core.Stop(why); }
+void Display()
+{
+    var lines = new List<string>(); lines.Add("AutoArm " + ControllerBuildVersion + " " + ("Arm") + " | Selected: " + Selected);
+    if ((InputOwner != Me.EntityId)) lines.Add("Cockpit input inactive here. Run Select " + Selected + ".");
+    if (HostError.Length > 0) lines.Add(HostError);
+    foreach (string name in Order) lines.Add(name + ": " + Arms[name].Summary);
+    ArmCore current; if (Arms.TryGetValue(Selected, out current)) lines.Add(current.Report);
+    Echo(string.Join("\n", lines));
+}
+
+sealed class ArmCore {
+readonly Program Host;
+public string CustomData = "", Storage, SavedData, Report = "";
+public MyIni Config;
+public bool ConfigChanged;
+bool ConfigDefaultsNeeded => false;
+bool ReadConfig(string text, out MyIni ini, out string why) { ini = Config; why = ""; return true; }
+void WriteConfig(MyIni ini) { Config = ini; ConfigChanged = true; }
+string ConfigText(MyIni ini) { return ""; }
+public UpdateFrequency Frequency = UpdateFrequency.Update10;
+public readonly Queue<MyIGCMessage> Inbox = new Queue<MyIGCMessage>();
+double Elapsed;
+public string Name => ArmName;
+IMyProgrammableBlock Me => Host.Me;
+IMyGridTerminalSystem GridTerminalSystem => Host.GridTerminalSystem;
+IMyGridProgramRuntimeInfo Runtime => Host.Runtime;
+IMyIntergridCommunicationSystem IGC => Host.IGC;
+void Echo(string text) { Report = text; }
+public void Update(string argument, UpdateType source, double elapsed)
+{ Elapsed = elapsed; Main(argument, source); }
+
 // AutoArm: auto-discovered mixed mechanical arm controller.
-// Change only this value in code. All detected group participation settings are
-// generated in this programmable block's Custom Data.
-const string ArmName = "Arm 1";
+// The host supplies the arm section name. This initializer supports engine tests.
+readonly string ArmName;
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "3.2";
+const string ControllerBuildVersion = "4.0.9";
 
 
-// C# 6 programmable-block fragment. Paste inside Program.
+// C# 6 programmable-block fragment. Paste inside ArmCore.
 class AutoMember
 {
     public IMyMechanicalConnectionBlock B;
@@ -46,7 +372,7 @@ class AutoTopology
 {
     const int MaxMembers = 48, MaxGroups = 24, MaxWorkEdges = 128, MaxInventory = 4096;
     const double AxisCos = .999961923, RotaryLineM = .03;
-    readonly Program P;
+    readonly ArmCore P;
     public readonly string Arm;
     public readonly List<AutoGroup> Groups = new List<AutoGroup>();
     public readonly List<long> Rigid = new List<long>();
@@ -63,7 +389,7 @@ class AutoTopology
     public IMyTerminalBlock Head;
     public IMyCubeBlock End;
     IMyCubeBlock EndOverride;
-    ToolTopInfo Focus;
+    ArmTipInfo Focus;
     public MatrixD EndPose
     {
         get { var pose = Focus == null ? End.WorldMatrix : Focus.WorldMatrix; pose.Translation = EndPosition; return pose; }
@@ -73,7 +399,7 @@ class AutoTopology
     string EndpointName = "";
     long ExcludedMechanical;
 
-    public void SetEndpointOverride(IMyTerminalBlock endpoint, long ignoredMechanical, IMyCubeBlock frame = null, ToolTopInfo focus = null)
+    public void SetEndpointOverride(IMyTerminalBlock endpoint, long ignoredMechanical, IMyCubeBlock frame = null, ArmTipInfo focus = null)
     {
         EndpointOverride = endpoint; EndpointName = endpoint == null ? "" : endpoint.CustomName;
         EndOverride = frame;
@@ -96,7 +422,7 @@ class AutoTopology
     int FullScanIn = 30;
     bool Building;
 
-    public AutoTopology(Program owner, string arm)
+    public AutoTopology(ArmCore owner, string arm)
     {
         P = owner; Arm = arm == null ? "" : arm.Trim();
     }
@@ -636,11 +962,11 @@ enum PilotMode { HEAD, HRZ, VRT }
 
 sealed class AutoSettings
 {
-    public static readonly string[] Keys = { "HeadSpeed", "HeadTurnSpeed", "StepAngle", "JointSpeed", "PistonSpeed", "HomeJointSpeed", "HomePistonSpeed", OrientationToleranceKey, "JointAcceleration", "PistonAcceleration", "PositionCorrectionCap", "OrientationCorrectionCap", "TargetLead", "PositionIntegralGain", "OrientationIntegralGain", "PositionIntegralCap", "OrientationIntegralCap", "MouseSensitivity" };
-    public static readonly double[] Defaults = { .20, 5, 5, .50, .20, .50, .20, 3, 1, .40, .20, 5, 1.50, .50, .25, .20, 5, .025 };
-    static readonly double[] Min = { 0, .01, .01, .01, .01, .01, .01, 0, .01, .01, 0, 0, .01, 0, 0, 0, 0, 0 };
-    static readonly double[] Max = { 5, 30, 180, 5, 2, 5, 2, 30, 20, 10, 5, 30, 10, 5, 5, 5, 30, 10 };
-    static readonly string[] Units = { "Head translation m/s", "Head rotation deg/s", "Toolbar step deg", "Rotor/hinge RPM cap", "Piston m/s cap", "Home RPM cap", "Home m/s cap", "Idle orientation band deg", "Rotor RPM/s cap", "Piston m/s^2 cap", "Correction m/s cap", "Correction deg/s cap", "Target lead m", "Bias gain 1/s^2; 0=off", "Angular bias gain 1/s^2; 0=off", "Bias m/s cap", "Bias deg/s cap", "Mouse scale; total rotation capped" };
+    public static readonly string[] Keys = { "HeadSpeed", "HeadTurnSpeed", "StepAngle", "JointSpeed", "PistonSpeed", "HomeJointSpeed", "HomePistonSpeed", OrientationToleranceKey, "JointAcceleration", "PistonAcceleration", "PositionCorrectionCap", "OrientationCorrectionCap", "TargetLead", "PositionIntegralGain", "OrientationIntegralGain", "PositionIntegralCap", "OrientationIntegralCap", "MouseSensitivity", "PositionDamping", "OrientationDamping" };
+    public static readonly double[] Defaults = { .20, 5, 5, .50, .20, .50, .20, 3, 1, .40, .20, 5, 1.50, .50, .25, .20, 5, .025, 0, 0 };
+    static readonly double[] Min = { 0, .01, .01, .01, .01, .01, .01, 0, .01, .01, 0, 0, .01, 0, 0, 0, 0, 0, 0, 0 };
+    static readonly double[] Max = { 5, 30, 180, 5, 2, 5, 2, 30, 20, 10, 5, 30, 10, 5, 5, 5, 30, 10, 3, 3 };
+    static readonly string[] Units = { "Head translation m/s", "Head rotation deg/s", "Toolbar step deg", "Rotor/hinge RPM cap", "Piston m/s cap", "Home RPM cap", "Home m/s cap", "Idle orientation band deg", "Rotor RPM/s cap", "Piston m/s^2 cap", "Correction m/s cap", "Correction deg/s cap", "Target lead m", "Bias gain 1/s^2; 0=off", "Angular bias gain 1/s^2; 0=off", "Bias m/s cap", "Bias deg/s cap", "Mouse scale; total rotation capped", "Velocity error damping; 0=off", "Angular velocity error damping; 0=off" };
     public static readonly string[] DefaultBindings = { "PitchUp", "Back", "PitchDown", "Left", "Down", "Right", "YawLeft", ForwardName, "YawRight" };
     public readonly double[] V = (double[])Defaults.Clone();
     public bool Keyboard = true, Roll = true, Mouse;
@@ -698,25 +1024,16 @@ sealed class AutoSettings
     public static string Number(double v) { return v.ToString("R", System.Globalization.CultureInfo.InvariantCulture); }
 }
 
+
+
 static class AutoConfig
 {
-    public const int Format = 6;
-    const string Identity = "AutoArm Config";
-    const string Header = "Name | Kind | Translation | Orientation";
 
-    public static bool ReadCurrent(string text, out MyIni ini, out string why)
+    const string Identity = "AutoArm Config";
+
+    public static bool ReadCurrent(ArmCore p, string text, out MyIni ini, out string why)
     {
-        ini = new MyIni(); why = ""; MyIniParseResult error;
-        if (!ini.TryParse(text ?? "", out error))
-        { why = "Custom Data is not valid INI (" + error + "). Fix it or delete Custom Data."; return false; }
-        if (string.IsNullOrWhiteSpace(text))
-        { ini.Set(ArmSection, "Arm", ArmName); ini.Set(ArmSection, "Format", Format); return true; }
-        int format;
-        if (!int.TryParse(ini.Get(ArmSection, "Format").ToString(), out format) || format != Format)
-        { why = "Custom Data Format must be " + Format + ". Delete Custom Data."; return false; }
-        if (ini.Get(ArmSection, "Arm").ToString() != ArmName)
-        { why = "Custom Data belongs to a different arm. Delete Custom Data and regenerate it for " + ArmName + "."; return false; }
-        return true;
+        return p.ReadConfig(text, out ini, out why);
     }
 
     public static MyIni Saved(string text)
@@ -726,125 +1043,118 @@ static class AutoConfig
         return ini;
     }
 
-    public static void EnsureDefaults(Program p)
+    public static void EnsureDefaults(ArmCore p)
     {
-        if (!string.IsNullOrWhiteSpace(p.Me.CustomData)) return;
+        if (!p.ConfigDefaultsNeeded) return;
         MyIni ini; string why;
-        if (!ReadCurrent("", out ini, out why)) throw new Exception(why);
-        new AutoSettings().Write(ini); ini.DeleteSection("Instructions");
-        if (p.Tools != null) p.Tools.WriteConfig(ini);
-        ini.Set(ConfigSection, "Actuators", "");
-        p.Me.CustomData = ini.ToString();
+        if (!ReadCurrent(p, "", out ini, out why)) throw new Exception(why);
+        if (!new AutoSettings().Read(ini, out why)) throw new Exception(why);
+        var defaults = new MyIni(); new AutoSettings().Write(defaults);
+        if (p.Tools != null) p.Tools.WriteConfig(defaults);
+        var keys = new List<MyIniKey>(); defaults.GetKeys(keys);
+        foreach (var key in keys) if (!ini.ContainsKey(key.Section, key.Name)) ini.Set(key.Section, key.Name, defaults.Get(key).ToString());
+        p.WriteConfig(ini);
     }
 
-    public static bool LoadOrGenerate(Program p, AutoTopology t, string customData,
+    public const string StageHeader = "Stage | Kind | Translation | Orientation";
+    public static string GroupKind(AutoGroup group)
+    {
+        int piston = 0, rotor = 0, hinge = 0;
+        foreach (var member in group.M)
+            if (member.B is IMyPistonBase) piston++;
+            else if ((member.B.BlockDefinition.SubtypeName ?? "").IndexOf("Hinge", StringComparison.OrdinalIgnoreCase) >= 0) hinge++;
+            else rotor++;
+        var kinds = new List<string>();
+        if (piston > 0) kinds.Add("Piston x" + piston);
+        if (rotor > 0) kinds.Add("Rotor x" + rotor);
+        if (hinge > 0) kinds.Add("Hinge x" + hinge);
+        return string.Join(" + ", kinds);
+    }
+    public static string Weights(List<AutoGroup> groups)
+    {
+        var text = new System.Text.StringBuilder(StageHeader); int stage = 0;
+        foreach (var g in groups) text.Append('\n').Append((++stage).ToString("00")).Append(" | ").Append(GroupKind(g)).Append(" | ").Append(AutoSettings.Number(g.MoveW)).Append(" | ").Append(AutoSettings.Number(g.TurnW));
+        return text.ToString();
+    }
+    public static bool ReadWeights(string table, List<AutoGroup> groups, out List<double[]> values, out string why)
+    {
+        values = new List<double[]>(); why = "";
+        for (int i = 0; i < groups.Count; i++) values.Add(new double[] { 1, 1 });
+        if (string.IsNullOrWhiteSpace(table)) return true;
+        var seen = new HashSet<int>(); bool header = false;
+        foreach (string raw in table.Split('\n'))
+        {
+            string line = raw.Trim(); if (line.Length == 0) continue;
+            if (!header) { if (line != StageHeader) { why = "Actuators requires: " + StageHeader; return false; } header = true; continue; }
+            string[] cells = line.Split('|'); int stage; double m, r;
+            if (cells.Length != 4 || !int.TryParse(cells[0].Trim(), out stage) || stage < 1 || stage > groups.Count || !seen.Add(stage) ||
+                cells[1].Trim() != GroupKind(groups[stage - 1]) || !ReadDouble(cells[2].Trim(), out m) || !ReadDouble(cells[3].Trim(), out r) || !Valid(m) || !Valid(r))
+            { why = "Malformed or nonconforming actuator stage."; return false; }
+            values[stage - 1] = new double[] { m, r };
+        }
+        if (seen.Count != groups.Count) { why = "Actuator stage count does not match configuration."; return false; }
+        return true;
+    }
+    public static bool LoadOrGenerate(ArmCore p, AutoTopology t, string customData,
         out string updated, out bool changed, out string why, bool captureToolWeights = false)
     {
         updated = customData ?? ""; changed = false; why = "";
         MyIni ini;
-        if (!ReadCurrent(updated, out ini, out why)) throw new Exception(why);
+        if (!ReadCurrent(p, updated, out ini, out why)) throw new Exception(why);
         if (t == null || !captureToolWeights && (t.Groups.Count == 0 || t.Fingerprint.Length == 0))
             return Refuse(t, "Discover a valid arm before loading actuator settings.", out why);
         var settings = new AutoSettings();
         if (!settings.Read(ini, out why)) return Refuse(t, why, out why);
-        var move = new Dictionary<string, double>(); var turn = new Dictionary<string, double>();
-        var current = new HashSet<string>(); foreach (var g in t.Groups) current.Add(g.Sig);
         var saved = Saved(p.Storage);
-        string table = ini.Get(ConfigSection, "Actuators").ToString("").Trim();
-        if (table.Length > 0)
+        if (saved.ContainsSection(Identity))
         {
-            var map = new Dictionary<string, string>(); var signatures = new HashSet<string>();
             if (saved.Get(Identity, "Arm").ToString() != t.Arm || saved.Get(Identity, "PB").ToInt64() != p.Me.EntityId || saved.Get(Identity, "Format").ToInt32() != 1)
-                return Refuse(t, "Actuator identity cache is missing. Clear Actuators and Reload to regenerate defaults.", out why);
-            foreach (string raw in saved.Get(Identity, "Rows").ToString().Split('\n'))
+                return Refuse(t, "Actuator identity cache belongs to a different arm/PB or format.", out why);
+            var names = new HashSet<string>(); var signatures = new HashSet<string>();
+            foreach (string row in saved.Get(Identity, "Rows").ToString().Split('\n'))
             {
-                string[] row = raw.Trim().Split('|');
-                if (row.Length != 2 || row[0].Trim().Length == 0 || map.ContainsKey(row[0]) || !Signature(row[1]) || !signatures.Add(row[1]))
-                    return Refuse(t, "Actuator identity cache is corrupt. Clear Actuators and Reload.", out why);
-                map.Add(row[0], row[1]);
+                if (row.Length == 0) continue;
+                string[] cells = row.Split('|');
+                if (cells.Length != 2 || cells[0].Trim().Length == 0 || !names.Add(cells[0]) || !Signature(cells[1]) || !signatures.Add(cells[1]))
+                    return Refuse(t, "Actuator identity cache is corrupt.", out why);
             }
-            var seen = new HashSet<string>(); bool header = false;
-            foreach (string raw in table.Split('\n'))
-            {
-                string line = raw.Trim(); if (line.Length == 0) continue;
-                if (!header) { if (line != Header) return Refuse(t, "Actuators needs its four-column header.", out why); header = true; continue; }
-                string[] row = line.Split('|'); string sig; double m, r;
-                for (int i = 0; i < row.Length; i++) row[i] = row[i].Trim();
-                if (row.Length != 4 || !map.TryGetValue(row[0], out sig) || !seen.Add(row[0]))
-                    return Refuse(t, "Unknown, duplicate or malformed actuator row. Edit only the two weights.", out why);
-                if (row[1] != Kind(sig) || !ReadDouble(row[2], out m) ||
-                    !ReadDouble(row[3], out r) || !Valid(m) || !Valid(r))
-                    return Refuse(t, "Actuator " + row[0] + " needs finite Translation/Orientation in 0..10 and its generated Kind.", out why);
-                move.Add(sig, m); turn.Add(sig, r);
-            }
-            foreach (var pair in map) if (current.Contains(pair.Value) && !seen.Contains(pair.Key))
-                return Refuse(t, "Missing actuator row: " + pair.Key + ". Restore it or clear Actuators.", out why);
         }
-        if (captureToolWeights)
-        {
-            p.RememberToolWeights(false);
-            if (table.Length == 0) p.ToolWeights.Clear();
-            foreach (var item in move)
-            {
-                string[] parts = item.Key.Split(':'); string key = parts[0];
-                for (int i = 1; i < parts.Length; i++) key += ":" + parts[i].Substring(0, parts[i].IndexOf('@'));
-                p.ToolWeights[key] = new double[] { item.Value, turn[item.Key] };
-            }
-            return true;
-        }
+        else if (saved.Get("AutoArm Tool Weights", "Rows").ToString().Length > 0 || !string.IsNullOrWhiteSpace(ini.Get(ConfigSection, "Actuators").ToString()))
+            return Refuse(t, "Actuator identity cache is missing.", out why);
+        List<double[]> values = null;
+        bool explicitWeights = ini.ContainsKey(ConfigSection, "Actuators");
+        if (explicitWeights && !ReadWeights(ini.Get(ConfigSection, "Actuators").ToString(), t.Groups, out values, out why)) return Refuse(t, why, out why);
+        p.RememberToolWeights(false);
+        if (values != null)
+            for (int i = 0; i < t.Groups.Count; i++) p.ToolWeights[p.ToolGroupKey(t.Groups[i])] = values[i];
         settings.Write(ini); ini.DeleteSection("Instructions");
         if (p.Tools != null) p.Tools.WriteConfig(ini);
-        var values = new List<double[]>();
-        foreach (var g in t.Groups)
+        if (!captureToolWeights)
         {
-            double m, r; double[] old;
-            if (p.Tools != null && p.Tools.Configured && p.ToolWeights.TryGetValue(p.ToolGroupKey(g), out old)) { m = old[0]; r = old[1]; }
-            else { if (!move.TryGetValue(g.Sig, out m)) m = 1; if (!turn.TryGetValue(g.Sig, out r)) r = 1; }
-            values.Add(new double[] { m, r });
-        }
-        string state; string text = Render(p, t, ini, saved, values, out state);
-        if (text != updated) p.Me.CustomData = text;
-        if (state != p.Storage) p.Storage = state;
-        for (int i = 0; i < t.Groups.Count; i++) { t.Groups[i].MoveW = values[i][0]; t.Groups[i].TurnW = values[i][1]; }
-        p.ApplySettings(settings); changed = text != updated; updated = text;
-        t.Ready = false; t.ZeroOwned(); why = "Configuration loaded; arm remains Off until On."; return true;
-    }
-
-    // Expected swap boundaries already validated the physical groups and copied
-    // their preferences. Rewrite identity rows without reloading runtime defaults.
-    public static void UpdateGroups(Program p)
-    {
-        MyIni ini; string why;
-        if (!ReadCurrent(p.Me.CustomData, out ini, out why)) throw new Exception(why);
-        var values = new List<double[]>();
-        foreach (var g in p.Topology.Groups) values.Add(new double[] { g.MoveW, g.TurnW });
-        string state; string text = Render(p, p.Topology, ini, Saved(p.Storage), values, out state);
-        if (text != p.Me.CustomData) p.Me.CustomData = text;
-        if (state != p.Storage) p.Storage = state;
-    }
-
-    static string Render(Program p, AutoTopology t, MyIni ini, MyIni saved, List<double[]> values, out string state)
-    {
-        ini.Set(ArmSection, "Arm", t.Arm); ini.Set(ArmSection, "Format", Format);
-        var table = new System.Text.StringBuilder(Header); var identities = new System.Text.StringBuilder();
-        for (int i = 0; i < t.Groups.Count; i++)
-        {
-            var g = t.Groups[i]; string name = (i + 1).ToString("00") + ". ";
-            for (int j = 0; j < g.M.Count; j++)
+            foreach (var g in t.Groups)
             {
-                if (j > 0) name += " + ";
-                name += g.M[j].B.CustomName.Replace('|', '/').Replace('\r', ' ').Replace('\n', ' ').Trim();
+                double[] old;
+                if (p.ToolWeights.TryGetValue(p.ToolGroupKey(g), out old)) { g.MoveW = old[0]; g.TurnW = old[1]; }
+                else { g.MoveW = g.TurnW = 1; }
             }
-            name = name.TrimEnd();
-            table.Append('\n').Append(name).Append(" | ").Append(Kind(g.Sig)).Append(" | ").Append(AutoSettings.Number(values[i][0])).Append(" | ").Append(AutoSettings.Number(values[i][1]));
-            if (i > 0) identities.Append('\n'); identities.Append(name).Append('|').Append(g.Sig);
+            UpdateGroups(p);
+            p.ApplySettings(settings); t.Ready = false; t.ZeroOwned(); why = "Configuration loaded; arm remains Off until On.";
         }
-        ini.Set(ConfigSection, "Actuators", table.ToString()); ini.SetComment(ConfigSection, "Actuators", "Edit only weights (0..10), then On.");
-        saved.DeleteSection(Identity); saved.Set(Identity, "Format", 1); saved.Set(Identity, "Arm", t.Arm); saved.Set(Identity, "PB", p.Me.EntityId); saved.Set(Identity, "Rows", identities.ToString());
-        state = saved.ToString(); return ini.ToString();
+        else p.WriteToolWeights();
+        if (explicitWeights || p.ConfigText(ini).Length > 0) ini.Set(ConfigSection, "Actuators", Weights(t.Groups));
+        updated = p.ConfigText(ini); changed = updated != customData;
+        p.WriteConfig(ini); return true;
     }
 
-    static string Kind(string sig) { return sig.StartsWith("R", StringComparison.Ordinal) ? "Rotor/Hinge" : "Piston"; }
+    // Keep startup stop identities and durable signed preferences together.
+    public static void UpdateGroups(ArmCore p)
+    {
+        var saved = Saved(p.Storage); var rows = new System.Text.StringBuilder(); int stage = 0;
+        foreach (var g in p.Topology.Groups)
+        { if (stage > 0) rows.Append('\n'); rows.Append((++stage).ToString("00")).Append('|').Append(g.Sig); }
+        saved.Set(Identity, "Format", 1); saved.Set(Identity, "Arm", p.Topology.Arm); saved.Set(Identity, "PB", p.Me.EntityId); saved.Set(Identity, "Rows", rows.ToString());
+        p.Storage = saved.ToString(); p.RememberToolWeights();
+    }
     static bool Signature(string sig)
     {
         string[] parts = sig.Split(':');
@@ -867,18 +1177,18 @@ static class AutoConfig
 
 const string ConfigSection = "Config";
 const string ToolsSection = "Tools";
-const string GeometryBudgetMessage = "Geometry budget; retry.";
-const string SwapSection = "AutoArm Swap";
-const string ApproachDockPhase = "ApproachDock";
+
+
+
 const string HomeSection = "AutoArm Home";
-const string ApproachTopPhase = "ApproachTop";
+
 const string ThreeDecimals = "0.000";
 const string EnabledKey = "Enabled";
 const string KeyboardKey = "ReadKeyboard";
-const string AlignTopPhase = "AlignTop";
+
 const string MovementModeKey = "MovementMode";
-const string ArmSection = "AutoArm";
-const string RetreatPhase = "Retreat";
+
+
 const string ToolWeightsSection = "AutoArm Tool Weights";
 const string OrientationToleranceKey = "OrientationTolerance";
 const string MouseKey = "ReadMouse";
@@ -901,6 +1211,7 @@ const double ManualCounterCorrectionFraction = 0.50;
 double MaximumPilotTargetLeadM = 1.50;
 double PositionIntegralCap = 0.20;
 double OrientationIntegralCapDeg = 5.0;
+double PositionDamping, OrientationDamping;
 const double IntegralUnwindSeconds = 2.0;
 double JointAccelerationRpmPerSec = 1.0;
 double PistonAccelerationMps2 = 0.40;
@@ -914,10 +1225,11 @@ ToolSwapLink Tools;
 ArmServices Services;
 PivotProbeTool PivotProbe;
 bool Enabled, GoingHome, PendingOn, ConfigValid;
+bool PilotSelected = true;
 bool ReadKeyboard = true, ReadRoll = true, AimingTarget, LastCounterCorrectionLimited;
 bool ReadMouse;
 bool ToolDriving, SwapBatchLock;
-double ToolDriveMoveCap, ToolDriveTurnCap;
+double ToolDriveMoveCap, ToolDriveTurnCap, ToolPositionBand, ToolOrientationBand;
 readonly Dictionary<string, double[]> ToolWeights = new Dictionary<string, double[]>();
 bool ToolWeightsLoaded;
 PilotMode MovementMode = PilotMode.HEAD;
@@ -936,6 +1248,7 @@ void ApplySettings(AutoSettings s)
     PositionCorrectionCap = s.V[10]; OrientationCorrectionCapDeg = s.V[11]; MaximumPilotTargetLeadM = s.V[12];
     PositionKi = s.V[13]; OrientationKi = s.V[14]; PositionIntegralCap = s.V[15]; OrientationIntegralCapDeg = s.V[16];
     ReadKeyboard = s.Keyboard; ReadRoll = s.Roll; ReadMouse = s.Mouse; MovementMode = s.Mode; MouseSensitivity = s.V[17];
+    PositionDamping = s.V[18]; OrientationDamping = s.V[19];
     InputController = null; InputScan = 10;
 }
 Vector3D TargetP, TargetF, TargetU, PreviousP, PreviousF, PreviousU;
@@ -966,9 +1279,8 @@ int[] BoundState;
 readonly Dictionary<long, double> Home = new Dictionary<long, double>();
 string HomeFingerprint = "";
 
-public Program()
-{
-    Runtime.UpdateFrequency = UpdateFrequency.Update10;
+public ArmCore(Program host, string name, MyIni config, string storage) { Host = host; ArmName = name; Config = config; Storage = storage;
+    Frequency = UpdateFrequency.Update10;
     Topology = new AutoTopology(this, ArmName);
     Tools = new ToolSwapLink(this);
     Services = new ArmServices(this);
@@ -983,41 +1295,19 @@ public Program()
     Echo(DisplayText);
 }
 
-public void Save()
-{
-    // Home is written immediately by SetHome. Save intentionally has no motion side effects.
-}
+
 
 // Reloading the PB does not clear native actuator velocities. Recover only
 // identities scoped to this PB/arm, before configuration can fail discovery.
 void ZeroSavedDrives()
 {
-    var ini = AutoConfig.Saved(Storage); var ids = new HashSet<long>();
-    string section = "AutoArm Config";
-    if (ini.Get(section, "PB").ToInt64() == Me.EntityId && ini.Get(section, "Arm").ToString() == ArmName && ini.Get(section, "Format").ToInt32() == 1)
-        foreach (string row in (ini.Get(section, "Rows").ToString() + "\n" + ini.Get(ToolWeightsSection, "Rows").ToString()).Split('\n'))
-        {
-            string[] cells = row.Split('|'); string key = cells.Length == 2 ? cells[1] : cells.Length == 3 ? cells[0] : "";
-            foreach (string part in key.Split(':'))
-            {
-                string token = part.Split('@')[0]; long id;
-                if (token.Length > 1 && (token.EndsWith("+") || token.EndsWith("-")) && long.TryParse(token.Substring(0, token.Length - 1), out id)) ids.Add(id);
-            }
-        }
-    var blocks = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(blocks);
-    foreach (var b in blocks)
-    {
-        if (b.Closed || !b.IsSameConstructAs(Me) || !ids.Contains(b.EntityId)) continue;
-        try { var piston = b as IMyPistonBase; var rotor = b as IMyMotorStator;
-            if (piston != null) piston.Velocity = 0; else if (rotor != null && !(rotor is IMyMotorSuspension)) rotor.TargetVelocityRad = 0;
-        } catch { }
-    }
+    SavedDrives.Stop(AutoConfig.Saved(Storage), ArmName, Me, GridTerminalSystem);
 }
 
 public void Main(string argument, UpdateType source)
 {
     DisplayWritten = false;
-    double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
+    double elapsed = Elapsed;
     bool timed = (source & (UpdateType.Update1 | UpdateType.Update10 | UpdateType.Update100 | UpdateType.Once)) != 0;
     if (Finite(elapsed) && elapsed > 0)
     {
@@ -1115,16 +1405,16 @@ void Discover(bool explicitRequest)
     string why;
     AutoConfig.EnsureDefaults(this);
     MyIni toolConfig; var options = new AutoSettings();
-    if (!AutoConfig.ReadCurrent(Me.CustomData, out toolConfig, out why) || !options.Read(toolConfig, out why)) throw new Exception(why);
+    if (!AutoConfig.ReadCurrent(this, CustomData, out toolConfig, out why) || !options.Read(toolConfig, out why)) throw new Exception(why);
     if (Tools != null && !Tools.Load(out why)) throw new Exception(why);
     Services.Load(toolConfig);
     if (Tools != null && Tools.Configured)
     {
         string preserved; bool differs;
-        if (!AutoConfig.LoadOrGenerate(this, Topology, Me.CustomData, out preserved, out differs, out why, true)) throw new Exception(why);
+        if (!AutoConfig.LoadOrGenerate(this, Topology, CustomData, out preserved, out differs, out why, true)) throw new Exception(why);
         foreach (var group in Topology.Groups)
         { double[] values; if (ToolWeights.TryGetValue(ToolGroupKey(group), out values)) { group.MoveW = values[0]; group.TurnW = values[1]; } }
-        ApplySettings(options); ConfigValid = true; Runtime.UpdateFrequency = UpdateFrequency.Update1;
+        ApplySettings(options); ConfigValid = true; Frequency = UpdateFrequency.Update1;
         Status = "Waiting for ToolSwap setup."; if (explicitRequest) Say(Status); return;
     }
     Topology.SetEndpointOverride(Tools == null ? null : Tools.Endpoint, Tools == null ? 0 : Tools.IgnoredMount, Tools == null ? null : Tools.EndFrame, Tools == null ? null : Tools.Focus);
@@ -1137,7 +1427,7 @@ void Discover(bool explicitRequest)
     Topology.ZeroOwned();
     string updated;
     bool changed;
-    if (!AutoConfig.LoadOrGenerate(this, Topology, Me.CustomData, out updated, out changed, out why))
+    if (!AutoConfig.LoadOrGenerate(this, Topology, CustomData, out updated, out changed, out why))
     {
         Status = "Custom Data refused: " + why;
         if (explicitRequest) Say(Status);
@@ -1148,7 +1438,7 @@ void Discover(bool explicitRequest)
     LoadHome();
     Status = (changed ? "Configuration generated/updated; " : "Configuration loaded; ") +
         Topology.Groups.Count + " groups found. Waiting for stable stopped scans.";
-    Runtime.UpdateFrequency = Tools != null && Tools.Busy ? UpdateFrequency.Update1 : UpdateFrequency.Update10;
+    Frequency = Tools != null && Tools.Busy ? UpdateFrequency.Update1 : UpdateFrequency.Update10;
     if (explicitRequest) Say(Status + "\n" + Topology.Report);
 }
 
@@ -1163,9 +1453,13 @@ void MaintainSetup()
         return;
     }
     Status = "Ready and OFF. Run On.";
+    if (!CheckArmLayout(out why)) { Topology.Ready = false; if (why.StartsWith("Waiting", StringComparison.Ordinal)) { Status = why; return; } ConfigValid = false; Fault(why); return; }
     PruneToolWeights();
     Say(Banner() + "\n" + Status);
 }
+
+// The host supplies per-arm shared-layout validation in the multi-arm build.
+bool CheckArmLayout(out string why) { return Host.Layout(this, out why); }
 
 void Allocate(int n)
 {
@@ -1196,12 +1490,12 @@ void EnableControl()
     {
         PendingOn = true;
         Status = "On pending: two stopped scans required.";
-        Runtime.UpdateFrequency = UpdateFrequency.Update10;
+        Frequency = UpdateFrequency.Update10;
         Say(Status);
         return;
     }
     string why;
-    if (!Topology.Validate(out why, true)) { Fault("On refused: " + why); return; }
+    if (!CheckArmLayout(out why) || !Topology.Validate(out why, true)) { Fault("On refused: " + why); return; }
     Vector3D p, f, u;
     if (!ReadPose(out p, out f, out u)) { Fault("On refused: Base/Head markers unavailable."); return; }
     CapturePose(p, f, u);
@@ -1220,7 +1514,7 @@ void EnableControl()
     DisplayPinned = false;
     InputController = null;
     InputScan = 10;
-    Runtime.UpdateFrequency = UpdateFrequency.Update1;
+    Frequency = UpdateFrequency.Update1;
     Status = "ON: pilot input plus pose feedback";
     Say(Banner() + "\n" + Status);
 }
@@ -1248,7 +1542,7 @@ void StopMotion(string reason)
     PositionI = OrientationI = Vector3D.Zero;
     if (LastQdot != null) Array.Clear(LastQdot, 0, LastQdot.Length);
     if (BoundState != null) Array.Clear(BoundState, 0, BoundState.Length);
-    Runtime.UpdateFrequency = UpdateFrequency.Update10;
+    Frequency = UpdateFrequency.Update10;
     if (!string.IsNullOrWhiteSpace(reason))
     {
         Status = reason;
@@ -1307,16 +1601,20 @@ void UpdateControl(double dt, double observationDt)
     if (manualTurn) AimingTarget = false;
     if (AimingTarget && LastOrientationErrorDeg <= AimToleranceDeg) AimingTarget = false;
     bool aiming = ToolDriving || manualTurn || AimingTarget;
-    double orientationBand = ToolDriving ? 0 : (aiming ? 0.5 * AimToleranceDeg : OrientationToleranceDeg) * Math.PI / 180;
-    Vector3D positionDemand = Outside(pe, ToolDriving ? 0 : PositionDeadbandM) * PositionKp;
+    double orientationBand = ToolDriving ? ToolOrientationBand : (aiming ? 0.5 * AimToleranceDeg : OrientationToleranceDeg) * Math.PI / 180;
+    Vector3D positionDemand = Outside(pe, ToolDriving ? ToolPositionBand : PositionDeadbandM) * PositionKp;
     Vector3D orientationDemand = Outside(oe, orientationBand) * OrientationKp;
     if (ToolDriving)
     {
         positionDemand = ClampLength(positionDemand, ToolDriveMoveCap);
         orientationDemand = ClampLength(orientationDemand, ToolDriveTurnCap);
     }
-    Vector3D rawPositionFeedback = positionDemand + PositionI - FilteredV * 0.0;
-    Vector3D rawOrientationFeedback = orientationDemand + OrientationI - FilteredW * 0.0;
+    // Measured-motion damping stays inside additive, bounded correction.
+    // Preserve the idle deadbands rather than chase measurement jitter.
+    double pd = ToolDriving || LastPilotLinear.LengthSquared() > 1e-12 || LastPositionError > PositionDeadbandM ? PositionDamping : 0;
+    double od = ToolDriving || manualTurn || oe.Length() > orientationBand ? OrientationDamping : 0;
+    Vector3D rawPositionFeedback = positionDemand + PositionI - FilteredV * pd;
+    Vector3D rawOrientationFeedback = orientationDemand + OrientationI - FilteredW * od;
     Vector3D boundedPositionFeedback = ClampLength(rawPositionFeedback, ToolDriving ? ToolDriveMoveCap : PositionCorrectionCap);
     LastFeedbackLinear = BlendManualCorrection(LastPilotLinear, boundedPositionFeedback,
         ManualCounterCorrectionFraction, out LastCounterCorrectionLimited);
@@ -1564,8 +1862,7 @@ void UpdateIntegral(ref Vector3D integral, Vector3D error, double deadband,
     Vector3D outside = Outside(error, deadband);
     if (ki <= 0 || !permit || error.Length() > capture)
     {
-        if (IntegralUnwindSeconds <= 0) integral = Vector3D.Zero;
-        else integral /= 1 + dt / IntegralUnwindSeconds;
+        integral = (integral / (1 + dt / IntegralUnwindSeconds));
         return;
     }
     // A held pose still needs the learned load bias. Reaching the deadband is
@@ -1628,12 +1925,19 @@ static Vector3D Outside(Vector3D error, double deadband)
     return n > deadband && n > 1e-12 ? error * ((n - deadband) / n) : Vector3D.Zero;
 }
 
+bool BareControl => Tools != null && Tools.Focus != null;
+void ManualAxes(ref Vector3D f, ref Vector3D u)
+{ if (BareControl) { var a = f; f = -u; u = a; } }
+void NativeAim(ref Vector3D f, ref Vector3D u)
+{ if (BareControl) { var a = f; f = u; u = -a; } }
+
 void ReadPilot(Vector3D headForward, Vector3D headUp, out Vector3D linear, out Vector3D angular)
 {
     linear = angular = Vector3D.Zero;
     Vector3D input; Vector2 mouse; double roll;
     IMyShipController c = PilotInputs(out input, out mouse, out roll);
     if (c == null) return;
+    ManualAxes(ref headForward, ref headUp);
     Vector3D forward, left, up;
     if (MovementMode == PilotMode.HEAD)
     {
@@ -1656,6 +1960,7 @@ void ReadPilot(Vector3D headForward, Vector3D headUp, out Vector3D linear, out V
 IMyShipController PilotInputs(out Vector3D move, out Vector2 mouse, out double roll)
 {
     move = Vector3D.Zero; mouse = Vector2.Zero; roll = 0;
+    if (!PilotSelected) return null;
     var c = FindInputController(); if (c == null) return null;
     if (ReadKeyboard) move = c.MoveIndicator;
     if (ReadMouse) mouse = c.RotationIndicator;
@@ -1762,6 +2067,7 @@ void PoseCommand(string[] w, int parts)
     if ((parts & 1) != 0 && !Finite(p.LengthSquared()) || (parts & 2) != 0 && !Orthonormalise(ref f, ref u)) throw new Exception("Invalid pose target.");
     if (GoingHome) HoldCurrent();
     if (!Enabled) return;
+    if ((parts & 2) != 0) NativeAim(ref f, ref u);
     SetPoseTarget(p, f, u, parts);
     if ((parts & 2) != 0) AimingTarget = true;
 }
@@ -1785,6 +2091,7 @@ void Face(string direction)
     }
     if (GoingHome) HoldCurrent();
     if (!Enabled) return;
+    NativeAim(ref targetForward, ref targetUp);
     SetPoseTarget(TargetP, targetForward, targetUp, 2);
     AimingTarget = true;
 }
@@ -1805,7 +2112,7 @@ void Step(string axis, double degrees)
     {
         case "yaw": a = MovementMode == PilotMode.HEAD ? new Vector3D(0, 0, 1) : viewUp; break;
         case "pitch": a = MovementMode == PilotMode.HEAD ? -Unit(Vector3D.Cross(TargetU, TargetF)) : -viewLeft; break;
-        default: a = TargetF; break;
+        default: a = BareControl ? -TargetU : TargetF; break;
     }
     Vector3D step = Unit(a) * (degrees * Math.PI / 180);
     SetPoseTarget(TargetP, Rotate(TargetF, step), Rotate(TargetU, step), 2);
@@ -1834,8 +2141,8 @@ void RunCommand(string command)
     {
         case "version": Say(Banner()); break;
         case "on": StartControl(); break;
-        case "off": case "stop": if (Tools != null && Tools.Busy) Tools.Cancel(c); StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
-        case "toggle": if (Enabled) { StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
+        case "off": case "stop": if (Tools != null) { Tools.InhibitRecovery(); if (Tools.Busy) Tools.Cancel(c); } StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
+        case "toggle": if (Enabled) { if (Tools != null) Tools.InhibitRecovery(); StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
         case "onoff": case "-oo":
             c = w.Length < 2 ? "" : w[1].ToLowerInvariant();
             if (c != "on" && c != "off" && c != "toggle") throw new Exception("OnOff expects On, Off or Toggle.");
@@ -1927,7 +2234,7 @@ void Reload()
     bool changed;
     ConfigValid = false;
     MyIni configIni;
-    if (!AutoConfig.ReadCurrent(Me.CustomData, out configIni, out why)) throw new Exception(why);
+    if (!AutoConfig.ReadCurrent(this, CustomData, out configIni, out why)) throw new Exception(why);
     Services.Load(configIni);
     if (Topology.Groups.Count == 0 || (Tools != null && Tools.Configured) || configIni.Get(ToolsSection, EnabledKey).ToBoolean(false)) { Discover(true); return; }
     if (Topology.Groups.Count > 0 && !Topology.Validate(out why, true))
@@ -1936,7 +2243,7 @@ void Reload()
         Say("Reload refused: " + why + " Run Rescan after repairing topology.");
         return;
     }
-    if (!AutoConfig.LoadOrGenerate(this, Topology, Me.CustomData, out updated, out changed, out why))
+    if (!AutoConfig.LoadOrGenerate(this, Topology, CustomData, out updated, out changed, out why))
     {
         ConfigValid = false;
         Status = "Reload refused without changing Custom Data: " + why;
@@ -2086,7 +2393,7 @@ void BeginHome()
     Enabled = GoingHome = true;
     PivotProbe = null;
     ControlElapsed = 0;
-    Runtime.UpdateFrequency = UpdateFrequency.Update1;
+    Frequency = UpdateFrequency.Update1;
     Status = "GoHome in progress; live pilot input cancels.";
     Say(Status);
 }
@@ -2275,6 +2582,36 @@ static Vector3D RotationError(Vector3D f, Vector3D u, Vector3D tf, Vector3D tu)
 }
 
 
+// Startup recovery runs before host configuration and again for each new core.
+// Saved identities include parked tools which current discovery may not reach.
+public static class SavedDrives
+{
+    public static void Stop(MyIni state, string arm, IMyProgrammableBlock me, IMyGridTerminalSystem terminal)
+    {
+        const string section = "AutoArm Config";
+        if (state.Get(section, "Format").ToInt32() != 1 || state.Get(section, "PB").ToInt64() != me.EntityId || state.Get(section, "Arm").ToString() != arm) return;
+        var ids = new HashSet<long>();
+        foreach (string row in (state.Get(section, "Rows").ToString() + "\n" + state.Get("AutoArm Tool Weights", "Rows").ToString()).Split('\n'))
+        {
+            string[] cells = row.Split('|'); string key = cells.Length == 2 ? cells[1] : cells.Length == 3 ? cells[0] : "";
+            foreach (string part in key.Split(':'))
+            {
+                string token = part.Split('@')[0]; long id;
+                if (token.Length < 2 || (token[token.Length - 1] != '+' && token[token.Length - 1] != '-') || !long.TryParse(token.Substring(0, token.Length - 1), out id) || !ids.Add(id)) continue;
+                try
+                {
+                    var block = terminal.GetBlockWithId(id);
+                    if (block == null || block.Closed || !block.IsSameConstructAs(me)) continue;
+                    var piston = block as IMyPistonBase; var rotor = block as IMyMotorStator;
+                    if (piston != null) piston.Velocity = 0; else if (rotor != null && !(rotor is IMyMotorSuspension)) rotor.TargetVelocityRad = 0;
+                }
+                catch { }
+            }
+        }
+    }
+}
+
+
 static Vector3D Rotate(Vector3D value, Vector3D rotation)
 {
     double angle = rotation.Length();
@@ -2335,7 +2672,7 @@ class PivotProbeTool
 {
     const double MinA=Math.PI/180,MaxA=15*Math.PI/180,OtherA=.1*Math.PI/180;
     const double PairA=.1*Math.PI/180,OtherP=.001,MinTravel=.01,AxisCos=.999993908;
-    readonly Program P; readonly AutoTopology T; readonly List<Result> R=new List<Result>();
+    readonly ArmCore P; readonly AutoTopology T; readonly List<Result> R=new List<Result>();
     Shot A; int G=-1; string Fingerprint="";
     class Shot { public Vector3D P,F,U; public double[][] Q; public Vector3D[] Axis,Base,Top; }
     public class Result
@@ -2343,8 +2680,8 @@ class PivotProbeTool
         public int Group; public double Delta,Travel,Orientation;
         public readonly double[] Error=new double[3],Spread=new double[3]; public string Verdict;
     }
-    public IList<Result> Trials => R.AsReadOnly();
-    public PivotProbeTool(Program owner,AutoTopology topology){P=owner;T=topology;}
+
+    public PivotProbeTool(ArmCore owner,AutoTopology topology){P=owner;T=topology;}
 
     public void Run(string[] w)
     {
@@ -2447,33 +2784,15 @@ class PivotProbeTool
 }
 
 
-class ToolTopInfo
+// Arm-side focus is the verified frame and local pose supplied by ToolSwap.
+class ArmTipInfo
 {
     public IMyCubeBlock Marker;
-    public IMyMotorRotor Live;
-    public long EntityId;
-    public string Subtype;
     public MatrixD Local;
-    public List<IMyTerminalBlock> Inventory;
-    public bool Closed => Marker.Closed || (Live != null && Live.Closed);
-    public IMyCubeGrid CubeGrid => Live == null ? Marker.CubeGrid : Live.CubeGrid;
-    public MatrixD WorldMatrix => Live == null ? Local * Marker.WorldMatrix : Live.WorldMatrix;
-    public Vector3I Position => Live == null ? CubeGrid.WorldToGridInteger(WorldMatrix.Translation) : Live.Position;
-    public IMyMechanicalConnectionBlock Base
-    {
-        get
-        {
-            if (Live != null) return Live.Base;
-            foreach (var b in Inventory)
-            { var m = b as IMyMechanicalConnectionBlock; if (m != null && m.Top != null && (m.Top.EntityId == EntityId || EntityId == 0 && m.Top.CubeGrid.EntityId == CubeGrid.EntityId && m.Top.Position == Position)) return m; }
-            return null;
-        }
-    }
-    public static ToolTopInfo Capture(IMyCubeBlock marker, IMyMotorRotor top, List<IMyTerminalBlock> inventory)
-    {
-        var pose = top.WorldMatrix; pose.Translation = top.CubeGrid.GridIntegerToWorld(top.Position);
-        return new ToolTopInfo { Marker = marker, Live = top, EntityId = top.EntityId, Subtype = top.BlockDefinition.SubtypeName, Local = pose * MatrixD.Invert(marker.WorldMatrix), Inventory = inventory };
-    }
+    public bool Closed => Marker.Closed;
+    public IMyCubeGrid CubeGrid => Marker.CubeGrid;
+    public MatrixD WorldMatrix => Local * Marker.WorldMatrix;
+    public Vector3I Position => CubeGrid.WorldToGridInteger(WorldMatrix.Translation);
 }
 
 
@@ -2502,7 +2821,8 @@ void RememberToolWeights(bool capture = true)
                 !Finite(m) || !Finite(r) || m < 0 || m > 10 || r < 0 || r > 10)
                 throw new Exception("Invalid saved tool actuator preferences.");
             ToolWeightIds(cells[0]);
-            loaded[cells[0]] = new double[] { m, r };
+            if (loaded.ContainsKey(cells[0])) throw new Exception("Duplicate saved tool actuator preferences.");
+            loaded.Add(cells[0], new double[] { m, r });
         }
         foreach (var pair in loaded) ToolWeights[pair.Key] = pair.Value;
         ToolWeightsLoaded = true;
@@ -2556,7 +2876,9 @@ void WriteToolWeights()
         if (text.Length > 0) text.Append('\n');
         text.Append(key).Append('|').Append(AutoSettings.Number(ToolWeights[key][0])).Append('|').Append(AutoSettings.Number(ToolWeights[key][1]));
     }
-    var ini = AutoConfig.Saved(Storage); ini.Set(ToolWeightsSection, "Rows", text.ToString()); Storage = ini.ToString();
+    var ini = AutoConfig.Saved(Storage);
+    if (ini.Get(ToolWeightsSection, "Rows").ToString() == text.ToString()) return;
+    ini.Set(ToolWeightsSection, "Rows", text.ToString()); Storage = ini.ToString();
 }
 
 bool RebuildToolTopology(out string why)
@@ -2574,7 +2896,7 @@ bool RebuildToolTopology(out string why)
         }
         Allocate(Topology.Groups.Count); ConfigValid = true;
         SetupElapsed = ControlElapsed = 0;
-        Runtime.UpdateFrequency = UpdateFrequency.Update1;
+        Frequency = UpdateFrequency.Update1;
         return true;
     }
     catch (Exception e) { why = e.Message; return false; }
@@ -2584,6 +2906,7 @@ bool SettleToolTopology(out string why)
 {
     if (!ConfigValid) { why = "Tool topology is not configured."; return false; }
     if (!Topology.StableSetup(out why)) return false;
+    if (!CheckArmLayout(out why)) { Topology.Ready = false; if (why.StartsWith("Waiting", StringComparison.Ordinal)) return false; ConfigValid = false; Fault(why); return false; }
     PruneToolWeights();
     AutoConfig.UpdateGroups(this); LoadHome();
     return true;
@@ -2591,42 +2914,45 @@ bool SettleToolTopology(out string why)
 
 bool ToolPoseStep(MatrixD world, double dt, double observationDt, double moveCap,
     double turnCap, double positionTolerance, double angleTolerance,
-    out bool settled, out string why)
+    out bool settled, out string why, double settleScale = 0)
 {
     settled = false; why = "";
     if (!Topology.Ready || !ConfigValid) { why = "Tool topology is not ready."; return false; }
     if (!Finite(dt) || dt <= 0 || !Finite(observationDt) || observationDt <= 0 ||
-        !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0)
-    { why = "Invalid tool movement interval or cap."; return false; }
+        !Finite(moveCap) || moveCap <= 0 || !Finite(turnCap) || turnCap <= 0 ||
+        !Finite(positionTolerance) || positionTolerance <= 0 || !Finite(angleTolerance) || angleTolerance <= 0)
+    { why = "Invalid tool interval, cap or tolerance."; return false; }
     MatrixD basis = Topology.Base.WorldMatrix;
     if (!SetPoseTarget(InFrame(world.Translation - Topology.Base.GetPosition(), basis),
         InFrame(world.Forward, basis), InFrame(world.Up, basis), 3))
     { why = "Invalid tool target frame."; return false; }
     ToolDriveMoveCap = moveCap; ToolDriveTurnCap = turnCap * Math.PI / 180;
+    ToolPositionBand = positionTolerance * .5; ToolOrientationBand = angleTolerance * Math.PI / 360;
     ToolDriving = true;
     try { UpdateControl(Math.Min(dt, .1), observationDt); }
     finally { ToolDriving = false; }
     if (!TargetValid || !Topology.Ready) { why = LastFault.Length > 0 ? LastFault : "Tool motion stopped."; return false; }
     settled = LastPositionError <= positionTolerance && LastOrientationErrorDeg <= angleTolerance &&
-        FilteredV.Length() <= .005 && FilteredW.Length() * 180 / Math.PI <= .2;
+        FilteredV.Length() <= Math.Max(.005, positionTolerance * settleScale) && FilteredW.Length() * 180 / Math.PI <= Math.Max(.2, angleTolerance * settleScale);
     return true;
 }
 
 
 // Versioned unicast transport. Epochs survive recompilation; generations revoke
 // outstanding commands on Stop. Messages never grant direct actuator access.
-const string LinkTag = "AutoArm/4";
+const string LinkTag = "AutoArm/5";
 const string LinkSection = "Link";
 
 sealed class ModuleLink
 {
-    readonly Program P;
+    readonly ArmCore P;
+    string ArmName => P.ArmName;
     public IMyProgrammableBlock Peer;
     public readonly long Epoch;
     public long RemoteEpoch, Generation, Sequence, Received;
     public double Age;
     bool Persisted;
-    public ModuleLink(Program p)
+    public ModuleLink(ArmCore p)
     {
         P = p;
         var ini = LinkSaved(p.Storage); long epoch = ini.Get("AutoArm Link", "Epoch").ToInt64();
@@ -2637,6 +2963,13 @@ sealed class ModuleLink
     public void Resolve(string name)
     {
         Peer = null;
+        long id;
+        if (name.StartsWith("@", StringComparison.Ordinal) && long.TryParse(name.Substring(1), out id))
+        {
+            Peer = P.GridTerminalSystem.GetBlockWithId(id) as IMyProgrammableBlock;
+            if (Peer == null || Peer == P.Me || Peer.Closed || !Peer.IsFunctional || !Peer.IsSameConstructAs(P.Me)) throw new Exception("Module PB unavailable.");
+            return;
+        }
         var blocks = new List<IMyProgrammableBlock>(); P.GridTerminalSystem.GetBlocksOfType(blocks);
         foreach (var b in blocks) if (b.CustomName == name && !b.Closed && b.IsSameConstructAs(P.Me))
         { if (Peer != null) throw new Exception("Duplicate PB: " + name); Peer = b; }
@@ -2644,7 +2977,7 @@ sealed class ModuleLink
     }
     public MyIni Packet(string operation)
     {
-        var ini = new MyIni(); ini.Set(LinkSection, "Version", 4); ini.Set(LinkSection, "Arm", ArmName);
+        var ini = new MyIni(); ini.Set(LinkSection, "Version", 5); ini.Set(LinkSection, "Arm", ArmName);
         ini.Set(LinkSection, "Epoch", Epoch); ini.Set(LinkSection, "Remote", RemoteEpoch);
         ini.Set(LinkSection, "Generation", Generation); ini.Set(LinkSection, "Sequence", ++Sequence);
         ini.Set(LinkSection, "Operation", operation); return ini;
@@ -2660,7 +2993,7 @@ sealed class ModuleLink
     {
         ini = new MyIni(); var text = message.Data as string;
         return Peer != null && !Peer.Closed && Peer.IsFunctional && Peer.IsSameConstructAs(P.Me) && message.Source == Peer.EntityId && message.Tag == LinkTag &&
-            text != null && text.Length <= 16000 && ini.TryParse(text) && ini.Get(LinkSection, "Version").ToInt32() == 4 && ini.Get(LinkSection, "Arm").ToString() == ArmName &&
+            text != null && text.Length <= 16000 && ini.TryParse(text) && ini.Get(LinkSection, "Version").ToInt32() == 5 && ini.Get(LinkSection, "Arm").ToString() == ArmName &&
             ini.Get(LinkSection, "Epoch").ToInt64() > 0 && ini.Get(LinkSection, "Sequence").ToInt64() > 0;
     }
 }
@@ -2692,11 +3025,7 @@ static IMyCubeBlock LinkAnchor(IMyTerminalBlock block, long entity)
     if (joint != null && joint.IsAttached && joint.Top != null && joint.Top.EntityId == entity) return joint.Top;
     throw new Exception("Module anchor attachment changed.");
 }
-static string PathRow(MatrixD frame)
-{
-    var values = new double[] { frame.Translation.X, frame.Translation.Y, frame.Translation.Z, frame.Forward.X, frame.Forward.Y, frame.Forward.Z, frame.Up.X, frame.Up.Y, frame.Up.Z };
-    var row = new List<string>(); foreach (double v in values) row.Add(AutoSettings.Number(v)); return string.Join(" ", row);
-}
+
 
 
 // The arm owns complete paths. A waypoint is a rigid position/orientation in
@@ -2714,6 +3043,7 @@ sealed class ArmPath
     public bool[] Lines;
     public Vector3D LineStart;
     public bool LineStarted;
+    public bool Docking, Capture;
     public double CurrentMove => Moves == null ? Move : Moves[Completed];
     public double CurrentTurn => Turns == null ? Turn : Turns[Completed];
     public bool Linear => Lines != null && Lines[Completed];
@@ -2741,6 +3071,7 @@ ArmPath ReadPath(string text, long anchor, long id, double move, double turn, do
 }
 void ConfigurePathStages(ArmPath path, MyIni ini)
 {
+    path.Docking = ini.Get(LinkSection, "Docking").ToBoolean();
     path.Moves = PathSpeeds(ini, "Moves", path.Waypoints.Count, path.Move, MoveMps, 5);
     path.Turns = PathSpeeds(ini, "Turns", path.Waypoints.Count, path.Turn, TurnDeg, 30);
     string text = ini.Get(LinkSection, "Lines").ToString();
@@ -2777,6 +3108,9 @@ bool StepPath(ArmPath path, double dt, double observed, out string why)
     path.Elapsed += observed;
     if (path.Elapsed > path.Budget) { why = "Path waypoint timeout: " + (path.Completed + 1); return false; }
     MatrixD goal = path.Current, demand = goal;
+    bool entry = path.Docking && path.Completed + 1 < path.Waypoints.Count;
+    double pt = entry ? Math.Max(.001, Math.Min(.02, Vector3D.Distance(path.Waypoints[path.Completed].Translation, path.Waypoints[path.Completed + 1].Translation) * .25)) : path.PositionTolerance;
+    double at = entry ? Math.Max(1, path.AngleTolerance) : path.AngleTolerance;
     PathRemainingDistance = Vector3D.Distance(goal.Translation, Topology.EndPosition);
     if (path.Linear)
     {
@@ -2788,15 +3122,22 @@ bool StepPath(ArmPath path, double dt, double observed, out string why)
         // Align before insertion/withdrawal, then hold one orientation and steer
         // to a lookahead point on the captured Cartesian line, never a shortcut.
         double angle = RotationError(Topology.EndPose.Forward, Topology.EndPose.Up, goal.Forward, goal.Up).Length() * 180 / Math.PI;
-        if (length > 1e-10 && angle <= path.AngleTolerance)
-        { var direction = delta / length; double progress = Vector3D.Dot(position - path.LineStart, direction); reference += direction * Clamp(progress + path.CurrentMove / PositionKp, 0, length); }
+        double gate = path.Docking ? Math.Max(at, Math.Min(1, PathRemainingDistance * 10)) : at;
+        if (length > 1e-10)
+        {
+            var direction = delta / length; double progress = Vector3D.Dot(position - path.LineStart, direction);
+            // Losing alignment pauses at current progress, never back at the
+            // insertion start. Retain perpendicular correction onto the line.
+            reference += direction * Clamp(progress + (path.CurrentMove / PositionKp + pt * .5) * Clamp(2 - angle / gate, 0, 1), 0, length);
+        }
         demand.Translation = Vector3D.Transform(reference, basis);
     }
     bool settled;
-    if (!ToolPoseStep(demand, dt, observed, path.CurrentMove, path.CurrentTurn, path.PositionTolerance, path.AngleTolerance, out settled, out why)) return false;
-    settled &= PathRemainingDistance <= path.PositionTolerance;
+    if (!ToolPoseStep(demand, dt, observed, path.CurrentMove, path.CurrentTurn, pt, at, out settled, out why, path.Docking ? 2 : 0)) return false;
+    if (entry) settled = LastPositionError <= pt && LastOrientationErrorDeg <= at && (path.Capture || FilteredV.Length() <= Math.Max(.005, Math.Min(path.Move, pt * 2.5)) && FilteredW.Length() * 180 / Math.PI <= Math.Max(.2, path.Turn));
+    settled &= PathRemainingDistance <= pt;
     path.Stable = settled ? path.Stable + 1 : 0;
-    if (path.Stable >= 2) { Topology.ZeroOwned(); Tools.ZeroMount(); path.Completed++; path.Elapsed = path.Budget = 0; path.Stable = 0; path.LineStarted = false; Say("Path " + path.Id + ": " + path.Completed + "/" + path.Waypoints.Count); }
+    if (path.Stable >= 2) { if (!entry) { Topology.ZeroOwned(); Tools.ZeroMount(); } path.Completed++; path.Elapsed = path.Budget = 0; path.Stable = 0; path.LineStarted = false; Say("Path " + path.Id + ": " + path.Completed + "/" + path.Waypoints.Count); }
     return true;
 }
 void PathCommand(string command)
@@ -2806,7 +3147,7 @@ void PathCommand(string command)
     var path = ReadPath(command.Substring(command.IndexOf(' ') + 1), 0, 0, MoveMps, TurnDeg, .005, .2);
     // Validate the entire list before changing any motion state.
     Vector3D p, f, u; if (!ReadPose(out p, out f, out u)) throw new Exception("Path focus unavailable.");
-    StopMotion(""); LocalPath = path; CapturePose(p, f, u); Enabled = true; Runtime.UpdateFrequency = UpdateFrequency.Update1;
+    StopMotion(""); LocalPath = path; CapturePose(p, f, u); Enabled = true; Frequency = UpdateFrequency.Update1;
     Say("Path accepted: " + path.Waypoints.Count + " waypoints.");
 }
 
@@ -2815,46 +3156,49 @@ void PathCommand(string command)
 // no parking or attachment state machine; the second PB supplies equipment data.
 sealed class ToolSwapLink
 {
-    readonly Program P;
+    readonly ArmCore P;
     readonly ModuleLink Link;
     readonly List<IMyMotorStator> Couplers = new List<IMyMotorStator>();
     readonly List<IMyTerminalBlock> Markers = new List<IMyTerminalBlock>();
     readonly List<long> Tops = new List<long>();
     readonly List<List<IMyShipMergeBlock>> Merges = new List<List<IMyShipMergeBlock>>();
     IMyCubeBlock Frame;
-    ToolTopInfo Tip;
+    ArmTipInfo Tip;
     IMyTerminalBlock End;
     string PeerName = "", Queued = "", Error = "";
     long Ignore, Request, MoveRequest;
     bool Lease, Rebuilding, Driving, Permitted, Settled, Changing, Transition, ResumePending;
+    bool RecoverBare, Resumed;
     ArmPath Path;
-    double Move, Turn, PosTol, AngleTol, ReportElapsed;
+    double Move, Turn, PosTol, AngleTol, ReportElapsed, ResumeElapsed;
     public bool Busy => Lease || ResumePending || Queued.Length > 0;
     public bool Automatic => Lease && Changing;
     public bool Configured => PeerName.Length > 0;
     public IMyTerminalBlock Endpoint => End;
     public IMyCubeBlock EndFrame => Frame;
-    public ToolTopInfo Focus => Tip;
+    public ArmTipInfo Focus => Tip;
     public long IgnoredMount => Ignore;
-    public ToolSwapLink(Program p) { P = p; Link = new ModuleLink(p); }
+    public bool IsToolJoint(IMyMechanicalConnectionBlock block) { return Couplers.Contains(block as IMyMotorStator); }
+    public ToolSwapLink(ArmCore p) { P = p; Link = new ModuleLink(p); }
     public bool Load(out string why)
     {
         why = ""; MyIni ini;
-        if (!AutoConfig.ReadCurrent(P.Me.CustomData, out ini, out why)) return false;
+        if (!AutoConfig.ReadCurrent(P, P.CustomData, out ini, out why)) return false;
         PeerName = ini.Get("Modules", "ToolSwapPB").ToString().Trim();
         Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = Transition = ResumePending = false; Error = "";
+        RecoverBare = Resumed = false;
         if (!Configured) { Link.Peer = null; End = null; Frame = null; Tip = null; Couplers.Clear(); Markers.Clear(); Tops.Clear(); Merges.Clear(); return true; }
         Link.Resolve(PeerName); Link.Generation++; Link.RemoteEpoch = Link.Received = 0; Link.Age = 0;
         Queued = "Reload"; return true;
     }
     public void WriteConfig(MyIni ini) { ini.Set("Modules", "ToolSwapPB", PeerName); if (P.Services != null) P.Services.WriteConfig(ini); }
-    public void StartOn() { Queued = "On"; P.Runtime.UpdateFrequency = UpdateFrequency.Update1; P.Say("On: waiting for ToolSwap PB."); }
+    public void StartOn() { Queued = "On"; P.Frequency = UpdateFrequency.Update1; P.Say("On: waiting for ToolSwap PB."); }
     public bool Handle(string command)
     {
         string verb = command.Trim().Split(' ')[0].ToLowerInvariant();
         if (verb != "tool" && verb != "toolswap" && verb != "toolscan" && verb != "toolinfo" && verb != "park" && verb != "swapcancel") return false;
         if (!Configured) { P.Say("Configure Modules.ToolSwapPB."); return true; }
-        if (verb == "swapcancel") { P.StopMotion(""); Cancel("Swap canceled; inspect, then On."); P.Say("Swap canceled; arm OFF."); return true; }
+        if (verb == "swapcancel") { InhibitRecovery(); P.StopMotion(""); Cancel("Swap canceled; inspect, then On."); P.Say("Swap canceled; arm OFF."); return true; }
         if (verb != "toolinfo")
         {
             if (Lease) { P.Say("ToolSwap busy; Stop first."); return true; }
@@ -2865,15 +3209,37 @@ sealed class ToolSwapLink
         SendCommand(command); return true;
     }
     void SendCommand(string command)
-    { var packet = Link.Packet("COMMAND"); packet.Set(LinkSection, "Command", command); packet.Set(LinkSection, "Stopped", !Driving); Link.Send(packet); }
+    { var packet = Link.Packet("COMMAND"); packet.Set(LinkSection, "Command", command); packet.Set(LinkSection, "Stopped", !Driving); packet.Set(LinkSection, "RecoverBare", RecoverBare); Link.Send(packet); }
     public void Cancel(string why)
     {
-        Driving = Rebuilding = Lease = Permitted = Transition = ResumePending = false; Queued = ""; Error = why; Link.Generation++;
+        Driving = Rebuilding = Lease = Permitted = Transition = ResumePending = Resumed = false; Queued = ""; Error = why; Link.Generation++;
         P.Topology.ZeroOwned(); ZeroMount();
         if (Link.Peer != null) try { SendCommand("Stop"); } catch { }
     }
     public void ZeroMount()
     { foreach (var rotor in Couplers) if (!rotor.Closed) rotor.TargetVelocityRad = 0; }
+    public void InhibitRecovery() { RecoverBare = false; }
+    bool Detached()
+    {
+        if (!RecoverBare || !Configured || Busy || Link.Age > .5 || P.Topology.Groups.Count == 0) return false;
+        int changed = 0;
+        for (int i = 0; i < Couplers.Count; i++)
+        {
+            var rotor = Couplers[i]; var marker = Markers[i];
+            if (rotor.Closed || marker.Closed || !rotor.IsFunctional || rotor.IsAttached || rotor.Top != null || rotor.PendingAttachment ||
+                rotor.CubeGrid.EntityId != marker.CubeGrid.EntityId || !rotor.IsSameConstructAs(P.Me)) return false;
+            if (Tops[i] != 0) changed++;
+        }
+        if (changed != 1) return false;
+        foreach (var group in P.Topology.Groups)
+        {
+            bool tool = false; foreach (var member in group.M) if (IsToolJoint(member.B)) tool = true;
+            if (tool) break;
+            foreach (var member in group.M) if (member.B.Closed || !member.B.IsFunctional || !member.B.IsAttached ||
+                member.B.Top == null || member.B.TopGrid == null || !member.B.IsSameConstructAs(P.Me)) return false;
+        }
+        return true;
+    }
     public bool AllowManual(out string why)
     {
         why = ""; if (!Configured) return true;
@@ -2895,10 +3261,10 @@ sealed class ToolSwapLink
     {
         if (Finite(elapsed) && elapsed > 0) Link.Age += elapsed;
         int count = 0;
-        while (P.IGC.UnicastListener.HasPendingMessage && count++ < 16)
+        while (P.Inbox.Count > 0 && count++ < 16)
         {
             if (P.Runtime.MaxInstructionCount > 0 && P.Runtime.CurrentInstructionCount >= P.Runtime.MaxInstructionCount * .5) break;
-            var message = P.IGC.UnicastListener.AcceptMessage(); MyIni ini;
+            var message = P.Inbox.Dequeue(); MyIni ini;
             if (P.Services != null && P.Services.Receive(message)) continue;
             if (!Link.Read(message, out ini)) continue;
             long epoch = ini.Get(LinkSection, "Epoch").ToInt64(), seq = ini.Get(LinkSection, "Sequence").ToInt64();
@@ -2908,11 +3274,11 @@ sealed class ToolSwapLink
                 if (ini.Get(LinkSection, "Remote").ToInt64() != 0 && ini.Get(LinkSection, "Remote").ToInt64() != Link.Epoch) continue;
                 bool acquire = ini.Get(LinkSection, "Acquire").ToBoolean();
                 if (epoch < Link.RemoteEpoch) continue;
-                if (Link.RemoteEpoch != epoch) { P.StopMotion(""); Link.RemoteEpoch = epoch; Link.Received = 0; Lease = Driving = Rebuilding = Permitted = Transition = ResumePending = false; }
+                if (Link.RemoteEpoch != epoch) { P.StopMotion(""); Link.RemoteEpoch = epoch; Link.Received = 0; Lease = Driving = Rebuilding = Permitted = Transition = ResumePending = Resumed = false; }
                 if (seq <= Link.Received) continue;
                 Link.Received = seq;
                 if (acquire && P.ConfigValid && ini.Get(LinkSection, "Remote").ToInt64() == Link.Epoch && ini.Get(LinkSection, "Generation").ToInt64() == Link.Generation)
-                { P.StopMotion(""); Lease = true; Driving = Rebuilding = Permitted = Transition = ResumePending = false; Changing = ini.Get(LinkSection, "Changing").ToBoolean(); Error = ""; }
+                { P.StopMotion(""); Lease = true; Driving = Rebuilding = Permitted = Transition = ResumePending = Resumed = false; Changing = ini.Get(LinkSection, "Changing").ToBoolean(); Error = ""; }
                 Link.Age = 0; Request = seq; Reply("STATE"); continue;
             }
             if (epoch != Link.RemoteEpoch || seq <= Link.Received || ini.Get(LinkSection, "Remote").ToInt64() != Link.Epoch || ini.Get(LinkSection, "Generation").ToInt64() != Link.Generation) continue;
@@ -2925,12 +3291,13 @@ sealed class ToolSwapLink
                     Permitted = ini.Get(LinkSection, "Permit").ToBoolean();
                     if (P.Enabled && !Permitted) { P.Fault("ToolSwap equipment not ready."); }
                 }
+                else if (op == "RESUME" && !Lease && Resumed) { Reply("STATE"); continue; }
                 else if (!Lease) throw new Exception("No movement lease.");
                 else if (op == "TRANSITION")
                 { Driving = false; Path = null; Transition = true; P.StopMotion(""); P.Topology.Ready = false; }
                 else if (op == "ABORT")
-                { Driving = Rebuilding = Lease = Permitted = false; Path = null; Error = ini.Get(LinkSection, "Reason").ToString(); P.StopMotion(Error); P.Say("ToolSwap stopped: " + Error); }
-                else if (op == "STOP" || op == "PAUSE") { Driving = false; Path = null; P.StopMotion(""); }
+                { Driving = Rebuilding = Lease = Permitted = Resumed = false; if (ini.Get(LinkSection, "ExplicitStop").ToBoolean()) InhibitRecovery(); Path = null; Error = ini.Get(LinkSection, "Reason").ToString(); P.StopMotion(Error); P.Say("ToolSwap stopped: " + Error); }
+                else if (op == "STOP" || op == "PAUSE") { Driving = false; Path = null; if (ini.Get(LinkSection, "ExplicitStop").ToBoolean()) InhibitRecovery(); P.StopMotion(""); }
                 else if (op == "BUILD")
                 {
                     if (!P.ConfigValid) throw new Exception("Arm configuration invalid; run On on arm PB.");
@@ -2945,20 +3312,26 @@ sealed class ToolSwapLink
                     PosTol = Number(ini, "PosTol", .001, .05); AngleTol = Number(ini, "AngleTol", .01, 2);
                     Path = P.ReadPath(ini.Get(LinkSection, "Waypoints").ToString(), ini.Get(LinkSection, "Anchor").ToInt64(), seq, Move, Turn, PosTol, AngleTol);
                     P.ConfigurePathStages(Path, ini);
+                    Path.Capture = ini.Get(LinkSection, "Capture").ToBoolean();
                     Driving = true; Settled = false; MoveRequest = seq;
                 }
                 else if (op == "RESUME" || op == "RELEASE")
                 {
                     Driving = false; P.StopMotion(""); ApplyEquipment(ini); Permitted = ini.Get(LinkSection, "Permit").ToBoolean();
-                    Lease = false; ResumePending = op == "RESUME";
+                    if (ini.Get(LinkSection, "ExplicitStop").ToBoolean()) InhibitRecovery();
+                    Lease = false; ResumePending = Resumed = op == "RESUME"; Error = "";
+                    ResumeElapsed = 0;
+                    RecoverBare |= ResumePending;
                 }
                 else throw new Exception("Unknown module operation.");
                 Reply("STATE");
             }
             catch (Exception e) { Error = e.Message; Driving = Rebuilding = false; P.StopMotion(Error); Reply("STATE"); }
         }
-        if (Configured && Link.Age > .5 && (P.Enabled || Lease))
+        if (Configured && Link.Age > .5 && (P.Enabled || Lease || ResumePending))
         { Driving = Rebuilding = false; P.Fault("ToolSwap communication timeout."); }
+        if (Detached())
+        { RecoverBare = false; P.StopMotion("Tool detached; rediscovering bare arm."); P.StartControl(); }
     }
     static double Number(MyIni ini, string key, double lo, double hi)
     { double v; if (!ini.Get(LinkSection, key).TryGetDouble(out v) || !Finite(v) || v < lo || v > hi) throw new Exception("Bad module " + key); return v; }
@@ -2971,8 +3344,7 @@ sealed class ToolSwapLink
         Ignore = ini.Get(LinkSection, "Ignore").ToInt64(); Tip = null;
         if (ini.Get(LinkSection, "Focus").ToBoolean())
         {
-            var inventory = new List<IMyTerminalBlock>(); P.GridTerminalSystem.GetBlocks(inventory);
-            Tip = new ToolTopInfo { Marker = Frame, EntityId = ini.Get(LinkSection, "Part").ToInt64(), Local = LinkFrame(ini, "Local"), Inventory = inventory };
+            Tip = new ArmTipInfo { Marker = Frame, Local = LinkFrame(ini, "Local") };
             if (!Tip.CubeGrid.CubeExists(Tip.Position)) throw new Exception("Module focus is outside the arm.");
         }
         ApplyEquipment(ini);
@@ -3006,14 +3378,26 @@ sealed class ToolSwapLink
         if (Link.Age > .5) return;
         if (Rebuilding)
         { string why; if (P.SettleToolTopology(out why)) { Rebuilding = Transition = false; Reply("STATE"); } }
-        if (ResumePending && P.Topology.Ready && (P.Runtime.MaxInstructionCount <= 0 || P.Runtime.CurrentInstructionCount < P.Runtime.MaxInstructionCount * .3))
+        if (ResumePending)
         {
-            ResumePending = false; string why;
-            if (!AllowManual(out why)) { ResumePending = true; return; }
-            P.EnableControl(); Reply("STATE");
+            ResumeElapsed += observationDt; string why = "Resume waiting for topology/budget.";
+            if (P.Topology.Ready && !Rebuilding && !Transition && (P.Runtime.MaxInstructionCount <= 0 || P.Runtime.CurrentInstructionCount < P.Runtime.MaxInstructionCount * .3))
+            {
+                ResumePending = false;
+                if (!AllowManual(out why)) ResumePending = true;
+                else
+                {
+                    P.EnableControl(); Error = P.Enabled ? "" : "Resume refused: " + P.Status;
+                    Reply("STATE");
+                }
+            }
+            if (ResumePending && ResumeElapsed > 2)
+            { ResumePending = false; Error = why; P.StopMotion(Error); P.Say(Error); Reply("STATE"); }
         }
         if (Driving)
         {
+            if (Path.Capture) for (int i = 0; i < Tops.Count; i++) if (Tops[i] != 0) foreach (var m in Merges[i]) if (m.IsConnected)
+            { Driving = false; Path = null; Transition = true; P.StopMotion(""); P.Topology.Ready = false; Reply("STATE"); return; }
             string why; int previous = Path.Completed;
             if (!P.StepPath(Path, dt, observationDt, out why))
             { Error = why; Driving = false; P.StopMotion(why); }
@@ -3024,12 +3408,15 @@ sealed class ToolSwapLink
     }
     void Reply(string operation)
     {
+        if (Resumed && !ResumePending && !P.Enabled && Error.Length == 0)
+            Error = P.LastFault.Length > 0 ? P.LastFault : "Arm stopped after tool handoff.";
         var ini = Link.Packet(operation); ini.Set(LinkSection, "Ack", Request); ini.Set(LinkSection, "MoveAck", MoveRequest);
         ini.Set(LinkSection, "Lease", Lease); ini.Set(LinkSection, "Ready", P.ConfigValid && P.Topology.Ready && !Rebuilding && !Transition);
         ini.Set(LinkSection, "Enabled", P.Enabled);
         ini.Set(LinkSection, "Stopped", !Driving && !P.Enabled); ini.Set(LinkSection, "Settled", Settled);
         ini.Set(LinkSection, "PathId", Path == null ? 0 : Path.Id); ini.Set(LinkSection, "Completed", Path == null ? 0 : Path.Completed); ini.Set(LinkSection, "Count", Path == null ? 0 : Path.Waypoints.Count);
         ini.Set(LinkSection, "Error", Error); ini.Set(LinkSection, "Pilot", P.HasPilotInput());
+        ini.Set(LinkSection, "PilotSelected", P.PilotSelected);
         ini.Set(LinkSection, "Keyboard", P.ReadKeyboard); ini.Set(LinkSection, "Mouse", P.ReadMouse); ini.Set(LinkSection, "Roll", P.ReadRoll);
         ini.Set(LinkSection, "DefaultMove", P.MoveMps); ini.Set(LinkSection, "DefaultTurn", P.TurnDeg);
         ini.Set(LinkSection, "Head", P.Topology.Head == null ? 0 : P.Topology.Head.EntityId);
@@ -3052,12 +3439,12 @@ sealed class ArmServices
         public long Seen;
         public double ReplyAge;
     }
-    readonly Program P;
+    readonly ArmCore P;
     readonly Dictionary<long, Client> Peers = new Dictionary<long, Client>();
     Client Owner;
     string Config = "";
     long Revision = 1;
-    public ArmServices(Program p) { P = p; }
+    public ArmServices(ArmCore p) { P = p; }
     public void Load(MyIni ini)
     {
         var peers = new Dictionary<long, Client>();
@@ -3130,6 +3517,7 @@ sealed class ArmServices
             else if (op == "STOP")
             {
                 if (client.Role != "Stop" && Owner != client) throw new Exception("Module has no stop authority.");
+                P.Tools.InhibitRecovery();
                 if (P.Tools.Busy) P.Tools.Cancel("Module emergency stop.");
                 P.StopMotion("Module stop: " + link.Peer.CustomName); P.Say(P.Status);
             }
@@ -3146,7 +3534,7 @@ sealed class ArmServices
                 if (!P.ReadPose(out p, out f, out u)) throw new Exception("Arm focus unavailable.");
                 // No state changes until every waypoint and policy has passed.
                 P.StopMotion(""); P.LocalPath = path; P.CapturePose(p, f, u); P.Enabled = true;
-                P.Runtime.UpdateFrequency = UpdateFrequency.Update1;
+                P.Frequency = UpdateFrequency.Update1;
                 client.Path = path; client.State = "Moving"; Owner = client;
                 client.ReplyAge = 0;
                 P.Say("Module path: " + link.Peer.CustomName);
@@ -3172,4 +3560,55 @@ sealed class ArmServices
         // Failure to reply to an idle observer must not fault a healthy arm.
         try { link.Send(ini); } catch { if (Owner == client) P.Fault("Planner reply failed."); }
     }
+}
+
+public string Summary => Enabled ? GoingHome ? "HOME" : LocalPath != null ? "PATH" : "ON" : Tools.Busy ? "TOOLS" : LastFault.Length > 0 ? LastFault : ConfigValid ? "OFF" : Status;
+public bool HasLayout => ConfigValid && Topology.Fingerprint.Length > 0;
+public void Stop(string why) { if (Tools != null) Tools.InhibitRecovery(); Fault(why); }
+public bool SharedSetting(string field) { return field != "ToolSwapPB" && field != "Peers"; }
+public void Select(bool selected)
+{
+    if (selected == PilotSelected) return;
+    if (Enabled && LocalPath == null && !GoingHome && !Tools.Busy)
+    { var position = PositionI; var orientation = OrientationI; HoldCurrent(); PositionI = position; OrientationI = orientation; }
+    PilotSelected = selected;
+}
+List<AutoGroup> BodyGroups()
+{
+    var groups = new List<AutoGroup>();
+    foreach (var group in Topology.Groups)
+    {
+        bool tool = false; foreach (var member in group.M) if (Tools.IsToolJoint(member.B)) tool = true;
+        if (tool) break;
+        groups.Add(group);
+    }
+    return groups;
+}
+public string Shape
+{
+    get
+    {
+        var rows = new List<string>();
+        foreach (var group in BodyGroups())
+        {
+            var before = new HashSet<long>(); var after = new HashSet<long>();
+            foreach (var member in group.M) { before.Add(member.U); after.Add(member.V); }
+            rows.Add(AutoConfig.GroupKind(group) + ":" + before.Count + ">" + after.Count);
+        }
+        return string.Join("|", rows);
+    }
+}
+public string WeightTable => AutoConfig.Weights(BodyGroups());
+public bool ApplyWeights(string table, out string why)
+{
+    var groups = BodyGroups(); List<double[]> values;
+    if (!AutoConfig.ReadWeights(table, groups, out values, out why)) { why = Name + ": " + why; return false; }
+    RememberToolWeights(false);
+    for (int i = 0; i < groups.Count; i++)
+    { groups[i].MoveW = values[i][0]; groups[i].TurnW = values[i][1]; ToolWeights[ToolGroupKey(groups[i])] = values[i]; }
+    WriteToolWeights(); return true;
+}
+public List<IMyMechanicalConnectionBlock> Joints()
+{ var blocks = new List<IMyMechanicalConnectionBlock>(); foreach (var group in Topology.Groups) foreach (var member in group.M) blocks.Add(member.B); return blocks; }
+
 }

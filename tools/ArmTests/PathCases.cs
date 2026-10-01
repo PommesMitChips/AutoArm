@@ -37,6 +37,41 @@ internal static partial class Scenarios
         var offset=(Vector3D)Get(script,"TargetP")!; var root=rig.Blocks.OfType<IMyMotorStator>().Single().WorldMatrix;
         var world=root.Translation+root.Forward*offset.X+root.Left*offset.Y+root.Up*offset.Z;
         var start=(Vector3D)Get(line,"LineStart")!; Check(Vector3D.Cross(world-start,Vector3D.Forward).Length()<1e-9,"Line reference left its Cartesian segment.");
+        // Losing angular alignment after advancing must pause along the line,
+        // rather than command a retreat to its starting point on every wobble.
+        var progressed=head.WorldMatrix; progressed.Translation+=Vector3D.Forward*.06;
+        foreach(double degrees in new[]{.21,.19,.21,.19})
+        {
+            var rotation=Vector3D.Up*(degrees*Math.PI/180);
+            RecordProxy.Of(head).Values["WorldMatrix"]=MatrixD.CreateWorld(progressed.Translation,
+                RotateVector(initial.Forward,rotation),RotateVector(initial.Up,rotation));
+            InvokeFrame(script,rig,"",UpdateType.Update1,1d/60);
+            offset=(Vector3D)Get(script,"TargetP")!;
+            world=root.Translation+root.Forward*offset.X+root.Left*offset.Y+root.Up*offset.Z;
+            double actual=Vector3D.Dot(head.GetPosition()-start,Vector3D.Forward);
+            double requested=Vector3D.Dot(world-start,Vector3D.Forward);
+            Check(requested>=actual-1e-9&&requested<=actual+.003167,"Angular tolerance crossing reset insertion progress or commanded a backward jump.");
+            Check(Vector3D.Cross(world-start,Vector3D.Forward).Length()<1e-9,"Paused insertion lost its Cartesian line.");
+            Check((int)Get(line,"Completed")! ==0,"Alignment jitter acknowledged an unfinished insertion.");
+        }
+        // The old binary alignment gate switched an entire lookahead on/off
+        // at .2 degrees. Adjacent angular samples must now change it smoothly.
+        double? previousRequest=null;
+        foreach(double degrees in new[]{.1999,.2001,.2999,.3001,.3999,.4001,.6})
+        {
+            var rotation=Vector3D.Up*(degrees*Math.PI/180);
+            RecordProxy.Of(head).Values["WorldMatrix"]=MatrixD.CreateWorld(progressed.Translation,
+                RotateVector(initial.Forward,rotation),RotateVector(initial.Up,rotation));
+            InvokeFrame(script,rig,"",UpdateType.Update1,1d/60);
+            offset=(Vector3D)Get(script,"TargetP")!;
+            world=root.Translation+root.Forward*offset.X+root.Left*offset.Y+root.Up*offset.Z;
+            double request=Vector3D.Dot(world-head.GetPosition(),Vector3D.Forward);
+            Check(request>=-1e-9&&request<=.003167,"Alignment blend left the forward segment.");
+            if(previousRequest.HasValue && degrees is .2001 or .3001 or .4001)
+                Check(Math.Abs(request-previousRequest.Value)<.00001,"Alignment blend retained a discontinuous lookahead.");
+            if(degrees==.6) Check(Math.Abs(request)<1e-9,"Large misalignment did not pause insertion.");
+            previousRequest=request;
+        }
         Run(script,"Stop"); NoVelocity(rig);
         Console.WriteLine("Paths: two ordered world-space poses, measured settling, whole-list rejection, 32-waypoint limit, Stop/pilot cancellation and Hold takeover.");
     }

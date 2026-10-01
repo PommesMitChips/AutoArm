@@ -1,47 +1,47 @@
 # Troubleshooting
 
-## “Head*; found X”
+## Fixing "Head*; found X"
 
-With `[Modules] ToolSwapPB` empty, exactly one terminal block must start with the arm's head prefix. For `Arm 1`, names such as `Arm 1 - Head 1 - Drill` and `Arm 1 - Head 1 - HeadMerge` both match `Arm 1 - Head`. Keep that prefix on only the reference block for a simple arm.
+For a simple arm, name exactly one terminal head block `<arm> - Head - <description>`. For tools, name one reference block per positive enum: `<arm> - Head 1 - Drill`, `<arm> - Head 2 - Welder`. Mounts and merges keep ordinary names. Install the ToolSwap PB for numbered tools and run On on the Arm PB.
 
-For a tool setup, install the second PB and set the arm PB's `Modules.ToolSwapPB` to its exact name. Put `[Tools]` and `[ToolNN]` sections in the ToolSwap PB, with complete marker names in `Heads` and tool-side rotor bases in `Mount`. Run `On` on the arm PB to load, scan and enable. `Check` alone does not load configuration edits.
+## Module pairing
 
-## Module PB missing or not responding
+Both scripts must run on the same construct. Empty settings detect the partner by its current global Format and declared arm section; generic PB names are fine. If several possible partners declare the same arm, explicitly set ToolSwapPB in its Arm section or Link.ArmPB in its ToolSwap section. Each arm name belongs to exactly one Arm PB. A ToolSwap PB can declare several arms with different Link.ArmPB overrides.
 
-Both PBs must be functional, running and on the same construct. Their code must use the same arm name. `Modules.ToolSwapPB` in the arm PB and `Link.ArmPB` in the ToolSwap PB must name the other PB exactly. Check that each PB contains the correct script and configuration example. Run `On` on the arm PB after fixing them. Loss of module communication stops movement.
+## Ambiguous rotor base or tool region
 
-## Missing or ambiguous names
+Start tools parked on connected facing merges. The named reference, rotor base and head merges must belong to the same connected rigid tool region. Two loose eligible rotor bases need a deliberately configured head identity or a less ambiguous arrangement. Rotors/hinges inside the main arm need no names; the detachable tool coupler must be a supported rotor base carried by the tool. The shared unnamed rotor top stays on the arm.
 
-Names must match the whole name, including spaces and capitalization. `Arm 1 - Head 1` does not identify a block actually named `Arm 1 - Head 1 - Drill`. Remove profiles for absent tools and keep `ToolNN` sections in the order of `Heads`.
+## Bare arm startup
 
-## Tool mount and arm tip
+Install one compatible loose rotor top on the arm end. Remove extra loose parts or surrounding blocks that hide its mounting face. The top can sit directly on a final hinge head. First pickup requires unlimited tool-rotor angle limits; Rotor Lock is restored after verification. No ArmTip offset, camera, setup mount or teaching is required.
 
-The rotor base belongs on the tool; one unnamed rotor part stays on the moving arm. There is no arm-side Mount name or ArmTip offset. The part can sit directly on the last hinge's moving head. AutoArm follows the named Base, finds that part, and uses it as the bare movement focus. Each tool's named base, marker and head merges remain on its tool assembly.
+## Wrong format or stale tool data
 
-`No loose arm rotor part` means no candidate was found on reachable moving arm grids. Check the Base attachment and the part's rigid connection to the arm. Multiple loose parts or a part surrounded on several possible mounting faces are ambiguous; remove spare parts or make the mounting arrangement clear.
+Arm PB data requires [global] Format=7; ToolSwap requires [global] Format=2. Delete older PB Custom Data and allow regeneration, then restore desired preferences. There is no migration. Each automatically configured head stores AutoArm Tool Format=1. If that section has an unsupported format, delete only that section and scan the tool while parked; preserve unrelated Custom Data.
 
-First automatic acquisition needs unlimited lower/upper angle limits on the selected tool rotor. Rotor Lock is supported and restored after verification. If cancelled while pending, keep support, inspect the equipment and run `On`; its scan cancels a confirmed bare pending request before restoring the lock. Use `ToolScan` instead to check while remaining OFF. No tool merge is released for an unverified actual part.
+## Shared structure mismatch
 
-`Tool attached elsewhere` means a configured tool base is attached to a different top. Keep that tool supported and remove its unintended attachment before scanning. Do not move an arm still attached to a merged tool.
+Global Actuators settings require the configured joint kinds, member counts and split/rejoin arrangement. Lengths and world mounting geometry may differ. Fix the nonconforming arm or give it local Structure and Actuators overrides. Coupling/downstream tool joints are excluded from this arm-body template. An invalid arm stays OFF without stopping an unrelated valid arm.
 
-## Automatic merge names
+## Motion stops or moves slowly
 
-Explicit merge lists work when their automatic scan flags are false. For automatic stand scanning, an empty `StandPrefix` derives from the entire marker name. Marker `Arm 1 - Head 1 - Drill` implies stand prefix `Arm 1 - Head 1 - Drill - StandMerge `. Alternatively, supply the explicit list shown in the examples.
+Stop cancels only the target arm; StopAll stops all arms hosted by that PB. Select chooses cockpit input. Automatic movement for an unselected arm continues independently. Resolve reported topology/attachment/communication faults, then run On for that arm. Expected ToolSwap changes rebuild and resume automatically.
 
-Automatic generic parking uses numbered names such as `Arm 1 - ParkMerge 1`. An explicitly listed unnumbered park merge works with `Park`, but `Park 1` requires the exact numbered name. Per-tool stands are used for swaps; they are not automatically generic park destinations.
+If a previously mounted known tool is manually parked and fully detached, an intact arm can cancel the old operation, rediscover its bare rotor tip and resume a fresh ON hold. Pending/foreign attachments, missing parts, broken upstream joints and failed discovery remain stopped. Explicit Stop/Off/SwapCancel or module stop authority inhibits this recovery; run On to request control again. Both PBs must use the current scripts to carry stop intent through the handoff.
 
-## Configuration format
+An arm can be ON while another arm owns cockpit input. Run `Select <arm name>` on its Arm PB to choose it. The status reports when cockpit input is inactive at that PB. An initial configuration error followed by a successful On now establishes the default selection if no owner exists.
 
-Arm configuration uses Format 6; ToolSwap configuration uses Format 1. If the loader reports the wrong format, save the preferences you want to retain, delete Custom Data and copy the current example for that PB. Run `On` on the arm PB. When installing into another arm PB, clear a copied `Actuators` table so the new PB can generate its own rows.
+`PositionDamping` and `OrientationDamping` default to 0 and can be set globally or per arm. Explicit older values remain unchanged; set both to zero to use the earlier undamped response. The final insertion target gradually reduces forward demand as alignment worsens and holds current progress when badly misaligned. It does not retreat to the line start. If movement still oscillates, record the position/angular errors and active speed, acceleration and damping settings; native SE joint flex and contact are not simulated by the test harness.
 
-## Interrupted swaps
+For parking, `Tools.PositionTolerance` defaults to 0.01 metres and `Tools.AngleTolerance` to 1 degree. Explicit older values of 0.005 and 0.2 still apply until edited. These settings belong in the ToolSwap PB's `[global]` or arm section. Rotor pickup retains tighter alignment. Declared merge/unmerge changes may briefly hide the tool's attachment; the arm waits stopped for at most two seconds while the known connection settles. Initial merge flags may settle before support is proven; loss of proven support, a wrong part or a foreign owner still cancels. Attachment, detachment and support/split confirmation require continuously valid observations for 0.2 seconds, beginning at the first valid observation.
 
-`Stop`, `Off`, `SwapCancel` or pilot input stops automatic movement while retaining support. Inspect the connections and run `On` to scan and resume. An explicit scan clears a pending failed attachment only when that base is actually bare. Successful tool pickup/swap resumes manual control automatically; parking and canceled or failed operations stay OFF. `Stop` also cancels startup requested by `On`.
+`Tool ready; waiting for arm ON confirmation` is pending, not proof of active control. ToolSwap reports `Tool ready; arm ON` only after the current handoff is acknowledged and the Arm PB reports enabled. Missing handoff requests are retried; duplicate accepted requests do not stop or recapture the arm. Failed readiness, permission, budget or validation during resume reports a concrete reason instead of waiting indefinitely. Update both PB scripts together. Existing v4 configuration remains valid.
 
-During a normal swap, merge and mount changes are expected. The arm pauses commands, waits for separation/attachment and rebuilds its topology before continuing. Replace both PB scripts together if a tool remains OFF after its support merges separate. Unrelated upstream changes still stop the operation.
+Travel uses the arm's HeadSpeed/HeadTurnSpeed. ToolSwap's slower defaults apply to final docking/insertion and withdrawal. Joint speed, acceleration, limits and actual physics still bound achievable movement. Multiple arms share one PB instruction budget; distribute larger arms over more PBs if the reserve guard stops them.
 
-## Parked orientation and tool speed
+If `Tools ApproachDock` hovers and vibrates until timeout, current paired scripts enable the head merges during the acknowledged approach. Parking clearance admission does not wait for quiet measured motion. Actual merge connection stops the Arm PB before the next solve or topology validation; the coordinator then verifies the intended stand. Rotor attachment and detachment still require stopped output and stable connection proofs. Update both PBs and run On; no configuration reset is needed.
 
-Start with tools merged to their stands so ToolSwap can record their actual rest poses. Those poses survive ToolSwap recompilation and prevent quarter-turn changes caused by visually symmetric merge blocks. A never-observed parked tool uses merge geometry for its first parking operation.
+## Tool return orientation
 
-Travel uses HeadSpeed/HeadTurnSpeed in the arm PB. MoveSpeed/TurnSpeed in ToolSwap apply only to final docking/insertion and straight withdrawal. ApproachDistance determines the clearance and backoff. Insertion/withdrawal hold orientation and follow a Cartesian line; this does not add obstacle avoidance during travel.
+Keep tools merged to their intended stands for initial scanning. The actual parked orientation is saved on the named reference block. Returning to that unchanged rack reuses it; a different rack or unobserved parked pose may require the first geometric alignment. Choose clear routes: collision avoidance is not included.

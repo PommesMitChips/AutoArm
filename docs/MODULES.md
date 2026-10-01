@@ -1,16 +1,40 @@
 # PB modules and paths
 
+## Multi-arm host
+
+One executable PB holds up to eight `ArmCore` instances. Each owns its topology, solver arrays, targets, PID/observation history, Home, preferences, endpoint descriptors and module sessions. The host only routes commands/messages, projects inherited configuration, persists scoped state and aggregates scheduling/display. One copy of the implementation is compiled into the PB, rather than duplicating source per arm.
+
+External configuration has only `[global]` and named arm sections. Dotted keys map tool options into their component (`Tools.ApproachDistance`, `Link.ArmPB`, `Tool01.Mount` for an optional explicit profile). Each core receives a direct effective MyIni view with local-over-global inheritance. Generated defaults publish only after successful configuration work and a dirty flag avoids active-tick enumeration. Discovery data is never used as configuration migration: older external formats are rejected. Private-format adapters exist only for standalone tests and are stripped from playable scripts.
+
+Root command parsing supports existing space-separated commands with `, Arm name`, or `Verb(arg,arg,Arm name)`. A recognized final arm identifies the target; omitted targets use that PB's selection. Unknown target suffixes refuse before dispatch. `Select Arm name` changes selection; `StopAll` is PB-wide. Selection is announced on `AutoArm/Select/1` to same-construct Arm PBs. Lamport revision/PB-identity ordering converges simultaneous requests; the selected owner alone samples cockpit input after message delivery. Selection does not cancel other arms' autonomous paths. Selected command targets are PB-local, while direct cockpit authority is coordinated across Arm PBs. Saved authority prevents a restarted inactive PB from claiming the cockpit again.
+
+Incoming unicast strings are bounded and routed by `[Link] Arm` into per-instance queues before authenticated client handlers consume them. A shared ToolSwap PB can keep independent sessions with several arms in one Arm PB or several Arm PBs. Header Arm plus actual source/destination PB identity is the address; sequence/epoch equality across different arms does not make their queues interchangeable. Whole-path validation, topology transition fences, stopped acknowledgements and automatic resume remain per arm.
+
+Timed updates use each arm's independent elapsed/control state and a rotating iteration order. The runtime/instruction budget is shared. Existing solver/scan reserves still stop unsafe work; a host reserve failure stops all hosted arms. Multiple instances do not create additional instruction allowance. Native game instruction timing remains unprofiled.
+
+Shared actuator preferences are ordered stages (`Stage | Kind | Translation | Orientation`). The global template includes actuator families/counts and distinct before/after grid counts for each split/rejoin stage, excluding detachable tool couplers/downstream tool joints. It uses the first configured arm as the prototype when no Structure is supplied. Lengths, world poses and mounting orientations are not template identity; each arm validates its actual geometry and synchronization separately. Local Structure plus Actuators can override the template. Duplicate arm declarations across Arm PBs and overlapping actuator claims within one host refuse ownership.
+
+## Automatic tool profiles
+
+When `Tools.Heads` is omitted, the tool instance finds one terminal marker per positive enum named `<arm> - Head <enum> - <description>`, sorts numerically, and rejects duplicate enums. Tool commands use that enum. Rotor bases and merge blocks need no unique names.
+
+Each marker's occupied region is walked with the existing facing-merge cuts. A rotor base is eligible only within that region and either bare or attached back into the arm's moving component. Cached rotor identity is a hint, not a substitute for region validation. No/multiple eligible uncached bases refuse. Connected facing merge pairs crossing out of the region identify head-side and stand-side support ports; internal/nonfacing pairs are not support barriers.
+
+Verified rotor/merge identities and the actual parked pose are written under `[AutoArm Tool] Format=1` on the named marker. Unrelated valid INI and opaque Custom Data are retained. Mounted scans validate stored head-merge IDs against the fresh region, and reuse durable stand/park data only after existing identity/layout checks. Unknown head-data formats refuse without migration. This data survives ToolSwap PB Storage loss and can be read by another paired PB. Safety journals and interrupted-attachment relock intent remain in the tool instance's scoped PB Storage.
+
+An empty PB discovers named bases and eligible counterpart PB declarations. Entity-ID addressing avoids requiring unique PB names. Multiple possible partners require explicit configuration. A marker's rotor base must still be a supported vanilla rotor family; an unseen bare rotor part needs the existing unlimited-angle first-attachment check. No naming or configuration convenience bypasses support, reciprocal attachment, actual part or final-pose verification.
+
 AutoArm owns arm topology, joint state, held targets, Home, the task-space solver and all actuator-velocity writes. ToolSwap owns tool profiles, docking geometry, support/attachment sequencing and its recovery journal. Shared math, rotor-part descriptors and transport live in reusable source fragments. Neither module calls the other recursively.
 
 ## Installation boundary
 
-Arm Custom Data is Format 6. `Modules.ToolSwapPB` is empty for a standalone arm, or the exact same-construct ToolSwap PB name. ToolSwap Custom Data is Format 1; `Link.ArmPB` is the exact arm PB name. Both scripts use the same `ArmName`. Formats are strict; there is no configuration migration.
+Arm Custom Data is `[global] Format=7`; ToolSwap is `[global] Format=2`. Every other section is an arm name. Unprefixed settings inherit from global; an arm value overrides them. `ToolSwapPB` and `Link.ArmPB` select an explicit partner by name or @EntityId, or are detected from partner PB declarations. Formats are strict; there is no configuration migration.
 
 ToolSwap sends endpoint/reference/focus descriptors during stopped topology changes. AutoArm resolves the actual blocks, discovers the mechanical corridor, retains weights by physical member identity and performs stopped setup. The authoritative groups and head identity are returned to ToolSwap. ToolSwap never writes rotor/piston velocities, including during cancellation. It changes only tool-side coupling state, rotor lock and the selected tool's support merges.
 
 ## Transport
 
-Messages are unicast IGC strings tagged `AutoArm/4`, encoded as INI. Both peers check the configured PB identity, same construct, protocol version and arm name. The `[Link]` envelope contains `Version=4`, `Arm`, sender `Epoch`, expected receiver `Remote`, `Generation`, increasing `Sequence` and `Operation`. Epochs survive recompilation in each PB's Storage. Stop revokes the generation so old requests cannot restart motion. There is one authorized movement lease. Both PBs must use the paired current scripts.
+Messages are unicast IGC strings tagged `AutoArm/5`, encoded as INI. Both peers check the configured PB identity, same construct, protocol version and arm name. The `[Link]` envelope contains `Version=5`, `Arm`, sender `Epoch`, expected receiver `Remote`, `Generation`, increasing `Sequence` and `Operation`. Epochs survive recompilation in each PB's Storage. Each (destination PB EntityId, Arm) owns independent epochs, sequences, generations and a movement lease. Stop revokes only that arm's generation. Both PBs must use the paired current scripts.
 
 | Operation | Direction | Meaning |
 | --- | --- | --- |
@@ -43,11 +67,19 @@ Optional per-waypoint `Moves`, `Turns` and `Lines` use `|`-separated rows of equ
 
 AutoArm advances only after position/orientation tolerances and measured low velocity hold over two positive observations. The existing solver, travel bounds, acceleration bounds, synchronization checks and instruction budget remain authoritative. A waypoint has a deadline derived from initial distance/angle and effective correction caps, with a 30-second allowance.
 
+Optional `Docking=true` selects ToolSwap arrival policy; the default is false, preserving generic path behavior. Intermediate waypoints use an angular admission tolerance of at least 1 degree and a position tolerance of one quarter of the next segment, bounded to 1–20 mm. They require low measured entry speed, bounded by the insertion cap and admission distance, but do not force a zero-output stop. The final waypoint retains the requested full pose tolerances; allowed measured speed is max(0.005 m/s, twice PosTol per second) and max(0.2 deg/s, twice AngleTol per second). Final output still stops before mechanical operations. Two valid observations are required.
+
+Docking linear motion admits up to 1 degree of alignment error when far from the coupler, tightening toward the requested angular tolerance over the last 0.1 metres. Forward demand blends to zero at twice that active alignment threshold. The actual rotor attachment identity/alignment proof is unchanged. This avoids imposing final shaft precision at the clearance waypoint while preserving it near contact.
+
 `STATE` reports `Ack`, `MoveAck`, `PathId`, `Completed`, `Count`, `Ready`, `Stopped`, `Settled`, `Error`, pilot/input settings, authoritative head identity and actuator groups. `Completed` counts reached waypoints. Completion requires the matching path identity; a stale settled reply cannot satisfy a new path. Final stopped output is confirmed before ToolSwap performs attachment mutations. Completion of movement is separate from completion of attachment.
 
 ToolSwap submits approach and insertion together. For example, `ApproachDistance=2.5` creates a first waypoint 2.5 metres outward from the mating pose, followed by the mating pose. Once the full path finishes, ToolSwap verifies support/identity/pose, changes attachment and asks AutoArm to rebuild and resume. Retreat is a one-waypoint path. Parking stays OFF; successful mounting resumes control at the actual current pose.
 
-Before enabling support, attaching/detaching a mount, releasing merges or canceling a pending native attachment, ToolSwap declares and waits for TRANSITION acknowledgement. AutoArm stops commands and blocks movement on stale topology while the coordinator observes native separation/attachment. BUILD rewalks the actual arm and settles it; RESUME activates normal control on a fresh timed update, after equipment permission is valid. Source head merges are disabled during parking travel so native merge snap cannot close the chain before stopped docking. Unexpected upstream connection changes still cancel through the coordinator's identity checks and the arm's active topology validation.
+For merge parking, ToolSwap sends `Capture=true` on its acknowledged motion path. The Arm PB installs capture monitoring before ToolSwap enables the selected head merges. Parking intermediate arrival uses geometry without requiring quiet measured motion. Before each solve/topology validation, the Arm PB checks safety merges on the previously mounted tool; any connection immediately zeros drives, cancels the path and pauses stale topology. The coordinator independently observes capture and verifies all intended reciprocal support pairs before detaching. Partial or unproven support never permits detach. This flag is reserved for ToolSwap's scoped lease and is not interpreted by generic planner path configuration.
+
+If native capture has not occurred, the final motion waypoint still stops outward from the exact saved pose by min(0.03 m, ApproachDistance/4). Magnets remain enabled while waiting. Native capture can interrupt travel or insertion without endpoint/velocity settling. The saved mating pose itself is unchanged. Synthetic fixtures model native cell snapping; live magnetic forces/contact remain unverified.
+
+Attaching/detaching a mount, releasing merges or canceling a pending native attachment still require TRANSITION acknowledgement and stopped output. Early parking merge capture uses the installed Arm-side capture monitor instead of demanding stopped motion before enabling magnets. AutoArm blocks movement on stale topology after closure. BUILD rewalks the arm after verified separation; RESUME activates normal control after equipment permission is valid. Unexpected upstream changes still cancel through identity checks and active topology validation.
 
 ToolSwap automatically stores parked marker pose relative to a real stand anchor plus merge-member relative frames in its scoped Storage. Fully connected parked profiles are captured during scans and verified support boundaries. Returning to the same rack uses that pose if marker/port identities and rigid layouts match. Grid IDs are not used as parked-tool identity. This preserves the user's rest orientation despite visually symmetric merge faces; there is no manual teaching requirement. An unobserved initial park or a different rack uses geometric matching.
 
@@ -55,7 +87,7 @@ Other PB automation can also invoke the arm's public `Path` Run argument with wo
 
 ## Additional direct peers
 
-`[Modules] Peers` authorizes up to 16 additional same-construct PBs by exact name, independently of `ToolSwapPB`. Each row is `PB name | Role`. The optional setting is shown in [Modules.ini](../examples/Modules.ini). Arm Format 6 remains valid without it. Invalid roles, duplicate/self/missing/nonfunctional PBs and reuse of the ToolSwap PB as a service peer refuse setup. Apply changes with `On` or `Reload`.
+`Peers` authorizes up to 16 additional same-construct PBs by exact name, independently of `ToolSwapPB`. Each row is `PB name | Role`. The optional setting is shown in [Modules.ini](../examples/Modules.ini). Peers is optional in the current Format 7 schema. Invalid roles, duplicate/self/missing/nonfunctional PBs and reuse of the ToolSwap PB as a service peer refuse setup. Apply changes with `On` or `Reload`.
 
 | Role | Authority |
 | --- | --- |
@@ -65,7 +97,7 @@ Other PB automation can also invoke the arm's public `Path` Run argument with wo
 
 Unicast is a transport choice, not a two-node topology restriction. Every authorized PB addresses the Arm PB directly. One helper can serve multiple arms if it keeps separate sessions keyed by destination EntityId and arm name; each Arm PB independently lists that helper. No ToolSwap relay or central star is required. Multiple helpers can offload planning, geometry or monitoring into their own instruction budgets. Native joint state and the numerical solver still belong to the Arm PB; this release does not split a solver across PBs.
 
-Service messages use the existing `AutoArm/4` tag and `[Link]` Version 4 envelope with the additional discriminator `Service=1`. The specialized ToolSwap protocol is unchanged. The Arm PB routes by authorized sender EntityId before parsing, with the same packet-size and per-callback instruction limits. A service peer cannot send ToolSwap BUILD, equipment descriptors, attachment transitions or RESUME.
+Service messages use the existing `AutoArm/5` tag and `[Link]` Version 5 envelope with the additional discriminator `Service=1`. The specialized ToolSwap protocol is unchanged. The Arm PB routes by authorized sender EntityId before parsing, with the same packet-size and per-callback instruction limits. A service peer cannot send ToolSwap BUILD, equipment descriptors, attachment transitions or RESUME.
 
 ### Service client contract
 
@@ -81,7 +113,7 @@ For example, after a HELLO response supplies the epochs/revision, a planner's pa
 
 ```ini
 [Link]
-Version=4
+Version=5
 Service=1
 Arm=Arm 1
 Epoch=7
@@ -97,7 +129,7 @@ Turns=0|2
 Lines=false|true
 ```
 
-The numeric epochs/revision/sequence and waypoints above are illustrative: use live session values and reachable targets. Send with `IGC.SendUnicastMessage(armPB.EntityId, "AutoArm/4", ini.ToString())`. A worker can compute its own path in another PB and submit it through this contract; an observer can consume pose/state without participating in motion ownership.
+The numeric epochs/revision/sequence and waypoints above are illustrative: use live session values and reachable targets. Send with `IGC.SendUnicastMessage(armPB.EntityId, "AutoArm/5", ini.ToString())`. A worker can compute its own path in another PB and submit it through this contract; an observer can consume pose/state without participating in motion ownership.
 
 ## Further modules
 

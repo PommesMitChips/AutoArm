@@ -1,6 +1,6 @@
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "3.2";
+const string ControllerBuildVersion = "4.0.9";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -15,24 +15,39 @@ sealed class AutoTopology
 }
 static class AutoSettings
 { public static string Number(double value) { return value.ToString("R", System.Globalization.CultureInfo.InvariantCulture); } }
+// BEGIN STANDALONE CONFIG
+bool ReadConfig(string text, out MyIni ini, out string why)
+{
+    ini = new MyIni(); why = "";
+    if (string.IsNullOrWhiteSpace(text))
+    {
+        ini.Set(ArmSection, "Arm", ArmName); ini.Set(ArmSection, "Format", 1);
+        ini.Set(LinkSection, "ArmPB", ArmName + " - Arm PB"); ini.Set(ToolsSection, EnabledKey, true);
+        WriteConfig(ini); return true;
+    }
+    if (!ini.TryParse(text)) { why = "Invalid Custom Data INI."; return false; }
+    if (ini.Get(ArmSection, "Format").ToInt32() != 1 || ini.Get(ArmSection, "Arm").ToString() != ArmName)
+    { why = "ToolSwap Custom Data requires Format 1 and this arm name. Delete Custom Data."; return false; }
+    return true;
+}
+void WriteConfig(MyIni ini) { Me.CustomData = ini.ToString(); }
+string ConfigText(MyIni ini) { return ini.ToString(); }
+// END STANDALONE CONFIG
+
 static class AutoConfig
 {
     public const int Format = 1;
     public static MyIni Saved(string text) { return LinkSaved(text); }
-    public static bool ReadCurrent(string text, out MyIni ini, out string why)
+    public static bool ReadCurrent(Program p, string text, out MyIni ini, out string why)
     {
-        ini = new MyIni(); why = "";
-        if (!ini.TryParse(text ?? "")) { why = "Invalid Custom Data INI."; return false; }
-        if (ini.Get(ArmSection, "Format").ToInt32() != Format || ini.Get(ArmSection, "Arm").ToString() != ArmName)
-        { why = "ToolSwap Custom Data requires Format 1 and this arm name. Delete Custom Data."; return false; }
-        return true;
+        return p.ReadConfig(text, out ini, out why);
     }
 }
 ModuleLink Link;
 ToolSwapController Tools;
 AutoTopology Topology = new AutoTopology();
 bool Acquired, Initialised, RemoteReady, RemoteStopped, RemoteSettled, RemotePilot, Released;
-long Ack, HelloRequest, StopRequest, BuildRequest, MoveRequest;
+long Ack, HelloRequest, StopRequest, BuildRequest, MoveRequest, ResumeRequest;
 double Clock, Heartbeat;
 string PendingCommand = "Reload", RemoteError = "", DisplayText = "ToolSwap starting OFF";
 string CancelReason = "";
@@ -41,8 +56,12 @@ long SentAnchor, ReportedPath;
 long TransitionRequest;
 string TransitionKind = "";
 bool ResumeRequested;
+double ResumeSeconds;
+int ResumeRetries;
+bool ExplicitStop;
 int CompletedWaypoints;
 bool ReadKeyboard = true, ReadMouse, ReadRoll = true;
+bool PilotSelected = true;
 readonly List<IMyShipController> Controllers = new List<IMyShipController>();
 int ControllerPoll;
 double DefaultMove = .2, DefaultTurn = 5;
@@ -56,19 +75,14 @@ public Program()
 public void Save() { }
 void ConfigureLink()
 {
-    if (string.IsNullOrWhiteSpace(Me.CustomData))
-    {
-        var defaults = new MyIni(); defaults.Set(ArmSection, "Arm", ArmName); defaults.Set(ArmSection, "Format", 1);
-        defaults.Set(LinkSection, "ArmPB", ArmName + " - Arm PB"); defaults.Set(ToolsSection, EnabledKey, true); defaults.Set(ToolsSection, "Heads", ""); Me.CustomData = defaults.ToString();
-    }
-    MyIni ini; string why; if (!AutoConfig.ReadCurrent(Me.CustomData, out ini, out why)) throw new Exception(why);
+    MyIni ini; string why; if (!AutoConfig.ReadCurrent(this, Me.CustomData, out ini, out why)) throw new Exception(why);
     Link.Resolve(ini.Get(LinkSection, "ArmPB").ToString());
 }
 public void Main(string argument, UpdateType source)
 {
     double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
     bool timed = (source & (UpdateType.Update1 | UpdateType.Update10 | UpdateType.Update100 | UpdateType.Once)) != 0;
-    if (Finite(elapsed) && elapsed > 0) { Link.Age += elapsed; Clock += elapsed; Heartbeat += elapsed; }
+    if (Finite(elapsed) && elapsed > 0) { Link.Age += elapsed; Clock += elapsed; Heartbeat += elapsed; if (ResumeRequested) ResumeSeconds += elapsed; }
     try
     {
         if (Link.Peer == null) ConfigureLink();
@@ -98,7 +112,8 @@ public void Main(string argument, UpdateType source)
             {
                 string why; if (!Tools.Load(out why)) throw new Exception(why);
                 if (!Tools.Configured) throw new Exception("Tools.Enabled must be true in the ToolSwap PB.");
-                var ini = new MyIni(); ini.TryParse(Me.CustomData); Tools.WriteConfig(ini); Me.CustomData = ini.ToString(); Initialised = true;
+                MyIni ini; if (!AutoConfig.ReadCurrent(this, Me.CustomData, out ini, out why)) throw new Exception(why);
+                Tools.WriteConfig(ini); WriteConfig(ini); Initialised = true;
                 if (verb == "on") Tools.StartOn();
             }
             else if (verb == "stop" || verb == "off" || verb == "swapcancel") { Tools.Cancel("Stopped; inspect, then On."); }
@@ -113,6 +128,11 @@ public void Main(string argument, UpdateType source)
         {
             Tools.Cancel("Arm PB communication timeout."); Acquired = false; PendingCommand = ""; return;
         }
+        if (ResumeRequested && Acquired && ResumeSeconds >= .25)
+        {
+            if (++ResumeRetries > 3 || !Permit()) Tools.Cancel("Arm did not confirm tool handoff; On.");
+            else EnableControl(true);
+        }
         if (Tools.Busy && Acquired)
         {
             if (RemoteError.Length > 0) throw new Exception(RemoteError);
@@ -123,7 +143,7 @@ public void Main(string argument, UpdateType source)
         if (!Tools.Busy && Acquired && !Released)
         {
             if (!Initialised || Tools.Recovery || Tools.Endpoint == null)
-            { var abort = Link.Packet("ABORT"); abort.Set(LinkSection, "Reason", CancelReason); Link.Send(abort); }
+            { var abort = Link.Packet("ABORT"); abort.Set(LinkSection, "Reason", CancelReason); abort.Set(LinkSection, "ExplicitStop", ExplicitStop); Link.Send(abort); }
             else { var release = EquipmentPacket("RELEASE"); release.Set(LinkSection, "Permit", Permit()); Link.Send(release); }
             Released = true;
         }
@@ -142,6 +162,8 @@ void Queue(string command)
 {
     string verb = command.Split(' ')[0].ToLowerInvariant();
     if (Tools.Busy && Tools.Automatic && verb != "stop" && verb != "off" && verb != "swapcancel") { Say("ToolSwap busy; Stop first."); return; }
+    if (Released) { Acquired = false; HelloRequest = 0; }
+    ExplicitStop = verb == "stop" || verb == "off" || verb == "swapcancel";
     PendingCommand = command; Released = false;
     if (!Acquired) HelloRequest = 0;
 }
@@ -168,7 +190,7 @@ void Receive()
             string command = ini.Get(LinkSection, "Command").ToString();
             if (command.Equals("ToolInfo", StringComparison.OrdinalIgnoreCase)) { Tools.Handle("ToolInfo"); var info = Link.Packet("INFO"); info.Set(LinkSection, "Text", DisplayText); Link.Send(info); continue; }
             if (command.Equals("Stop", StringComparison.OrdinalIgnoreCase))
-            { PendingCommand = ""; Acquired = false; Tools.Cancel("Arm stopped; inspect, then On."); continue; }
+            { ExplicitStop = !ini.Get(LinkSection, "RecoverBare").ToBoolean(); PendingCommand = ""; Acquired = false; Tools.Cancel("Arm stopped; inspect, then On."); continue; }
             if (Tools.Busy) Tools.Cancel("Arm requested new setup; inspect equipment.");
             Queue(command); Acquired = false; continue;
         }
@@ -177,11 +199,13 @@ void Receive()
         Link.RemoteEpoch = epoch; Link.Generation = ini.Get(LinkSection, "Generation").ToInt64(); Link.Received = sequence; Link.Age = 0;
         Ack = ini.Get(LinkSection, "Ack").ToInt64(); RemoteReady = ini.Get(LinkSection, "Ready").ToBoolean(); RemoteStopped = ini.Get(LinkSection, "Stopped").ToBoolean();
         RemoteSettled = ini.Get(LinkSection, "Settled").ToBoolean(); RemotePilot = ini.Get(LinkSection, "Pilot").ToBoolean(); RemoteError = ini.Get(LinkSection, "Error").ToString();
+        PilotSelected = ini.Get(LinkSection, "PilotSelected").ToBoolean(true);
         ReportedPath = ini.Get(LinkSection, "PathId").ToInt64(); CompletedWaypoints = ini.Get(LinkSection, "Completed").ToInt32();
         ReadKeyboard = ini.Get(LinkSection, "Keyboard").ToBoolean(true); ReadMouse = ini.Get(LinkSection, "Mouse").ToBoolean(); ReadRoll = ini.Get(LinkSection, "Roll").ToBoolean(true);
         DefaultMove = ini.Get(LinkSection, "DefaultMove").ToDouble(.2); DefaultTurn = ini.Get(LinkSection, "DefaultTurn").ToDouble(5);
         Acquired = ini.Get(LinkSection, "Lease").ToBoolean();
-        if (ResumeRequested && ini.Get(LinkSection, "Enabled").ToBoolean()) { ResumeRequested = false; Say("Tool ready; arm ON."); }
+        if (ResumeRequested && Ack >= ResumeRequest && !Acquired && (ini.Get(LinkSection, "Enabled").ToBoolean() || RemoteError.Length > 0))
+        { ResumeRequested = false; Say(RemoteError.Length > 0 ? "Arm resume failed: " + RemoteError : "Tool ready; arm ON."); }
         if (HelloRequest != 0 && Ack >= HelloRequest && !Acquired) HelloRequest = 0;
         if (MoveRequest != 0 && ini.Get(LinkSection, "MoveAck").ToInt64() != MoveRequest) RemoteSettled = false;
         Topology.Head = GridTerminalSystem.GetBlockWithId(ini.Get(LinkSection, "Head").ToInt64()); Topology.Groups.Clear();
@@ -197,11 +221,12 @@ void Receive()
     }
 }
 bool Permit() { string why; return Initialised && Tools.AllowManual(out why); }
+bool CaptureReady => MoveRequest != 0 && ReportedPath == MoveRequest && Ack >= MoveRequest;
 void Say(string text) { DisplayText = text; }
 void StopMotion(string reason)
 {
     if (RemoteStopped && (StopRequest == 0 || Ack >= StopRequest)) { StopRequest = 0; MoveRequest = 0; return; }
-    if (StopRequest == 0) { var stop = Link.Packet("STOP"); StopRequest = Link.Sequence; Link.Send(stop); }
+    if (StopRequest == 0) { var stop = Link.Packet("STOP"); stop.Set(LinkSection, "ExplicitStop", ExplicitStop); StopRequest = Link.Sequence; Link.Send(stop); }
     throw new RemoteWait();
 }
 void CancelMotion(string reason)
@@ -238,15 +263,19 @@ bool SubmitPath(string rows, long anchor, int waypoint, double moveCap, double t
     { settled = ReportedPath == MoveRequest && CompletedWaypoints > waypoint && Link.Age < .2 && (waypoint == 0 && rows.Contains("|") || RemoteSettled && RemoteStopped); return true; }
     var packet = Link.Packet("PATH"); packet.Set(LinkSection, "Waypoints", rows); packet.Set(LinkSection, "Anchor", anchor); packet.Set(LinkSection, "Move", moveCap); packet.Set(LinkSection, "Turn", turnCap);
     packet.Set(LinkSection, "PosTol", positionTolerance); packet.Set(LinkSection, "AngleTol", angleTolerance);
+    packet.Set(LinkSection, "Docking", true);
+    packet.Set(LinkSection, "Capture", Tools.Parking);
     packet.Set(LinkSection, "Moves", travel ? "0|" + AutoSettings.Number(moveCap) : AutoSettings.Number(moveCap));
     packet.Set(LinkSection, "Turns", travel ? "0|" + AutoSettings.Number(turnCap) : AutoSettings.Number(turnCap));
     packet.Set(LinkSection, "Lines", travel ? "false|true" : "true");
     MoveRequest = Link.Sequence; SentPath = rows; SentAnchor = anchor; RemoteStopped = RemoteSettled = false; Link.Send(packet); return true;
 }
-void EnableControl()
+void EnableControl(bool retry = false)
 {
-    var resume = EquipmentPacket("RESUME"); resume.Set(LinkSection, "Permit", Permit()); Link.Send(resume); Released = ResumeRequested = true;
-    Say("Tool ready; arm control resuming.");
+    if (!retry) ResumeRetries = 0;
+    ResumeSeconds = 0;
+    var resume = EquipmentPacket("RESUME"); resume.Set(LinkSection, "Permit", Permit()); ResumeRequest = Link.Sequence; Link.Send(resume); Released = ResumeRequested = true;
+    Say("Tool ready; waiting for arm ON confirmation.");
 }
 MyIni EquipmentPacket(string operation)
 {
@@ -259,10 +288,11 @@ MyIni EquipmentPacket(string operation)
     ini.Set(LinkSection, "Endpoint", endpoint.EntityId); ini.Set(LinkSection, "AnchorOwner", owner.EntityId); ini.Set(LinkSection, "Anchor", frame.EntityId); ini.Set(LinkSection, "Ignore", Tools.IgnoredMount);
     var focus = Tools.Focus; ini.Set(LinkSection, "Focus", focus != null);
     if (focus != null) { ini.Set(LinkSection, "Part", focus.EntityId); WriteFrame(ini, "Local", focus.Local); }
-    Tools.WriteEquipment(ini); return ini;
+    ini.Set(LinkSection, "ExplicitStop", ExplicitStop); Tools.WriteEquipment(ini); return ini;
 }
 bool HasPilotInput()
 {
+    if (!PilotSelected) return false;
     if (ControllerPoll-- <= 0) { GridTerminalSystem.GetBlocksOfType(Controllers); ControllerPoll = 9; }
     foreach (var c in Controllers) if (!c.Closed && c.IsUnderControl && c.IsSameConstructAs(Me) && (ReadKeyboard && c.MoveIndicator.LengthSquared() > 1e-8 || ReadMouse && c.RotationIndicator.LengthSquared() > 1e-8 || ReadRoll && Math.Abs(c.RollIndicator) > 1e-4)) return true;
     return false;
