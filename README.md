@@ -4,109 +4,72 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 
 ## Installation
 
-1. Run `Stop` on the previous controller, if one is installed.
-2. Copy the entire [AutoArm script](https://github.com/PommesMitChips/AutoArm/blob/v3.2/AutoArm_Compact.txt) into the arm programmable block's script editor. A simple arm needs only this PB.
-3. For parking or tool swapping, install the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v3.2/AutoArm_ToolSwap_Compact.txt) in a second PB on the same construct. Name the PBs `Arm 1 - Arm PB` and `Arm 1 - ToolSwap PB`.
-4. Change `const string ArmName = "Arm 1";` to your arm's name in each installed script, then check/compile them in the game editor.
-5. Choose a setup below. Name the parts and put the matching configuration in each **programmable block's Custom Data**.
-6. Run `On` once on the **arm PB**. AutoArm loads configuration, discovers/scans and enables control when setup succeeds. Keep both PBs running when tools are configured.
+1. Stop your existing arm controller before replacing it.
+2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v4.0/AutoArm_Compact.txt) into an arm programmable block.
+3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v4.0/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
+4. Name the parts as shown below. You do not need to edit the code or enter configuration for a quick start.
+5. Run `On` on the Arm PB. For another arm, use `On(Arm 2)`. Then use `Select Arm 2` to give it cockpit control.
 
-The examples use `Arm 1`. Replace it with your chosen name throughout the scripts, block names and configuration. Match names, spaces and capitalization exactly. The operating cockpit can have any name; AutoArm uses the one you are actively piloting. You can use different PB names if the two configurations name each other exactly.
+When upgrading an older setup, delete the old PB Custom Data and let this version generate the new layout. Arm PBs use `[global] Format=7`; ToolSwap PBs use `[global] Format=2`. Incorrect formats produce an error; they are not converted.
 
-For a fresh setup, copy the chosen example into PB Custom Data. When changing an existing setup, edit its existing sections to retain your settings. If the script reports a configuration-format error, save the settings you want to keep, delete Custom Data, and run `On` to generate new defaults and start setup.
+## Choose a setup
 
 ### Simple arm
 
-Use this for one fixed tool without automatic parking or swapping.
+Name the first attached joint **`Arm 1 - Base - Rotor`** (or `Arm 1 - Base - Piston` / `Arm 1 - Base - Hinge`). Name exactly one terminal block on the moving end **`Arm 1 - Head - Drill`**, or another description after `Head -`.
+
+Intermediate pistons, rotors and hinges do not need special names. Use only the Arm PB. Run `On` and pilot from your active cockpit.
+
+### Tool parking and swapping
+
+Start with the tools securely merged to their stands. Each tool carries a rotor **base**; the compatible unnamed rotor **top** stays on the arm. Place one or more tool-side merge blocks facing matching stand merges.
+
+Name only the arm base and **one reference block per tool**:
 
 | Part | Example name |
 | --- | --- |
-| First piston, rotor or hinge on the ship | `Arm 1 - Base - Rotor` |
-| One drill or camera used as the head reference | `Arm 1 - Head - Drill` |
-| Other joints | Any name, such as `Reach Piston` or `Elbow Hinge` |
-| Other tools and merges | Names such as `Arm 1 - Drill 2` or `Arm 1 - ToolMerge 1` |
-
-Name only one arm joint with the `Arm 1 - Base` prefix and only one reference block with the `Arm 1 - Head` prefix. Other drills, merges and spare tools must not use that head prefix in this setup.
-
-Put [SimpleArm.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/SimpleArm.ini) in the arm PB. Leave `[Modules] ToolSwapPB` empty, then run `On`. No second PB is needed.
-
-### One tool with automatic parking
-
-For automatic parking and swapping, put the detachable rotor **base on the tool**, and its unnamed **top on the arm**. AutoArm finds the arm-side rotor part automatically. The final arm joint can have any name.
-
-| Part | Exact example name |
-| --- | --- |
 | First arm joint | `Arm 1 - Base - Rotor` |
-| Rotor base carried by the tool | `Arm 1 - Head 1 - Mount` |
-| Drill used as the tool reference | `Arm 1 - Head 1 - Drill` |
-| Merge carried by the tool | `Arm 1 - Head 1 - HeadMerge` |
-| Merge fixed to the parking support | `Arm 1 - ParkMerge 1` |
-| Rotor top carried by the arm | Leave unnamed |
+| Drill head reference | `Arm 1 - Head 1 - Drill` |
+| Welder head reference | `Arm 1 - Head 2 - Welder` |
 
-Keep the tool's reference, base and head merge connected together. The head merge must face the support merge. Avoid another solid connection between tool and support that would prevent separation.
+Leave the rotor bases, rotor top and merge blocks with their ordinary names. Do not give several blocks the same `Head 1` or `Head 2` marker pattern. A reference block can be a drill, welder, grinder or another terminal block rigidly connected to that tool.
 
-Start with the tool parked and its merges connected. ToolSwap records its actual position and orientation relative to the stand and remembers that pose across restarts. Returning it preserves that orientation; you do not need to identify the merge blocks' hidden roll. A tool introduced already mounted has no recorded parked pose yet: its first park follows merge geometry, which can rotate the tool by 90°.
+Install both scripts and run `On` on the Arm PB. AutoArm finds the tools, rotor bases and facing merge pairs, then saves the setup in each reference block's Custom Data. That data stays with the tool across PB restarts. You do not need to mount every tool once, teach a pose, name the mounts/merges, or fill their names into PB configuration.
 
-Put [ArmWithTools.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/ArmWithTools.ini) in the arm PB and [Park.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/Park.ini) in the ToolSwap PB. `[Tool01] Mount` names the tool's rotor base. Run `On` on the arm PB and wait for setup to finish. `ToolInfo` shows the detected tools if you want to check them.
+The bare arm needs exactly one loose compatible rotor top at its moving end. It may sit directly on the last hinge's moving head. Tool couplers use rotors; ordinary arm joints may use hinges. For first pickup, leave the tool rotor's angle limits unlimited. Rotor Lock is supported.
 
-- `Park` or `Park 1` parks and detaches the tool.
-- `Tool Head 1` picks it up again.
-- Pickup automatically resumes manual control. Parking leaves the bare arm OFF; run `On` to move it manually.
+- `Tool 2` or `Tool Head 2` picks up Head 2, parking the current tool first.
+- `Tool(2,Arm 2)` performs the same operation for Arm 2.
+- `Park` returns the current tool to its stand and detaches it.
+- Successful pickup/swap automatically returns the arm to ON control. Parking leaves it OFF; run `On` if you want to move the bare arm manually.
 
-If the tool has several support merges, list every required head merge and matching park merge in the configuration.
+Tools approach at the arm's normal speed, align in front of the socket and enter in a straight line. Detachment backs out before travel. Start with all tools parked so their existing return orientations are preserved. Keep routes clear: AutoArm does not avoid ship geometry.
 
-### Tool swapping
-
-Use the same arrangement: one unnamed rotor top stays on the arm, and each tool carries its own named, compatible rotor base. Each tool also carries its reference block and head merges; its stand has matching merges facing them.
-
-| Part | Exact example name |
-| --- | --- |
-| First arm joint | `Arm 1 - Base - Rotor` |
-| Drill tool's rotor base | `Arm 1 - Head 1 - Mount` |
-| Drill tool reference | `Arm 1 - Head 1 - Drill` |
-| Drill tool merge | `Arm 1 - Head 1 - HeadMerge` |
-| Drill stand merge | `Arm 1 - Head 1 - StandMerge` |
-| Welder tool's rotor base | `Arm 1 - Head 2 - Mount` |
-| Welder tool reference | `Arm 1 - Head 2 - Welder` |
-| Welder tool merge | `Arm 1 - Head 2 - HeadMerge` |
-| Welder stand merge | `Arm 1 - Head 2 - StandMerge` |
-| Rotor top carried by the arm | Leave unnamed |
-
-Put [ArmWithTools.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/ArmWithTools.ini) in the arm PB and [ToolSwap.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/ToolSwap.ini) in the ToolSwap PB. Each `[ToolNN] Mount` names that tool's rotor base. List the complete drill/welder names in `Heads`; their order matches `Tool01`, `Tool02`, and so on. The example lists the merges explicitly and provides the command aliases `Head 1` and `Head 2`.
-
-Start with all tools secured on their stands to record their return orientations automatically. The arm can start bare with its unnamed rotor part installed. An already mounted tool is also supported, with the first-park limitation described above. Run `On` and wait for setup to finish. Then `Tool 2` or `Tool Head 2` parks Head 1 and picks up Head 2. `Tool 1` or `Tool Head 1` switches back. Control resumes automatically after the selected tool separates from its stand. Each spare tool can be used immediately; you do not need to mount it first or teach a parking position.
-
-Pickup moves to the configured clearance in front of the rotor socket, aligns, then enters along a straight line with orientation held. Dropping a tool backs the arm out along the socket axis before travelling to the next tool. Expected merge/mount changes pause movement while AutoArm rediscovers the arm; they do not cancel the swap or require another `On`.
-
-AutoArm detects the arm end again after restarting or recompiling, whether a tool is attached or the arm is bare. To add a common parking support, configure its merges under `ParkMerges`.
-
-### Starting with a bare arm
-
-Build one unattached rotor part on the arm's moving end. It can be placed directly on the final hinge's moving head. The hinge does not need a special name, and no camera or reference block is required.
-
-Use the two-PB tool-swap configuration above, keep the selected tool secured on its stand, run `On` on the arm PB, and wait for setup to finish. You can then move the bare arm or run `Tool 2` to approach and pick up Head 2. Manual control resumes automatically after pickup. No offset, direction settings, initial tool mount or teaching is required. The rotor part is the movement focus while the arm is bare; the configured tool marker becomes the focus after pickup.
-
-Keep only one loose rotor part on the moving arm. Its attachment to the arm must be clear: avoid surrounding it with blocks touching several possible mounting faces. AutoArm stops if it cannot identify a unique part and mounting face.
-
-For the first pickup from a bare arm, leave the selected tool rotor's lower and upper angle limits **unlimited**. **Rotor Lock** is supported: AutoArm temporarily unlocks it for that first attachment and restores the requested lock after verification. Tool couplers use rotors; ordinary arm joints can use pistons, rotors and hinges.
+If a tool has more than one possible rotor base in its rigid region, or two reference markers describe the same tool, scanning refuses the ambiguous setup. The reference, coupler and tool merges must belong to the same connected tool body.
 
 ## Use and features
 
-AutoArm supports:
+AutoArm supports mixed piston/rotor/hinge arms, offset joints, compatible parallel actuators, opposite-facing rotary pairs, position/orientation hold, saved Home positions, ordered motion paths and automatic tool parking/swapping.
 
-- Mixed piston, rotor and hinge arms, including offset and differently oriented joints.
-- Compatible parallel actuators, including opposite-facing rotor/hinge pairs sharing a rotation axis.
-- Position and orientation hold while moving the head.
-- Head, excavator and crane movement views.
-- Saved home positions, tool parking and tool swapping.
-- Adjustable movement speeds, actuator speed/acceleration limits and control preferences in Custom Data.
-- Additional programmable blocks for path planning, monitoring and emergency stops.
+### Several arms
 
-Choose clear routes for automatic parking and swapping; AutoArm does not avoid ship geometry.
+One Arm PB can host up to eight arms within its instruction budget. Each arm has its own state, targets, joint settings, Home, tool session and faults. Only the selected arm receives cockpit input; the others continue holding or following their commanded paths. Larger setups can distribute arms across more Arm PBs.
 
-### Additional programmable blocks
+Name each arm's base and heads using its own name. `Select Arm 1` or `Select Arm 2` changes live control. Selecting on another Arm PB releases direct cockpit control on the previous PB. Each PB keeps its own selected command target. An arm name must belong to exactly one Arm PB.
 
-Optional helper PBs connect directly to the arm. Add their exact names under `[Modules] Peers`, using `Plan`, `Observe` or `Stop` permissions as shown in [Modules.ini](https://github.com/PommesMitChips/AutoArm/blob/v3.2/examples/Modules.ini), then run `On`. Leave this setting out if you do not use helpers. A helper can serve several arms; each arm has its own name and configuration. Helpers need a compatible script; the integration guide is [PB modules and paths](docs/MODULES.md).
+Commands without a target go to the selected arm. Add the arm as the last argument to target another:
+
+```text
+On(Arm 2)
+MoveTo(2,0,1,Arm 2)
+OrientTo(1,0,0,0,0,1,Arm 2)
+Tool(2,Arm 2)
+Stop(Arm 2)
+```
+
+The existing toolbar style also works: `MoveTo 2 0 1, Arm 2`. `StopAll` stops every arm in that PB.
+
+One ToolSwap PB can serve several arms, including arms hosted by different Arm PBs. Automatic linking works when each arm has one eligible partner PB. For deliberately split or ambiguous setups, list only that PB's arms in its Custom Data and set `ToolSwapPB` / `Link.ArmPB` explicitly. See [MultiArm.ini](examples/MultiArm.ini) and [MultiArmTools.ini](examples/MultiArmTools.ini).
 
 ### Movement views
 
@@ -116,53 +79,47 @@ Optional helper PBs connect directly to the arm. Add their exact names under `[M
 | `HRZ` | Cockpit Forward/Back | Cockpit Left/Right | Cockpit Down/Up |
 | `VRT` | Cockpit screen Up/Down | Cockpit Left/Right | Into/out of the view |
 
-Translation holds the head's orientation. Q/E rolls around the head. Optional mouse input controls pitch and yaw. These keys assume the usual game bindings.
+Translation holds head orientation. Q/E rolls around the head. Optional mouse input controls pitch/yaw. AutoArm uses your active cockpit; it needs no special name.
 
-Set `MovementMode=HEAD`, `HRZ` or `VRT` in `[Config]` for the default view. Use `Mode HEAD`, `Mode HRZ` or `Mode VRT` to change it while operating. Use `ReadMouse On` or `ReadMouse Off` to enable or disable mouse turning.
+Set `MovementMode=HEAD`, `HRZ` or `VRT` in Custom Data for the default. `Mode VRT` changes the selected arm's current view; `Mode(VRT,Arm 2)` targets Arm 2. Use `ReadMouse On` / `ReadMouse Off` to enable/disable mouse turning.
 
 ### Toolbar commands
 
-Add an **arm PB Run** action to your toolbar and enter one of these arguments. Tool commands are forwarded to the ToolSwap PB:
+Use a programmable block **Run** action with one of these arguments. The optional final arm name applies to every arm command.
 
 | Argument | Action |
 | --- | --- |
-| `On` | Load configuration, discover/scan and enable arm control |
-| `Off` or `Stop` | Stop arm movement |
-| `Hold` | Hold the current head pose |
-| `Reload` | Apply Custom Data edits |
-| `Check` | Check setup before enabling control |
-| `Info` or `Joints` | Show the arm or joint details |
-| `SetHome` | Save the current joint positions |
-| `GoHome` | Return the attached arm to those positions |
-| `MoveTo x y z` | Move to a position while holding orientation |
-| `OrientTo fx fy fz ux uy uz` | Turn to an orientation while holding position |
-| `MoveToPosOri x y z fx fy fz ux uy uz` | Set both position and orientation |
-| `Path <pose> \| <pose> ...` | Follow a list of position/orientation waypoints |
-| `Mode HEAD`, `Mode HRZ`, `Mode VRT` | Select a movement view |
-| `ToolScan` | Scan configured tools and check their setup |
-| `ToolInfo` | Show tool setup and current state |
-| `Tool Head 1` or `Tool Head 2` | Select a configured tool |
-| `Park` | Park and detach the current tool |
-| `SwapCancel` | Cancel an automatic tool operation |
+| `On` | Load settings, discover/scan and enable control |
+| `Off` / `Stop` | Stop the target arm |
+| `Hold` | Hold its current head pose |
+| `Reload` / `Rescan` | Reload settings / rediscover while OFF |
+| `Check` / `Info` / `Joints` | Inspect the setup |
+| `SetHome` / `GoHome` | Save / return to that arm's Home |
+| `MoveTo x y z` | Move while holding orientation |
+| `OrientTo fx fy fz ux uy uz` | Turn while holding position |
+| `MoveToPosOri x y z fx fy fz ux uy uz` | Set both |
+| `Path <pose> \| <pose> ...` | Follow up to 32 poses |
+| `Mode HEAD` / `Mode HRZ` / `Mode VRT` | Choose a movement view |
+| `ToolScan` / `ToolInfo` | Scan / inspect tools |
+| `Tool 2` / `Tool Head 2` | Select a numbered tool |
+| `Park` / `SwapCancel` | Park / cancel the target arm's tool operation |
 
-Successful tool pickup and swapping automatically resume manual control. Parking leaves the bare arm OFF. Pilot input or `Stop` cancels automatic movement and leaves control OFF; inspect the equipment, then run `On` to check the setup and resume. `Reload`, `Check` and `ToolScan` remain available as separate setup checks; they are not required before `On`.
+Directional actions include `Forward`, `Back`, `Left`, `Right`, `Up`, `Down`, `PitchUp`, `PitchDown`, `YawLeft`, `YawRight`, `RollLeft` and `RollRight`.
 
-### Position and orientation commands
+`MoveTo` positions are metres from that arm's base in its Forward, Left and Up directions. Orientation commands use those same base directions. `Path` rows use world position, forward and up: nine numbers per pose, separated by `|`. AutoArm reaches each waypoint in order and holds the final pose.
 
-Run `On` first. `MoveTo` coordinates are metres from the base in its Forward, Left and Up directions. For example, `MoveTo 2 0 1` requests a position two metres forward and one metre up from the base. The head keeps its held orientation.
-
-`OrientTo` takes a desired forward direction followed by an up direction, using the same base directions. For example, `OrientTo 1 0 0 0 0 1` points forward with up aligned to the base. `MoveToPosOri` combines the three position values and six orientation values. Choose reachable targets with a clear path. Live pilot input remains active and adjusts the target; these commands also accept PB Run actions from other automation.
-
-`Path` accepts up to 32 poses, separated by `|`. Each pose contains nine numbers: world position `x y z`, forward direction `fx fy fz`, and up direction `ux uy uz`. AutoArm reaches the waypoints in order, reports progress and holds the final pose. `Stop` or live pilot input cancels a path. ToolSwap uses paths automatically for approach and insertion; you do not need to enter its waypoints yourself.
+Pilot input cancels an automatic path or tool operation only for the arm receiving that input. `Stop` also cancels it; inspect the equipment, then run `On` to resume. `Reload`, `Check` and `ToolScan` remain available but are not prerequisites for `On`.
 
 ### Fine tuning
 
-Edit `[Config]` in PB Custom Data, then run `On` to apply the settings and resume control. Use `Reload` instead if you want to apply them while staying OFF. Use `HeadSpeed` and `HeadTurnSpeed` for head movement, and `JointSpeed` and `PistonSpeed` for actuator speeds. Setting comments show units and accepted ranges.
+Custom Data is divided into `[global]` and one section per arm, such as `[Arm 1]` and `[Arm 2]`. Global settings are defaults; a value in an arm section overrides them. Edit settings and run `On(Arm 2)` to apply them to Arm 2, or `Reload(Arm 2)` to remain OFF.
 
-The `Actuators` table has `Translation` and `Orientation` preferences from 0 to 10. Edit those two values to tune each group's participation in positioning and turning. Use the toolbar command table above; Custom Data contains settings only.
+Use `HeadSpeed` / `HeadTurnSpeed` for movement, `JointSpeed` / `PistonSpeed` for actuator caps, and their acceleration settings to control changes in speed. ToolSwap settings use names such as `Tools.ApproachDistance`, `Tools.MoveSpeed` and `Tools.TurnSpeed`. Travel inherits arm speed; final insertion/withdrawal defaults to 0.05 m/s and 2 degrees/s.
 
-Arm movement settings belong in the **arm PB**. Tool profiles, merge lists and `[Tools]` settings belong in the **ToolSwap PB**. Travel uses the arm's `HeadSpeed` and `HeadTurnSpeed`. ToolSwap's `MoveSpeed` and `TurnSpeed` apply to final insertion/docking and withdrawal; their slower defaults remain `0.05` m/s and `2`°/s. `ApproachDistance` controls clearance before docking/pickup and backoff after detaching; for example, `2.5` requests 2.5 m. After editing either PB, run `On` on the arm PB to apply the changes. When updating a tool setup, replace both PB scripts together.
+The `Actuators` table gives stage Translation/Orientation preferences from 0 to 10. Put it under `[global]` to share it across structurally identical arms. AutoArm checks joint kinds, parallel member counts and split/rejoin layout; a nonconforming arm reports an error and stays OFF. Different lengths and mounting geometry are allowed and checked separately for each arm. Use local `Actuators` and `Structure` overrides for a different arrangement. Detachable tool couplers are excluded from the shared arm-body template.
+
+Optional helper PBs can plan paths, observe state or stop movement. Add their exact names to `Peers` with `Plan`, `Observe` or `Stop` permissions; see [Modules.ini](examples/Modules.ini). They need a compatible script. The integration guide is [PB modules and paths](docs/MODULES.md).
 
 ## Acknowledgements
 
-Development began with a mining-arm adaptation inspired by [Philippe117's MArmOS](https://github.com/Philippe117/MArmOS). Since then, AutoArm has developed its own automatic discovery and task-space control architecture.
+Development began with a mining-arm adaptation inspired by [Philippe117's MArmOS](https://github.com/Philippe117/MArmOS). AutoArm now uses its own automatic discovery and task-space control architecture.

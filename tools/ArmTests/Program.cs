@@ -7,6 +7,7 @@ internal static class Tests
 {
     internal static int Assertions;
     internal static string Workspace = "";
+    internal static string EngineSource = "", ToolEngineSource = "";
     internal static void Assert(bool condition, string message)
     {
         Assertions++;
@@ -47,9 +48,12 @@ internal static class Tests
             };
             if(args.Length!=1) throw new Exception("Usage: ArmTests <script.txt>");
             Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
-            var type=Script(File.ReadAllText(args[0]));
+            EngineSource=File.ReadAllText(Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm.Engine.txt"));
+            ToolEngineSource=File.ReadAllText(Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm.ToolEngine.txt"));
+            var type=Script(EngineSource);
             Console.WriteLine("Full script compiles against installed interfaces in the simulated PB host.");
             Scenarios.RunAll(type);
+            Scenarios.RunHosts(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_ToolSwap_Source.txt"))));
             return 0;
         }
         catch(Exception e){Console.Error.WriteLine(e);return 1;}

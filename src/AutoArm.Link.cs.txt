@@ -6,6 +6,7 @@ const string LinkSection = "Link";
 sealed class ModuleLink
 {
     readonly Program P;
+    string ArmName => P.ArmName;
     public IMyProgrammableBlock Peer;
     public readonly long Epoch;
     public long RemoteEpoch, Generation, Sequence, Received;
@@ -22,6 +23,13 @@ sealed class ModuleLink
     public void Resolve(string name)
     {
         Peer = null;
+        long id;
+        if (name.StartsWith("@", StringComparison.Ordinal) && long.TryParse(name.Substring(1), out id))
+        {
+            Peer = P.GridTerminalSystem.GetBlockWithId(id) as IMyProgrammableBlock;
+            if (Peer == null || Peer == P.Me || Peer.Closed || !Peer.IsFunctional || !Peer.IsSameConstructAs(P.Me)) throw new Exception("Module PB unavailable.");
+            return;
+        }
         var blocks = new List<IMyProgrammableBlock>(); P.GridTerminalSystem.GetBlocksOfType(blocks);
         foreach (var b in blocks) if (b.CustomName == name && !b.Closed && b.IsSameConstructAs(P.Me))
         { if (Peer != null) throw new Exception("Duplicate PB: " + name); Peer = b; }

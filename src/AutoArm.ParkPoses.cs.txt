@@ -24,14 +24,19 @@ bool CaptureParkPose(ToolSwapController.Profile h, string axis)
     data.Set(LinkSection, "Pairs", string.Join("\n", rows));
     var saved = AutoConfig.Saved(Storage); const string section = "AutoArm Park Poses";
     saved.Set(section, "PB", Me.EntityId); saved.Set(section, "Arm", ArmName);
-    saved.Set(section, h.Coupler.EntityId.ToString(), data.ToString()); Storage = saved.ToString(); return true;
+    saved.Set(section, h.Coupler.EntityId.ToString(), data.ToString()); Storage = saved.ToString();
+    var markerData = AutoConfig.Saved(h.Marker.CustomData);
+    markerData.Set("AutoArm Tool", "Format", 1); markerData.Set("AutoArm Tool", "Arm", ArmName);
+    markerData.Set("AutoArm Tool", "ParkPose", data.ToString()); h.Marker.CustomData = markerData.ToString(); return true;
 }
 bool ParkPose(ToolSwapController.Profile h, List<IMyShipMergeBlock> rack, long selected, out MatrixD pose, out List<ToolPortPair> pairs)
 {
     pose = MatrixD.Identity; pairs = new List<ToolPortPair>(); const string section = "AutoArm Park Poses";
     var saved = AutoConfig.Saved(Storage);
-    if (saved.Get(section, "PB").ToInt64() != Me.EntityId || saved.Get(section, "Arm").ToString() != ArmName) return false;
-    string text = saved.Get(section, h.Coupler.EntityId.ToString()).ToString(); if (text.Length == 0) return false;
+    var markerData = AutoConfig.Saved(h.Marker.CustomData);
+    string text = markerData.Get("AutoArm Tool", "Format").ToInt32() == 1 && markerData.Get("AutoArm Tool", "Arm").ToString() == ArmName ? markerData.Get("AutoArm Tool", "ParkPose").ToString() : "";
+    if (text.Length == 0 && saved.Get(section, "PB").ToInt64() == Me.EntityId && saved.Get(section, "Arm").ToString() == ArmName) text = saved.Get(section, h.Coupler.EntityId.ToString()).ToString();
+    if (text.Length == 0) return false;
     var data = new MyIni(); if (!data.TryParse(text)) throw new Exception("Invalid saved park pose; park tool and ToolScan.");
     if (data.Get(LinkSection, "Marker").ToInt64() != h.Marker.EntityId) return false;
     var anchor = GridTerminalSystem.GetBlockWithId(data.Get(LinkSection, "Anchor").ToInt64()) as IMyShipMergeBlock;

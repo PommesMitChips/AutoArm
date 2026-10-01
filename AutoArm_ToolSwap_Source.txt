@@ -1,11 +1,352 @@
+// One PB hosts isolated arm instances. Block prefixes are the section names.
+const string DefaultArm = "Arm 1";
+// ===== IMPLEMENTATION =====
+const string ControllerBuildVersion = "4.0";
+const bool ToolHost = true;
+const int HostFormat = 2;
+const string WireTag = "AutoArm/5";
+readonly Dictionary<string, ArmCore> Arms = new Dictionary<string, ArmCore>(StringComparer.Ordinal);
+readonly List<string> Order = new List<string>();
+readonly Dictionary<long, ArmCore> Owners = new Dictionary<long, ArmCore>();
+MyIni Configuration = new MyIni(), Saved = new MyIni();
+string Selected = "", HostError = "";
+int Next;
+IMyBroadcastListener Selection;
+long InputClock, InputOwner;
+double InputAge;
+const string SelectionTag = "AutoArm/Select/1";
+public Program()
+{
+    Runtime.UpdateFrequency = UpdateFrequency.Update10;
+    IGC.UnicastListener.SetMessageCallback(WireTag);
+    try
+    {
+        if (!Saved.TryParse(Storage)) { Saved.Clear(); Saved.EndContent = Storage; }
+        if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId) { InputClock = Saved.Get("AutoArm Host", "InputClock").ToInt64(); InputOwner = Saved.Get("AutoArm Host", "InputOwner").ToInt64(); }
+        if (!ToolHost) { Selection = IGC.RegisterBroadcastListener(SelectionTag); if (Selection != null) Selection.SetMessageCallback(WireTag); }
+        StopSaved(); LoadHost();
+        string prior = Saved.Get("AutoArm Host", "Selected").ToString();
+        if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Arms.ContainsKey(prior)) Selected = prior;
+        SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
+        Save();
+    }
+    catch (Exception e) { StopAll(e.Message); }
+    Display();
+}
+public void Save()
+{
+    bool changed = Saved.Get("AutoArm Host", "PB").ToInt64() != Me.EntityId || Saved.Get("AutoArm Host", "Selected").ToString() != Selected || Saved.Get("AutoArm Host", "InputClock").ToInt64() != InputClock || Saved.Get("AutoArm Host", "InputOwner").ToInt64() != InputOwner;
+    if (changed) { Saved.Set("AutoArm Host", "Format", 1); Saved.Set("AutoArm Host", "PB", Me.EntityId); Saved.Set("AutoArm Host", "Selected", Selected); Saved.Set("AutoArm Host", "InputClock", InputClock); Saved.Set("AutoArm Host", "InputOwner", InputOwner); }
+    foreach (var pair in Arms) if (pair.Value.Storage != pair.Value.SavedData) { Saved.Set("State " + pair.Key, "Data", pair.Value.Storage); pair.Value.SavedData = pair.Value.Storage; changed = true; }
+    if (!changed) return;
+    string text = Saved.ToString(); if (text != Storage) Storage = text;
+}
+void StopSaved()
+{
+    var sections = new List<string>(); Saved.GetSections(sections);
+    foreach (string section in sections)
+    {
+        if (!section.StartsWith("State ", StringComparison.Ordinal)) continue;
+        var state = new MyIni(); if (!state.TryParse(Saved.Get(section, "Data").ToString())) continue;
+        if (state.Get("AutoArm Config", "PB").ToInt64() != Me.EntityId || state.Get("AutoArm Config", "Arm").ToString() != section.Substring(6)) continue;
+        foreach (string row in (state.Get("AutoArm Config", "Rows").ToString() + "\n" + state.Get("AutoArm Tool Weights", "Rows").ToString()).Split('\n'))
+        {
+            string[] cells = row.Split('|'); string key = cells.Length == 2 ? cells[1] : cells.Length == 3 ? cells[0] : "";
+            foreach (string part in key.Split(':'))
+            {
+                string token = part.Split('@')[0]; long id;
+                if (token.Length < 2 || !long.TryParse(token.Substring(0, token.Length - 1), out id)) continue;
+                var block = GridTerminalSystem.GetBlockWithId(id); if (block == null || block.Closed || !block.IsSameConstructAs(Me)) continue;
+                var piston = block as IMyPistonBase; var rotor = block as IMyMotorStator;
+                if (piston != null) piston.Velocity = 0; else if (rotor != null && !(rotor is IMyMotorSuspension)) rotor.TargetVelocityRad = 0;
+            }
+        }
+    }
+}
+void LoadHost()
+{
+    var ini = new MyIni();
+    if (string.IsNullOrWhiteSpace(Me.CustomData))
+    {
+        ini.Set("global", "Format", HostFormat); ini.Set("global", "SelectedArm", DefaultArm);
+        var bases = new List<IMyMechanicalConnectionBlock>(); GridTerminalSystem.GetBlocksOfType(bases); var detected = new List<string>();
+        foreach (var block in bases)
+        {
+            int split = block.CustomName.IndexOf(" - Base", StringComparison.Ordinal);
+            if (split > 0 && !block.Closed && block.IsSameConstructAs(Me) && !detected.Contains(block.CustomName.Substring(0, split))) detected.Add(block.CustomName.Substring(0, split));
+        }
+        if (detected.Count == 0) detected.Add(DefaultArm); detected.Sort(StringComparer.Ordinal);
+        if (ToolHost)
+        {
+            var blocks = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(blocks);
+            detected.RemoveAll(name => !blocks.Any(block => block.CustomName.StartsWith(name + " - Head ", StringComparison.Ordinal) && block.CustomName.Substring((name + " - Head ").Length).IndexOf(" - ", StringComparison.Ordinal) > 0));
+            if (detected.Count == 0) detected.Add(DefaultArm);
+        }
+        foreach (string name in detected) ini.Set(name, ToolHost ? "Tools.Enabled" : "ToolSwapPB", ToolHost ? "true" : "");
+        Me.CustomData = ini.ToString();
+    }
+    if (!ini.TryParse(Me.CustomData) || ini.Get("global", "Format").ToInt32() != HostFormat)
+        throw new Exception("Custom Data requires [global] Format=" + HostFormat + ". Delete Custom Data.");
+    var names = new List<string>(); ini.GetSections(names); names.Remove("global");
+    if (names.Count < 1 || names.Count > 8) throw new Exception("Configure 1..8 named arm sections.");
+    foreach (string name in names) if (name.Trim() != name || name.Length == 0 || name.IndexOfAny(new char[] { ',', '|', '(', ')', ';', '\r', '\n' }) >= 0 || name.Equals("global", StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid arm section name.");
+    if (!ToolHost)
+    {
+        var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
+        foreach (var peer in peers)
+        {
+            if (peer == Me || peer.Closed || !peer.IsSameConstructAs(Me)) continue;
+            var data = new MyIni(); if (!data.TryParse(peer.CustomData) || data.Get("global", "Format").ToInt32() != 7) continue;
+            foreach (string name in names) if (data.ContainsSection(name)) throw new Exception("Arm already assigned to another PB: " + name);
+        }
+    }
+    var removed = new List<string>(); foreach (string name in Order) if (!names.Contains(name)) removed.Add(name);
+    foreach (string name in removed) { Arms[name].Stop("Arm removed from configuration."); Saved.Set("State " + name, "Data", Arms[name].Storage); Arms.Remove(name); }
+    Configuration = ini; Order.Clear(); Order.AddRange(names);
+    AutoLinks();
+    foreach (string name in names) if (!Arms.ContainsKey(name))
+    {
+        string state = Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId ? Saved.Get("State " + name, "Data").ToString() : "";
+        Arms.Add(name, new ArmCore(this, name, InternalConfig(name), state));
+    }
+    if (!Arms.ContainsKey(Selected))
+    { string configured = ini.Get("global", "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
+    if (!ToolHost) foreach (var core in Arms.Values) core.Select(core.Name == Selected && InputOwner == Me.EntityId);
+    HostError = "";
+}
+string Effective(string arm, string key)
+{ return Configuration.Get(Configuration.ContainsKey(arm, key) ? arm : "global", key).ToString().Replace("{arm}", arm); }
+void AutoLinks()
+{
+    var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
+    foreach (string name in Order)
+    {
+        string key = ToolHost ? "Link.ArmPB" : "ToolSwapPB";
+        if (Effective(name, key).Length > 0) continue;
+        IMyProgrammableBlock found = null;
+        foreach (var peer in peers)
+        {
+            if (peer == Me || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me)) continue;
+            var data = new MyIni();
+            if (!data.TryParse(peer.CustomData) || data.Get("global", "Format").ToInt32() != (ToolHost ? 7 : 2) || !data.ContainsSection(name)) continue;
+            if (!ToolHost && !data.Get(data.ContainsKey(name, "Tools.Enabled") ? name : "global", "Tools.Enabled").ToBoolean(true)) continue;
+            if (found != null) throw new Exception("Multiple module PBs for " + name + ". Set " + key + ".");
+            found = peer;
+        }
+        if (found != null) Configuration.Set(name, key, "@" + found.EntityId);
+    }
+    PublishConfig();
+}
+string InternalConfig(string name)
+{
+    var ini = new MyIni(); ini.Set("AutoArm", "Format", ToolHost ? 1 : 6); ini.Set("AutoArm", "Arm", name);
+    var keys = new List<MyIniKey>(); Configuration.GetKeys("global", keys);
+    var own = new List<MyIniKey>(); Configuration.GetKeys(name, own); keys.AddRange(own);
+    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var item in keys)
+    {
+        string key = item.Name; if (!seen.Add(key) || key == "Format" || key == "SelectedArm" || key == "Structure" || key == "Actuators") continue;
+        string section = "Config", field = key; int dot = key.IndexOf('.');
+        if (dot > 0) { section = key.Substring(0, dot); field = key.Substring(dot + 1); }
+        else if (key == "ToolSwapPB" || key == "Peers") section = "Modules";
+        ini.Set(section, field, Effective(name, key));
+    }
+    if (ToolHost)
+    {
+        if (!ini.ContainsKey("Link", "ArmPB")) ini.Set("Link", "ArmPB", name + " - Arm PB");
+        if (!ini.ContainsKey("Tools", "Enabled")) ini.Set("Tools", "Enabled", true);
+    }
+    return ini.ToString();
+}
+bool Layout(ArmCore core, out string why)
+{
+    why = ""; string name = core.Name, table = Effective(name, "Actuators"), expected = Effective(name, "Structure");
+    bool shared = !Configuration.ContainsKey(name, "Actuators") && Configuration.ContainsKey("global", "Actuators") && table.Trim().Length > 0;
+    if (shared && Configuration.ContainsKey(name, "Structure")) { why = "A local Structure requires local Actuators; clear it to inherit the global template."; return false; }
+    if (shared && expected.Length == 0)
+    {
+        ArmCore prototype;
+        if (!Arms.TryGetValue(Order[0], out prototype) || !prototype.HasLayout) { why = "Waiting for global structure prototype: " + Order[0]; return false; }
+        expected = prototype.Shape; Configuration.Set("global", "Structure", expected);
+    }
+    string shape = core.Shape;
+    if (expected.Length > 0 && expected != shape) { why = name + " does not match configured joint kinds/parallel layout."; return false; }
+    if (!core.ApplyWeights(table, out why)) return false;
+    foreach (var joint in core.Joints())
+    {
+        ArmCore owner;
+        if (Owners.TryGetValue(joint.EntityId, out owner) && owner != core && Arms.ContainsKey(owner.Name))
+        { owner.Stop("Actuator also claimed by " + name); why = "Actuator shared with " + owner.Name + ": " + joint.CustomName; return false; }
+    }
+    var release = new List<long>(); foreach (var pair in Owners) if (pair.Value == core) release.Add(pair.Key);
+    foreach (long id in release) Owners.Remove(id);
+    foreach (var joint in core.Joints()) Owners[joint.EntityId] = core;
+    if (!shared && table.Trim().Length == 0) Configuration.Set(name, "Actuators", core.WeightTable);
+    PublishConfig(); return true;
+}
+void PublishConfig()
+{
+    // Generated values only fill missing keys. Preserve edits made while running.
+    var live = new MyIni(); if (!live.TryParse(Me.CustomData) || live.Get("global", "Format").ToInt32() != HostFormat) return;
+    var keys = new List<MyIniKey>(); Configuration.GetKeys(keys);
+    foreach (var key in keys) if (!live.ContainsKey(key.Section, key.Name)) live.Set(key.Section, key.Name, Configuration.Get(key).ToString());
+    string text = live.ToString(); if (text != Me.CustomData) Me.CustomData = text;
+}
+void SelectArm(string name, bool claim = true)
+{
+    if (!Arms.ContainsKey(name)) throw new Exception("Unknown arm: " + name);
+    Selected = name;
+    if (!ToolHost) { if (claim) { InputClock++; InputOwner = Me.EntityId; } foreach (var core in Arms.Values) core.Select(core.Name == name && InputOwner == Me.EntityId); if (InputOwner == Me.EntityId) AnnounceInput(); }
+    Save();
+}
+void Command(string raw)
+{
+    string text = raw.Trim(); if (text.Length == 0) return;
+    if (text.StartsWith("Select ", StringComparison.OrdinalIgnoreCase)) { SelectArm(text.Substring(7).Trim()); return; }
+    if (text.Equals("StopAll", StringComparison.OrdinalIgnoreCase)) { StopAll("StopAll command."); return; }
+    int end = text.IndexOfAny(new char[] { ' ', '(', ',' }); string first = (end < 0 ? text : text.Substring(0, end)).ToLowerInvariant();
+    if (first == "on" || first == "reload" || first == "rescan")
+    { try { LoadHost(); } catch (Exception e) { StopAll(e.Message); throw; } }
+    string name = Selected, command = text; int open = text.IndexOf('(');
+    if (open > 0)
+    {
+        if (!text.EndsWith(")", StringComparison.Ordinal)) throw new Exception("Command needs closing parenthesis.");
+        string verb = text.Substring(0, open).Trim(); var values = new List<string>();
+        foreach (string value in text.Substring(open + 1, text.Length - open - 2).Split(',')) if (value.Trim().Length > 0) values.Add(value.Trim());
+        if (values.Count > 0 && Arms.ContainsKey(values[values.Count - 1])) { name = values[values.Count - 1]; values.RemoveAt(values.Count - 1); }
+        else if (values.Count > Arity(verb)) throw new Exception("Unknown arm argument.");
+        command = verb + (values.Count == 0 ? "" : " " + string.Join(" ", values));
+    }
+    else
+    {
+        int comma = text.LastIndexOf(',');
+        if (comma >= 0) { name = text.Substring(comma + 1).Trim(); command = text.Substring(0, comma).Trim(); }
+    }
+    ArmCore target; if (!Arms.TryGetValue(name, out target)) throw new Exception("Unknown arm: " + name);
+    string action = command.Split(' ')[0].ToLowerInvariant();
+    if (action == "on" || action == "reload" || action == "rescan")
+    { target.CustomData = InternalConfig(name); }
+    target.Update(command, UpdateType.Terminal, 0);
+    CaptureDefaults(target);
+}
+static int Arity(string verb)
+{
+    switch (verb.ToLowerInvariant())
+    {
+        case "on": case "off": case "stop": case "hold": case "check": case "info": case "joints": case "reload": case "rescan": case "sethome": case "gohome": case "toolscan": case "toolinfo": case "swapcancel": case "version": case "status": case "bindings": case "homeinfo": case "forward": case "back": case "left": case "right": case "up": case "down": case "yawleft": case "yawright": case "pitchup": case "pitchdown": case "rollleft": case "rollright": return 0;
+        case "moveto": return 3;
+        case "orientto": return 6;
+        case "movetoposori": return 9;
+        case "homespeed": case "step": return 2;
+        default: return 1;
+    }
+}
+void AnnounceInput()
+{ if (Selection != null) IGC.SendBroadcastMessage(SelectionTag, InputClock + "|" + Selected, TransmissionDistance.CurrentConstruct); }
+void ReceiveSelection(double elapsed)
+{
+    if (Selection == null) return;
+    int read = 0;
+    while (Selection.HasPendingMessage && read++ < 8)
+    {
+        var message = Selection.AcceptMessage(); string text = message.Data as string; long clock;
+        if (message.Tag != SelectionTag || message.Source == Me.EntityId || text == null || text.Length > 512) continue;
+        string[] cells = text.Split('|');
+        if (cells.Length != 2 || !long.TryParse(cells[0], out clock) || clock <= 0 || clock < InputClock || clock == InputClock && message.Source <= InputOwner) continue;
+        var peer = GridTerminalSystem.GetBlockWithId(message.Source) as IMyProgrammableBlock; var config = new MyIni();
+        if (peer == null || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me) || !config.TryParse(peer.CustomData) || config.Get("global", "Format").ToInt32() != 7 || !config.ContainsSection(cells[1])) continue;
+        InputClock = clock; InputOwner = message.Source;
+        foreach (var core in Arms.Values) core.Select(false);
+    }
+    if (elapsed > 0 && !double.IsInfinity(elapsed) && !double.IsNaN(elapsed)) InputAge += elapsed;
+    if (InputAge >= .1 && InputOwner == Me.EntityId) { InputAge = 0; AnnounceInput(); }
+}
+void CaptureDefaults(ArmCore core)
+{
+    if (core.ExportedData == core.CustomData) return;
+    core.ExportedData = core.CustomData;
+    var ini = new MyIni(); if (!ini.TryParse(core.CustomData)) return;
+    var keys = new List<MyIniKey>(); ini.GetKeys(keys);
+    foreach (var key in keys)
+    {
+        if (key.Section == "AutoArm" || key.Name == "Actuators") continue;
+        string field = key.Section == "Config" || key.Section == "Modules" ? key.Name : key.Section + "." + key.Name;
+        if (!Configuration.ContainsKey(core.Name, field) && !Configuration.ContainsKey("global", field))
+            Configuration.Set(ToolHost || field == "ToolSwapPB" || field == "Peers" ? core.Name : "global", field, ini.Get(key).ToString());
+    }
+    PublishConfig();
+}
+public void Main(string argument, UpdateType source)
+{
+    double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
+    try { ReceiveSelection(elapsed); } catch (Exception e) { StopAll(e.Message); }
+    try
+    {
+        if (!string.IsNullOrWhiteSpace(argument) && !((source & UpdateType.IGC) != 0 && argument == WireTag))
+            foreach (string raw in argument.Split(new char[] { ';', '\n' }, StringSplitOptions.RemoveEmptyEntries)) Command(raw);
+    }
+    catch (Exception e) { HostError = e.Message; }
+    try
+    {
+        int read = 0;
+        while (IGC.UnicastListener.HasPendingMessage && read++ < 16)
+        {
+            if (Runtime.MaxInstructionCount > 0 && Runtime.CurrentInstructionCount >= Runtime.MaxInstructionCount * .4) break;
+            var message = IGC.UnicastListener.AcceptMessage(); var data = message.Data as string; var ini = new MyIni(); ArmCore core;
+            if (message.Tag != WireTag || data == null || data.Length > 16000 || !ini.TryParse(data) || !Arms.TryGetValue(ini.Get("Link", "Arm").ToString(), out core)) continue;
+            if (core.Inbox.Count < 32) core.Inbox.Enqueue(message);
+        }
+        int count = Order.Count;
+        for (int i = 0; i < count; i++)
+        {
+            if (Runtime.MaxInstructionCount > 0 && Runtime.CurrentInstructionCount >= Runtime.MaxInstructionCount * .7) { StopAll("Shared PB instruction budget exhausted."); break; }
+            var core = Arms[Order[(Next + i) % count]]; core.Update("", source, elapsed); CaptureDefaults(core);
+        }
+        if (count > 0) Next = (Next + 1) % count;
+        Save();
+    }
+    catch (Exception e) { StopAll(e.Message); }
+    finally
+    {
+        UpdateFrequency frequency = UpdateFrequency.Update10;
+        foreach (var core in Arms.Values) if ((core.Frequency & UpdateFrequency.Update1) != 0) frequency = UpdateFrequency.Update1;
+        Runtime.UpdateFrequency = frequency; Display();
+    }
+}
+void StopAll(string why)
+{ HostError = why; foreach (var core in Arms.Values) core.Stop(why); }
+void Display()
+{
+    var lines = new List<string>(); lines.Add("AutoArm " + ControllerBuildVersion + " " + (ToolHost ? "ToolSwap" : "Arm") + " | Selected: " + Selected);
+    if (HostError.Length > 0) lines.Add(HostError);
+    foreach (string name in Order) lines.Add(name + ": " + Arms[name].Summary);
+    ArmCore current; if (Arms.TryGetValue(Selected, out current)) lines.Add(current.Report);
+    Echo(string.Join("\n", lines));
+}
+
+sealed class ArmCore {
+readonly Program Host;
+public string CustomData, Storage, ExportedData, SavedData, Report = "";
+public UpdateFrequency Frequency = UpdateFrequency.Update10;
+public readonly Queue<MyIGCMessage> Inbox = new Queue<MyIGCMessage>();
+double Elapsed;
+public string Name => ArmName;
+IMyProgrammableBlock Me => Host.Me;
+IMyGridTerminalSystem GridTerminalSystem => Host.GridTerminalSystem;
+IMyGridProgramRuntimeInfo Runtime => Host.Runtime;
+IMyIntergridCommunicationSystem IGC => Host.IGC;
+void Echo(string text) { Report = text; }
+public void Update(string argument, UpdateType source, double elapsed)
+{ Elapsed = elapsed; Main(argument, source); }
+
 // AutoArm ToolSwap: configure tools in this PB's Custom Data.
-const string ArmName = "Arm 1";
+readonly string ArmName;
 // ===== IMPLEMENTATION =====
 
 
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "3.2";
+const string ControllerBuildVersion = "4.0";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -24,11 +365,11 @@ static class AutoConfig
 {
     public const int Format = 1;
     public static MyIni Saved(string text) { return LinkSaved(text); }
-    public static bool ReadCurrent(string text, out MyIni ini, out string why)
+    public static bool ReadCurrent(ArmCore p, string text, out MyIni ini, out string why)
     {
         ini = new MyIni(); why = "";
         if (!ini.TryParse(text ?? "")) { why = "Invalid Custom Data INI."; return false; }
-        if (ini.Get(ArmSection, "Format").ToInt32() != Format || ini.Get(ArmSection, "Arm").ToString() != ArmName)
+        if (ini.Get(ArmSection, "Format").ToInt32() != Format || ini.Get(ArmSection, "Arm").ToString() != p.ArmName)
         { why = "ToolSwap Custom Data requires Format 1 and this arm name. Delete Custom Data."; return false; }
         return true;
     }
@@ -48,12 +389,12 @@ string TransitionKind = "";
 bool ResumeRequested;
 int CompletedWaypoints;
 bool ReadKeyboard = true, ReadMouse, ReadRoll = true;
+bool PilotSelected = true;
 readonly List<IMyShipController> Controllers = new List<IMyShipController>();
 int ControllerPoll;
 double DefaultMove = .2, DefaultTurn = 5;
-public Program()
-{
-    Runtime.UpdateFrequency = UpdateFrequency.Update1;
+public ArmCore(Program host, string name, string customData, string storage) { Host = host; ArmName = name; CustomData = customData; Storage = storage;
+    Frequency = UpdateFrequency.Update1;
     Link = new ModuleLink(this); Tools = new ToolSwapController(this);
     try { ConfigureLink(); } catch (Exception e) { PendingCommand = ""; Say(e.Message); }
     Echo(DisplayText);
@@ -61,17 +402,17 @@ public Program()
 public void Save() { }
 void ConfigureLink()
 {
-    if (string.IsNullOrWhiteSpace(Me.CustomData))
+    if (string.IsNullOrWhiteSpace(CustomData))
     {
         var defaults = new MyIni(); defaults.Set(ArmSection, "Arm", ArmName); defaults.Set(ArmSection, "Format", 1);
-        defaults.Set(LinkSection, "ArmPB", ArmName + " - Arm PB"); defaults.Set(ToolsSection, EnabledKey, true); defaults.Set(ToolsSection, "Heads", ""); Me.CustomData = defaults.ToString();
+        defaults.Set(LinkSection, "ArmPB", ArmName + " - Arm PB"); defaults.Set(ToolsSection, EnabledKey, true); defaults.Set(ToolsSection, "Heads", ""); CustomData = defaults.ToString();
     }
-    MyIni ini; string why; if (!AutoConfig.ReadCurrent(Me.CustomData, out ini, out why)) throw new Exception(why);
+    MyIni ini; string why; if (!AutoConfig.ReadCurrent(this, CustomData, out ini, out why)) throw new Exception(why);
     Link.Resolve(ini.Get(LinkSection, "ArmPB").ToString());
 }
 public void Main(string argument, UpdateType source)
 {
-    double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
+    double elapsed = Elapsed;
     bool timed = (source & (UpdateType.Update1 | UpdateType.Update10 | UpdateType.Update100 | UpdateType.Once)) != 0;
     if (Finite(elapsed) && elapsed > 0) { Link.Age += elapsed; Clock += elapsed; Heartbeat += elapsed; }
     try
@@ -101,9 +442,9 @@ public void Main(string argument, UpdateType source)
             string command = PendingCommand, verb = command.Split(' ')[0].ToLowerInvariant();
             if (verb == "on" || verb == "reload")
             {
-                string why; if (!Tools.Load(out why)) throw new Exception(why);
+                string why; if (!Tools.Load(out why) || !Tools.NamesForArm(out why)) throw new Exception(why);
                 if (!Tools.Configured) throw new Exception("Tools.Enabled must be true in the ToolSwap PB.");
-                var ini = new MyIni(); ini.TryParse(Me.CustomData); Tools.WriteConfig(ini); Me.CustomData = ini.ToString(); Initialised = true;
+                var ini = new MyIni(); ini.TryParse(CustomData); Tools.WriteConfig(ini); CustomData = ini.ToString(); Initialised = true;
                 if (verb == "on") Tools.StartOn();
             }
             else if (verb == "stop" || verb == "off" || verb == "swapcancel") { Tools.Cancel("Stopped; inspect, then On."); }
@@ -153,10 +494,10 @@ void Queue(string command)
 void Receive()
 {
     int count = 0;
-    while (IGC.UnicastListener.HasPendingMessage && count++ < 16)
+    while (Inbox.Count > 0 && count++ < 16)
     {
         if (Runtime.MaxInstructionCount > 0 && Runtime.CurrentInstructionCount >= Runtime.MaxInstructionCount * .5) break;
-        var message = IGC.UnicastListener.AcceptMessage(); MyIni ini;
+        var message = Inbox.Dequeue(); MyIni ini;
         if (!Link.Read(message, out ini)) continue;
         long epoch = ini.Get(LinkSection, "Epoch").ToInt64(), sequence = ini.Get(LinkSection, "Sequence").ToInt64();
         string op = ini.Get(LinkSection, "Operation").ToString();
@@ -182,6 +523,7 @@ void Receive()
         Link.RemoteEpoch = epoch; Link.Generation = ini.Get(LinkSection, "Generation").ToInt64(); Link.Received = sequence; Link.Age = 0;
         Ack = ini.Get(LinkSection, "Ack").ToInt64(); RemoteReady = ini.Get(LinkSection, "Ready").ToBoolean(); RemoteStopped = ini.Get(LinkSection, "Stopped").ToBoolean();
         RemoteSettled = ini.Get(LinkSection, "Settled").ToBoolean(); RemotePilot = ini.Get(LinkSection, "Pilot").ToBoolean(); RemoteError = ini.Get(LinkSection, "Error").ToString();
+        PilotSelected = ini.Get(LinkSection, "PilotSelected").ToBoolean(true);
         ReportedPath = ini.Get(LinkSection, "PathId").ToInt64(); CompletedWaypoints = ini.Get(LinkSection, "Completed").ToInt32();
         ReadKeyboard = ini.Get(LinkSection, "Keyboard").ToBoolean(true); ReadMouse = ini.Get(LinkSection, "Mouse").ToBoolean(); ReadRoll = ini.Get(LinkSection, "Roll").ToBoolean(true);
         DefaultMove = ini.Get(LinkSection, "DefaultMove").ToDouble(.2); DefaultTurn = ini.Get(LinkSection, "DefaultTurn").ToDouble(5);
@@ -268,6 +610,7 @@ MyIni EquipmentPacket(string operation)
 }
 bool HasPilotInput()
 {
+    if (!PilotSelected) return false;
     if (ControllerPoll-- <= 0) { GridTerminalSystem.GetBlocksOfType(Controllers); ControllerPoll = 9; }
     foreach (var c in Controllers) if (!c.Closed && c.IsUnderControl && c.IsSameConstructAs(Me) && (ReadKeyboard && c.MoveIndicator.LengthSquared() > 1e-8 || ReadMouse && c.RotationIndicator.LengthSquared() > 1e-8 || ReadRoll && Math.Abs(c.RollIndicator) > 1e-4)) return true;
     return false;
@@ -309,7 +652,7 @@ class ToolTopInfo
 class ToolPortPair { public IMyShipMergeBlock Head, Stand; }
 class ToolRegionScan
 {
-    Program P; IMyCubeBlock Marker; IMyCubeGrid Grid;
+    ArmCore P; IMyCubeBlock Marker; IMyCubeGrid Grid;
     long GridId; int Limit; string Axis, Fault;
     Queue<Vector3I> Pending = new Queue<Vector3I>();
     public HashSet<Vector3I> Cells = new HashSet<Vector3I>();
@@ -317,7 +660,7 @@ class ToolRegionScan
     public HashSet<long> Blocks = new HashSet<long>();
     public List<IMyShipMergeBlock> Merges = new List<IMyShipMergeBlock>();
     public static Vector3I[] Dirs = { Vector3I.UnitX, -Vector3I.UnitX, Vector3I.UnitY, -Vector3I.UnitY, Vector3I.UnitZ, -Vector3I.UnitZ };
-    public ToolRegionScan(Program p, IMyCubeBlock marker, int cellLimit, string mergeAxis)
+    public ToolRegionScan(ArmCore p, IMyCubeBlock marker, int cellLimit, string mergeAxis)
     {
         P = p; Marker = marker; Limit = Math.Min(4096, Math.Max(1, cellLimit)); Axis = mergeAxis;
         if (marker == null) { Fault = "Missing Head/Mount."; return; }
@@ -362,7 +705,7 @@ class ToolRegionScan
 }
 static class ToolGeometry
 {
-    public static Program Owner;
+    public static ArmCore Owner;
     static bool Budget() => Owner == null || Owner.Runtime.MaxInstructionCount <= 0 || Owner.Runtime.CurrentInstructionCount < Owner.Runtime.MaxInstructionCount * .6;
     public static bool Fail(out string why, string message) { why = message; return false; }
     static string[] Axes = { "right", "left", "up", "down", "forward", "backward" };
@@ -600,18 +943,21 @@ static class ToolGeometry
 
 
 // Tool changes use timed observations and journal every mechanical mutation.
-sealed class ToolSwapController
+sealed partial class ToolSwapController
 {
     public sealed class Profile
     {
         public string Name, Prefix, MarkerName, CouplerName;
+        public int Number;
+        public bool Automatic;
         public readonly List<string> HeadNames = new List<string>(), StandNames = new List<string>();
         public IMyTerminalBlock Marker;
         public IMyMotorStator Coupler;
         public double Angle; public bool Relock;
         public readonly List<IMyShipMergeBlock> Heads = new List<IMyShipMergeBlock>(), Stands = new List<IMyShipMergeBlock>(), SafetyMerges = new List<IMyShipMergeBlock>();
     }
-    readonly Program P;
+    readonly ArmCore P;
+    string ArmName => P.ArmName;
     static readonly string[] NumberKeys = { "ApproachDistance", "MoveSpeed", "TurnSpeed", "PositionTolerance", "AngleTolerance", "PhaseTimeout" };
     readonly List<Profile> Profiles = new List<Profile>();
     readonly List<IMyTerminalBlock> Inventory = new List<IMyTerminalBlock>();
@@ -659,7 +1005,7 @@ sealed class ToolSwapController
     {
         get { if (Endpoint == Mount) foreach (var h in Profiles) if (Mounted(h)) return h.Coupler.EntityId; return 0; }
     }
-    public ToolSwapController(Program p)
+    public ToolSwapController(ArmCore p)
     {
         P = p;
         ToolGeometry.Owner = p;
@@ -690,7 +1036,7 @@ sealed class ToolSwapController
     {
         StartAfterScan = false;
         MyIni ini;
-        if (!AutoConfig.ReadCurrent(P.Me.CustomData, out ini, out why)) return false;
+        if (!AutoConfig.ReadCurrent(P, P.CustomData, out ini, out why)) return false;
         bool enabled = false, sh = true, ss = true, sp = true;
         var values = new double[] { .5, .05, 2, .005, .2, 30 };
         if (!Bool(ini, EnabledKey, ref enabled, out why) || !Bool(ini, "ScanHeadMerges", ref sh, out why) ||
@@ -703,28 +1049,32 @@ sealed class ToolSwapController
         int limit = 4096;
         if (ini.ContainsKey(ToolsSection, "CellLimit") && (!ini.Get(ToolsSection, "CellLimit").TryGetInt32(out limit) || limit < 64 || limit > 4096))
         { why = "Tools.CellLimit: 64..4096."; return false; }
+        if (!ScanBudget(out why)) return false;
+        Inventory.Clear(); P.GridTerminalSystem.GetBlocks(Inventory);
         var heads = Names(ini.Get(ToolsSection, "Heads").ToString()); var profiles = new List<Profile>(); var seen = new HashSet<string>();
+        AutoProfiles = enabled && heads.Count == 0;
+        if (AutoProfiles && !AutoHeads(heads, out why)) return false;
         if (heads.Count > 16) { why = "Tools.Heads: maximum 16."; return false; }
         for (int n = 0; n < heads.Count; n++)
         {
             string section = "Tool" + (n + 1).ToString("00");
-            string name = ini.Get(section, "Name").ToString(heads[n]).Trim();
+            int number = AutoProfiles ? HeadNumber(heads[n]) : n + 1;
+            string name = ini.Get(section, "Name").ToString(AutoProfiles ? "Head " + number : heads[n]).Trim();
             if (name.Length == 0 || !seen.Add(heads[n])) { why = "Empty or duplicate tool marker."; return false; }
-            var h = new Profile { Name = name, MarkerName = heads[n], CouplerName = ini.Get(section, "Mount").ToString().Trim(), Prefix = ini.Get(section, "StandPrefix").ToString("") };
+            var h = new Profile { Number = number, Automatic = AutoProfiles, Name = name, MarkerName = heads[n], CouplerName = ini.Get(section, "Mount").ToString().Trim(), Prefix = ini.Get(section, "StandPrefix").ToString("") };
             h.Marker = null;
             h.HeadNames.AddRange(Names(ini.Get(section, "HeadMerges").ToString()));
             h.StandNames.AddRange(Names(ini.Get(section, "StandMerges").ToString()));
             profiles.Add(h);
         }
         if (enabled && heads.Count == 0) { why = "Tools require Heads."; return false; }
-        if (!ScanBudget(out why)) return false;
-        Inventory.Clear(); P.GridTerminalSystem.GetBlocks(Inventory);
         for (int n = 0; n < heads.Count; n++)
         {
             IMyTerminalBlock marker;
             if (!Exact(heads[n], out marker, out why)) return false;
             profiles[n].Marker = marker;
-            if (profiles[n].CouplerName.Length > 0 || enabled)
+            if (AutoProfiles) HeadHint(profiles[n]);
+            else if (profiles[n].CouplerName.Length > 0 || enabled)
             {
                 IMyTerminalBlock block;
                 if (!Exact(profiles[n].CouplerName, out block, out why)) return false;
@@ -767,16 +1117,25 @@ sealed class ToolSwapController
     {
         ini.Set(ToolsSection, EnabledKey, EnabledTools); ini.Delete(ToolsSection, "Mount"); ini.Delete(ToolsSection, "ArmTip");
         var names = new List<string>(); foreach (var h in Profiles) names.Add(h.MarkerName);
-        ini.Set(ToolsSection, "Heads", string.Join("\n", names)); ini.Set(ToolsSection, "ScanHeadMerges", ScanHead); ini.Set(ToolsSection, "ScanStandMerges", ScanStand); ini.Set(ToolsSection, "ScanParkMerges", ScanPark);
+        if (!AutoProfiles) ini.Set(ToolsSection, "Heads", string.Join("\n", names)); ini.Set(ToolsSection, "ScanHeadMerges", ScanHead); ini.Set(ToolsSection, "ScanStandMerges", ScanStand); ini.Set(ToolsSection, "ScanParkMerges", ScanPark);
         ini.Set(ToolsSection, "ParkMerges", string.Join("\n", ParkNames)); ini.Set(ToolsSection, "MergeNormal", Axis);
         var values = new double[] { Clearance, Move, Turn, PosTol, AngleTol, Timeout };
         for (int n = 0; n < values.Length; n++) ini.Set(ToolsSection, NumberKeys[n], AutoSettings.Number(values[n])); ini.Set(ToolsSection, "CellLimit", CellLimit);
-        ini.SetComment(ToolsSection, "Heads", "Exact markers, one per line; ToolNN order. Tool <name/index>; Park [number]; ToolScan; SwapCancel.");
-        for (int n = 0; n < Profiles.Count; n++)
+        if (!AutoProfiles) ini.SetComment(ToolsSection, "Heads", "Exact markers, one per line; ToolNN order. Tool <name/index>; Park [number]; ToolScan; SwapCancel.");
+        for (int n = 0; !AutoProfiles && n < Profiles.Count; n++)
         {
             var h = Profiles[n]; string s = "Tool" + (n + 1).ToString("00");
             ini.Set(s, "Name", h.Name); ini.Set(s, "Mount", h.CouplerName); ini.Set(s, "HeadMerges", string.Join("\n", h.HeadNames)); ini.Set(s, "StandMerges", string.Join("\n", h.StandNames)); ini.Set(s, "StandPrefix", h.Prefix);
         }
+    }
+
+    public bool NamesForArm(out string why)
+    {
+        why = ""; var names = new List<string>(ParkNames);
+        names.Clear(); foreach (var profile in Profiles) names.Add(profile.MarkerName);
+        foreach (string name in names) if (!name.StartsWith(ArmName + " - ", StringComparison.Ordinal))
+        { why = "Tool block names must start with '" + ArmName + " - ': " + name; return false; }
+        return true;
     }
     bool Mounted(Profile h)
     {
@@ -822,6 +1181,8 @@ sealed class ToolSwapController
             long a = b.CubeGrid.EntityId, z = b.TopGrid.EntityId;
             long next = a == ArmOrder[n] ? z : z == ArmOrder[n] ? a : 0;
             if (next == 0 || next == hull || ArmGrids.ContainsKey(next)) continue;
+            bool headGrid = false; foreach (var profile in Profiles) if (profile.Marker.CubeGrid.EntityId == next) headGrid = true;
+            if (headGrid) continue;
             if (ArmOrder.Count >= 128) { why = "Arm graph exceeds 128 grids."; return false; }
             ArmGrids.Add(next, b); ArmOrder.Add(next);
         }
@@ -885,7 +1246,7 @@ sealed class ToolSwapController
         if (verb == "tool" || verb == "toolswap")
         {
             int index;
-            if (int.TryParse(arg, out index) && index >= 1 && index <= Profiles.Count) Destination = Profiles[index - 1];
+            if (int.TryParse(arg, out index)) { foreach (var h in Profiles) if (h.Number == index) Destination = h; }
             else foreach (var h in Profiles) if (h.Name == arg || h.MarkerName == arg)
             { if (Destination != null) { P.Say("Ambiguous name; use index."); return true; } Destination = h; }
             if (Destination == null) { P.Say("Unknown tool name/index."); return true; }
@@ -899,7 +1260,7 @@ sealed class ToolSwapController
         ScanIndex = 0; Scan = null; Parks.Clear(); Upstream.Clear(); UpstreamTops.Clear(); Clearing.Clear();
         foreach (var h in Profiles) { h.Heads.Clear(); h.Stands.Clear(); h.SafetyMerges.Clear(); }
         Last = verb == "toolscan" ? "Scan" : "Change";
-        Go("Scan"); P.Runtime.UpdateFrequency = UpdateFrequency.Update1; return true;
+        Go("Scan"); P.Frequency = UpdateFrequency.Update1; return true;
     }
     bool MergeNames(List<string> names, List<IMyShipMergeBlock> output, out string why)
     {
@@ -928,15 +1289,17 @@ sealed class ToolSwapController
             if (Scan == null) Scan = new ToolRegionScan(P, h.Marker, CellLimit, Axis);
             bool finished; if (!Scan.Step(out finished, out why)) { why = h.MarkerName + ": " + why; return false; }
             if (!finished) return true;
+            if (h.Automatic && !DiscoverHardware(h, out why)) return false;
             if (!Scan.Blocks.Contains(h.Coupler.EntityId)) { why = "Tool Mount outside marker region."; return false; }
             foreach (var other in Profiles) if (other != h && Scan.Blocks.Contains(other.Marker.EntityId)) { why = "Tool regions overlap."; return false; }
             h.SafetyMerges.AddRange(Scan.Merges);
-            if (ScanHead) h.Heads.AddRange(Scan.Merges);
+            if (ScanHead && !h.Automatic) h.Heads.AddRange(Scan.Merges);
             if (!MergeNames(h.HeadNames, h.Heads, out why) || !MergeNames(h.StandNames, h.Stands, out why)) return false;
             foreach (var merge in h.Heads) if (!Scan.Blocks.Contains(merge.EntityId)) { why = "Foreign head merge: " + merge.CustomName; return false; }
-            if (ScanStand) Prefix(h.Prefix, h.Stands);
+            if (ScanStand && !h.Automatic) Prefix(h.Prefix, h.Stands);
             foreach (var merge in h.Stands) if (h.Heads.Contains(merge)) { why = "Stand is on head: " + merge.CustomName; return false; }
             P.CaptureParkPose(h, Axis);
+            if (h.Automatic) SaveHead(h);
             ScanIndex++; Scan = null; return true;
         }
         if (Tip == null)
@@ -999,7 +1362,7 @@ sealed class ToolSwapController
     {
         why = ""; var owner = Tip == null ? null : Tip.Base;
         if (owner == null) return true;
-        foreach (var h in Profiles) if (h.Coupler.EntityId == owner.EntityId && (Mounted(h) || (h == Source && Phase == "Detach") || (h == Destination && Phase == "Attach"))) return true;
+        foreach (var h in Profiles) if (h.Coupler != null && h.Coupler.EntityId == owner.EntityId && (Mounted(h) || (h == Source && Phase == "Detach") || (h == Destination && Phase == "Attach"))) return true;
         why = "Unknown arm-tip owner."; return false;
     }
     bool Guard(out string why)
@@ -1010,10 +1373,12 @@ sealed class ToolSwapController
         {
             var b = Upstream[n]; if (b.Closed || !b.IsAttached || b.Top == null || b.Top.EntityId != UpstreamTops[n]) { why = "Upstream attachment changed."; return false; }
         }
-        foreach (var h in Profiles) if (h.Marker == null || h.Marker.Closed || h.Marker.CustomName != h.MarkerName || h.Coupler == null || h.Coupler.Closed || !h.Coupler.IsFunctional || h.Coupler.CustomName != h.CouplerName || h.Coupler.CubeGrid.EntityId == Reference.CubeGrid.EntityId || h.Coupler.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId)
+        foreach (var h in Profiles) if (h.Marker == null || h.Marker.Closed || h.Marker.CustomName != h.MarkerName ||
+            !(h.Automatic && Phase == "Scan" && h.Coupler == null) && (h.Coupler == null || h.Coupler.Closed || !h.Coupler.IsFunctional || !h.Automatic && h.Coupler.CustomName != h.CouplerName || h.Coupler.CubeGrid.EntityId == Reference.CubeGrid.EntityId || h.Coupler.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId))
         { why = "Tool block changed."; return false; }
         foreach (var h in Profiles)
         {
+            if (h.Automatic && Phase == "Scan" && h.Coupler == null) continue;
             foreach (var merge in h.SafetyMerges) if (merge.Closed || merge.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId) { why = "Tool support body split."; return false; }
             if (h.Coupler.IsAttached && !Mounted(h)) { why = "Tool attached elsewhere."; return false; }
             if (Last == "Change" && Phase != "Scan" && Phase != "ScanSettle" && !(h == Source && Phase == "Detach") && !h.Coupler.IsAttached && Math.Abs(h.Coupler.Angle - h.Angle) > .002)
@@ -1300,6 +1665,106 @@ sealed class ToolSwapController
 }
 
 
+// Tool hardware belongs to the occupied-cell region cut at facing merge pairs.
+// Names select only the reference block; detected identities live on that block.
+sealed partial class ToolSwapController
+{
+    bool AutoProfiles;
+    const string HeadData = "AutoArm Tool";
+    int HeadNumber(string name)
+    {
+        string prefix = ArmName + " - Head "; int number;
+        if (!name.StartsWith(prefix, StringComparison.Ordinal)) return 0;
+        string tail = name.Substring(prefix.Length); int split = tail.IndexOf(" - ", StringComparison.Ordinal);
+        return split > 0 && split + 3 < tail.Length && int.TryParse(tail.Substring(0, split), out number) && number > 0 ? number : 0;
+    }
+    bool AutoHeads(List<string> heads, out string why)
+    {
+        why = ""; var names = new SortedDictionary<int, string>();
+        foreach (var block in Inventory)
+        {
+            if (block.Closed || !block.IsSameConstructAs(P.Me)) continue;
+            int number = HeadNumber(block.CustomName); if (number == 0) continue;
+            if (names.ContainsKey(number)) { why = "More than one named block for " + ArmName + " - Head " + number + ". Keep that name only on its reference block."; return false; }
+            names.Add(number, block.CustomName);
+        }
+        foreach (var pair in names) heads.Add(pair.Value);
+        if (heads.Count == 0) { why = "Name one block per tool: " + ArmName + " - Head 1 - Drill."; return false; }
+        return true;
+    }
+    MyIni ReadHead(Profile head)
+    {
+        var data = AutoConfig.Saved(head.Marker.CustomData);
+        if (data.ContainsSection(HeadData) && data.Get(HeadData, "Format").ToInt32() != 1) throw new Exception(head.MarkerName + ": delete its AutoArm Tool section (unsupported Format).");
+        return data;
+    }
+    void HeadHint(Profile head)
+    {
+        var data = ReadHead(head);
+        if (data.Get(HeadData, "Arm").ToString() != ArmName) return;
+        var mount = P.GridTerminalSystem.GetBlockWithId(data.Get(HeadData, "Mount").ToInt64()) as IMyMotorStator;
+        if (mount != null && !mount.Closed && mount.CubeGrid.EntityId == head.Marker.CubeGrid.EntityId && ToolGeometry.Rotor(mount))
+        { head.Coupler = mount; head.CouplerName = mount.CustomName; }
+    }
+    bool DiscoverHardware(Profile head, out string why)
+    {
+        why = "";
+        var candidates = new List<IMyMotorStator>();
+        foreach (var block in Inventory)
+        {
+            var rotor = block as IMyMotorStator;
+            if (rotor == null || rotor.Closed || !ToolGeometry.Rotor(rotor) || !Scan.Blocks.Contains(rotor.EntityId)) continue;
+            if (!rotor.IsAttached || rotor.Top != null && ArmGrids.ContainsKey(rotor.Top.CubeGrid.EntityId)) candidates.Add(rotor);
+        }
+        if (head.Coupler == null || !candidates.Contains(head.Coupler))
+        {
+            if (candidates.Count != 1) { why = head.MarkerName + ": need exactly one eligible rotor base inside the tool; found " + candidates.Count; return false; }
+            head.Coupler = candidates[0];
+        }
+        head.CouplerName = head.Coupler.CustomName;
+        foreach (var other in Profiles) if (other != head && other.Coupler == head.Coupler) { why = "Tool regions share a rotor base."; return false; }
+        var data = ReadHead(head);
+        if (ScanHead) foreach (var merge in Scan.Merges)
+        {
+            IMyShipMergeBlock stand;
+            if (ToolGeometry.TryLockedPartner(merge, Axis, out stand) && !Scan.Blocks.Contains(stand.EntityId))
+            { head.Heads.Add(merge); if (ScanStand && !head.Stands.Contains(stand)) head.Stands.Add(stand); }
+        }
+        // Mounted tools have no connected stand pairs. Validate stored ports
+        // against the fresh tool region before reusing their identities.
+        if (ScanHead && head.Heads.Count == 0 && data.Get(HeadData, "Arm").ToString() == ArmName)
+            foreach (string token in data.Get(HeadData, "HeadMerges").ToString().Split(','))
+            {
+                long id; if (!long.TryParse(token, out id)) continue;
+                var merge = P.GridTerminalSystem.GetBlockWithId(id) as IMyShipMergeBlock;
+                if (merge == null || merge.Closed || !Scan.Blocks.Contains(id)) { why = "Stored head merge outside tool: " + head.MarkerName; return false; }
+                head.Heads.Add(merge);
+            }
+        if (ScanStand && head.Stands.Count == 0 && data.Get(HeadData, "Arm").ToString() == ArmName)
+            foreach (string token in data.Get(HeadData, "StandMerges").ToString().Split(','))
+            {
+                long id; if (!long.TryParse(token, out id)) continue;
+                var merge = P.GridTerminalSystem.GetBlockWithId(id) as IMyShipMergeBlock;
+                if (merge != null && !merge.Closed && !Scan.Blocks.Contains(id) && !head.Stands.Contains(merge)) head.Stands.Add(merge);
+            }
+        if (ScanHead && head.Heads.Count == 0 && !head.Coupler.IsAttached) { why = "Park " + head.MarkerName + " on facing connected merge blocks for automatic setup."; return false; }
+        if (!RefreshTip(out why)) return false;
+        var saved = AutoConfig.Saved(P.Storage);
+        head.Relock = saved.Get(SwapSection, "PB").ToInt64() == P.Me.EntityId && saved.Get(SwapSection, "Relock").ToInt64() == head.Coupler.EntityId;
+        return true;
+    }
+    static string PortIds(List<IMyShipMergeBlock> ports)
+    { var ids = new List<string>(); foreach (var port in ports) ids.Add(port.EntityId.ToString()); return string.Join(",", ids); }
+    void SaveHead(Profile head)
+    {
+        var data = ReadHead(head); data.Set(HeadData, "Format", 1); data.Set(HeadData, "Arm", ArmName);
+        data.Set(HeadData, "Marker", head.Marker.EntityId); data.Set(HeadData, "Mount", head.Coupler.EntityId);
+        data.Set(HeadData, "HeadMerges", PortIds(head.Heads)); data.Set(HeadData, "StandMerges", PortIds(head.Stands));
+        string text = data.ToString(); if (text != head.Marker.CustomData) head.Marker.CustomData = text;
+    }
+}
+
+
 // Automatically record the actual parked assembly pose, not an arbitrary
 // quarter-turn alignment of visually symmetric merge blocks.
 bool CaptureParkPose(ToolSwapController.Profile h, string axis)
@@ -1326,14 +1791,19 @@ bool CaptureParkPose(ToolSwapController.Profile h, string axis)
     data.Set(LinkSection, "Pairs", string.Join("\n", rows));
     var saved = AutoConfig.Saved(Storage); const string section = "AutoArm Park Poses";
     saved.Set(section, "PB", Me.EntityId); saved.Set(section, "Arm", ArmName);
-    saved.Set(section, h.Coupler.EntityId.ToString(), data.ToString()); Storage = saved.ToString(); return true;
+    saved.Set(section, h.Coupler.EntityId.ToString(), data.ToString()); Storage = saved.ToString();
+    var markerData = AutoConfig.Saved(h.Marker.CustomData);
+    markerData.Set("AutoArm Tool", "Format", 1); markerData.Set("AutoArm Tool", "Arm", ArmName);
+    markerData.Set("AutoArm Tool", "ParkPose", data.ToString()); h.Marker.CustomData = markerData.ToString(); return true;
 }
 bool ParkPose(ToolSwapController.Profile h, List<IMyShipMergeBlock> rack, long selected, out MatrixD pose, out List<ToolPortPair> pairs)
 {
     pose = MatrixD.Identity; pairs = new List<ToolPortPair>(); const string section = "AutoArm Park Poses";
     var saved = AutoConfig.Saved(Storage);
-    if (saved.Get(section, "PB").ToInt64() != Me.EntityId || saved.Get(section, "Arm").ToString() != ArmName) return false;
-    string text = saved.Get(section, h.Coupler.EntityId.ToString()).ToString(); if (text.Length == 0) return false;
+    var markerData = AutoConfig.Saved(h.Marker.CustomData);
+    string text = markerData.Get("AutoArm Tool", "Format").ToInt32() == 1 && markerData.Get("AutoArm Tool", "Arm").ToString() == ArmName ? markerData.Get("AutoArm Tool", "ParkPose").ToString() : "";
+    if (text.Length == 0 && saved.Get(section, "PB").ToInt64() == Me.EntityId && saved.Get(section, "Arm").ToString() == ArmName) text = saved.Get(section, h.Coupler.EntityId.ToString()).ToString();
+    if (text.Length == 0) return false;
     var data = new MyIni(); if (!data.TryParse(text)) throw new Exception("Invalid saved park pose; park tool and ToolScan.");
     if (data.Get(LinkSection, "Marker").ToInt64() != h.Marker.EntityId) return false;
     var anchor = GridTerminalSystem.GetBlockWithId(data.Get(LinkSection, "Anchor").ToInt64()) as IMyShipMergeBlock;
@@ -1412,18 +1882,19 @@ static bool ReadDouble(string text, out double value) => double.TryParse(text, S
 
 // Versioned unicast transport. Epochs survive recompilation; generations revoke
 // outstanding commands on Stop. Messages never grant direct actuator access.
-const string LinkTag = "AutoArm/4";
+const string LinkTag = "AutoArm/5";
 const string LinkSection = "Link";
 
 sealed class ModuleLink
 {
-    readonly Program P;
+    readonly ArmCore P;
+    string ArmName => P.ArmName;
     public IMyProgrammableBlock Peer;
     public readonly long Epoch;
     public long RemoteEpoch, Generation, Sequence, Received;
     public double Age;
     bool Persisted;
-    public ModuleLink(Program p)
+    public ModuleLink(ArmCore p)
     {
         P = p;
         var ini = LinkSaved(p.Storage); long epoch = ini.Get("AutoArm Link", "Epoch").ToInt64();
@@ -1434,6 +1905,13 @@ sealed class ModuleLink
     public void Resolve(string name)
     {
         Peer = null;
+        long id;
+        if (name.StartsWith("@", StringComparison.Ordinal) && long.TryParse(name.Substring(1), out id))
+        {
+            Peer = P.GridTerminalSystem.GetBlockWithId(id) as IMyProgrammableBlock;
+            if (Peer == null || Peer == P.Me || Peer.Closed || !Peer.IsFunctional || !Peer.IsSameConstructAs(P.Me)) throw new Exception("Module PB unavailable.");
+            return;
+        }
         var blocks = new List<IMyProgrammableBlock>(); P.GridTerminalSystem.GetBlocksOfType(blocks);
         foreach (var b in blocks) if (b.CustomName == name && !b.Closed && b.IsSameConstructAs(P.Me))
         { if (Peer != null) throw new Exception("Duplicate PB: " + name); Peer = b; }
@@ -1441,7 +1919,7 @@ sealed class ModuleLink
     }
     public MyIni Packet(string operation)
     {
-        var ini = new MyIni(); ini.Set(LinkSection, "Version", 4); ini.Set(LinkSection, "Arm", ArmName);
+        var ini = new MyIni(); ini.Set(LinkSection, "Version", 5); ini.Set(LinkSection, "Arm", ArmName);
         ini.Set(LinkSection, "Epoch", Epoch); ini.Set(LinkSection, "Remote", RemoteEpoch);
         ini.Set(LinkSection, "Generation", Generation); ini.Set(LinkSection, "Sequence", ++Sequence);
         ini.Set(LinkSection, "Operation", operation); return ini;
@@ -1457,7 +1935,7 @@ sealed class ModuleLink
     {
         ini = new MyIni(); var text = message.Data as string;
         return Peer != null && !Peer.Closed && Peer.IsFunctional && Peer.IsSameConstructAs(P.Me) && message.Source == Peer.EntityId && message.Tag == LinkTag &&
-            text != null && text.Length <= 16000 && ini.TryParse(text) && ini.Get(LinkSection, "Version").ToInt32() == 4 && ini.Get(LinkSection, "Arm").ToString() == ArmName &&
+            text != null && text.Length <= 16000 && ini.TryParse(text) && ini.Get(LinkSection, "Version").ToInt32() == 5 && ini.Get(LinkSection, "Arm").ToString() == ArmName &&
             ini.Get(LinkSection, "Epoch").ToInt64() > 0 && ini.Get(LinkSection, "Sequence").ToInt64() > 0;
     }
 }
@@ -1493,4 +1971,15 @@ static string PathRow(MatrixD frame)
 {
     var values = new double[] { frame.Translation.X, frame.Translation.Y, frame.Translation.Z, frame.Forward.X, frame.Forward.Y, frame.Forward.Z, frame.Up.X, frame.Up.Y, frame.Up.Z };
     var row = new List<string>(); foreach (double v in values) row.Add(AutoSettings.Number(v)); return string.Join(" ", row);
+}
+
+public string Summary => Tools.Busy ? "TOOLS" : Tools.Recovery ? "RECOVERY" : "IDLE";
+public void Stop(string why) { PendingCommand = ""; Tools.Cancel(why); }
+public void Select(bool selected) { }
+public string Shape => "";
+public bool HasLayout => false;
+public string WeightTable => "";
+public bool ApplyWeights(string table, out string why) { why = ""; return true; }
+public List<IMyMechanicalConnectionBlock> Joints() { return new List<IMyMechanicalConnectionBlock>(); }
+
 }

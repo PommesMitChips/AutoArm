@@ -1,0 +1,8 @@
+public string Summary => Tools.Busy ? "TOOLS" : Tools.Recovery ? "RECOVERY" : "IDLE";
+public void Stop(string why) { PendingCommand = ""; Tools.Cancel(why); }
+public void Select(bool selected) { }
+public string Shape => "";
+public bool HasLayout => false;
+public string WeightTable => "";
+public bool ApplyWeights(string table, out string why) { why = ""; return true; }
+public List<IMyMechanicalConnectionBlock> Joints() { return new List<IMyMechanicalConnectionBlock>(); }

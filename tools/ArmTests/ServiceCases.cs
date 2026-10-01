@@ -12,20 +12,21 @@ internal static partial class Scenarios
         internal Rig ArmRig;
         internal long Seq, Epoch=1;
         internal string ArmName="Arm 1";
+        internal int Protocol=4;
         internal MyIni Last=new();
         internal ServicePeer(Rig rig,ModuleBus bus,object arm,Rig armRig)
         { Rig=rig; Bus=bus; Arm=arm; ArmRig=armRig; }
         internal MyIni Packet(string op)
         {
-            var p=new MyIni(); p.Set("Link","Version",4); p.Set("Link","Service",1); p.Set("Link","Arm",ArmName);
+            var p=new MyIni(); p.Set("Link","Version",Protocol); p.Set("Link","Service",1); p.Set("Link","Arm",ArmName);
             p.Set("Link","Epoch",Epoch); p.Set("Link","Sequence",++Seq); p.Set("Link","Operation",op);
             p.Set("Link","Seen",op=="HELLO"?0:Last.Get("Link","Sequence").ToInt64());
             p.Set("Link","Remote",op=="HELLO"?0:Last.Get("Link","Epoch").ToInt64()); p.Set("Link","Generation",Last.Get("Link","Generation").ToInt64()); return p;
         }
         internal MyIni Send(MyIni p)
         {
-            Rig.IGC.SendUnicastMessage(ArmRig.PB.EntityId,"AutoArm/4",p.ToString());
-            InvokeFrame(Arm,ArmRig,"AutoArm/4",UpdateType.IGC,0);
+            Rig.IGC.SendUnicastMessage(ArmRig.PB.EntityId,"AutoArm/"+Protocol,p.ToString());
+            InvokeFrame(Arm,ArmRig,"AutoArm/"+Protocol,UpdateType.IGC,0);
             while(Bus.Queues[Rig.PB.EntityId].Count>0) { Last=new MyIni(); Last.TryParse((string)Bus.Queues[Rig.PB.EntityId].Dequeue().Data); }
             return Last;
         }
@@ -90,7 +91,7 @@ internal static partial class Scenarios
         rig.Rotor("Arm 2 - Base - Rotor",rig.Root,middle); rig.Piston("Arm 2 piston",middle,tip,axis:Vector3D.Forward);
         var otherHead=rig.Block<IMyShipDrill>("Arm 2 - Head - Drill",tip,new Vector3D(0,0,-12));
         var oc=new MyIni(); oc.Set("AutoArm","Format",6); oc.Set("AutoArm","Arm","Arm 2"); oc.Set("Modules","Peers","Planner A | Plan"); RecordProxy.Of(otherRig.PB).Values["CustomData"]=oc.ToString(); bus.Bind(otherRig);
-        var otherType=Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_Source.txt")).Replace("const string ArmName = \"Arm 1\";","const string ArmName = \"Arm 2\";")); var other=Start(otherType,otherRig); Run(other,"On");
+        var otherType=Tests.Script(Tests.EngineSource.Replace("readonly string ArmName = \"Arm 1\";","readonly string ArmName = \"Arm 2\";")); var other=Start(otherType,otherRig); Run(other,"On");
         var secondArm=new ServicePeer(planners[0],bus,other,otherRig){ArmName="Arm 2"}; secondArm.Send("HELLO");
         path=secondArm.Packet("PATH"); var next=otherHead.WorldMatrix; next.Translation+=Vector3D.Forward*.2; path.Set("Link","Waypoints",PCRow(next)); secondArm.Send(path);
         a.Send("HELLO"); path=a.Packet("PATH"); path.Set("Link","Waypoints",PCRow(destination)); a.Send(path);

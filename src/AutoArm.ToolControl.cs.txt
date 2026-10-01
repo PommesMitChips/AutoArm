@@ -105,6 +105,7 @@ bool SettleToolTopology(out string why)
 {
     if (!ConfigValid) { why = "Tool topology is not configured."; return false; }
     if (!Topology.StableSetup(out why)) return false;
+    if (!CheckArmLayout(out why)) { Topology.Ready = false; if (why.StartsWith("Waiting", StringComparison.Ordinal)) return false; ConfigValid = false; Fault(why); return false; }
     PruneToolWeights();
     AutoConfig.UpdateGroups(this); LoadHome();
     return true;

@@ -19,6 +19,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v3.0` | Separate arm/ToolSwap PBs, acknowledged ordered paths, movement leases and restart/timeout fences | Arm 78,266; ToolSwap 48,330 |
 | `v3.1` | Recorded parked orientation, inherited travel speeds, linear insertion/withdrawal and expected-topology continuation | Arm 79,911; ToolSwap 51,414 |
 | `v3.2` | Additional direct PB peers, one-pass active joint validation and stale tool-weight pruning | Arm 84,975; ToolSwap 51,414 |
+| `v4.0` | Multiple arm instances, inherited layout templates, scoped commands/sessions and marker-stored automatic tool setup | Arm 99,319; ToolSwap 68,170 |
 
 Read a previous script without changing your working tree:
 
@@ -35,6 +36,6 @@ git switch --detach v2.4
 
 Run `git switch -` to return to your previous branch. Tags retain their original notes and configuration examples as well as the top-level source and compact script. Historical folder names exist only in those snapshots. Earlier versions preserve combined source; the full maintainable fragments and current toolchain were introduced with v2.5.
 
-Historical notes describe configuration and behavior at their own version. The current arm PB requires Format 6 and the ToolSwap PB requires Format 1. Re-enter previous preferences in the current examples after deleting older Custom Data; there is no migration.
+Historical notes describe configuration and behavior at their own version. The current arm PB requires [global] Format 7 and the ToolSwap PB requires [global] Format 2. Re-enter previous preferences in the current examples after deleting older Custom Data; there is no migration.
 
 The supplied `reference/MiningArm_v2_0_HeadOnly.txt` remains a behavior-comparison fixture required by the tests; it is not a parallel AutoArm release.

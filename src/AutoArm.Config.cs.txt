@@ -71,18 +71,18 @@ static class AutoConfig
     const string Identity = "AutoArm Config";
     const string Header = "Name | Kind | Translation | Orientation";
 
-    public static bool ReadCurrent(string text, out MyIni ini, out string why)
+    public static bool ReadCurrent(Program p, string text, out MyIni ini, out string why)
     {
         ini = new MyIni(); why = ""; MyIniParseResult error;
         if (!ini.TryParse(text ?? "", out error))
         { why = "Custom Data is not valid INI (" + error + "). Fix it or delete Custom Data."; return false; }
         if (string.IsNullOrWhiteSpace(text))
-        { ini.Set(ArmSection, "Arm", ArmName); ini.Set(ArmSection, "Format", Format); return true; }
+        { ini.Set(ArmSection, "Arm", p.ArmName); ini.Set(ArmSection, "Format", Format); return true; }
         int format;
         if (!int.TryParse(ini.Get(ArmSection, "Format").ToString(), out format) || format != Format)
         { why = "Custom Data Format must be " + Format + ". Delete Custom Data."; return false; }
-        if (ini.Get(ArmSection, "Arm").ToString() != ArmName)
-        { why = "Custom Data belongs to a different arm. Delete Custom Data and regenerate it for " + ArmName + "."; return false; }
+        if (ini.Get(ArmSection, "Arm").ToString() != p.ArmName)
+        { why = "Custom Data belongs to a different arm. Delete Custom Data and regenerate it for " + p.ArmName + "."; return false; }
         return true;
     }
 
@@ -97,7 +97,7 @@ static class AutoConfig
     {
         if (!string.IsNullOrWhiteSpace(p.Me.CustomData)) return;
         MyIni ini; string why;
-        if (!ReadCurrent("", out ini, out why)) throw new Exception(why);
+        if (!ReadCurrent(p, "", out ini, out why)) throw new Exception(why);
         new AutoSettings().Write(ini); ini.DeleteSection("Instructions");
         if (p.Tools != null) p.Tools.WriteConfig(ini);
         ini.Set(ConfigSection, "Actuators", "");
@@ -109,7 +109,7 @@ static class AutoConfig
     {
         updated = customData ?? ""; changed = false; why = "";
         MyIni ini;
-        if (!ReadCurrent(updated, out ini, out why)) throw new Exception(why);
+        if (!ReadCurrent(p, updated, out ini, out why)) throw new Exception(why);
         if (t == null || !captureToolWeights && (t.Groups.Count == 0 || t.Fingerprint.Length == 0))
             return Refuse(t, "Discover a valid arm before loading actuator settings.", out why);
         var settings = new AutoSettings();
@@ -182,7 +182,7 @@ static class AutoConfig
     public static void UpdateGroups(Program p)
     {
         MyIni ini; string why;
-        if (!ReadCurrent(p.Me.CustomData, out ini, out why)) throw new Exception(why);
+        if (!ReadCurrent(p, p.Me.CustomData, out ini, out why)) throw new Exception(why);
         var values = new List<double[]>();
         foreach (var g in p.Topology.Groups) values.Add(new double[] { g.MoveW, g.TurnW });
         string state; string text = Render(p, p.Topology, ini, Saved(p.Storage), values, out state);

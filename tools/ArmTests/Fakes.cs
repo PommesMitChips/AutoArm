@@ -54,6 +54,7 @@ public class Rig
 {
     long sequence = 100;
     public readonly List<IMyTerminalBlock> Blocks = new();
+    public List<IMyTerminalBlock>? ExternalInventory;
     public readonly List<string> Log = new();
     public int InventoryCalls;
     public int TypedInventoryCalls;
@@ -83,13 +84,13 @@ public class Rig
                 var list = (IList)a![listIndex]!; list.Clear();
                 var type = m.IsGenericMethod ? m.GetGenericArguments()[0] : typeof(IMyTerminalBlock);
                 var filter = a.Length > listIndex + 1 ? a[listIndex + 1] as Delegate : null;
-                foreach (var block in Blocks)
+                foreach (var block in ExternalInventory ?? Blocks)
                     if (type.IsInstanceOfType(block) && (m.Name != "SearchBlocksOfName" || block.CustomName.Contains((string)a[0]!)) &&
                         (filter == null || (bool)filter.DynamicInvoke(block)!)) list.Add(block);
                 return null;
             }
-            if (m.Name == "GetBlockWithName") return Blocks.FirstOrDefault(b => b.CustomName == (string)a![0]!);
-            if (m.Name == "GetBlockWithId") return Blocks.FirstOrDefault(b => b.EntityId == (long)a![0]!);
+            if (m.Name == "GetBlockWithName") return (ExternalInventory ?? Blocks).FirstOrDefault(b => b.CustomName == (string)a![0]!);
+            if (m.Name == "GetBlockWithId") return (ExternalInventory ?? Blocks).FirstOrDefault(b => b.EntityId == (long)a![0]!);
             return null;
         };
         Runtime = RecordProxy.Make<IMyGridProgramRuntimeInfo>();

@@ -6,6 +6,7 @@ internal sealed class ModuleBus
 {
     internal readonly Dictionary<long,Queue<MyIGCMessage>> Queues=new();
     internal readonly List<(long Source,long Target,string Data)> Sent=new();
+    internal readonly Dictionary<(long Id,string Tag),Queue<MyIGCMessage>> Broadcasts=new();
     internal bool DropArm,DropTool;
     internal long ArmId,ToolId;
     internal void Bind(Rig rig)
@@ -21,6 +22,18 @@ internal sealed class ModuleBus
         RecordProxy.Of(rig.IGC).Values["UnicastListener"]=listener;
         RecordProxy.Of(rig.IGC).Call=(m,a)=>
         {
+            if(m.Name=="RegisterBroadcastListener")
+            {
+                string tag=(string)a![0]!; var messages=new Queue<MyIGCMessage>(); Broadcasts[(rig.PB.EntityId,tag)]=messages;
+                var receiver=RecordProxy.Make<IMyBroadcastListener>(); RecordProxy.Of(receiver).Call=(method,args)=>method.Name=="get_HasPendingMessage"?messages.Count>0:method.Name=="AcceptMessage"?messages.Dequeue():null;
+                return receiver;
+            }
+            if(m.Name=="SendBroadcastMessage")
+            {
+                string tag=(string)a![0]!,data=(string)a[1]!;
+                foreach(var pair in Broadcasts) if(pair.Key.Tag==tag) pair.Value.Enqueue(new MyIGCMessage(data,tag,rig.PB.EntityId));
+                return null;
+            }
             if(m.Name=="SendUnicastMessage")
             {
                 long target=(long)a![0]!; string tag=(string)a[1]!,data=(string)a[2]!; Sent.Add((rig.PB.EntityId,target,data));

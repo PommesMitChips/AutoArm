@@ -47,6 +47,7 @@ ToolSwapLink Tools;
 ArmServices Services;
 PivotProbeTool PivotProbe;
 bool Enabled, GoingHome, PendingOn, ConfigValid;
+bool PilotSelected = true;
 bool ReadKeyboard = true, ReadRoll = true, AimingTarget, LastCounterCorrectionLimited;
 bool ReadMouse;
 bool ToolDriving, SwapBatchLock;
@@ -248,7 +249,7 @@ void Discover(bool explicitRequest)
     string why;
     AutoConfig.EnsureDefaults(this);
     MyIni toolConfig; var options = new AutoSettings();
-    if (!AutoConfig.ReadCurrent(Me.CustomData, out toolConfig, out why) || !options.Read(toolConfig, out why)) throw new Exception(why);
+    if (!AutoConfig.ReadCurrent(this, Me.CustomData, out toolConfig, out why) || !options.Read(toolConfig, out why)) throw new Exception(why);
     if (Tools != null && !Tools.Load(out why)) throw new Exception(why);
     Services.Load(toolConfig);
     if (Tools != null && Tools.Configured)
@@ -296,9 +297,13 @@ void MaintainSetup()
         return;
     }
     Status = "Ready and OFF. Run On.";
+    if (!CheckArmLayout(out why)) { Topology.Ready = false; if (why.StartsWith("Waiting", StringComparison.Ordinal)) { Status = why; return; } ConfigValid = false; Fault(why); return; }
     PruneToolWeights();
     Say(Banner() + "\n" + Status);
 }
+
+// The host supplies per-arm shared-layout validation in the multi-arm build.
+bool CheckArmLayout(out string why) { why = ""; return true; }
 
 void Allocate(int n)
 {
@@ -334,7 +339,7 @@ void EnableControl()
         return;
     }
     string why;
-    if (!Topology.Validate(out why, true)) { Fault("On refused: " + why); return; }
+    if (!CheckArmLayout(out why) || !Topology.Validate(out why, true)) { Fault("On refused: " + why); return; }
     Vector3D p, f, u;
     if (!ReadPose(out p, out f, out u)) { Fault("On refused: Base/Head markers unavailable."); return; }
     CapturePose(p, f, u);
@@ -789,6 +794,7 @@ void ReadPilot(Vector3D headForward, Vector3D headUp, out Vector3D linear, out V
 IMyShipController PilotInputs(out Vector3D move, out Vector2 mouse, out double roll)
 {
     move = Vector3D.Zero; mouse = Vector2.Zero; roll = 0;
+    if (!PilotSelected) return null;
     var c = FindInputController(); if (c == null) return null;
     if (ReadKeyboard) move = c.MoveIndicator;
     if (ReadMouse) mouse = c.RotationIndicator;
@@ -1060,7 +1066,7 @@ void Reload()
     bool changed;
     ConfigValid = false;
     MyIni configIni;
-    if (!AutoConfig.ReadCurrent(Me.CustomData, out configIni, out why)) throw new Exception(why);
+    if (!AutoConfig.ReadCurrent(this, Me.CustomData, out configIni, out why)) throw new Exception(why);
     Services.Load(configIni);
     if (Topology.Groups.Count == 0 || (Tools != null && Tools.Configured) || configIni.Get(ToolsSection, EnabledKey).ToBoolean(false)) { Discover(true); return; }
     if (Topology.Groups.Count > 0 && !Topology.Validate(out why, true))

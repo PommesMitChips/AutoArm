@@ -23,11 +23,12 @@ sealed class ToolSwapLink
     public IMyCubeBlock EndFrame => Frame;
     public ToolTopInfo Focus => Tip;
     public long IgnoredMount => Ignore;
+    public bool IsToolJoint(IMyMechanicalConnectionBlock block) { return Couplers.Contains(block as IMyMotorStator); }
     public ToolSwapLink(Program p) { P = p; Link = new ModuleLink(p); }
     public bool Load(out string why)
     {
         why = ""; MyIni ini;
-        if (!AutoConfig.ReadCurrent(P.Me.CustomData, out ini, out why)) return false;
+        if (!AutoConfig.ReadCurrent(P, P.Me.CustomData, out ini, out why)) return false;
         PeerName = ini.Get("Modules", "ToolSwapPB").ToString().Trim();
         Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = Transition = ResumePending = false; Error = "";
         if (!Configured) { Link.Peer = null; End = null; Frame = null; Tip = null; Couplers.Clear(); Markers.Clear(); Tops.Clear(); Merges.Clear(); return true; }
@@ -217,6 +218,7 @@ sealed class ToolSwapLink
         ini.Set(LinkSection, "Stopped", !Driving && !P.Enabled); ini.Set(LinkSection, "Settled", Settled);
         ini.Set(LinkSection, "PathId", Path == null ? 0 : Path.Id); ini.Set(LinkSection, "Completed", Path == null ? 0 : Path.Completed); ini.Set(LinkSection, "Count", Path == null ? 0 : Path.Waypoints.Count);
         ini.Set(LinkSection, "Error", Error); ini.Set(LinkSection, "Pilot", P.HasPilotInput());
+        ini.Set(LinkSection, "PilotSelected", P.PilotSelected);
         ini.Set(LinkSection, "Keyboard", P.ReadKeyboard); ini.Set(LinkSection, "Mouse", P.ReadMouse); ini.Set(LinkSection, "Roll", P.ReadRoll);
         ini.Set(LinkSection, "DefaultMove", P.MoveMps); ini.Set(LinkSection, "DefaultTurn", P.TurnDeg);
         ini.Set(LinkSection, "Head", P.Topology.Head == null ? 0 : P.Topology.Head.EntityId);

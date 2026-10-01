@@ -1,0 +1,80 @@
+public string Summary => Enabled ? GoingHome ? "HOME" : LocalPath != null ? "PATH" : "ON" : Tools.Busy ? "TOOLS" : LastFault.Length > 0 ? LastFault : ConfigValid ? "OFF" : Status;
+public bool HasLayout => ConfigValid && Topology.Fingerprint.Length > 0;
+public void Stop(string why) { Fault(why); }
+public void Select(bool selected)
+{
+    if (selected == PilotSelected) return;
+    if (Enabled && LocalPath == null && !GoingHome && !Tools.Busy)
+    { var position = PositionI; var orientation = OrientationI; HoldCurrent(); PositionI = position; OrientationI = orientation; }
+    PilotSelected = selected;
+}
+List<AutoGroup> BodyGroups()
+{
+    var groups = new List<AutoGroup>();
+    foreach (var group in Topology.Groups)
+    {
+        bool tool = false; foreach (var member in group.M) if (Tools.IsToolJoint(member.B)) tool = true;
+        if (tool) break;
+        groups.Add(group);
+    }
+    return groups;
+}
+static string GroupKind(AutoGroup group)
+{
+    int piston = 0, rotor = 0, hinge = 0;
+    foreach (var member in group.M)
+    {
+        if (member.B is IMyPistonBase) piston++;
+        else if ((member.B.BlockDefinition.SubtypeName ?? "").IndexOf("Hinge", StringComparison.OrdinalIgnoreCase) >= 0) hinge++;
+        else rotor++;
+    }
+    var kinds = new List<string>();
+    if (piston > 0) kinds.Add("Piston x" + piston);
+    if (rotor > 0) kinds.Add("Rotor x" + rotor);
+    if (hinge > 0) kinds.Add("Hinge x" + hinge);
+    return string.Join(" + ", kinds);
+}
+public string Shape
+{
+    get
+    {
+        var rows = new List<string>();
+        foreach (var group in BodyGroups())
+        {
+            var before = new HashSet<long>(); var after = new HashSet<long>();
+            foreach (var member in group.M) { before.Add(member.U); after.Add(member.V); }
+            rows.Add(GroupKind(group) + ":" + before.Count + ">" + after.Count);
+        }
+        return string.Join("|", rows);
+    }
+}
+const string StageHeader = "Stage | Kind | Translation | Orientation";
+public string WeightTable
+{
+    get
+    {
+        string text = StageHeader; int index = 0;
+        foreach (var group in BodyGroups()) text += "\n" + (++index).ToString("00") + " | " + GroupKind(group) + " | " + AutoSettings.Number(group.MoveW) + " | " + AutoSettings.Number(group.TurnW);
+        return text;
+    }
+}
+public bool ApplyWeights(string table, out string why)
+{
+    why = ""; if (table.Trim().Length == 0) return true;
+    var groups = BodyGroups(); var move = new double[groups.Count]; var turn = new double[groups.Count]; var seen = new HashSet<int>(); bool header = false;
+    foreach (string raw in table.Split('\n'))
+    {
+        string line = raw.Trim(); if (line.Length == 0) continue;
+        if (!header) { if (line != StageHeader) { why = "Actuators requires: " + StageHeader; return false; } header = true; continue; }
+        string[] cells = line.Split('|'); int index; double m, r;
+        if (cells.Length != 4 || !int.TryParse(cells[0].Trim(), out index) || index < 1 || index > groups.Count || !seen.Add(index) ||
+            cells[1].Trim() != GroupKind(groups[index - 1]) || !ReadDouble(cells[2].Trim(), out m) || !ReadDouble(cells[3].Trim(), out r) || m < 0 || m > 10 || r < 0 || r > 10)
+        { why = Name + " has a malformed or nonconforming actuator stage."; return false; }
+        move[index - 1] = m; turn[index - 1] = r;
+    }
+    if (seen.Count != groups.Count) { why = Name + " actuator stage count does not match configuration."; return false; }
+    for (int i = 0; i < groups.Count; i++) { groups[i].MoveW = move[i]; groups[i].TurnW = turn[i]; }
+    return true;
+}
+public List<IMyMechanicalConnectionBlock> Joints()
+{ var blocks = new List<IMyMechanicalConnectionBlock>(); foreach (var group in Topology.Groups) foreach (var member in group.M) blocks.Add(member.B); return blocks; }

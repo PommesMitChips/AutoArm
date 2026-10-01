@@ -7,7 +7,14 @@ using VRageMath;
 internal static partial class Scenarios
 {
     const BindingFlags All = BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic;
-    static object? Get(object o,string name) => o.GetType().GetField(name,All)?.GetValue(o) ?? o.GetType().GetProperty(name,All)?.GetValue(o);
+    static object? Get(object o,string name)
+    {
+        var field=o.GetType().GetField(name,All); if(field!=null) return field.GetValue(o);
+        var property=o.GetType().GetProperty(name,All); if(property!=null) return property.GetValue(o);
+        var arms=o.GetType().GetField("Arms",All)?.GetValue(o) as IDictionary;
+        var selected=o.GetType().GetField("Selected",All)?.GetValue(o) as string;
+        return arms!=null&&selected!=null&&arms.Contains(selected)?Get(arms[selected]!,name):null;
+    }
     static object[] Groups(object script) => ((IEnumerable?)Get(Get(script,"Topology")!,"Groups"))?.Cast<object>().ToArray() ?? Array.Empty<object>();
     static object[] Members(object group) => ((IEnumerable)Get(group,"M")!).Cast<object>().ToArray();
     static bool Enabled(object script) => (bool)Get(script,"Enabled")!;
@@ -70,7 +77,7 @@ internal static partial class Scenarios
         ViewControlCases(type);
         PoseCommandsCases(type);
         PathCases(type);
-        var toolType=Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_ToolSwap_Source.txt")));
+        var toolType=Tests.Script(Tests.ToolEngineSource);
         NativeReverseGeometry(toolType);
         DualModuleCases(type,toolType);
         ServiceCases(type,toolType);
