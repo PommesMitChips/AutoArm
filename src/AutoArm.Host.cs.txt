@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0";
+const string ControllerBuildVersion = "4.0.1";
 const bool ToolHost = @@TOOL@@;
 const int HostFormat = @@FORMAT@@;
 const string WireTag = "AutoArm/5";
@@ -207,7 +207,7 @@ void Command(string raw)
     if (text.Equals("StopAll", StringComparison.OrdinalIgnoreCase)) { StopAll("StopAll command."); return; }
     int end = text.IndexOfAny(new char[] { ' ', '(', ',' }); string first = (end < 0 ? text : text.Substring(0, end)).ToLowerInvariant();
     if (first == "on" || first == "reload" || first == "rescan")
-    { try { LoadHost(); } catch (Exception e) { StopAll(e.Message); throw; } }
+    { try { LoadHost(); if (!ToolHost && InputOwner == 0) SelectArm(Selected); } catch (Exception e) { StopAll(e.Message); throw; } }
     string name = Selected, command = text; int open = text.IndexOf('(');
     if (open > 0)
     {
@@ -273,7 +273,7 @@ void CaptureDefaults(ArmCore core)
         if (key.Section == "AutoArm" || key.Name == "Actuators") continue;
         string field = key.Section == "Config" || key.Section == "Modules" ? key.Name : key.Section + "." + key.Name;
         if (!Configuration.ContainsKey(core.Name, field) && !Configuration.ContainsKey("global", field))
-            Configuration.Set(ToolHost || field == "ToolSwapPB" || field == "Peers" ? core.Name : "global", field, ini.Get(key).ToString());
+            Configuration.Set(core.SharedSetting(field) ? "global" : core.Name, field, ini.Get(key).ToString());
     }
     PublishConfig();
 }
@@ -319,6 +319,7 @@ void StopAll(string why)
 void Display()
 {
     var lines = new List<string>(); lines.Add("AutoArm " + ControllerBuildVersion + " " + (ToolHost ? "ToolSwap" : "Arm") + " | Selected: " + Selected);
+    if (!ToolHost && InputOwner != Me.EntityId) lines.Add("Cockpit input inactive here. Run Select " + Selected + ".");
     if (HostError.Length > 0) lines.Add(HostError);
     foreach (string name in Order) lines.Add(name + ": " + Arms[name].Summary);
     ArmCore current; if (Arms.TryGetValue(Selected, out current)) lines.Add(current.Report);

@@ -5,8 +5,8 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 ## Installation
 
 1. Stop your existing arm controller before replacing it.
-2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v4.0/AutoArm_Compact.txt) into an arm programmable block.
-3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v4.0/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
+2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.1/AutoArm_Compact.txt) into an arm programmable block.
+3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.1/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
 4. Name the parts as shown below. You do not need to edit the code or enter configuration for a quick start.
 5. Run `On` on the Arm PB. For another arm, use `On(Arm 2)`. Then use `Select Arm 2` to give it cockpit control.
 
@@ -112,9 +112,11 @@ Pilot input cancels an automatic path or tool operation only for the arm receivi
 
 ### Fine tuning
 
-Custom Data is divided into `[global]` and one section per arm, such as `[Arm 1]` and `[Arm 2]`. Global settings are defaults; a value in an arm section overrides them. Edit settings and run `On(Arm 2)` to apply them to Arm 2, or `Reload(Arm 2)` to remain OFF.
+Custom Data is divided into `[global]` and one section per arm, such as `[Arm 1]` and `[Arm 2]`. Missing settings are generated automatically. Values apply in this order: built-in default, global setting, then arm override. Edit settings and run `On(Arm 2)` on the Arm PB to apply them to both scripts for Arm 2, or `Reload(Arm 2)` to remain OFF.
 
 Use `HeadSpeed` / `HeadTurnSpeed` for movement, `JointSpeed` / `PistonSpeed` for actuator caps, and their acceleration settings to control changes in speed. ToolSwap settings use names such as `Tools.ApproachDistance`, `Tools.MoveSpeed` and `Tools.TurnSpeed`. Travel inherits arm speed; final insertion/withdrawal defaults to 0.05 m/s and 2 degrees/s.
+
+`PositionDamping` and `OrientationDamping` resist unwanted movement and default to `0.2`. Setting either to `0` disables that damping. Pilot input remains additive, and idle deadbands ignore small movement jitter. If the display says cockpit input is inactive, run `Select <arm name>`; `On` does not take input ownership from another selected arm.
 
 The `Actuators` table gives stage Translation/Orientation preferences from 0 to 10. Put it under `[global]` to share it across structurally identical arms. AutoArm checks joint kinds, parallel member counts and split/rejoin layout; a nonconforming arm reports an error and stays OFF. Different lengths and mounting geometry are allowed and checked separately for each arm. Use local `Actuators` and `Structure` overrides for a different arrangement. Detachable tool couplers are excluded from the shared arm-body template.
 

@@ -74,6 +74,7 @@ internal static partial class Scenarios
         PivotProbeCases(type);
         FriendlyConfigCases(type);
         GravityHoldCases(type);
+        DampingCases(type);
         ViewControlCases(type);
         PoseCommandsCases(type);
         PathCases(type);

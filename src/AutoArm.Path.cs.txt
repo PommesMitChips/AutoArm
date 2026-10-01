@@ -87,8 +87,13 @@ bool StepPath(ArmPath path, double dt, double observed, out string why)
         // Align before insertion/withdrawal, then hold one orientation and steer
         // to a lookahead point on the captured Cartesian line, never a shortcut.
         double angle = RotationError(Topology.EndPose.Forward, Topology.EndPose.Up, goal.Forward, goal.Up).Length() * 180 / Math.PI;
-        if (length > 1e-10 && angle <= path.AngleTolerance)
-        { var direction = delta / length; double progress = Vector3D.Dot(position - path.LineStart, direction); reference += direction * Clamp(progress + path.CurrentMove / PositionKp, 0, length); }
+        if (length > 1e-10)
+        {
+            var direction = delta / length; double progress = Vector3D.Dot(position - path.LineStart, direction);
+            // Losing alignment pauses at current progress, never back at the
+            // insertion start. Retain perpendicular correction onto the line.
+            reference += direction * Clamp(progress + (angle <= path.AngleTolerance ? path.CurrentMove / PositionKp : 0), 0, length);
+        }
         demand.Translation = Vector3D.Transform(reference, basis);
     }
     bool settled;

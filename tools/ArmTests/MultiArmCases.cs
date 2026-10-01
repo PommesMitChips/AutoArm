@@ -52,9 +52,21 @@ internal static partial class Scenarios
             var invalid=MultiFixture(out _,out _,out _,paired:!differentKind,wrongKind:differentKind); var scoped=Tests.Create(armType,invalid); for(int i=0;i<20;i++) HostFrame(scoped,invalid); HostReady(scoped,invalid,"Arm 1"); HostFrame(scoped,invalid,"On(Arm 2)"); for(int i=0;i<30;i++) HostFrame(scoped,invalid);
             Check(Enabled(Core(scoped,"Arm 1"))&&!Enabled(Core(scoped,"Arm 2")),"Nonconforming shared layout silently enabled or stopped a valid neighbor.");
         }
-        MultiHostInput(armType); HostServices(armType); MultiToolHost(armType,toolType); MultiToolHost(armType,toolType,true); MultiToolHost(armType,toolType,true,true);
+        HostStartupInput(armType); MultiHostInput(armType); HostServices(armType); MultiToolHost(armType,toolType); MultiToolHost(armType,toolType,true); MultiToolHost(armType,toolType,true,true);
         File.WriteAllText(Path.Combine(Tests.Workspace,"examples/CustomData.ini"),rig.PB.CustomData);
         Console.WriteLine("Multi-arm hosts: selected-only input, scoped/implicit commands, global inheritance and overrides, joint-kind/parallel rejection, independent Home/restart, cross-PB input selection and shared ToolSwap routing.");
+    }
+    static void HostStartupInput(Type type)
+    {
+        var rig=MultiFixture(out _,out _,out var cockpit); string correct=rig.PB.CustomData;
+        var invalid=new MyIni(); invalid.Set("global","Format",0); RecordProxy.Of(rig.PB).Values["CustomData"]=invalid.ToString();
+        var host=Tests.Create(type,rig); Check((long)Get(host,"InputOwner")! ==0,"Invalid startup fixture unexpectedly selected an input owner.");
+        RecordProxy.Of(rig.PB).Values["CustomData"]=correct; HostReady(host,rig,"Arm 1");
+        RecordProxy.Of(cockpit).Values["MoveIndicator"]=new Vector3(0,0,-1);
+        for(int i=0;i<12;i++) HostFrame(host,rig);
+        Check((bool)Get(Core(host,"Arm 1"),"PilotSelected")!&&((Vector3D)Get(Core(host,"Arm 1"),"LastPilotLinear")!).Length()>.01,
+            "On after repairing startup configuration enabled motion without a cockpit input owner.");
+        HostFrame(host,rig,"StopAll"); NoVelocity(rig);
     }
     static void MultiHostInput(Type type)
     {
@@ -64,6 +76,9 @@ internal static partial class Scenarios
         var bus=new ModuleBus(); bus.Bind(rig); bus.Bind(peerRig); var a=Tests.Create(type,rig); var b=Tests.Create(type,peerRig);
         for(int i=0;i<20;i++) { HostFrame(a,rig); HostFrame(b,peerRig); }
         Check(!(bool)Get(Core(a,"Arm 1"),"PilotSelected")!&&(bool)Get(Core(b,"Arm 2"),"PilotSelected")!,"Two Arm PBs retained direct cockpit ownership.");
+        Check(rig.Log.Last().Contains("Cockpit input inactive here"),"An unselected host falsely advertised active cockpit input.");
+        HostFrame(a,rig,"On(Arm 1)"); for(int i=0;i<20;i++) { HostFrame(a,rig); HostFrame(b,peerRig); }
+        Check(!(bool)Get(Core(a,"Arm 1"),"PilotSelected")!&&(bool)Get(Core(b,"Arm 2"),"PilotSelected")!,"On stole another Arm PB's explicit input ownership.");
         HostFrame(a,rig,"Select Arm 1"); for(int i=0;i<10;i++) { HostFrame(a,rig); HostFrame(b,peerRig); }
         Check((bool)Get(Core(a,"Arm 1"),"PilotSelected")!&&!(bool)Get(Core(b,"Arm 2"),"PilotSelected")!,"Construct-wide selection did not transfer input ownership.");
     }
@@ -135,6 +150,19 @@ internal static partial class Scenarios
         Check(Enabled(Core(arm,"Arm 1"))&&Enabled(Core(otherArm,"Arm 2")),"Shared ToolSwap startup failed: "+string.Join(" | ",f.Rig.Log.TakeLast(2))+" / "+string.Join(" | ",toolRig.Log.TakeLast(2)));
         if(automatic)
         {
+            var armSettings=new MyIni(); Check(armSettings.TryParse(f.Rig.PB.CustomData)&&armSettings.ContainsKey("global","ReadKeyboard")&&
+                armSettings.Get("global","PositionIntegralGain").ToDouble()==.5,"Headless ToolSwap startup did not publish arm defaults.");
+            var toolSettings=new MyIni(); Check(toolSettings.TryParse(toolRig.PB.CustomData)&&toolSettings.ContainsKey("global","Tools.MoveSpeed")&&
+                !toolSettings.ContainsKey("Arm 1","Tools.MoveSpeed"),"Tool defaults shadowed global settings with generated arm overrides.");
+            toolSettings.Set("global","Tools.MoveSpeed",.03); toolSettings.Set("Arm 1","Tools.MoveSpeed",.02);
+            RecordProxy.Of(toolRig.PB).Values["CustomData"]=toolSettings.ToString();
+            armSettings.Set("global","PositionIntegralGain",.4); armSettings.Set("Arm 1","PositionIntegralGain",.3);
+            RecordProxy.Of(f.Rig.PB).Values["CustomData"]=armSettings.ToString();
+            HostFrame(arm,f.Rig,"On(Arm 1)"); HostFrame(Owner("Arm 2"),OwnerRig("Arm 2"),"On(Arm 2)");
+            for(int i=0;i<600&&(!Enabled(Core(arm,"Arm 1"))||!Enabled(Core(otherArm,"Arm 2")));i++) Tick();
+            Check((double)Get(Core(arm,"Arm 1"),"PositionKi")! ==.3&&(!split?(double)Get(Core(arm,"Arm 2"),"PositionKi")! ==.4:true),"Generated arm defaults broke local/global priority.");
+            Check((double)Get(SwapController(Core(tools,"Arm 1")),"Move")! ==.02&&
+                (double)Get(SwapController(Core(tools,"Arm 2")),"Move")! ==.03,"Tool local/global settings did not override generated defaults.");
             foreach(var fixture in new[]{f,g}) foreach(var marker in fixture.Markers)
             {
                 var data=new MyIni(); Check(data.TryParse(marker.CustomData)&&data.Get("AutoArm Tool","Mount").ToInt64()!=0&&data.Get("AutoArm Tool","HeadMerges").ToString().Length>0&&data.Get("AutoArm Tool","ParkPose").ToString().Length>0,"Quick-start discovery did not persist hardware/park pose on its named head.");
@@ -144,7 +172,8 @@ internal static partial class Scenarios
         }
         foreach(var target in new[]{(Name:"Arm 1",Fixture:f),(Name:"Arm 2",Fixture:g)})
         {
-            HostFrame(Owner(target.Name),OwnerRig(target.Name),"Tool(2,"+target.Name+")"); string previous=""; int phaseTicks=0;
+            int chosen=automatic&&target.Name=="Arm 1"?1:2;
+            HostFrame(Owner(target.Name),OwnerRig(target.Name),"Tool("+chosen+","+target.Name+")"); string previous=""; int phaseTicks=0;
             for(int i=0;i<7000;i++)
             {
                 var core=Core(tools,target.Name); string phase=SwapPhase(core); phaseTicks=phase==previous?phaseTicks+1:0;
@@ -156,8 +185,23 @@ internal static partial class Scenarios
                 else if(phase=="Release") target.Fixture.SplitTool(Array.IndexOf(target.Fixture.Markers,(IMyTerminalBlock)Get(Get(SwapController(core),"Destination")!,"Marker")!));
                 Tick(); previous=phase;
             }
-            Check(Enabled(Core(Owner(target.Name),target.Name))&&target.Fixture.Couplers[1].Top==target.Fixture.ArmTip,"Shared ToolSwap failed to mount/resume "+target.Name+": "+string.Join(" | ",toolRig.Log.TakeLast(3)));
+            Check(Enabled(Core(Owner(target.Name),target.Name))&&target.Fixture.Couplers[chosen-1].Top==target.Fixture.ArmTip,"Shared ToolSwap failed to mount/resume "+target.Name+": "+string.Join(" | ",toolRig.Log.TakeLast(3)));
             string neighbor=target.Name=="Arm 1"?"Arm 2":"Arm 1"; Check(Enabled(Core(Owner(neighbor),neighbor)),"Scoped tool change stopped the other hosted arm.");
+            if(!split&&target.Name=="Arm 1")
+            {
+                var cockpit=f.Rig.Blocks.OfType<IMyShipController>().First();
+                RecordProxy.Of(cockpit).Values["MoveIndicator"]=new Vector3(0,0,-1);
+                for(int i=0;i<12;i++) Tick();
+                Check((bool)Get(Core(arm,"Arm 1"),"PilotSelected")!&&((Vector3D)Get(Core(arm,"Arm 1"),"LastPilotLinear")!).Length()>.01,
+                    "Tool pickup resumed ON without restoring live selected-arm cockpit input.");
+                RecordProxy.Of(cockpit).Values["MoveIndicator"]=Vector3.Zero;
+                HostFrame(arm,f.Rig,"On(Arm 1)"); for(int i=0;i<600&&!Enabled(Core(arm,"Arm 1"));i++) Tick();
+                RecordProxy.Of(cockpit).Values["MoveIndicator"]=new Vector3(0,0,-1);
+                for(int i=0;i<12;i++) Tick();
+                Check(Enabled(Core(arm,"Arm 1"))&&((Vector3D)Get(Core(arm,"Arm 1"),"LastPilotLinear")!).Length()>.01,
+                    "Repeated On after tool pickup lost cockpit input.");
+                RecordProxy.Of(cockpit).Values["MoveIndicator"]=Vector3.Zero;
+            }
         }
         Check(inventory.All(x=>!RecordProxy.Of(x).ActorWrites.Any(w=>w.Actor=="ToolSwap"&&w.Name is "Velocity" or "TargetVelocityRad")),"Multi-arm ToolSwap wrote joint velocities.");
         if(automatic)

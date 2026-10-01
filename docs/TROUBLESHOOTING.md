@@ -28,6 +28,10 @@ Global Actuators settings require the configured joint kinds, member counts and 
 
 Stop cancels only the target arm; StopAll stops all arms hosted by that PB. Select chooses cockpit input. Automatic movement for an unselected arm continues independently. Resolve reported topology/attachment/communication faults, then run On for that arm. Expected ToolSwap changes rebuild and resume automatically.
 
+An arm can be ON while another arm owns cockpit input. Run `Select <arm name>` on its Arm PB to choose it. The status reports when cockpit input is inactive at that PB. An initial configuration error followed by a successful On now establishes the default selection if no owner exists.
+
+`PositionDamping` and `OrientationDamping` default to 0.2 and can be set globally or per arm. Zero restores the earlier undamped response. The final insertion target holds current progress when alignment is lost; it does not retreat to the line start. If movement still oscillates, record the position/angular errors and active speed, acceleration and damping settings; native SE joint flex and contact are not simulated by the test harness.
+
 Travel uses the arm's HeadSpeed/HeadTurnSpeed. ToolSwap's slower defaults apply to final docking/insertion and withdrawal. Joint speed, acceleration, limits and actual physics still bound achievable movement. Multiple arms share one PB instruction budget; distribute larger arms over more PBs if the reserve guard stops them.
 
 ## Tool return orientation

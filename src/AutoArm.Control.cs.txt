@@ -34,6 +34,7 @@ const double ManualCounterCorrectionFraction = 0.50;
 double MaximumPilotTargetLeadM = 1.50;
 double PositionIntegralCap = 0.20;
 double OrientationIntegralCapDeg = 5.0;
+double PositionDamping = .2, OrientationDamping = .2;
 const double IntegralUnwindSeconds = 2.0;
 double JointAccelerationRpmPerSec = 1.0;
 double PistonAccelerationMps2 = 0.40;
@@ -70,6 +71,7 @@ void ApplySettings(AutoSettings s)
     PositionCorrectionCap = s.V[10]; OrientationCorrectionCapDeg = s.V[11]; MaximumPilotTargetLeadM = s.V[12];
     PositionKi = s.V[13]; OrientationKi = s.V[14]; PositionIntegralCap = s.V[15]; OrientationIntegralCapDeg = s.V[16];
     ReadKeyboard = s.Keyboard; ReadRoll = s.Roll; ReadMouse = s.Mouse; MovementMode = s.Mode; MouseSensitivity = s.V[17];
+    PositionDamping = s.V[18]; OrientationDamping = s.V[19];
     InputController = null; InputScan = 10;
 }
 Vector3D TargetP, TargetF, TargetU, PreviousP, PreviousF, PreviousU;
@@ -453,8 +455,12 @@ void UpdateControl(double dt, double observationDt)
         positionDemand = ClampLength(positionDemand, ToolDriveMoveCap);
         orientationDemand = ClampLength(orientationDemand, ToolDriveTurnCap);
     }
-    Vector3D rawPositionFeedback = positionDemand + PositionI - FilteredV * 0.0;
-    Vector3D rawOrientationFeedback = orientationDemand + OrientationI - FilteredW * 0.0;
+    // Measured-motion damping stays inside additive, bounded correction.
+    // Preserve the idle deadbands rather than chase measurement jitter.
+    double pd = ToolDriving || LastPilotLinear.LengthSquared() > 1e-12 || LastPositionError > PositionDeadbandM ? PositionDamping : 0;
+    double od = ToolDriving || manualTurn || oe.Length() > orientationBand ? OrientationDamping : 0;
+    Vector3D rawPositionFeedback = positionDemand + PositionI - FilteredV * pd;
+    Vector3D rawOrientationFeedback = orientationDemand + OrientationI - FilteredW * od;
     Vector3D boundedPositionFeedback = ClampLength(rawPositionFeedback, ToolDriving ? ToolDriveMoveCap : PositionCorrectionCap);
     LastFeedbackLinear = BlendManualCorrection(LastPilotLinear, boundedPositionFeedback,
         ManualCounterCorrectionFraction, out LastCounterCorrectionLimited);

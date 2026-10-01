@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0";
+const string ControllerBuildVersion = "4.0.1";
 
 const int HostFormat = 2;
 const string WireTag = "AutoArm/5";
@@ -192,7 +192,7 @@ void CaptureDefaults(ArmCore core)
         if (key.Section == "AutoArm" || key.Name == "Actuators") continue;
         string field = key.Section == "Config" || key.Section == "Modules" ? key.Name : key.Section + "." + key.Name;
         if (!Configuration.ContainsKey(core.Name, field) && !Configuration.ContainsKey("global", field))
-            Configuration.Set(core.Name, field, ini.Get(key).ToString());
+            Configuration.Set(core.SharedSetting(field) ? "global" : core.Name, field, ini.Get(key).ToString());
     }
     PublishConfig();
 }
@@ -265,7 +265,7 @@ readonly string ArmName;
 
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "4.0";
+const string ControllerBuildVersion = "4.0.1";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -361,7 +361,7 @@ public void Main(string argument, UpdateType source)
             string command = PendingCommand, verb = command.Split(' ')[0].ToLowerInvariant();
             if (verb == "on" || verb == "reload")
             {
-                string why; if (!Tools.Load(out why) || !Tools.NamesForArm(out why)) throw new Exception(why);
+                string why; RefreshConfig(); if (!Tools.Load(out why) || !Tools.NamesForArm(out why)) throw new Exception(why);
                 if (!Tools.Configured) throw new Exception("Tools.Enabled must be true in the ToolSwap PB.");
                 var ini = new MyIni(); ini.TryParse(CustomData); Tools.WriteConfig(ini); CustomData = ini.ToString(); Initialised = true;
                 if (verb == "on") Tools.StartOn();
@@ -878,6 +878,8 @@ sealed partial class ToolSwapController
     readonly ArmCore P;
     string ArmName => P.ArmName;
     static readonly string[] NumberKeys = { "ApproachDistance", "MoveSpeed", "TurnSpeed", "PositionTolerance", "AngleTolerance", "PhaseTimeout" };
+    public bool SharedSetting(string field)
+    { return field.StartsWith("Tools.", StringComparison.Ordinal) && (Array.IndexOf(NumberKeys, field.Substring(6)) >= 0 || "|Tools.ScanHeadMerges|Tools.ScanStandMerges|Tools.ScanParkMerges|Tools.MergeNormal|Tools.CellLimit|".Contains("|" + field + "|")); }
     readonly List<Profile> Profiles = new List<Profile>();
     readonly List<IMyTerminalBlock> Inventory = new List<IMyTerminalBlock>();
     readonly List<string> ParkNames = new List<string>();
@@ -1013,6 +1015,10 @@ sealed partial class ToolSwapController
         Profiles.Clear(); Profiles.AddRange(profiles); ParkNames.Clear(); ParkNames.AddRange(Names(ini.Get(ToolsSection, "ParkMerges").ToString()));
         ZeroMount(); Scanned = false; Tip = null;
         if (!BuildArm(out why) || !RefreshTip(out why)) return false;
+        for (int i = 0; i < values.Length; i++) ini.Set(ToolsSection, NumberKeys[i], values[i]);
+        ini.Set(ToolsSection, "ScanHeadMerges", sh); ini.Set(ToolsSection, "ScanStandMerges", ss); ini.Set(ToolsSection, "ScanParkMerges", sp);
+        ini.Set(ToolsSection, "MergeNormal", axis); ini.Set(ToolsSection, "CellLimit", limit);
+        P.CustomData = ini.ToString();
         Last = "Tools disabled";
         if (enabled)
         {
@@ -1883,6 +1889,8 @@ static string PathRow(MatrixD frame)
 public string Summary => Tools.Busy ? "TOOLS" : Tools.Recovery ? "RECOVERY" : "IDLE";
 public void Stop(string why) { PendingCommand = ""; Tools.Cancel(why); }
 
+public bool SharedSetting(string field) { return Tools.SharedSetting(field); }
+void RefreshConfig() { Host.LoadHost(); if (!Host.Arms.ContainsKey(Name)) throw new Exception("Arm removed from configuration."); CustomData = Host.InternalConfig(Name); }
 
 
 

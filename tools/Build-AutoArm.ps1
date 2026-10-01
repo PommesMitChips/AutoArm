@@ -29,7 +29,7 @@ function Build-HostScript([string]$engine, [bool]$tool) {
     $coreText = $coreText.Replace('"AutoArm/4"','"AutoArm/5"').Replace('"Version", 4','"Version", 5').Replace('"Version").ToInt32() == 4','"Version").ToInt32() == 5')
     $coreText = [regex]::Replace($coreText,'public ArmCore\(\)\s*\{','public ArmCore(Program host, string name, string customData, string storage) { Host = host; ArmName = name; CustomData = customData; Storage = storage;')
     if (-not $tool) { $coreText = $coreText.Replace('bool CheckArmLayout(out string why) { why = ""; return true; }','bool CheckArmLayout(out string why) { return Host.Layout(this, out why); }') }
-    else { $coreText = $coreText.Replace('if (!Tools.Load(out why)) throw new Exception(why);','if (!Tools.Load(out why) || !Tools.NamesForArm(out why)) throw new Exception(why);') }
+    else { $coreText = $coreText.Replace('if (!Tools.Load(out why)) throw new Exception(why);','RefreshConfig(); if (!Tools.Load(out why) || !Tools.NamesForArm(out why)) throw new Exception(why);') }
     $facadeText = [IO.File]::ReadAllText((Join-Path $workspace 'src/AutoArm.CoreFacade.cs.txt'))
     $roleText = [IO.File]::ReadAllText((Join-Path $workspace $(if ($tool) {'src/AutoArm.ToolFacade.cs.txt'} else {'src/AutoArm.ArmFacade.cs.txt'})))
     return $hostText + "`nsealed class ArmCore {`n" + $facadeText + "`n" + $coreText + "`n" + $roleText + "`n}`n"

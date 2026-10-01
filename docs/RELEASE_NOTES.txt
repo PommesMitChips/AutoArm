@@ -1,4 +1,21 @@
-AutoArm 4.0 — Multiple arms and tool quick start
+AutoArm 4.0.1 — Docking, damping and configuration recovery
+
+Final insertion now pauses at its current line progress when orientation loses
+alignment. It no longer commands a return to the insertion start on each angular
+tolerance crossing. Measured-motion damping is configurable with PositionDamping
+and OrientationDamping, defaulting to 0.2; 0 restores the previous undamped law.
+P/I gains are unchanged. Additive manual priority, gravity bias, speed/acceleration
+bounds and idle deadbands remain enforced. Delayed velocity-plant tests reduce
+peak release overshoot; live SE flex, contact and actuator dynamics are unverified.
+
+Arm and ToolSwap settings are generated even for a headless ToolSwap setup.
+Defaults fill missing fields without shadowing global values with generated arm
+overrides. A remote On reloads the ToolSwap PB's current public configuration.
+Recovery from invalid startup claims input only if no owner was established;
+another Arm PB's selection is preserved. Status explains inactive cockpit input.
+External formats/protocol are unchanged; existing v4.0 Custom Data can be retained.
+
+Multiple arms and tool quick start:
 
 The Arm PB now hosts up to eight independent arm instances within one shared
 instruction budget. Select <arm name> assigns live cockpit input. All commands
@@ -30,6 +47,6 @@ fallback are absent from generated code. No unreachable-code warnings remain;
 the build reports CS0162 diagnostics explicitly. Specialization checks preserve
 scopes, expression types, callbacks and initializer/short-circuit effects.
 
-Arm: 97,844 characters, 2,156 free. ToolSwap: 63,602, 36,398 free. Installed SE API /
-C#6 compilation, exact source-method IL after packing and 179,770 simulated
+Arm: 98,238 characters, 1,762 free. ToolSwap: 64,193, 35,807 free. Installed SE API /
+C#6 compilation, exact source-method IL after packing and 191,378 simulated
 assertions pass. Actual instruction timing and live game physics remain unverified.

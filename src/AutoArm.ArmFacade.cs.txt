@@ -1,6 +1,7 @@
 public string Summary => Enabled ? GoingHome ? "HOME" : LocalPath != null ? "PATH" : "ON" : Tools.Busy ? "TOOLS" : LastFault.Length > 0 ? LastFault : ConfigValid ? "OFF" : Status;
 public bool HasLayout => ConfigValid && Topology.Fingerprint.Length > 0;
 public void Stop(string why) { Fault(why); }
+public bool SharedSetting(string field) { return field != "ToolSwapPB" && field != "Peers"; }
 public void Select(bool selected)
 {
     if (selected == PilotSelected) return;

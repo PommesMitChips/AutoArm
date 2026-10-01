@@ -15,6 +15,8 @@ sealed partial class ToolSwapController
     readonly Program P;
     string ArmName => P.ArmName;
     static readonly string[] NumberKeys = { "ApproachDistance", "MoveSpeed", "TurnSpeed", "PositionTolerance", "AngleTolerance", "PhaseTimeout" };
+    public bool SharedSetting(string field)
+    { return field.StartsWith("Tools.", StringComparison.Ordinal) && (Array.IndexOf(NumberKeys, field.Substring(6)) >= 0 || "|Tools.ScanHeadMerges|Tools.ScanStandMerges|Tools.ScanParkMerges|Tools.MergeNormal|Tools.CellLimit|".Contains("|" + field + "|")); }
     readonly List<Profile> Profiles = new List<Profile>();
     readonly List<IMyTerminalBlock> Inventory = new List<IMyTerminalBlock>();
     readonly List<string> ParkNames = new List<string>();
@@ -150,6 +152,10 @@ sealed partial class ToolSwapController
         Profiles.Clear(); Profiles.AddRange(profiles); ParkNames.Clear(); ParkNames.AddRange(Names(ini.Get(ToolsSection, "ParkMerges").ToString()));
         ZeroMount(); Scanned = false; Tip = null;
         if (!BuildArm(out why) || !RefreshTip(out why)) return false;
+        for (int i = 0; i < values.Length; i++) ini.Set(ToolsSection, NumberKeys[i], values[i]);
+        ini.Set(ToolsSection, "ScanHeadMerges", sh); ini.Set(ToolsSection, "ScanStandMerges", ss); ini.Set(ToolsSection, "ScanParkMerges", sp);
+        ini.Set(ToolsSection, "MergeNormal", axis); ini.Set(ToolsSection, "CellLimit", limit);
+        P.Me.CustomData = ini.ToString();
         Last = "Tools disabled";
         if (enabled)
         {
