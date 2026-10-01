@@ -52,6 +52,13 @@ internal static class Tests
             { Scenarios.ControlCompare(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(args[1]))); return 0; }
             if(args.Length==2&&args[1]=="--servo-compare")
             { string source=File.ReadAllText(args[0]); Scenarios.ServoComparison(Script(source),Script(Scenarios.ServoCandidate(source))); return 0; }
+            if(args.Length==2&&args[1]=="--packed-hosts")
+            {
+                Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
+                Scenarios.RunHosts(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_ToolSwap_Source.txt"))));
+                CheckPackedPrograms();
+                return 0;
+            }
             if(args.Length!=1) throw new Exception("Usage: ArmTests <script.txt> [--control-audit|--servo-compare]");
             Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
             EngineSource=File.ReadAllText(Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm.Engine.txt"));
@@ -60,8 +67,18 @@ internal static class Tests
             Console.WriteLine("Full script compiles against installed interfaces in the simulated PB host.");
             Scenarios.RunAll(type);
             Scenarios.RunHosts(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_ToolSwap_Source.txt"))));
+            CheckPackedPrograms();
             return 0;
         }
         catch(Exception e){Console.Error.WriteLine(e);return 1;}
+    }
+    static void CheckPackedPrograms()
+    {
+            var packedArm=Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Compact.txt")));
+            var packedTool=Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_ToolSwap_Compact.txt")));
+            PackedProgramChecks.Register(packedArm,Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm_Compact.names.json"));
+            PackedProgramChecks.Register(packedTool,Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm_ToolSwap_Compact.names.json"));
+            Scenarios.RunHosts(packedArm,packedTool);
+            Console.WriteLine("Actual compressed programs: PASS (namespace entry points, aliases, strings and forwarding helpers).");
     }
 }

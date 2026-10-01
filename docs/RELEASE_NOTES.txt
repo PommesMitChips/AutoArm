@@ -26,8 +26,8 @@ baseline packing with exact token/compilation/method-IL checks, and 194,723
 standard simulated assertions. Capture tests connect while the path is moving
 and filtered velocity is above old thresholds, run the Arm alone to prove local
 stopping, refuse partial/unproven support, and complete automatic swap/resume.
-The actual baseline compact programs also pass multi-arm host tests via the
-in-progress test adapter (194,866 total assertions). Live SE capture/contact
-still requires confirmation. Separate compression-tool work was preserved.
+The reviewed repetition/namespace packer also passes compact-host tests via the
+integrated test adapter (194,866 total assertions). Live SE capture/contact
+still requires confirmation. No features or diagnostics were removed.
 
-Arm: 99,924 characters, 76 free. ToolSwap: 65,268, 34,732 free.
+Arm: 90,452 characters, 9,548 free. ToolSwap: 57,716, 42,284 free.

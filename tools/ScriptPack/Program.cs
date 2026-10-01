@@ -60,6 +60,7 @@ internal static class ScriptPack
             if (args[0] == "inspect") { Inspect(compilation); return; }
             if (args[0] == "test") { Regression.Run(args[1], args[2]); return; }
             if (args[0] != "pack" || args.Length != 3) throw new Exception("Unknown command or missing output path.");
+            CompressionChecks.Run();
             Pack(source, compilation, args[2]);
         }
         catch (Exception e) { Console.Error.WriteLine(e); Environment.ExitCode = 1; }
@@ -241,12 +242,19 @@ internal static class ScriptPack
             }
             if (restored != tokens[i].Text) throw new Exception("Source token round-trip failed.");
         }
+        var repetitions = RepetitionCompression.Run(packed, packed.Length - compact.Length - 1);
+        packed = repetitions.Source;
+        var namespaceAliases = NamespaceCompression.Run(packed);
+        packed = namespaceAliases.Source;
+        repetitions.Report.AddRange(namespaceAliases.Report);
+        Check(Compile(packed, output));
         if (packed.Length > 100000) throw new Exception($"Packed script still exceeds 100,000 characters: {packed.Length}.");
         File.WriteAllText(output, packed, new UTF8Encoding(false));
         var mapPath = Path.Combine(Path.GetDirectoryName(output)!, "tools", "ScriptPack", "obj", Path.GetFileNameWithoutExtension(output) + ".names.json");
         Directory.CreateDirectory(Path.GetDirectoryName(mapPath)!);
         File.WriteAllText(mapPath, JsonSerializer.Serialize(symbols.Select(kv => new { symbol = kv.Key.ToDisplayString(), name = kv.Value }), new JsonSerializerOptions { WriteIndented = true }));
-        Console.WriteLine($"Packed: {packed.Length:N0} characters; {100000 - packed.Length:N0} free to 100,000. Token round-trip, compilation and identical method IL: PASS. Renamed {symbols.Count} symbols.");
+        File.WriteAllText(Path.ChangeExtension(mapPath, ".compression.json"), JsonSerializer.Serialize(repetitions.Report, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine($"Packed: {packed.Length:N0} characters; {100000 - packed.Length:N0} free to 100,000. Base packing token/IL checks and repetition expansion check: PASS. Renamed {symbols.Count} symbols.");
     }
 
     static string ShortDeclarations(string source, CSharpCompilation compilation)
@@ -322,6 +330,15 @@ internal static class ScriptPack
             edits.RemoveAll(e => e.Start >= variables.Type.SpanStart - Header.Length && e.Start + e.Length <= variables.Type.Span.End - Header.Length);
             edits.Add((variables.Type.SpanStart - Header.Length, variables.Type.Span.Length, "var"));
         }
+        foreach (var loop in tree.GetRoot().DescendantNodes().OfType<ForEachStatementSyntax>())
+        {
+            if (loop.Type.SpanStart < Header.Length + boundary || loop.Type.IsVar || loop.Type.Span.Length <= 3) continue;
+            var declared = model.GetTypeInfo(loop.Type).Type;
+            var element = model.GetForEachStatementInfo(loop).ElementType;
+            if (declared == null || declared.Locations.Any(l => l.IsInSource) || !SymbolEqualityComparer.Default.Equals(declared, element)) continue;
+            edits.RemoveAll(e => e.Start >= loop.Type.SpanStart - Header.Length && e.Start + e.Length <= loop.Type.Span.End - Header.Length);
+            edits.Add((loop.Type.SpanStart - Header.Length, loop.Type.Span.Length, "var"));
+        }
         foreach (var token in tree.GetRoot().DescendantTokens().Where(t => t.IsKind(SyntaxKind.PrivateKeyword)))
         {
             if (token.SpanStart < Header.Length + boundary || token.Parent?.Parent is not ClassDeclarationSyntax) continue;
@@ -334,7 +351,7 @@ internal static class ScriptPack
         return result.ToString();
     }
 
-    static void CompareIL(CSharpCompilation source, CSharpCompilation packed)
+    internal static void CompareIL(CSharpCompilation source, CSharpCompilation packed)
     {
         using var a = new MemoryStream();
         using var b = new MemoryStream();
@@ -444,7 +461,7 @@ internal static class ScriptPack
             parsed[0].ValueText == value ? candidate : null;
     }
 
-    static string Compact(SyntaxToken[] tokens)
+    internal static string Compact(SyntaxToken[] tokens)
     {
         var b = new StringBuilder();
         string previous = "";
