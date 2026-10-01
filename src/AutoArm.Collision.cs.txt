@@ -1,6 +1,6 @@
 // Shared optional collision service. Paste the generated script into a third PB.
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "5.0";
+const string ControllerBuildVersion = "5.0.1";
 const string Tag = "AutoArm/5", Section = "Link";
 sealed class Shape
 {
@@ -320,7 +320,7 @@ void Evaluate(Arm arm, MyIni response)
                     if (!Budget()) { hold = true; reason = "Collision query budget; hold."; break; }
                     Vector3D axis; double d = Separation(body, a, obstacle, b, out axis);
                     if (d >= range || Contact(arm, body, a, obstacle, b)) continue;
-                    if (d < -Clearance) { hold = true; reason = "Overlapping geometry; inspect or adjust contact setup."; break; }
+                    if (d < -Clearance) { hold = true; reason = "Overlapping geometry: grids " + body.Grid.EntityId + "/" + obstacle.Grid.EntityId + ", blocks " + a.Tag + "/" + b.Tag + "; inspect contact setup."; break; }
                     if (!AddConstraint(arm, pair.Value, obstacle, a, body, b, d, axis, bias, rows))
                     { hold = true; reason = "Too many simultaneous constraints; hold."; break; }
                     reason = "Avoiding grid " + obstacle.Grid.EntityId + "; clearance " + d.ToString("0.000") + " m.";

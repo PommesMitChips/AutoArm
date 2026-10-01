@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "5.0";
+const string ControllerBuildVersion = "5.0.1";
 
 const int HostFormat = 7;
 const string WireTag = "AutoArm/5", GlobalSection = "global";
@@ -330,7 +330,7 @@ public void Update(string argument, UpdateType source, double elapsed)
 readonly string ArmName;
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "5.0";
+const string ControllerBuildVersion = "5.0.1";
 
 
 // C# 6 programmable-block fragment. Paste inside ArmCore.
@@ -3578,6 +3578,10 @@ sealed class ArmServices
         ini.Set(LinkSection, "Completed", client.Path == null ? 0 : client.Path.Completed);
         ini.Set(LinkSection, "Count", client.Path == null ? 0 : client.Path.Waypoints.Count);
         ini.Set(LinkSection, "DefaultMove", P.MoveMps); ini.Set(LinkSection, "DefaultTurn", P.TurnDeg);
+        ini.Set(LinkSection, "SafetyRequired", Safety != null);
+        if (Safety != null) Safety.WriteStatus(ini);
+        ini.Set(LinkSection, "PositionError", P.LastPositionError); ini.Set(LinkSection, "AngleError", P.LastOrientationErrorDeg);
+        ini.Set(LinkSection, "SolverPasses", P.LastSolverPasses); ini.Set(LinkSection, "SolverBudget", P.LastSolverBudgetLimited);
         if (P.Topology.Ready) WriteFrame(ini, "Pose", P.Topology.EndPose);
         // Failure to reply to an idle observer must not fault a healthy arm.
         try { link.Send(ini); } catch { if (Owner == client) P.Fault("Planner reply failed."); }
@@ -3664,6 +3668,13 @@ sealed class SafetyOverlay
         return values;
     }
     public bool Ready { get { return Age <= .25 && P.Topology.Ready && Stamp == Identity(); } }
+    public void WriteStatus(MyIni ini)
+    {
+        ini.Set(LinkSection, "SafetyReady", Ready); ini.Set(LinkSection, "SafetyHold", !Ready || Blocked);
+        ini.Set(LinkSection, "SafetyAge", Age); ini.Set(LinkSection, "SafetyScale", Scale);
+        ini.Set(LinkSection, "SafetyLimited", Limited); ini.Set(LinkSection, "SafetyFraction", Fraction);
+        ini.Set(LinkSection, "SafetyReason", Ready ? Reason : "Waiting for fresh collision guidance.");
+    }
     public double Preferred(int i) { return Ready && i < Bias.Length ? Bias[i] : 0; }
     public void Hold()
     {

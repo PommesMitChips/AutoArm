@@ -5,8 +5,8 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 ## Installation
 
 1. Stop your existing arm controller before replacing it.
-2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v5.0/AutoArm_Compact.txt) into an arm programmable block.
-3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v5.0/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
+2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v5.0.1/AutoArm_Compact.txt) into an arm programmable block.
+3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v5.0.1/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
 4. Name the parts as shown below. You do not need to edit the code or enter configuration for a quick start.
 5. Run `On` on the Arm PB. For another arm, use `On(Arm 2)`. Then use `Select Arm 2` to give it cockpit control.
 
@@ -22,7 +22,7 @@ Intermediate pistons, rotors and hinges do not need special names. Use only the 
 
 ### Optional collision avoidance
 
-Install the [Collision script](https://github.com/PommesMitChips/AutoArm/blob/v5.0/AutoArm_Collision_Compact.txt) in another PB on the same construct and name it **`Collision PB`**. Add this key to the Arm PB's existing `[global]` section, retaining any other peer rows:
+Install the [Collision script](https://github.com/PommesMitChips/AutoArm/blob/v5.0.1/AutoArm_Collision_Compact.txt) in another PB on the same construct and name it **`Collision PB`**. Add this key to the Arm PB's existing `[global]` section, retaining any other peer rows:
 
 ```ini
 Peers=
@@ -36,6 +36,8 @@ AutoArm uses spare joint movement to improve clearance while tracking the head. 
 Collision PB commands are `Info`, `Rescan`, `On`, `Reload` and `Off`. Run `Rescan` after adding or removing ship blocks. Adjust `Clearance`, `Influence` and `AwaySpeed` in its Custom Data, then `Reload`. If `Info` reports a scan limit, increase `MaxCells` or `MaxShapes` within the accepted range.
 
 For a repeatable two-arm test, first collect a read-only geometry report with [Arm Survey](docs/IN_GAME_SURVEY.md). It records starting head poses without commanding movement; use that report to prepare the head paths before testing through ArmService with Safety enabled.
+
+The [two-arm test runner](docs/IN_GAME_BENCH.md) provides a readiness check, small outward-and-return smoke test, and repeated outward/sideways head paths for the surveyed build. It requires live Safety permission and operates through ArmService.
 
 This first version uses conservative occupied-block volumes, rather than exact model shapes. Intended joint and docking contacts have limited allowances. It covers construct geometry and registered arms; terrain, unrelated ships and automatic routes around traps are not covered. Clearance checks do not model every SE physics effect, so begin with low movement speeds and confirm clearance on your build.
 

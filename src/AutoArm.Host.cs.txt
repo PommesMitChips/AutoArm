@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "5.0";
+const string ControllerBuildVersion = "5.0.1";
 const bool ToolHost = @@TOOL@@;
 const int HostFormat = @@FORMAT@@;
 const string WireTag = "AutoArm/5", GlobalSection = "global";

@@ -37,6 +37,6 @@ The observer verifies that a Safety peer is configured and accessible; it does n
 
 ## The motion test after the report
 
-The report will define the next script's starting poses and excursions. That runner will submit head position/orientation paths to the **same ArmService PB**, with Collision/Safety enabled. It will keep separate progress and results for each arm, use matching head motions relative to the reported starting frames, and finish each successful sequence at its starting head pose. Returning the head pose does not necessarily restore every redundant joint angle.
+The report defines the next script's starting poses and excursions. The [test runner](IN_GAME_BENCH.md) submits head position/orientation paths to the **same ArmService PB**, with Collision/Safety enabled. It keeps separate progress and results for each arm, uses matching head displacements in a common reference frame, and finishes each successful sequence at its starting head pose. Returning the head pose does not necessarily restore every redundant joint angle.
 
 Do not start a motion test from guessed coordinates. The survey deliberately contains no test path. The later runner will report a blocked or cancelled run instead of forcing a return through an obstacle or after an emergency stop.

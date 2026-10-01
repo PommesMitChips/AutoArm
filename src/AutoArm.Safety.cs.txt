@@ -77,6 +77,13 @@ sealed class SafetyOverlay
         return values;
     }
     public bool Ready { get { return Age <= .25 && P.Topology.Ready && Stamp == Identity(); } }
+    public void WriteStatus(MyIni ini)
+    {
+        ini.Set(LinkSection, "SafetyReady", Ready); ini.Set(LinkSection, "SafetyHold", !Ready || Blocked);
+        ini.Set(LinkSection, "SafetyAge", Age); ini.Set(LinkSection, "SafetyScale", Scale);
+        ini.Set(LinkSection, "SafetyLimited", Limited); ini.Set(LinkSection, "SafetyFraction", Fraction);
+        ini.Set(LinkSection, "SafetyReason", Ready ? Reason : "Waiting for fresh collision guidance.");
+    }
     public double Preferred(int i) { return Ready && i < Bias.Length ? Bias[i] : 0; }
     public void Hold()
     {

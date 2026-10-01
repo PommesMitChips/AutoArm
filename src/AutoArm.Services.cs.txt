@@ -135,6 +135,10 @@ sealed class ArmServices
         ini.Set(LinkSection, "Completed", client.Path == null ? 0 : client.Path.Completed);
         ini.Set(LinkSection, "Count", client.Path == null ? 0 : client.Path.Waypoints.Count);
         ini.Set(LinkSection, "DefaultMove", P.MoveMps); ini.Set(LinkSection, "DefaultTurn", P.TurnDeg);
+        ini.Set(LinkSection, "SafetyRequired", Safety != null);
+        if (Safety != null) Safety.WriteStatus(ini);
+        ini.Set(LinkSection, "PositionError", P.LastPositionError); ini.Set(LinkSection, "AngleError", P.LastOrientationErrorDeg);
+        ini.Set(LinkSection, "SolverPasses", P.LastSolverPasses); ini.Set(LinkSection, "SolverBudget", P.LastSolverBudgetLimited);
         if (P.Topology.Ready) WriteFrame(ini, "Pose", P.Topology.EndPose);
         // Failure to reply to an idle observer must not fault a healthy arm.
         try { link.Send(ini); } catch { if (Owner == client) P.Fault("Planner reply failed."); }

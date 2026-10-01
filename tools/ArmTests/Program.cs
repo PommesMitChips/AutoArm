@@ -63,6 +63,10 @@ internal static class Tests
             { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.CollisionCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))));return 0; }
             if(args.Length==2&&args[1]=="--survey")
             { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.SurveyCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Survey.txt"))));return 0; }
+            if(args.Length==2&&args[1]=="--bench")
+            { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.BenchCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Bench.txt"))));return 0; }
+            if(args.Length==3&&args[1]=="--survey-geometry")
+            { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.SurveyGeometryCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))),args[2]);return 0; }
             if(args.Length!=1) throw new Exception("Usage: ArmTests <script.txt> [--control-audit|--servo-compare]");
             Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
             EngineSource=File.ReadAllText(Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm.Engine.txt"));
@@ -71,6 +75,7 @@ internal static class Tests
             Console.WriteLine("Full script compiles against installed interfaces in the simulated PB host.");
             Scenarios.RunAll(type);
             Scenarios.WeightRepresentationCases(type);
+            Scenarios.BenchCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Bench.txt"))));
             Scenarios.RunHosts(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_ToolSwap_Source.txt"))));
             CheckPackedPrograms();
             Scenarios.CollisionCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))));
@@ -88,6 +93,7 @@ internal static class Tests
             var packedCollision=Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Compact.txt")));
             PackedProgramChecks.Register(packedCollision,Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm_Collision_Compact.names.json"));
             Scenarios.CollisionCases(packedArm,packedCollision);
+            Scenarios.BenchCases(packedArm,Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Bench.txt"))));
             Console.WriteLine("Actual compressed programs: PASS (namespace entry points, aliases, strings and forwarding helpers).");
     }
 }

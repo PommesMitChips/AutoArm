@@ -3,4 +3,4 @@
 readonly string ArmName = "Arm 1";
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "5.0";
+const string ControllerBuildVersion = "5.0.1";
