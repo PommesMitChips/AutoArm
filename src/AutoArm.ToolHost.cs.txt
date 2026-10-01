@@ -1,6 +1,6 @@
 // ToolSwap PB: geometry and equipment state only. The arm PB is the sole writer
 // of joint velocities. Stop fences wait for a matching acknowledgement.
-const string ControllerBuildVersion = "4.0.4";
+const string ControllerBuildVersion = "4.0.5";
 const string ToolsSection = "Tools", ArmSection = "AutoArm", SwapSection = "AutoArm Swap";
 const string EnabledKey = "Enabled", ForwardName = "Forward";
 const string ApproachDockPhase = "ApproachDock", ApproachTopPhase = "ApproachTop", AlignTopPhase = "AlignTop", RetreatPhase = "Retreat";
@@ -32,7 +32,7 @@ ModuleLink Link;
 ToolSwapController Tools;
 AutoTopology Topology = new AutoTopology();
 bool Acquired, Initialised, RemoteReady, RemoteStopped, RemoteSettled, RemotePilot, Released;
-long Ack, HelloRequest, StopRequest, BuildRequest, MoveRequest;
+long Ack, HelloRequest, StopRequest, BuildRequest, MoveRequest, ResumeRequest;
 double Clock, Heartbeat;
 string PendingCommand = "Reload", RemoteError = "", DisplayText = "ToolSwap starting OFF";
 string CancelReason = "";
@@ -41,6 +41,8 @@ long SentAnchor, ReportedPath;
 long TransitionRequest;
 string TransitionKind = "";
 bool ResumeRequested;
+double ResumeSeconds;
+int ResumeRetries;
 bool ExplicitStop;
 int CompletedWaypoints;
 bool ReadKeyboard = true, ReadMouse, ReadRoll = true;
@@ -70,7 +72,7 @@ public void Main(string argument, UpdateType source)
 {
     double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
     bool timed = (source & (UpdateType.Update1 | UpdateType.Update10 | UpdateType.Update100 | UpdateType.Once)) != 0;
-    if (Finite(elapsed) && elapsed > 0) { Link.Age += elapsed; Clock += elapsed; Heartbeat += elapsed; }
+    if (Finite(elapsed) && elapsed > 0) { Link.Age += elapsed; Clock += elapsed; Heartbeat += elapsed; if (ResumeRequested) ResumeSeconds += elapsed; }
     try
     {
         if (Link.Peer == null) ConfigureLink();
@@ -114,6 +116,11 @@ public void Main(string argument, UpdateType source)
         if (Link.RemoteEpoch != 0 && Link.Age > .5)
         {
             Tools.Cancel("Arm PB communication timeout."); Acquired = false; PendingCommand = ""; return;
+        }
+        if (ResumeRequested && Acquired && ResumeSeconds >= .25)
+        {
+            if (++ResumeRetries > 3 || !Permit()) Tools.Cancel("Arm did not confirm tool handoff; On.");
+            else EnableControl(true);
         }
         if (Tools.Busy && Acquired)
         {
@@ -186,7 +193,8 @@ void Receive()
         ReadKeyboard = ini.Get(LinkSection, "Keyboard").ToBoolean(true); ReadMouse = ini.Get(LinkSection, "Mouse").ToBoolean(); ReadRoll = ini.Get(LinkSection, "Roll").ToBoolean(true);
         DefaultMove = ini.Get(LinkSection, "DefaultMove").ToDouble(.2); DefaultTurn = ini.Get(LinkSection, "DefaultTurn").ToDouble(5);
         Acquired = ini.Get(LinkSection, "Lease").ToBoolean();
-        if (ResumeRequested && ini.Get(LinkSection, "Enabled").ToBoolean()) { ResumeRequested = false; Say("Tool ready; arm ON."); }
+        if (ResumeRequested && Ack >= ResumeRequest && !Acquired && (ini.Get(LinkSection, "Enabled").ToBoolean() || RemoteError.Length > 0))
+        { ResumeRequested = false; Say(RemoteError.Length > 0 ? "Arm resume failed: " + RemoteError : "Tool ready; arm ON."); }
         if (HelloRequest != 0 && Ack >= HelloRequest && !Acquired) HelloRequest = 0;
         if (MoveRequest != 0 && ini.Get(LinkSection, "MoveAck").ToInt64() != MoveRequest) RemoteSettled = false;
         Topology.Head = GridTerminalSystem.GetBlockWithId(ini.Get(LinkSection, "Head").ToInt64()); Topology.Groups.Clear();
@@ -248,10 +256,12 @@ bool SubmitPath(string rows, long anchor, int waypoint, double moveCap, double t
     packet.Set(LinkSection, "Lines", travel ? "false|true" : "true");
     MoveRequest = Link.Sequence; SentPath = rows; SentAnchor = anchor; RemoteStopped = RemoteSettled = false; Link.Send(packet); return true;
 }
-void EnableControl()
+void EnableControl(bool retry = false)
 {
-    var resume = EquipmentPacket("RESUME"); resume.Set(LinkSection, "Permit", Permit()); Link.Send(resume); Released = ResumeRequested = true;
-    Say("Tool ready; arm control resuming.");
+    if (!retry) ResumeRetries = 0;
+    ResumeSeconds = 0;
+    var resume = EquipmentPacket("RESUME"); resume.Set(LinkSection, "Permit", Permit()); ResumeRequest = Link.Sequence; Link.Send(resume); Released = ResumeRequested = true;
+    Say("Tool ready; waiting for arm ON confirmation.");
 }
 MyIni EquipmentPacket(string operation)
 {

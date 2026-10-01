@@ -126,7 +126,7 @@ internal static partial class Scenarios
             c["IsAttached"]=false; c["Top"]=null; RecordProxy.Of(d.F.ArmTip).Values["Base"]=null;
             if(failure=="Top") c["Top"]=d.F.WrongArmPart();
             if(failure=="Owner") RecordProxy.Of(d.F.ArmTip).Values["Base"]=d.F.Couplers[1];
-            if(failure=="Support") RecordProxy.Of(d.F.Heads[0][0]).Values["IsConnected"]=false;
+            if(failure=="Support") { d.Tick(); Check((bool)Get(SwapController(d.Tool),"SupportProven")!,"Support-loss test never established its proof."); RecordProxy.Of(d.F.Heads[0][0]).Values["IsConnected"]=false; }
             d.Tick(); Check(SwapPhase(d.Tool)=="Idle"&&!d.F.AnyDrive&&!d.F.Mutations.Any(m=>m.Kind=="Detach"),"Merge refresh accepted contradictory "+failure);
         }
         Console.WriteLine("Control regressions: bare socket manual frames, retained/axial incoming phase, support loss and bounded stopped merge refresh.");

@@ -1,44 +1,36 @@
-AutoArm 4.0.4 — Socket controls and docking stability
+AutoArm 4.0.5 — Tool connection settling and confirmed handoff
 
-Bare-arm manual facing and HEAD controls now use the exposed rotor socket as
-forward. Q/E and Roll steps rotate around its shaft. Native observation and
-ToolSwap coupling frames are unchanged.
+Fixes false 'Attachment lost' after pickup and 'Source detached prematurely'
+during parking. The declared merge/unmerge windows allow temporarily missing
+attachment observations while output is stopped, bounded to two seconds and
+restricted to the known tool/top/owner. Initial parking support flags may settle
+before proof; lost proven support, wrong parts and foreign owners still abort.
 
-Automatic pose correction now has a precision band equal to half the active
-position/angular tolerance, preserving retained load compensation. Linear
-lookahead includes that band so even minimum-speed paths continue moving.
-Forward insertion demand blends continuously as alignment worsens rather than
-switching abruptly on/off at the tolerance boundary. Full endpoint distance,
-measured settling and attachment proofs still govern completion.
+Lock, Detach, Attach and Release require continuously valid connection/support
+or split observations for 0.2 seconds. Timing starts at the first true sample;
+a delayed first tick cannot count unseen time. The arm rebuilds only after the
+connection has settled, then resumes automatically.
 
-Parking defaults are 0.01 metres and 1 degree. Rotor pickup retains 0.003 metres
-and 0.2 degrees. Existing Custom Data overrides remain in force: change
-Tools.PositionTolerance=0.01 and Tools.AngleTolerance=1 in the ToolSwap PB's
-[global] or target arm section if it still contains the older tighter values.
+ToolSwap now waits for acknowledgement of the current handoff and actual arm
+ON before reporting success. Requests are retried while the movement lease is
+still held, with a bounded retry count. Duplicate accepted RESUME requests only
+acknowledge current state; they do not stop, recapture or restart the arm.
+Prior protocol errors are cleared at valid new acceptance, and current resume
+readiness/permission/budget/validation failures are reported rather than left
+pending indefinitely. An explicit Off before confirmation remains Off and
+reports its reason. Resume waiting is included in communication supervision.
 
-Parking enables support, observes locked support and the correct source mount
-on consecutive timed observations, then detaches. A temporarily missing source
-attachment after proven merge support waits stopped for at most two seconds.
-Permanent loss, wrong top/owner or lost support cancels. Pickup confirms the
-correct attachment before disabling support merges.
+Update BOTH PB scripts, keep existing Custom Data, then run On on the Arm PB.
+No configuration changes are required. Arm Format 7, ToolSwap Format 2 and
+protocol 5 remain unchanged. Manual movement, solver and PID code are unchanged
+from 4.0.4; the experimental manual learner remains rejected and test-only.
 
-Detached mount phase checks now apply only to the relevant non-axial incoming
-cached target and compare wrapped angles. Source/inactive mounts and expected
-attachment transitions no longer trigger the broad mount-angle error.
+Validation: installed SE API / C#6, specialization, packing token/compile and
+identical-method-IL gates, plus 195,696 simulated assertions. Tests cover initial
+staggered merge flags, post-unmerge pointer gaps, false-sample timer reset,
+contradictory/permanent loss, lost request/confirmation, preserved active target
+on retry, old errors, explicit Off and bounded resume failures. Actual multi-arm
+hosts inject connection gaps and retain independent neighboring-arm control.
+Live SE physics and instruction costs remain unverified.
 
-History audit found a retained-integral/damping conflict at input release.
-New damping defaults return to zero; explicit user values remain unchanged.
-Manual PI gains remain unchanged. The user's zero-damping trial did not improve
-severe shaking; lowering PositionCorrectionCap to 0.05 reduced manual shaking
-but did not help parking. Automatic motion has its own caps. The docking repairs
-above still require live in-game confirmation on that arm.
-
-Update BOTH PBs, retaining current formats (Arm 7, ToolSwap 2) and protocol 5.
-Run On; it reloads configuration and scans equipment automatically.
-
-Arm: 99,161 characters, 839 free. ToolSwap: 64,661, 35,339 free.
-Installed SE API / C#6 compilation and identical method IL after packing pass.
-193,526 simulated assertions pass, including socket frames, precision bands,
-minimum-speed actual line motion, support/attachment transitions and independent
-multi-arm operation. Live SE joint flex, contact and instruction timing remain
-unverified. Detailed comparison: docs/CONTROL_AUDIT.txt.
+Arm: 99,449 characters, 551 free. ToolSwap: 65,142, 34,858 free.

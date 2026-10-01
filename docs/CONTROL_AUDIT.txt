@@ -162,6 +162,48 @@ the final implementation includes the band offset and a physical-progress test.
 
 REPRODUCTION TOOL
 
+FOLLOW-UP: SMOOTH AUTOMATIC MOVEMENT, MANUAL SHAKING/DRIFT
+
+The user clarified that ToolSwap travel is completely smooth; manual travel
+retains slight shaking and drift. Final docking is a separate previously
+reported problem. This narrows the investigation to manual target tracking,
+correction and release behavior; it does not prove a general solver or physics
+fault. Different paths, speeds and reference poses still limit the comparison.
+
+Manual bias learns pose error; tool bias learns velocity error. Manual targets
+advance from solver-predicted pilot delivery, not measured physical movement.
+Tracking lag can therefore remain in the manual target/bias state. This is an
+identified algorithm difference, not a verified sole cause of the live issue.
+
+An experimental shared estimator used unconstrained predicted task velocity
+minus existing bias minus filtered measured velocity, with original capture,
+clipping and allocation protections. Projection avoids learning nonexistent
+delivery of unreachable pilot input; including the actual requested feedback
+also avoids treating intentional damping as an unknown load.
+
+Full-controller release tests REJECTED this blanket replacement. After 30s of
+1 degree/s input, these are travel over seconds 2..30 after release at damping0:
+
+Actuator lag       Current control     Experimental control
+0 seconds          0.000000 degrees    0.069690 degrees
+0.25 seconds       0.000191 degrees    0.235443 degrees
+0.75 seconds       0.056237 degrees    0.651473 degrees
+
+Filtered velocity and physical coasting during release make the alternative
+learn a temporary opposing bias inside the idle angular band. It improves the
+opt-in damping0.2 release problem but regresses the already undamped case.
+The existing frozen-pose responsiveness check also refused that candidate.
+No production control code was changed or new release created for this trial.
+The user subsequently accepted manual movement, with some stopping vibration.
+Further manual tuning was deferred. The v4.0.5 work changes only swap lifecycle
+and communication; the manual movement/PID source is unchanged from v4.0.4.
+The remaining manual issue requires separating movement tracking from the
+transition to held-pose load compensation; simply copying the tool learner is
+not established as safe. These synthetic results do not diagnose SE physics.
+
+Reproduce the rejected comparison with the raw engine:
+dotnet run --project tools/ArmTests -- tools/ScriptPack/obj/AutoArm.Engine.txt --servo-compare
+
 From the repository, run:
 dotnet run --project tools/ArmTests -- <complete single-instance script> --control-audit
 

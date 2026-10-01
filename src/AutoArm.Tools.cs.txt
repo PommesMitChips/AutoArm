@@ -30,12 +30,12 @@ sealed partial class ToolSwapController
     readonly List<long> ArmOrder = new List<long>();
     int ArmIndex; ToolTopInfo Found;
     ToolTopInfo Tip;
-    bool Scanned, AxialPickup, StartAfterScan;
+    bool Scanned, AxialPickup, StartAfterScan, SupportProven;
     string MountName = "", Axis = "Auto", Phase = "Idle", Last = "Tools disabled";
     bool EnabledTools, ScanHead = true, ScanStand = true, ScanPark = true, ParkOnly, DockMoved, PassiveScan;
     double Clearance = .5, Move = .05, Turn = 2, PosTol = .01, AngleTol = 1, Timeout = 30, Elapsed;
     int CellLimit = 4096, ScanIndex, Stable, ParkIndex;
-    double PhaseBudget;
+    double PhaseBudget, StableSeconds;
     ToolRegionScan Scan;
     Profile Source, Destination;
     Profile Supported;
@@ -387,7 +387,8 @@ sealed partial class ToolSwapController
     }
     void Go(string phase)
     {
-        Phase = phase; Elapsed = 0; Stable = 0; PhaseBudget = Timeout;
+        Phase = phase; Elapsed = StableSeconds = 0; Stable = 0; PhaseBudget = Timeout;
+        if (phase == "Lock") SupportProven = false;
         if (phase == ApproachDockPhase || phase == "Dock" || phase == RetreatPhase || phase == ApproachTopPhase || phase == AlignTopPhase)
         {
             MatrixD target = phase == ApproachDockPhase ? Approach : phase == "Dock" ? Dock : phase == RetreatPhase ? Retreat : phase == ApproachTopPhase ? TopApproach : Attach;
@@ -419,17 +420,23 @@ sealed partial class ToolSwapController
         if (start) P.EnableControl(); else P.Say(message + " On required.");
     }
     public void StartOn() { PassiveScan = false; StartAfterScan = true; P.Say("On: scanning tools."); }
-    bool Observe(bool condition) { if (!condition) { Stable = 0; return false; } return ++Stable >= 2; }
+    bool Observe(bool condition, double seconds = 0)
+    {
+        if (!condition) { Stable = 0; StableSeconds = 0; return false; }
+        if (++Stable > 1) StableSeconds += seconds;
+        return seconds > 0 ? StableSeconds >= .2 : Stable >= 2;
+    }
     bool TipOwned(out string why)
     {
         why = ""; var owner = Tip == null ? null : Tip.Base;
         if (owner == null) return true;
-        foreach (var h in Profiles) if (h.Coupler != null && h.Coupler.EntityId == owner.EntityId && (Mounted(h) || (h == Source && (Phase == "Detach" || MergeRefresh(h))) || (h == Destination && Phase == "Attach"))) return true;
+        foreach (var h in Profiles) if (h.Coupler != null && h.Coupler.EntityId == owner.EntityId && (Mounted(h) || ConnectionRefresh(h) || (h == Source && Phase == "Detach") || (h == Destination && Phase == "Attach"))) return true;
         why = "Unknown arm-tip owner."; return false;
     }
-    bool MergeRefresh(Profile h)
+    bool ConnectionRefresh(Profile h)
     {
-        if (h != Source || Phase != "Lock" || !DockMoved || Elapsed > 2 || !AllLocked()) return false;
+        if (Elapsed > 2 || Tip == null || Tip.EntityId == 0 ||
+            !(h == Source && Phase == "Lock" && DockMoved && (!SupportProven || AllLocked()) || h == Destination && Phase == "Release")) return false;
         var top = h.Coupler.Top as IMyMotorRotor;
         return top == null || top.EntityId == Tip.EntityId && (top.Base == null || top.Base.EntityId == h.Coupler.EntityId);
     }
@@ -448,7 +455,7 @@ sealed partial class ToolSwapController
         {
             if (h.Automatic && Phase == "Scan" && h.Coupler == null) continue;
             foreach (var merge in h.SafetyMerges) if (merge.Closed || merge.CubeGrid.EntityId != h.Marker.CubeGrid.EntityId) { why = "Tool support body split."; return false; }
-            if (h.Coupler.IsAttached && !Mounted(h) && !MergeRefresh(h)) { why = "Tool attached elsewhere."; return false; }
+            if (h.Coupler.IsAttached && !Mounted(h) && !ConnectionRefresh(h)) { why = "Tool attached elsewhere."; return false; }
             if (h == Destination && !AxialPickup && (Phase == ApproachTopPhase || Phase == AlignTopPhase || Phase == "PrepareAttach") &&
                 (!Finite(h.Coupler.Angle) || Math.Abs(Wrap(h.Coupler.Angle - h.Angle)) > .002))
             { why = h.Name + " mount phase changed during " + Phase + "; ToolScan."; return false; }
@@ -665,8 +672,12 @@ sealed partial class ToolSwapController
                     Go("Lock"); return;
                 case "Lock":
                     P.StopMotion("Support wait OFF");
-                    if (!Mounted(Source)) { Stable = 0; if (!MergeRefresh(Source)) Cancel("Source detached prematurely."); return; }
-                    if (!Observe(AllLocked())) return;
+                    bool locked = AllLocked();
+                    if (SupportProven && !locked) { Cancel("Support lost."); return; }
+                    SupportProven |= locked;
+                    if (!Mounted(Source) || Source.Coupler.PendingAttachment)
+                    { Observe(false); if (!ConnectionRefresh(Source)) Cancel("Source detached prematurely."); return; }
+                    if (!Observe(locked, observationDt)) return;
                     P.CaptureParkPose(Source, Axis);
                     if (DockMoved) SetRetreat();
                     ParkedPairs = new List<ToolPortPair>(Pairs);
@@ -675,7 +686,7 @@ sealed partial class ToolSwapController
                 case "Detach":
                     P.StopMotion("Detach wait OFF");
                     if (!AllLocked()) { Cancel("Support lost."); return; }
-                    if (!Observe(!Source.Coupler.IsAttached && !Source.Coupler.PendingAttachment && Source.Coupler.Top == null && Tip.Base == null)) return;
+                    if (!Observe(!Source.Coupler.IsAttached && !Source.Coupler.PendingAttachment && Source.Coupler.Top == null && Tip.Base == null, observationDt)) return;
                     Source.Angle = Source.Coupler.Angle;
                     if (!P.RebuildToolTopology(out why)) { Cancel(why); return; } Go("BareSettle"); return;
                 case "BareSettle":
@@ -698,17 +709,18 @@ sealed partial class ToolSwapController
                     if (!ToolGeometry.TryTopPose(Destination.Coupler, Tip, out expected, out why, AxialPickup)) { Cancel(why); return; }
                     bool aligned = Vector3D.DistanceSquared(Reference.GetPosition(), expected.Translation) < .000025 &&
                         Vector3D.Dot(Reference.WorldMatrix.Up, expected.Up) > .9999939 && Vector3D.Dot(Reference.WorldMatrix.Forward, expected.Forward) > .9999939;
-                    if (!Observe(Mounted(Destination) && !Destination.Coupler.PendingAttachment && aligned)) return;
+                    if (!Observe(Mounted(Destination) && !Destination.Coupler.PendingAttachment && aligned, observationDt)) return;
                     if (Destination.Relock) { Destination.Coupler.RotorLock = true; Destination.Relock = false; }
                     P.ExpectTransition("MergeRelease");
                     P.CaptureParkPose(Destination, Axis);
                     Journal("ReleaseSupport"); foreach (var pair in Pairs) pair.Head.Enabled = false; Go("Release"); return;
                 case "Release":
                     P.StopMotion("Split wait OFF");
-                    if (!Mounted(Destination)) { Cancel("Attachment lost."); return; }
+                    if (!Mounted(Destination) || Destination.Coupler.PendingAttachment)
+                    { Observe(false); if (!ConnectionRefresh(Destination)) Cancel("Attachment lost after support release."); return; }
                     bool split = !Connected(Destination.SafetyMerges);
                     foreach (var pair in Pairs) if (pair.Head.Closed || pair.Stand.Closed || pair.Stand.IsConnected || Destination.Marker.CubeGrid.EntityId == pair.Stand.CubeGrid.EntityId) split = false;
-                    if (!Observe(split)) return;
+                    if (!Observe(split, observationDt)) return;
                     if (!P.RebuildToolTopology(out why)) { Cancel(why); return; } Go("FullSettle"); return;
                 case "FullSettle":
                     if (!Mounted(Destination) || Connected(Destination.SafetyMerges)) { Cancel("Attachment/support changed."); return; }

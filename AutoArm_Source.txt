@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.4";
+const string ControllerBuildVersion = "4.0.5";
 
 const int HostFormat = 7;
 const string WireTag = "AutoArm/5";
@@ -336,7 +336,7 @@ public void Update(string argument, UpdateType source, double elapsed)
 readonly string ArmName;
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.4";
+const string ControllerBuildVersion = "4.0.5";
 
 
 // C# 6 programmable-block fragment. Paste inside ArmCore.
@@ -3174,9 +3174,9 @@ sealed class ToolSwapLink
     string PeerName = "", Queued = "", Error = "";
     long Ignore, Request, MoveRequest;
     bool Lease, Rebuilding, Driving, Permitted, Settled, Changing, Transition, ResumePending;
-    bool RecoverBare;
+    bool RecoverBare, Resumed;
     ArmPath Path;
-    double Move, Turn, PosTol, AngleTol, ReportElapsed;
+    double Move, Turn, PosTol, AngleTol, ReportElapsed, ResumeElapsed;
     public bool Busy => Lease || ResumePending || Queued.Length > 0;
     public bool Automatic => Lease && Changing;
     public bool Configured => PeerName.Length > 0;
@@ -3192,7 +3192,7 @@ sealed class ToolSwapLink
         if (!AutoConfig.ReadCurrent(P, P.CustomData, out ini, out why)) return false;
         PeerName = ini.Get("Modules", "ToolSwapPB").ToString().Trim();
         Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = Transition = ResumePending = false; Error = "";
-        RecoverBare = false;
+        RecoverBare = Resumed = false;
         if (!Configured) { Link.Peer = null; End = null; Frame = null; Tip = null; Couplers.Clear(); Markers.Clear(); Tops.Clear(); Merges.Clear(); return true; }
         Link.Resolve(PeerName); Link.Generation++; Link.RemoteEpoch = Link.Received = 0; Link.Age = 0;
         Queued = "Reload"; return true;
@@ -3218,7 +3218,7 @@ sealed class ToolSwapLink
     { var packet = Link.Packet("COMMAND"); packet.Set(LinkSection, "Command", command); packet.Set(LinkSection, "Stopped", !Driving); packet.Set(LinkSection, "RecoverBare", RecoverBare); Link.Send(packet); }
     public void Cancel(string why)
     {
-        Driving = Rebuilding = Lease = Permitted = Transition = ResumePending = false; Queued = ""; Error = why; Link.Generation++;
+        Driving = Rebuilding = Lease = Permitted = Transition = ResumePending = Resumed = false; Queued = ""; Error = why; Link.Generation++;
         P.Topology.ZeroOwned(); ZeroMount();
         if (Link.Peer != null) try { SendCommand("Stop"); } catch { }
     }
@@ -3280,11 +3280,11 @@ sealed class ToolSwapLink
                 if (ini.Get(LinkSection, "Remote").ToInt64() != 0 && ini.Get(LinkSection, "Remote").ToInt64() != Link.Epoch) continue;
                 bool acquire = ini.Get(LinkSection, "Acquire").ToBoolean();
                 if (epoch < Link.RemoteEpoch) continue;
-                if (Link.RemoteEpoch != epoch) { P.StopMotion(""); Link.RemoteEpoch = epoch; Link.Received = 0; Lease = Driving = Rebuilding = Permitted = Transition = ResumePending = false; }
+                if (Link.RemoteEpoch != epoch) { P.StopMotion(""); Link.RemoteEpoch = epoch; Link.Received = 0; Lease = Driving = Rebuilding = Permitted = Transition = ResumePending = Resumed = false; }
                 if (seq <= Link.Received) continue;
                 Link.Received = seq;
                 if (acquire && P.ConfigValid && ini.Get(LinkSection, "Remote").ToInt64() == Link.Epoch && ini.Get(LinkSection, "Generation").ToInt64() == Link.Generation)
-                { P.StopMotion(""); Lease = true; Driving = Rebuilding = Permitted = Transition = ResumePending = false; Changing = ini.Get(LinkSection, "Changing").ToBoolean(); Error = ""; }
+                { P.StopMotion(""); Lease = true; Driving = Rebuilding = Permitted = Transition = ResumePending = Resumed = false; Changing = ini.Get(LinkSection, "Changing").ToBoolean(); Error = ""; }
                 Link.Age = 0; Request = seq; Reply("STATE"); continue;
             }
             if (epoch != Link.RemoteEpoch || seq <= Link.Received || ini.Get(LinkSection, "Remote").ToInt64() != Link.Epoch || ini.Get(LinkSection, "Generation").ToInt64() != Link.Generation) continue;
@@ -3297,11 +3297,12 @@ sealed class ToolSwapLink
                     Permitted = ini.Get(LinkSection, "Permit").ToBoolean();
                     if (P.Enabled && !Permitted) { P.Fault("ToolSwap equipment not ready."); }
                 }
+                else if (op == "RESUME" && !Lease && Resumed) { Reply("STATE"); continue; }
                 else if (!Lease) throw new Exception("No movement lease.");
                 else if (op == "TRANSITION")
                 { Driving = false; Path = null; Transition = true; P.StopMotion(""); P.Topology.Ready = false; }
                 else if (op == "ABORT")
-                { Driving = Rebuilding = Lease = Permitted = false; if (ini.Get(LinkSection, "ExplicitStop").ToBoolean()) InhibitRecovery(); Path = null; Error = ini.Get(LinkSection, "Reason").ToString(); P.StopMotion(Error); P.Say("ToolSwap stopped: " + Error); }
+                { Driving = Rebuilding = Lease = Permitted = Resumed = false; if (ini.Get(LinkSection, "ExplicitStop").ToBoolean()) InhibitRecovery(); Path = null; Error = ini.Get(LinkSection, "Reason").ToString(); P.StopMotion(Error); P.Say("ToolSwap stopped: " + Error); }
                 else if (op == "STOP" || op == "PAUSE") { Driving = false; Path = null; if (ini.Get(LinkSection, "ExplicitStop").ToBoolean()) InhibitRecovery(); P.StopMotion(""); }
                 else if (op == "BUILD")
                 {
@@ -3323,7 +3324,8 @@ sealed class ToolSwapLink
                 {
                     Driving = false; P.StopMotion(""); ApplyEquipment(ini); Permitted = ini.Get(LinkSection, "Permit").ToBoolean();
                     if (ini.Get(LinkSection, "ExplicitStop").ToBoolean()) InhibitRecovery();
-                    Lease = false; ResumePending = op == "RESUME";
+                    Lease = false; ResumePending = Resumed = op == "RESUME"; Error = "";
+                    ResumeElapsed = 0;
                     RecoverBare |= ResumePending;
                 }
                 else throw new Exception("Unknown module operation.");
@@ -3331,7 +3333,7 @@ sealed class ToolSwapLink
             }
             catch (Exception e) { Error = e.Message; Driving = Rebuilding = false; P.StopMotion(Error); Reply("STATE"); }
         }
-        if (Configured && Link.Age > .5 && (P.Enabled || Lease))
+        if (Configured && Link.Age > .5 && (P.Enabled || Lease || ResumePending))
         { Driving = Rebuilding = false; P.Fault("ToolSwap communication timeout."); }
         if (Detached())
         { RecoverBare = false; P.StopMotion("Tool detached; rediscovering bare arm."); P.StartControl(); }
@@ -3381,11 +3383,21 @@ sealed class ToolSwapLink
         if (Link.Age > .5) return;
         if (Rebuilding)
         { string why; if (P.SettleToolTopology(out why)) { Rebuilding = Transition = false; Reply("STATE"); } }
-        if (ResumePending && P.Topology.Ready && (P.Runtime.MaxInstructionCount <= 0 || P.Runtime.CurrentInstructionCount < P.Runtime.MaxInstructionCount * .3))
+        if (ResumePending)
         {
-            ResumePending = false; string why;
-            if (!AllowManual(out why)) { ResumePending = true; return; }
-            P.EnableControl(); Reply("STATE");
+            ResumeElapsed += observationDt; string why = "Resume waiting for topology/budget.";
+            if (P.Topology.Ready && !Rebuilding && !Transition && (P.Runtime.MaxInstructionCount <= 0 || P.Runtime.CurrentInstructionCount < P.Runtime.MaxInstructionCount * .3))
+            {
+                ResumePending = false;
+                if (!AllowManual(out why)) ResumePending = true;
+                else
+                {
+                    P.EnableControl(); Error = P.Enabled ? "" : "Resume refused: " + P.Status;
+                    Reply("STATE");
+                }
+            }
+            if (ResumePending && ResumeElapsed > 2)
+            { ResumePending = false; Error = why; P.StopMotion(Error); P.Say(Error); Reply("STATE"); }
         }
         if (Driving)
         {
@@ -3399,6 +3411,8 @@ sealed class ToolSwapLink
     }
     void Reply(string operation)
     {
+        if (Resumed && !ResumePending && !P.Enabled && Error.Length == 0)
+            Error = P.LastFault.Length > 0 ? P.LastFault : "Arm stopped after tool handoff.";
         var ini = Link.Packet(operation); ini.Set(LinkSection, "Ack", Request); ini.Set(LinkSection, "MoveAck", MoveRequest);
         ini.Set(LinkSection, "Lease", Lease); ini.Set(LinkSection, "Ready", P.ConfigValid && P.Topology.Ready && !Rebuilding && !Transition);
         ini.Set(LinkSection, "Enabled", P.Enabled);

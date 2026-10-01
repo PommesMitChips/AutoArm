@@ -181,8 +181,19 @@ internal static partial class Scenarios
                 string? field=phase=="ApproachDock"?"Approach":phase=="Dock"?"Dock":phase=="Retreat"?"Retreat":phase=="ApproachTop"?"TopApproach":phase=="AlignTop"?"Attach":null;
                 int source=Get(SwapController(core),"Source") is object s?Array.IndexOf(target.Fixture.Markers,(IMyTerminalBlock)Get(s,"Marker")!):0;
                 if(field!=null&&phaseTicks>8) { var pose=SwapGoal(core,field); if(phase=="ApproachDock"||phase=="Dock") target.Fixture.MoveSource(pose,source); else target.Fixture.MoveArm(pose); }
-                else if(phase=="Lock") target.Fixture.LockSource(source:source);
-                else if(phase=="Release") target.Fixture.SplitTool(Array.IndexOf(target.Fixture.Markers,(IMyTerminalBlock)Get(Get(SwapController(core),"Destination")!,"Marker")!));
+                else if(phase=="Lock")
+                {
+                    target.Fixture.LockSource(phaseTicks<4?1:2,source);
+                    if(phaseTicks<4)SwapFixturePointer(target.Fixture,source,true);
+                    else if(phaseTicks==4)SwapFixturePointer(target.Fixture,source,false);
+                }
+                else if(phase=="Release")
+                {
+                    int destination=Array.IndexOf(target.Fixture.Markers,(IMyTerminalBlock)Get(Get(SwapController(core),"Destination")!,"Marker")!);
+                    target.Fixture.SplitTool(destination);
+                    if(phaseTicks<4)SwapFixturePointer(target.Fixture,destination,true);
+                    else if(phaseTicks==4)SwapFixturePointer(target.Fixture,destination,false);
+                }
                 Tick(); previous=phase;
             }
             Check(Enabled(Core(Owner(target.Name),target.Name))&&target.Fixture.Couplers[chosen-1].Top==target.Fixture.ArmTip,"Shared ToolSwap failed to mount/resume "+target.Name+": "+string.Join(" | ",toolRig.Log.TakeLast(3)));

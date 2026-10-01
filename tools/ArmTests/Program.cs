@@ -50,7 +50,9 @@ internal static class Tests
             { Scenarios.ControlAudit(Script(File.ReadAllText(args[0]))); return 0; }
             if(args.Length==3&&args[2]=="--control-compare")
             { Scenarios.ControlCompare(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(args[1]))); return 0; }
-            if(args.Length!=1) throw new Exception("Usage: ArmTests <script.txt> [--control-audit]");
+            if(args.Length==2&&args[1]=="--servo-compare")
+            { string source=File.ReadAllText(args[0]); Scenarios.ServoComparison(Script(source),Script(Scenarios.ServoCandidate(source))); return 0; }
+            if(args.Length!=1) throw new Exception("Usage: ArmTests <script.txt> [--control-audit|--servo-compare]");
             Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
             EngineSource=File.ReadAllText(Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm.Engine.txt"));
             ToolEngineSource=File.ReadAllText(Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm.ToolEngine.txt"));

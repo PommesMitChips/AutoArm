@@ -176,7 +176,7 @@ internal static partial class Scenarios
                 Check(Enabled(script),"Tracking correction disabled manual control.");
                 var pilot=(Vector3D)Get(script,"LastPilotLinear")!;var feedback=(Vector3D)Get(script,"LastFeedbackLinear")!;var request=(Vector3D)Get(script,"LastRequestedLinear")!;
                 Check(pilot.LengthSquared()>1e-8,"Tracking error muted pilot input.");
-                Check(feedback.LengthSquared()>1e-8,"Pose correction disappeared under pilot input.");
+                Check(feedback.LengthSquared()>1e-8,"Pose correction disappeared under pilot input: tick="+tick+", offset="+offset+", pose error="+Get(script,"LastPositionError")+", bias="+Get(script,"PositionI")+", feedback="+feedback);
                 Check((request-pilot-feedback).Length()<1e-10,"Pilot and feedback are not additive.");
                 Check(Convert.ToDouble(Get(script,"LastLinearAdvance"))>0,"Opposing correction froze pilot target advancement.");
                 Check(Math.Abs(piston.Velocity)<=.200001,"Piston cap exceeded.");
