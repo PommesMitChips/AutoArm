@@ -22,10 +22,10 @@ IMyTerminalBlock Reference;
 long Epoch;
 int Phase, ArmIndex, Iteration, Repeats;
 double Clock, LastPoll, Deadline, Extent, Side, Speed, StartTime, LastProgress, BestRemaining;
-double EncounterSpeed, CrossBeyond, BaseHeight, BaseSweep, TotalBudget;
+double EncounterSpeed, CrossBeyond, BaseHeight, BaseSweep, TotalBudget, CaptureTime;
 bool Encounter, Preview;
 bool Truncated;
-string Mode, Status = "Check, Smoke, Run, PreviewCross, Cross, PreviewBases, Bases, Info, Cancel.", Settings, AbortReason;
+string Mode, Status = "Rebase, Check, Smoke, Run, PreviewCross, Cross, PreviewBases, Bases, Info, Cancel.", Settings, AbortReason;
 public Program() {
     long n; long.TryParse(Storage, out n); Epoch = n > 0 && n < long.MaxValue ? n + 1 : 1; Save();
     if (string.IsNullOrWhiteSpace(Me.CustomData)) Defaults();
@@ -57,10 +57,10 @@ public void Main(string argument, UpdateType source) {
         }
         if (command.Equals("Cancel", StringComparison.OrdinalIgnoreCase)) {
             if (Phase == 0) Status = "No test path active."; else Abort("Cancelled by player.");
-        } else if (new[] { "Check", "Smoke", "Run", "Cross", "Bases", "PreviewCross", "PreviewBases" }.Any(c => command.Equals(c, StringComparison.OrdinalIgnoreCase))) {
+        } else if (new[] { "Rebase", "Check", "Smoke", "Run", "Cross", "Bases", "PreviewCross", "PreviewBases" }.Any(c => command.Equals(c, StringComparison.OrdinalIgnoreCase))) {
             if (Phase != 0) throw new Exception("Test running; Cancel first.");
             Begin(command.ToUpperInvariant());
-        } else if (command.Length > 0 && !command.Equals("Info", StringComparison.OrdinalIgnoreCase) && command != Tag) throw new Exception("Commands: Check, Smoke, Run, PreviewCross, Cross, PreviewBases, Bases, Info, Cancel.");
+        } else if (command.Length > 0 && !command.Equals("Info", StringComparison.OrdinalIgnoreCase) && command != Tag) throw new Exception("Commands: Rebase, Check, Smoke, Run, PreviewCross, Cross, PreviewBases, Bases, Info, Cancel.");
         Replies();
         if (Phase != 0 && Phase != 90) {
             if (Owner.Closed || Reference.Closed || !Reference.IsSameConstructAs(Me)) throw new Exception("Owner/reference lost.");
@@ -73,6 +73,7 @@ public void Main(string argument, UpdateType source) {
             if (Phase >= 2) {
                 foreach (var arm in Arms) if (Clock - arm.ReplyTime > .35) throw new Exception("ArmService reply lost: " + arm.Name);
                 if (Phase == 2) { if (Encounter) EncounterState(); else MoveState(); }
+                if (Phase == 4) RebaseState();
                 if (Phase == 3 && Clock >= Deadline) {
                     foreach (var arm in Arms) {
                         RequireIdle(arm); RequireSafety(arm, false);
@@ -122,7 +123,7 @@ void Begin(string mode) {
     foreach (string value in ini.Get("Bench", "Arms").ToString().Split('|')) {
         string name = value.Trim();
         if (name.Length == 0 || sessions.Any(a => a.Name == name) || !ownerData.ContainsSection(name)) throw new Exception("List distinct configured arms belonging to the same owner PB.");
-        var expected = Frame(ini.Get("Baseline " + name, "Pose").ToString());
+        var expected = mode == "REBASE" ? MatrixD.Identity : Frame(ini.Get("Baseline " + name, "Pose").ToString());
         string rows = ownerData.ContainsKey(name, "Peers") ? ownerData.Get(name, "Peers").ToString() : ownerData.Get("global", "Peers").ToString();
         rows = rows.Replace("{arm}", name);
         bool plan = false, safety = false;
@@ -142,7 +143,7 @@ void Begin(string mode) {
     Extent = mode == "SMOKE" ? Math.Min(.1, extent) : extent; Side = side; Speed = speed;
     Repeats = mode == "SMOKE" || mode == "CHECK" || Encounter ? 1 : repeats; Mode = mode; TotalBudget = 360;
     ArmIndex = Iteration = 0; LastPoll = Clock; Deadline = Clock + 5; StartTime = Clock;
-    Log.Clear(); Truncated = false; Add("AUTOARM BENCH 2 | " + mode + " | heads only; ArmService owner " + Owner.EntityId);
+    Log.Clear(); Truncated = false; Add("AUTOARM BENCH 3 | " + mode + " | heads only; ArmService owner " + Owner.EntityId);
     Add("REFERENCE " + Reference.EntityId + " | " + Row(Reference.WorldMatrix));
     Add("SETTINGS extent=" + N(Extent) + " side=" + N(Side) + " speed=" + N(Speed) + " repeats=" + Repeats);
     Add("ARM CONFIG BEGIN\n" + Owner.CustomData + "\nARM CONFIG END");
@@ -205,13 +206,30 @@ void Prepare() {
         RequireIdle(arm); RequireSafety(arm, true);
         arm.Start = Pose(arm) * inverse;
         double distance = Vector3D.Distance(arm.Start.Translation, arm.Expected.Translation), angle = Rotation(arm.Start, arm.Expected);
-        if (distance > .03 || angle > .5) throw new Exception(arm.Name + ": start differs from surveyed baseline by " + N(distance) + " m / " + N(angle) + " deg. Restore the surveyed pose before testing.");
-        Add("START " + arm.Name + " | " + Row(arm.Start) + " | baseline error " + N(distance) + " / " + N(angle));
+        if (Mode != "REBASE" && (distance > .03 || angle > .5)) throw new Exception(arm.Name + ": start differs from saved baseline by " + N(distance) + " m / " + N(angle) + " deg. Run Rebase to record a new test start, or restore the saved pose.");
+        if (Mode == "REBASE") Add("PREVIOUS BASELINE " + arm.Name + " | " + Config.Get("Baseline " + arm.Name, "Pose"));
+        else Add("START " + arm.Name + " | " + Row(arm.Start) + " | baseline error " + N(distance) + " / " + N(angle));
     }
+    if (Mode == "REBASE") { Phase = 4; CaptureTime = Clock; Deadline = Clock + 10; Status = "Rebase: observing both idle arms; keep input neutral. No motion is sent."; return; }
     if (Encounter) BuildEncounter(); else foreach (var arm in Arms) BuildPath(arm);
     if (Mode == "CHECK") { Complete("CHECK PASS: both arms ready at surveyed poses with fresh Safety permission; no motion sent."); return; }
     if (Preview) { Complete("PREVIEW: both requested encounter paths recorded; no motion sent. Inspect WAYPOINT rows before Cross/Bases."); return; }
     if (Encounter) SubmitEncounter(); else Submit();
+}
+void RebaseState() {
+    bool moved = false; var poses = new List<MatrixD>();
+    foreach (var arm in Arms) {
+        RequireIdle(arm); RequireSafety(arm, true);
+        var pose = LocalPose(arm);
+        poses.Add(pose);
+        if (Vector3D.Distance(pose.Translation, arm.Start.Translation) > .005 || Rotation(pose, arm.Start) > .2) moved = true;
+    }
+    if (Clock > Deadline) throw new Exception("Rebase: arms did not settle within 10 s; baselines unchanged.");
+    if (moved) { for (int i = 0; i < Arms.Count; i++) Arms[i].Start = poses[i]; CaptureTime = Clock; }
+    if (Clock - CaptureTime < 1) return;
+    // Commit both baselines only after a full stable observation window.
+    for (int i = 0; i < Arms.Count; i++) { var arm = Arms[i]; arm.Start = poses[i]; Config.Set("Baseline " + arm.Name, "Pose", Row(arm.Start)); Add("CAPTURED BASELINE " + arm.Name + " | " + Row(arm.Start)); }
+    Complete("REBASE PASS: saved both current head poses; no motion sent. Run Check, then Smoke. This is a new comparison baseline.");
 }
 void BuildEncounter() {
     double longest = 0;

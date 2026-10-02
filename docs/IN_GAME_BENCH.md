@@ -22,11 +22,13 @@ The runner submits paths to one Arm PB. It never writes joint velocities, switch
 
 The runner's generated settings already contain your Arm PB and reference block IDs and the surveyed starting poses. You do not need to enter coordinates. Those IDs must still refer to the original blocks. The reference is the first arm's base block on the hull. Paths use its frame, so moving the whole build to another world location does not require new world coordinates.
 
+If an arm has moved and you cannot restore the original pose, replace only Arm Bench's code with the current script, keeping Custom Data, and run **`Rebase`** on Arm Bench. Both arms must be ON, ready, idle and unowned, with fresh Safety permission. Leave cockpit input neutral. Rebase observes for one second, requiring less than 5 mm / 0.2 degrees of pose variation, and saves both current head poses as the new comparison baseline. It sends no path or joint commands. Movement restarts the observation window; failure to settle within ten seconds, a Safety hold, cancellation or lost replies leaves the baselines unchanged. Rebase records the previous and captured baselines in its report. It is not a geometry/clearance test or an avoidance pass. Run `Check`, then `Smoke` afterwards.
+
 ## Run
 
 Run these commands on **Arm Bench**:
 
-1. **`Check`** verifies both arms are ON and idle, their poses match the survey within 3 cm / 0.5°, and ArmService reports fresh Safety permission. It sends no motion.
+1. **`Check`** verifies both arms are ON and idle, their poses match the saved baseline within 3 cm / 0.5°, and ArmService reports fresh Safety permission. It sends no motion.
 2. **`Smoke`** moves Arm 1 outward **10 cm** and back, waits one second, then repeats for Arm 2. Each successful path returns to the pose captured immediately before the test.
 3. **`Run`** performs the shared-plane sequence below, first for Arm 1 and then Arm 2. The larger sequence remains conservative/uncompleted in the imported ideal model; a safe abort is not an avoidance-completion pass.
 
@@ -63,7 +65,7 @@ BaseHeight=7.5
 BaseSweep=3
 ```
 
-Speed accepts 0.001..0.5 m/s; distances are metres, with `CrossBeyond` 0.1..5, `BaseHeight` 2.5..20 and `BaseSweep` 1..10. Height follows the reference base's Up direction, not gravity. Existing `Speed`, `Extent`, `Side` and `Repeats` continue to apply to the small tests; each encounter runs once. Restore the surveyed starting head poses before each separate test, including after any abort. A returned head pose can have a different redundant-joint posture.
+Speed accepts 0.001..0.5 m/s; distances are metres, with `CrossBeyond` 0.1..5, `BaseHeight` 2.5..20 and `BaseSweep` 1..10. Height follows the reference base's Up direction, not gravity. Existing `Speed`, `Extent`, `Side` and `Repeats` continue to apply to the small tests; each encounter runs once. Restore the saved starting poses before each separate test, or deliberately use Rebase to begin a new comparison after an abort. A returned head pose can have a different redundant-joint posture. Preview encounter paths again after Rebase: their geometry changes with the starting poses.
 
 Encounter reports retain pose samples at roughly 2 Hz per arm, with Safety reason and delivered fraction, while summary counters continue at reply frequency. For a long report, use `Page 1`, `Page 2`, etc. after completion. Each page contains at most 12,000 report characters. Send all pages or save the complete Custom Data as a text file; a single clipboard paste can truncate the report. Request Collision `Info` after any hold too.
 
@@ -75,6 +77,6 @@ For repeat testing, leave all Arm/Collision settings unchanged. `Run` captures o
 
 ## Settings
 
-Arm Bench generates `[Bench]` with `Format=1`, `ArmPB`, `Reference`, `Arms`, `Extent=0.25`, `Side=0.1`, `Speed=0.05` and `Repeats=1`. Distances are metres. Accepted ranges: outward extent greater than zero and at most 0.5, side 0..0.2, speed greater than zero and at most 0.1, repeats 1..3. Leave the defaults for the first comparison. `[Baseline Arm 1]` and `[Baseline Arm 2]` contain the surveyed poses; do not edit them to bypass a mismatch.
+Arm Bench generates `[Bench]` with `Format=1`, `ArmPB`, `Reference`, `Arms`, `Extent=0.25`, `Side=0.1`, `Speed=0.05` and `Repeats=1`. Distances are metres. Accepted ranges: outward extent greater than zero and at most 0.5, side 0..0.2, speed greater than zero and at most 0.1, repeats 1..3. Leave the defaults for the first comparison. `[Baseline Arm 1]` and `[Baseline Arm 2]` contain the saved poses. Use Rebase to capture new ones rather than entering coordinates manually; runs after Rebase belong to a new comparison baseline.
 
 Small tests have a six-minute total timeout. Encounters use twice the longest nominal path duration plus two minutes, capped at one hour. Eight seconds without measured progress while Safety is holding aborts the path; other lack of progress is limited to 35 seconds. ArmService's own waypoint timeouts also apply. Test paths include their return waypoint before movement starts, but emergency stops and clearance restrictions take precedence over completion.

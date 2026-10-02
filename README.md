@@ -37,7 +37,7 @@ Collision PB commands are `Info`, `Rescan`, `On`, `Reload` and `Off`. Run `Resca
 
 For a repeatable two-arm test, first collect a read-only geometry report with [Arm Survey](docs/IN_GAME_SURVEY.md). It records starting head poses without commanding movement; use that report to prepare the head paths before testing through ArmService with Safety enabled.
 
-The [two-arm test runner](docs/IN_GAME_BENCH.md) provides a readiness check, small outward-and-return tests, simultaneous head crossing and sweeps past the opposite arm's base. Preview commands show the requested paths before movement. It requires live Safety permission and operates through ArmService; inability to pass safely stops the test.
+The [two-arm test runner](docs/IN_GAME_BENCH.md) provides a readiness check, small outward-and-return tests, simultaneous head crossing and sweeps past the opposite arm's base. `Rebase` records a new test start from both idle arms without commanding movement. Preview commands show the requested paths before movement. It requires live Safety permission and operates through ArmService; inability to pass safely stops the test.
 
 An optional [self-collision filter prototype](docs/SELF_PAIR_PROTOTYPE.md) can report which segment pairs can safely be excluded from repeated checking. It starts in Shadow mode, retaining the normal checks; the guide explains how to test enabled exclusions and revert.
 
