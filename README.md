@@ -39,6 +39,8 @@ For a repeatable two-arm test, first collect a read-only geometry report with [A
 
 The [two-arm test runner](docs/IN_GAME_BENCH.md) provides a readiness check, small outward-and-return tests, simultaneous head crossing and sweeps past the opposite arm's base. Preview commands show the requested paths before movement. It requires live Safety permission and operates through ArmService; inability to pass safely stops the test.
 
+An optional [self-collision filter prototype](docs/SELF_PAIR_PROTOTYPE.md) can report which segment pairs can safely be excluded from repeated checking. It starts in Shadow mode, retaining the normal checks; the guide explains how to test enabled exclusions and revert.
+
 This first version uses conservative occupied-block volumes, rather than exact model shapes. Intended joint and docking contacts have limited allowances. It covers construct geometry and registered arms; terrain, unrelated ships and automatic routes around traps are not covered. Clearance checks do not model every SE physics effect, so begin with low movement speeds and confirm clearance on your build.
 
 ### Tool parking and swapping

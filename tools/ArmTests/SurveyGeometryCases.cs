@@ -8,7 +8,7 @@ internal static partial class Scenarios
 {
     // Import a read-only survey into proxy grids so the actual topology and
     // clearance implementations can consume its geometry. No game is touched.
-    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false,bool encounters=false)
+    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false,bool encounters=false,string? selfMode=null)
     {
         string[] lines=File.ReadAllLines(path);
         Check(lines.Any(l=>l.StartsWith("RESULT STABLE ENDPOINTS")),"Survey endpoints were not stable.");
@@ -65,6 +65,10 @@ internal static partial class Scenarios
         foreach(var block in blocks.Values) SetModelAabb(block);
         foreach(var joint in blocks.Values.OfType<IMyMechanicalConnectionBlock>())if(joint.Top!=null)SetModelAabb(joint.Top);
         var collisionPB=(IMyProgrammableBlock)blocks.Values.Single(b=>b.CustomName=="Collision PB");
+        if(selfMode!=null) {
+            var prototypeConfig=new MyIni();prototypeConfig.TryParse(collisionPB.CustomData);prototypeConfig.Set("Collision","SelfPairs",selfMode);
+            RecordProxy.Of(collisionPB).Values["CustomData"]=prototypeConfig.ToString();
+        }
         var collisionRig=new Rig(rig,"Collision import host");rig.Blocks.Remove(collisionRig.PB);
         object? counter=null;int peak=0;var costs=new List<int>();
         var injector=profile?Assembly.LoadFrom(Path.Combine(Tests.GameBin,"VRage.Library.dll")).GetType("VRage.Library.Compiler.IlInjector",true):null;
@@ -97,6 +101,10 @@ internal static partial class Scenarios
         CollisionFrame(collision,"Reload");
         for(int i=0;i<150;i++){HostFrame(arm,rig);CollisionFrame(collision);}
         if(profile)Console.WriteLine("Stationary counted runs: peak="+peak+" / 50000; last="+collisionRig.Log.Last());
+        if(selfMode!=null) {
+            var tables=(System.Collections.IDictionary)Get(collision,"SelfTables")!;
+            foreach(System.Collections.DictionaryEntry entry in tables)Console.WriteLine("Self-pair table "+entry.Key+": "+((System.Collections.IDictionary)Get(entry.Value!,"Proven")!).Count+" / "+((System.Collections.IList)Get(entry.Value!,"Pairs")!).Count+" proven; processed "+Get(entry.Value!,"Cursor"));
+        }
         foreach(string name in new[]{"Arm 1","Arm 2"})
         {
             var core=Core(arm,name);Check(Enabled(core),"Imported arm stopped: "+name);
