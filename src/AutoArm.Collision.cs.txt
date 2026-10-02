@@ -1,6 +1,6 @@
 // Shared optional collision service. Paste the generated script into a third PB.
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "5.0.3";
+const string ControllerBuildVersion = "5.0.4";
 const string Tag = "AutoArm/5", Section = "Link";
 sealed class Shape
 {
@@ -32,6 +32,7 @@ sealed class Group
 }
 sealed class Arm
 {
+    public int ConstraintLimit = 8;
     public IMyProgrammableBlock PB;
     public string Name, Fingerprint;
     public long Epoch, Remote, Received, Sequence, Generation;
@@ -58,7 +59,7 @@ long Epoch;
 double Clock, ScanAge;
 double Clearance = .10, Influence = .75, AwaySpeed = .05, Horizon = .35;
 int MaxCells = 65536, MaxShapes = 8192;
-int TilesVisited, CandidatesSeen, NarrowChecks, LastCost, PeakCost;
+int TilesVisited, CandidatesSeen, NarrowChecks, LastCost, PeakCost, LastRows, LastRowLimit;
 string Status = "Collision service starting.";
 bool Ready;
 public Program()
@@ -132,7 +133,7 @@ public void Main(string argument, UpdateType source)
     catch (Exception e) { Ready = false; Status = "Collision service stopped: " + e.Message; }
     foreach (var grid in Scene.Values) if (Clock - grid.Observed > .000001) { grid.Previous = grid.Grid.WorldMatrix; grid.Observed = Clock; }
     Echo("AutoArm " + ControllerBuildVersion + " Collision | " + Arms.Count + " arms / " + Scene.Count + " grids\n" + Status +
-        "\nQuery: " + TilesVisited + " tiles / " + CandidatesSeen + " candidates / " + NarrowChecks + " checks; instructions " + LastCost + " / peak " + PeakCost + "/" + Runtime.MaxInstructionCount);
+        "\nQuery: " + TilesVisited + " tiles / " + CandidatesSeen + " candidates / " + NarrowChecks + " checks; rows " + LastRows + "/" + LastRowLimit + "; instructions " + LastCost + " / peak " + PeakCost + "/" + Runtime.MaxInstructionCount);
 }
 bool Budget() { return Runtime.MaxInstructionCount <= 0 || Runtime.CurrentInstructionCount < Runtime.MaxInstructionCount * .65; }
 void RefreshScene(bool force)
@@ -263,6 +264,9 @@ void Send(Arm arm, MyIni ini)
 }
 void ParseArm(Arm arm, MyIni ini)
 {
+    int limit = 8;
+    if (ini.ContainsKey(Section, "ConstraintLimit") && (!ini.Get(Section, "ConstraintLimit").TryGetInt32(out limit) || limit != 8 && limit != 16)) throw new Exception("Invalid collision constraint capacity.");
+    arm.ConstraintLimit = limit;
     arm.Groups.Clear(); arm.Bodies.Clear(); arm.Contacts.Clear();
     arm.Hull = ini.Get(Section, "Hull").ToInt64(); arm.Tool = ini.Get(Section, "ToolGrid").ToInt64();
     arm.TipGrid = ini.Get(Section, "TipGrid").ToInt64(); arm.Socket = ini.Get(Section, "Socket").ToBoolean();
@@ -346,7 +350,7 @@ void Evaluate(Arm arm, MyIni response)
                     if (d >= range) continue;
                     if (d < -Clearance) { hold = true; reason = "Overlapping geometry: grids " + body.Grid.EntityId + "/" + obstacle.Grid.EntityId + ", blocks " + a.Tag + "/" + b.Tag + "; inspect contact setup."; break; }
                     if (!AddConstraint(arm, pair.Value, obstacle, x, body, y, d, axis, clearance, !assembly, bias, rows))
-                    { hold = true; reason = "Too many simultaneous constraints; blocks " + a.Tag + "/" + b.Tag + "; hold."; break; }
+                    { hold = true; reason = "Collision constraint capacity " + arm.ConstraintLimit + " exceeded; blocks " + a.Tag + "/" + b.Tag + "; hold."; break; }
                     if (rows.Count > 0) reason = "Avoiding grid " + obstacle.Grid.EntityId + "; clearance " + d.ToString("0.000") + " m.";
                 }
                 if (hold) break;
@@ -360,8 +364,10 @@ void Evaluate(Arm arm, MyIni response)
         bias[i] = hold ? 0 : Math.Max(-arm.Caps[i] * .25, Math.Min(arm.Caps[i] * .25, previous + .3 * (bias[i] - previous)));
     }
     arm.Bias = bias;
+    LastRows = rows.Count; LastRowLimit = arm.ConstraintLimit;
     var text = new System.Text.StringBuilder(); foreach (var row in rows) { if (text.Length > 0) text.Append('\n'); text.Append(Row(row)); }
     response.Set(Section, "Bias", Row(bias)); response.Set(Section, "Rows", text.ToString()); response.Set(Section, "Scale", hold ? 0 : scale);
+    response.Set(Section, "ConstraintLimit", arm.ConstraintLimit);
     response.Set(Section, "Hold", hold); response.Set(Section, "Reason", reason); Status = arm.Name + ": " + reason;
 }
 bool AddConstraint(Arm arm, int mask, GridShape obstacle, Shape a, GridShape body, Shape b, double distance, Vector3D normal, double clearance, bool repel, double[] bias, List<double[]> rows)
@@ -393,7 +399,7 @@ bool AddConstraint(Arm arm, int mask, GridShape obstacle, Shape a, GridShape bod
         // difference. This merged row implies BOTH original inequalities.
         if (error <= .001) { old[n] = Math.Max(old[n], row[n] + error); duplicate = true; break; }
     }
-    if (!duplicate) { if (rows.Count >= 8) return false; rows.Add(row); }
+    if (!duplicate) { if (rows.Count >= arm.ConstraintLimit) return false; rows.Add(row); }
     double gain = repel ? Math.Max(0, Math.Min(1, (Influence - distance) / (Influence - Clearance))) : 0;
     if (norm > 1e-12) for (int i = 0; i < n; i++) bias[i] += arm.Caps[i] * arm.Caps[i] * gradient[i] * AwaySpeed * gain / norm;
     return true;

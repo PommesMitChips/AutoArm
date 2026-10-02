@@ -6,7 +6,7 @@ The runner submits paths to one Arm PB. It never writes joint velocities, switch
 
 ## Install
 
-1. Stop the Arm PB and replace its code with **v5.0.1** [AutoArm_Compact.txt](../AutoArm_Compact.txt). Keep its Custom Data. The update adds live Safety status to service replies; it does not change PID tuning. Install the updated [Collision script](../AutoArm_Collision_Compact.txt) too for overlap diagnostics with block IDs. Keep Collision Custom Data. Existing ToolSwap scripts remain compatible.
+1. Stop the Arm PB and replace its code with **v5.0.4** [AutoArm_Compact.txt](../AutoArm_Compact.txt). Keep its Custom Data. Install the updated [Collision script](../AutoArm_Collision_Compact.txt) too, keeping Collision Custom Data. Updating both enables sixteen collision constraints and live row-count/capacity telemetry. PID tuning is unchanged. Existing ToolSwap scripts remain compatible.
 2. Name another PB **`Arm Bench`** and paste the complete [AutoArm_Bench.txt](../AutoArm_Bench.txt) into it. This file is already ready to paste, without compression.
 3. In the Arm PB's existing `[global]` section, add the planner, preserving other peers:
 
@@ -52,7 +52,7 @@ For the base encounter, use `PreviewBases`, then `Bases`. Both heads travel besi
 
 The crossing/head paths use free Cartesian goal pursuit, without the docking line constraint or any contact exemptions. Bench supplies no obstacle detours: the Collision service must influence the arm movement itself. Both heads keep their starting orientation. This can be unreachable for a particular arm, and local clearance assistance can stop in a trap or deadlock instead of finding a route. **Safe hold/abort and successful passage are different results.** Completion and telemetry alone also do not establish that physical blocks never contacted: observe both arms during the test.
 
-The captured ideal model currently aborts **both Cross and Bases** because Arm 2 exceeds the service's eight independent collision constraints. Both test paths are stopped and no forced return is sent. These are useful failing encounter tests, not validated autonomous routes. A live run will show whether the same limit appears in your game; do not disable Safety or remove obstacles to turn that result into a pass.
+The earlier eight-row limit caused Arm 2 to abort both encounters. With v5.0.4's negotiated sixteen-row capacity, the captured Cross/Bases replay reaches nine rows without capacity holds, but both encounters still stall under local clearance limiting. Both paths stop and no forced return is sent. These remain failing encounter tests, not validated autonomous routes. Do not disable Safety or remove obstacles to turn that result into a pass.
 
 Encounter speed defaults to **0.2 m/s**, capped by each arm's configured `HeadSpeed`; normal joint speed/acceleration limits remain active. To override the encounter settings, add these keys to the existing `[Bench]` section:
 
@@ -69,7 +69,7 @@ Encounter reports retain pose samples at roughly 2 Hz per arm, with Safety reaso
 
 Copy **all Arm Bench Custom Data** after completion or an abort and send it back. Its report follows `---`. It includes requested waypoints, sampled head poses, control errors, Safety holds/limits, solver budget observations, return errors and elapsed time. Sampling is approximately 10 Hz per arm; it can miss faster vibration. Control error is the controller's tracking error, not a claim about physical clearance.
 
-Collision **v5.0.3** includes the base-rotor/following-hinge interface fix and reduces the spatial-query instruction cost. Only Collision PB needs updating from v5.0.1/v5.0.2; keep Arm and Bench code and settings. After installing it, run `Reload` on Collision PB, `On(Arm 1)` and `On(Arm 2)` on the Arm PB, then `Check` and `Smoke` on Arm Bench. Send the full report after Smoke, or after any hold. Collision `Info` also shows tile/candidate/check counts and instruction use. The exact compact script completes both Smoke paths under SE's resource-counting rewriter on the imported ideal plant; the larger sideways Run still encounters conservative constraints/timeouts. These results do not establish live SE physics or wall-clock performance.
+For the capacity fix, update **both Arm and Collision to v5.0.4**, keeping their Custom Data and Bench settings. Run `Reload` on Collision PB, `On(Arm 1)` and `On(Arm 2)` on Arm PB, then `Check` and `Smoke` on Arm Bench. Send the full report after Smoke or any hold. Collision `Info` now shows rows/capacity alongside tile/candidate/check counts and instruction use. The exact compact Collision replay peaks at 17,556/50,000 instructions and completes both Smoke paths; the larger sideways Run still encounters conservative constraints/timeouts. These results do not establish live SE physics or wall-clock performance.
 
 For repeat testing, leave all Arm/Collision settings unchanged. `Run` captures one start per arm and replays those same paths when `Repeats` is increased. Comparing runs after different PID, speed, geometry or clearance changes is a separate experiment. Returning a head pose does not guarantee that redundant joints return to their original angles.
 

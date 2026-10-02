@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "5.0.1";
+const string ControllerBuildVersion = "5.0.4";
 
 const int HostFormat = 7;
 const string WireTag = "AutoArm/5", GlobalSection = "global";
@@ -330,7 +330,7 @@ public void Update(string argument, UpdateType source, double elapsed)
 readonly string ArmName;
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "5.0.1";
+const string ControllerBuildVersion = "5.0.4";
 
 
 // C# 6 programmable-block fragment. Paste inside ArmCore.
@@ -3603,6 +3603,7 @@ sealed class SafetyOverlay
     readonly List<double[]> Rows = new List<double[]>();
     readonly Dictionary<long, double> Sent = new Dictionary<long, double>();
     double Clock;
+    int ConstraintLimit = 8;
     public void Reset() { Age = 1e6; Sent.Clear(); SendAge = 1; }
     public SafetyOverlay(ArmCore p, ModuleLink link) { P = p; Link = link; }
     double Cap(int i) { return P.Topology.Groups[i].Rotary ? (P.GoingHome ? P.HomeJointRpm : P.JointRpm) * Math.PI / 30 : P.GoingHome ? P.HomePistonMps : P.PistonMps; }
@@ -3616,6 +3617,7 @@ sealed class SafetyOverlay
         if (SendAge < .1) return;
         SendAge = 0;
         var ini = Link.Packet("CHECK"); ini.Set(LinkSection, "Service", 1); ini.Set(LinkSection, "Generation", revision);
+        ini.Set(LinkSection, "ConstraintLimit", 16);
         ini.Set(LinkSection, "Fingerprint", Stamp); ini.Set(LinkSection, "Groups", P.Topology.Fingerprint);
         ini.Set(LinkSection, "Hull", P.Topology.Base.CubeGrid.EntityId); ini.Set(LinkSection, "ToolGrid", P.Topology.Head.CubeGrid.EntityId);
         ini.Set(LinkSection, "Contacts", P.Tools.Contacts);
@@ -3647,16 +3649,19 @@ sealed class SafetyOverlay
         for (int i = 0; i < n; i++)
             if (Math.Abs(bias[i]) > Cap(i) * .25 + 1e-9) throw new Exception("Collision preference exceeds cap.");
         var rows = new List<double[]>();
+        int limit = 8;
+        if (ini.ContainsKey(LinkSection, "ConstraintLimit") && (!ini.Get(LinkSection, "ConstraintLimit").TryGetInt32(out limit) || limit != 8 && limit != 16)) throw new Exception("Invalid collision constraint capacity.");
         foreach (string text in ini.Get(LinkSection, "Rows").ToString().Split('\n'))
         {
             if (text.Length == 0) continue;
-            if (rows.Count >= 8) throw new Exception("Too many collision constraints.");
+            if (rows.Count >= limit) throw new Exception("Too many collision constraints.");
             var row = Numbers(text, n + 1);
             foreach (double value in row) if (Math.Abs(value) > 1e6) throw new Exception("Collision constraint out of range.");
             rows.Add(row);
         }
         // Commit only a complete, fresh, matching reply. Replay cannot extend expiry.
         Sent.Remove(ack); Bias = bias; Rows.Clear(); Rows.AddRange(rows); Scale = scale; Blocked = blocked;
+        ConstraintLimit = limit;
         Reason = ini.Get(LinkSection, "Reason").ToString(); Age = Clock - time;
     }
     static double[] Numbers(string text, int count)
@@ -3673,6 +3678,7 @@ sealed class SafetyOverlay
         ini.Set(LinkSection, "SafetyReady", Ready); ini.Set(LinkSection, "SafetyHold", !Ready || Blocked);
         ini.Set(LinkSection, "SafetyAge", Age); ini.Set(LinkSection, "SafetyScale", Scale);
         ini.Set(LinkSection, "SafetyLimited", Limited); ini.Set(LinkSection, "SafetyFraction", Fraction);
+        ini.Set(LinkSection, "SafetyConstraints", Rows.Count); ini.Set(LinkSection, "SafetyConstraintLimit", ConstraintLimit);
         ini.Set(LinkSection, "SafetyReason", Ready ? Reason : "Waiting for fresh collision guidance.");
     }
     public double Preferred(int i) { return Ready && i < Bias.Length ? Bias[i] : 0; }

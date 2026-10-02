@@ -1,3 +1,30 @@
+AutoArm 5.0.4 — Negotiated collision constraint capacity
+
+Update both AutoArm_Compact.txt (Arm PB) and AutoArm_Collision_Compact.txt
+(Collision PB), keeping Custom Data and movement/PID settings. ToolSwap does
+not need updating. Run Reload on Collision PB, On(Arm 1) and On(Arm 2) on
+Arm PB, then Check and Smoke on Arm Bench. The self-pair prototype has also
+been rebuilt from this base and needs the new Arm PB for expanded capacity.
+
+The live Arm 2 refusal was a row-capacity hold before any path was submitted.
+Its reported block IDs are the stage-8 rotor top and stage-9 hinge top. A
+small posture change adds a ninth row; the previous implementation allowed
+only eight. The new Arm advertises sixteen, Collision echoes that limit,
+and both sides retain and validate every row. Legacy clients/replies remain
+limited to eight. Overflow, invalid limits/rows, packet size, instruction
+budget, overlap and freshness still fail closed. No geometry or required
+contact constraints are removed; PID and the allocation law are unchanged.
+State replies expose SafetyConstraints/SafetyConstraintLimit; Collision Info
+shows rows/capacity. Public formats and wire Version 5 remain unchanged.
+
+Validation: full source/compact harness 198,493 assertions; installed SE C#6,
+type-safety/memory-safe rewriting and packing checks pass. Exact compact
+Collision resource-counting replay peaks at 17,556/50,000 over 4,354 calls,
+retains nine rows with zero capacity holds and passes both Smoke paths.
+Cross/Bases advance beyond the old refusal but still stall under local
+clearance limiting; those are not passing autonomous avoidance routes.
+Compact sizes: Arm 93,292; ToolSwap 57,902; Collision 24,516 characters.
+
 AutoArm 5.0.3 — Collision PB spatial-query instruction cost
 
 Replace only AutoArm_Collision_Compact.txt. Keep Collision Custom Data and

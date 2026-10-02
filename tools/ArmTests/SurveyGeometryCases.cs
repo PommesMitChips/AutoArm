@@ -179,6 +179,13 @@ internal static partial class Scenarios
             }
         }
         Console.WriteLine("Imported survey geometry consumed by actual topology/collision scripts; stationary proxy frames, not physics.");
+        int peakRows=0,capacityHolds=0;
+        foreach(var message in bus.Sent.Where(s=>s.Source==collisionPB.EntityId)) {
+            var guide=new MyIni();guide.TryParse(message.Data);if(guide.Get("Link","Operation").ToString()!="GUIDE")continue;
+            peakRows=Math.Max(peakRows,guide.Get("Link","Rows").ToString().Split('\n').Count(s=>s.Length>0));
+            if(guide.Get("Link","Hold").ToBoolean()&&guide.Get("Link","Reason").ToString().Contains("constraint capacity"))capacityHolds++;
+        }
+        Console.WriteLine("Replay constraint rows: peak "+peakRows+"; capacity holds "+capacityHolds);
         if(profile)Console.WriteLine("Installed resource-monitoring rewrite: "+costs.Count+" runs, peak "+peak+" / 50000 instructions; median "+costs.Order().ElementAt(costs.Count/2)+".");
     }
 }

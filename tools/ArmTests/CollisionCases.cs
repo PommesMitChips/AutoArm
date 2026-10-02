@@ -16,6 +16,7 @@ internal static partial class Scenarios
         CollisionContactCases(collisionType);
         CollisionModelsCases(collisionType);
         CollisionSpatialCases(collisionType);
+        CollisionCapacityCases(armType,collisionType);
         Console.WriteLine($"Collision service: authenticated fresh overlays, bounded null-space preference, blocked advancement, Home/loss/replay refusal, occupied-cell geometry, closing limits and outward escape. PASS ({Tests.Assertions} total assertions).");
     }
     static MyIni LastCheck(ModuleBus bus,long arm,long service)
@@ -119,6 +120,17 @@ internal static partial class Scenarios
         var host=Tests.Create(armType,rig);var service=Tests.Create(collisionType,peer);HostReady(host,rig,"Arm 1");
         void Tick(){HostFrame(service,peer);HostFrame(host,rig);}
         for(int i=0;i<40;i++)Tick();Check((int)((IDictionary)Get(service,"Arms")!).Count==1,"Collision service did not register an authenticated arm.");
+        var implementation=PackedProgramChecks.Unwrap(service);var implementationType=implementation.GetType();
+        var frames=(IDictionary)Get(service,"Arms")!;Check((int)Get(frames.Values.Cast<object>().Single(),"ConstraintLimit")! ==16,"Producer ignored the new arm's advertised capacity.");
+        var legacyFrame=Activator.CreateInstance(implementationType.GetNestedType(PackedProgramChecks.Name(implementationType,"Arm"),All)!,true)!;Put(legacyFrame,"Name","Arm 1");
+        var legacyCheck=LastCheck(bus,rig.PB.EntityId,peer.PB.EntityId);legacyCheck.Delete("Link","ConstraintLimit");
+        var parse=implementationType.GetMethod(PackedProgramChecks.Name(implementationType,"ParseArm"),All)!;parse.Invoke(implementation,new object[]{legacyFrame,legacyCheck});
+        Check((int)Get(legacyFrame,"ConstraintLimit")! ==8,"Missing advertisement did not preserve legacy producer capacity.");
+        foreach(string invalid in new[]{"0","9","17","NaN"}) {
+            legacyCheck.Set("Link","ConstraintLimit",invalid);bool refused=false;
+            try{parse.Invoke(implementation,new object[]{legacyFrame,legacyCheck});}catch(TargetInvocationException e){refused=e.InnerException!.Message.Contains("constraint capacity");}
+            Check(refused,"Malformed advertised collision capacity was accepted: "+invalid);
+        }
         var safety=Get(Get(Core(host,"Arm 1"),"Services")!,"Safety")!;
         Check((bool)Get(safety,"Ready")!&&!(bool)Get(safety,"Blocked")!,"Occupied-cell clearance geometry did not produce fresh guidance: "+string.Join(" | ",peer.Log.TakeLast(3)));
         RecordProxy.Of(pilot).Values["MoveIndicator"]=new Vector3(1,0,0);

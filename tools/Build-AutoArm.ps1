@@ -23,6 +23,7 @@ function Specialize-Source([string]$path) {
 $source = ($parts | ForEach-Object { [IO.File]::ReadAllText((Join-Path $workspace ('src\' + $_))) }) -join "`n`n"
 function Build-HostScript([string]$engine, [bool]$tool) {
     $hostText = [IO.File]::ReadAllText((Join-Path $workspace 'src/AutoArm.Host.cs.txt')).Replace('@@TOOL@@',$(if ($tool) {'true'} else {'false'})).Replace('@@FORMAT@@',$(if ($tool) {'2'} else {'7'}))
+    $hostText = $hostText.Replace('@@VERSION@@',$(if ($tool) {'5.0.1'} else {'5.0.4'}))
     $coreText = [regex]::Replace($engine,'\bProgram\b','ArmCore')
     # Standalone fixtures supply their own input boundary; hosted arms use Config.
     $coreText = [regex]::Replace($coreText,'(?s)// BEGIN STANDALONE CONFIG.*?// END STANDALONE CONFIG','')

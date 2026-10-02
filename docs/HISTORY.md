@@ -33,6 +33,7 @@ The working tree contains the current script, source fragments, examples and dev
 | `v5.0.1` | Read-only arm survey, scoped head-path test runner, live Safety telemetry and overlap block IDs; control gains unchanged | Arm 93,047; ToolSwap 57,907; Collision 18,543 |
 | `v5.0.2` | Collision-only mechanical-interface geometry correction, common-ancestor cancellation and conservative row reduction | Arm 93,047; ToolSwap 57,907; Collision 22,037 |
 | `v5.0.3` | Collision spatial prefilter, request headroom, query diagnostics and runtime-efficient token packing | Arm 93,047; ToolSwap 57,907; Collision 24,240 |
+| `v5.0.4` | Negotiated sixteen-row collision capacity, legacy eight-row fallback and row-count telemetry | Arm 93,292; ToolSwap 57,902; Collision 24,516 |
 
 Read a previous script without changing your working tree:
 

@@ -1,6 +1,6 @@
 # Self-collision pair-filter prototype
 
-This is a separate experimental Collision PB script. ArmService, ToolSwap, their movement settings and the production Collision artifacts are unchanged. It recognises segment pairs whose reachable enclosures remain separated across the permitted joint ranges. It does not implement route planning or alter the eight-constraint limit.
+This is a separate experimental Collision PB script built from the current production Collision code. It recognises segment pairs whose reachable enclosures remain separated across the permitted joint ranges. It does not implement route planning or independently alter the negotiated constraint limit. The v5.0.4 base supports sixteen rows with updated Arm PBs and eight for legacy clients; update Arm PB too when testing that capacity fix.
 
 ## Try it
 
@@ -28,10 +28,10 @@ These are conservative sphere bounds in the current kinematic/occupied-cell mode
 
 ## Prototype results
 
-- Source and compact scripts pass installed SE C#6/type-safety/memory-safe compilation and token/IL packing checks. Compact size: **30,102 UTF-16 characters**.
+- Source and compact scripts pass installed SE C#6/type-safety/memory-safe compilation and token/IL packing checks. Current compact size: **30,378 UTF-16 characters**.
 - **21,541 assertions per artifact** exercise the filter, including 1,200 combined configurations of a rotated, offset, non-collinear PHHP fixture with all occupied cube corners checked against the analytic enclosures, plus 120 full-turn invariant-centre configurations. Cases cover Shadow/On/Off, foldable full-rotation chains, shared piston/rotor movement, wrapped angles, prediction-range guard, geometry/limit/attachment/enclosure changes, budget refusal and unsupported parallel/reversed-edge fallback.
-- The existing Collision service regression suite passes **637 assertions** against the prototype source.
-- The exact compact artifact passes native ResourceMonitoringRewriter/IlInjector replay. Shadow and On both peak at **18,035 / 50,000 instructions** across 4,354 invocations; Off peaks at 17,629. Both Smoke paths complete in all three modes. The original compact Collision peak was 17,428 in this replay. Proxy APIs and model AABBs do not establish live physics or wall-clock/API costs.
-- The captured build yields **0/15 proven pairs for Arm 1 and 0/36 for Arm 2**. Consequently no exclusions are applied and no speedup or eight-constraint fix is claimed for this build. Tighter swept-volume bounds or subdivided motion domains are needed to establish more exclusions. The larger existing Run still aborts conservatively in the ideal model.
+- The v5.0.4 full production suite passes 198,493 assertions, including the capacity boundary and legacy compatibility. The filter's focused source/compact cases remain separate from that suite.
+- The current exact compact artifact passes native ResourceMonitoringRewriter/IlInjector replay in On mode: **18,163 / 50,000 instructions** peak across 4,354 invocations. Both Smoke paths complete; nine rows are retained with zero capacity holds. The production v5.0.4 Collision peak is 17,556. Proxy APIs and model AABBs do not establish live physics or wall-clock/API costs.
+- The captured build still yields **0/15 proven pairs for Arm 1 and 0/36 for Arm 2**. Consequently no exclusions are applied and no speedup from the self-pair filter is claimed. The capacity fix comes from the v5.0.4 base, not geometric exclusions. Tighter swept-volume bounds or subdivided motion domains are needed to establish more exclusions. The larger existing Run still aborts conservatively in the ideal model.
 
 Build with `tools/Build-CollisionPrototype.ps1`. Run focused tests with `dotnet run --project tools/ArmTests -- AutoArm_Collision_Prototype_Source.txt --self-pairs` (or the compact filename). Replay a captured survey with `dotnet run --project tools/ArmTests -- AutoArm_Source.txt --self-profile <survey.txt> AutoArm_Collision_Prototype_Compact.txt On`. Logs remain under ignored tool output directories.
