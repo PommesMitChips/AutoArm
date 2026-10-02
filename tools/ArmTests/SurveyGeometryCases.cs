@@ -8,7 +8,7 @@ internal static partial class Scenarios
 {
     // Import a read-only survey into proxy grids so the actual topology and
     // clearance implementations can consume its geometry. No game is touched.
-    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false,bool encounters=false,string? selfMode=null,bool armProfile=false)
+    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false,bool encounters=false,string? selfMode=null,bool armProfile=false,string? posture=null)
     {
         string[] lines=File.ReadAllLines(path);
         Check(lines.Any(l=>l.StartsWith("RESULT STABLE ENDPOINTS")),"Survey endpoints were not stable.");
@@ -59,6 +59,31 @@ internal static partial class Scenarios
             if(joint is IMyMotorStator)
             {v["Angle"]=q;var limits=lines.Single(l=>l.StartsWith("ROTARY "+id+" |")).Split('|')[1].Trim()[7..].Split(' ');v["LowerLimitRad"]=float.Parse(limits[0],System.Globalization.CultureInfo.InvariantCulture);v["UpperLimitRad"]=float.Parse(limits[1],System.Globalization.CultureInfo.InvariantCulture);}
             else{v["CurrentPosition"]=q;v["MinLimit"]=0f;v["MaxLimit"]=10f;v["MaxVelocity"]=5f;}
+        }
+        if(posture!=null) {
+            // Retain the original occupied cells and block-local geometry, then
+            // apply the newly reported coordinates through ideal rigid joints.
+            // This reconstructs posture; it does not reproduce measured flex.
+            var coordinates=System.Text.Json.JsonSerializer.Deserialize<Dictionary<long,double>>(File.ReadAllText(posture))!;
+            var links=blocks.Values.OfType<IMyMechanicalConnectionBlock>().ToArray();
+            Check(coordinates.Count==links.Length&&links.All(j=>coordinates.ContainsKey(j.EntityId)),"Posture must cover each imported joint exactly.");
+            var original=grids.ToDictionary(g=>g.Key,g=>g.Value.WorldMatrix);
+            var localBlocks=blocks.Values.ToDictionary(b=>b.EntityId,b=>b.WorldMatrix*MatrixD.Invert(original[b.CubeGrid.EntityId]));
+            var tops=links.ToDictionary(j=>j.EntityId,j=>j.Top.WorldMatrix*MatrixD.Invert(original[j.TopGrid.EntityId]));
+            var pending=links.ToList();var done=new HashSet<long>{rig.PB.CubeGrid.EntityId};
+            while(pending.Count>0) {
+                var j=pending.First(k=>done.Contains(k.CubeGrid.EntityId));pending.Remove(j);
+                var frame=localBlocks[j.EntityId]*j.CubeGrid.WorldMatrix;
+                var child=original[j.TopGrid.EntityId]*MatrixD.Invert(original[j.CubeGrid.EntityId])*j.CubeGrid.WorldMatrix;
+                double old=j is IMyMotorStator r?r.Angle:((IMyPistonBase)j).CurrentPosition,delta=coordinates[j.EntityId]-old;
+                if(j is IMyMotorStator) {var rotate=MatrixD.CreateFromAxisAngle(-frame.Up,delta);var position=frame.Translation+Vector3D.TransformNormal(child.Translation-frame.Translation,rotate);child=child.GetOrientation()*rotate;child.Translation=position;}
+                else child.Translation+=frame.Up*delta;
+                RecordProxy.Of(j).Values[j is IMyMotorStator?"Angle":"CurrentPosition"]=(float)coordinates[j.EntityId];
+                RecordProxy.Of(j.TopGrid).Values["WorldMatrix"]=child;done.Add(j.TopGrid.EntityId);
+            }
+            foreach(var b in blocks.Values)RecordProxy.Of(b).Values["WorldMatrix"]=localBlocks[b.EntityId]*b.CubeGrid.WorldMatrix;
+            foreach(var j in links)RecordProxy.Of(j.Top).Values["WorldMatrix"]=tops[j.EntityId]*j.TopGrid.WorldMatrix;
+            Console.WriteLine("POSTURE reconstructed from reported joint coordinates, original occupancy and ideal rigid transforms.");
         }
         // Native AABBs were not in the original report. Emulate them from the
         // installed MWM assets; this is explicit model evidence, not live API proof.
@@ -113,6 +138,7 @@ internal static partial class Scenarios
         // Reload after substituting Me to ensure the imported config is authoritative.
         CollisionFrame(collision,"Reload");
         for(int i=0;i<150;i++){ArmFrame();CollisionFrame(collision);}
+        if(posture!=null) {CollisionFrame(collision,"Info");Console.WriteLine(collisionRig.Log.Last());}
         if(profile)Console.WriteLine("Stationary counted runs: peak="+peak+" / 50000; last="+collisionRig.Log.Last());
         if(selfMode!=null) {
             var tables=(System.Collections.IDictionary)Get(collision,"SelfTables")!;
@@ -159,6 +185,11 @@ internal static partial class Scenarios
         ArmReady("Arm 1");ArmReady("Arm 2");
         for(int i=0;i<100;i++){ArmFrame();CollisionFrame(collision);}
         var bench=Tests.Create(Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_Bench.txt"))),benchRig);
+        if(posture!=null) {
+            HostFrame(bench,benchRig,"Rebase");
+            for(int i=0;i<900&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();ArmFrame();CollisionFrame(collision);HostFrame(bench,benchRig);}
+            Check(benchRig.Log.Last().StartsWith("REBASE"),"Posture replay did not rebase: "+benchRig.Log.Last());
+        }
         foreach(string command in encounters?new[]{"Cross","Bases"}:new[]{"Smoke","Run"})
         {
             if(encounters) {
@@ -172,11 +203,12 @@ internal static partial class Scenarios
             HostFrame(bench,benchRig,command);
             for(int i=0;i<(encounters?216100:22000)&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();ArmFrame();CollisionFrame(collision);HostFrame(bench,benchRig);}
             Console.WriteLine("Imported ideal kinematic "+command+": "+benchRig.Log.Last());
+            if(posture!=null) {var report=new MyIni();report.TryParse(benchRig.PB.CustomData);File.WriteAllText(Path.Combine(Tests.Workspace,"tools/ArmTests/obj/posture-"+command.ToLowerInvariant()+".txt"),report.EndContent);CollisionFrame(collision,"Info");Console.WriteLine(collisionRig.Log.Last());}
             if(!benchRig.Log.Last().StartsWith("PASS:"))
             {
                 foreach(var message in bus.Sent.Where(s=>s.Source==collisionPB.EntityId).TakeLast(2))Console.WriteLine(message.Data);
             }
-            if(command=="Smoke")Check(benchRig.Log.Last().StartsWith("PASS:"),"Imported smoke path failed: "+benchRig.Log.Last()+" / "+string.Join(" | ",rig.Log.TakeLast(3)));
+            if(command=="Smoke"&&posture==null)Check(benchRig.Log.Last().StartsWith("PASS:"),"Imported smoke path failed: "+benchRig.Log.Last()+" / "+string.Join(" | ",rig.Log.TakeLast(3)));
             else {
                 bool passed=benchRig.Log.Last().StartsWith("PASS:");
                 Check(passed||benchRig.Log.Last().StartsWith("ABORT:"),"Full run neither completed nor aborted within its bound.");

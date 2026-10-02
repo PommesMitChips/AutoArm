@@ -31,6 +31,7 @@ internal static partial class Scenarios
     {var box=InstalledModelBox(block.BlockDefinition.SubtypeName);if(box!=null)RecordProxy.Of(block).Values["WorldAABB"]=WorldModelBox(box.Value,block.WorldMatrix);}
     static void CollisionModelsCases(Type type)
     {
+        MountedCollarCases(type);
         var rig=new Rig();var mid=rig.Grid();var end=rig.Grid();
         var rotor=rig.Rotor("Arm 1 - Base",rig.Root,mid);
         var hinge=rig.Rotor("hinge",mid,end,new Vector3D(0,2.7,0),Vector3D.Right);
@@ -96,5 +97,64 @@ internal static partial class Scenarios
         foreach(double q1 in new[]{-.1,0,.1})
             Check(10*q0-.0005*q1>=-1e-12&&10*q0>=-1e-12,"Merged inequality weakened an original constraint at a cap-bounded corner.");
         Console.WriteLine("Mechanical interface bounds: installed MWM envelopes, exact attachment scope, armour/other-arm protection, changed/unknown models, and common-ancestor cancellation PASS.");
+    }
+    static void MountedCollarCases(Type type)
+    {
+        var rig=new Rig();var middle=rig.Grid();var end=rig.Grid();
+        var piston=rig.Piston("preceding piston",rig.Root,middle);
+        var hinge=rig.Rotor("directly mounted hinge",middle,end,new Vector3D(0,2.5,0),Vector3D.Right);
+        RecordProxy.Of(piston).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargePistonBaseReskin");
+        RecordProxy.Of(piston.Top).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargePistonTopReskin");
+        RecordProxy.Of(piston.Top).Values["WorldMatrix"]=MatrixD.Identity;
+        RecordProxy.Of(hinge).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargeHinge");
+        var hingeFrame=MatrixD.CreateWorld(new(0,2.5,0),Vector3D.Forward,Vector3D.Right);
+        RecordProxy.Of(hinge).Values["WorldMatrix"]=hingeFrame;
+        RecordProxy.Of(hinge.Top).Values["WorldMatrix"]=hingeFrame;
+        RecordProxy.Of(hinge.Top).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargeHingeHead");
+        foreach(var top in new IMyCubeBlock[]{piston.Top,hinge.Top}) {var proxy=RecordProxy.Of(top);proxy.Call=(m,a)=>m.Name=="GetPosition"?((MatrixD)proxy.Values["WorldMatrix"]!).Translation:m.ReturnType.IsValueType?Activator.CreateInstance(m.ReturnType):null;}
+        foreach(var part in new IMyCubeBlock[]{piston,piston.Top,hinge,hinge.Top})SetModelAabb(part);
+        var service=PackedProgramChecks.Unwrap(Tests.Create(type,rig));var owner=service.GetType();
+        bool Allowed(long a,long b)=>(bool)owner.GetMethod(PackedProgramChecks.Name(owner,"MountedCollars"),All)!.Invoke(service,new object[]{a,b})!;
+        Check(Allowed(piston.Top.EntityId,hinge.Top.EntityId),"Direct piston/hinge mounting collars were not recognised.");
+        Check(!Allowed(piston.EntityId,hinge.Top.EntityId)&&!Allowed(piston.Top.EntityId,hinge.EntityId)&&!Allowed(0,hinge.Top.EntityId),"Collar allowance leaked to actuator bodies or untagged armour.");
+        var worldP=piston.Top.WorldMatrix;var worldH=hinge.WorldMatrix;var worldT=hinge.Top.WorldMatrix;
+        for(int i=0;i<40;i++) {
+            var frame=MatrixD.CreateFromYawPitchRoll(i*.137,i*.081,i*.193);frame.Translation=new Vector3D(200+i,-80,40);
+            RecordProxy.Of(piston.Top).Values["WorldMatrix"]=worldP*frame;
+            RecordProxy.Of(hinge).Values["WorldMatrix"]=worldH*frame;
+            var head=worldT.GetOrientation()*MatrixD.CreateFromAxisAngle(worldH.Up,i*.03);
+            head.Translation=worldT.Translation;RecordProxy.Of(hinge.Top).Values["WorldMatrix"]=head*frame;
+            foreach(var part in new IMyCubeBlock[]{piston.Top,hinge,hinge.Top})SetModelAabb(part);
+            Check(Allowed(piston.Top.EntityId,hinge.Top.EntityId),"Rotated/offset mounted collars lost their exact interface allowance.");
+        }
+        RecordProxy.Of(piston.Top).Values["WorldMatrix"]=worldP;RecordProxy.Of(hinge).Values["WorldMatrix"]=worldH;RecordProxy.Of(hinge.Top).Values["WorldMatrix"]=worldT;
+        foreach(var part in new IMyCubeBlock[]{piston.Top,hinge,hinge.Top})SetModelAabb(part);
+        foreach(var joint in new[]{(IMyMechanicalConnectionBlock)piston,hinge})foreach(var property in new[]{"IsAttached","PendingAttachment"}) {
+            RecordProxy.Of(joint).Values[property]=property=="PendingAttachment";
+            Check(!Allowed(piston.Top.EntityId,hinge.Top.EntityId),"Detached or pending coupling retained a collar allowance.");
+            RecordProxy.Of(joint).Values[property]=property=="IsAttached";
+        }
+        var displaced=worldH;displaced.Translation+=new Vector3D(0,.1,0);RecordProxy.Of(hinge).Values["WorldMatrix"]=displaced;SetModelAabb(hinge);
+        Check(!Allowed(piston.Top.EntityId,hinge.Top.EntityId),"Indirect/spaced mounting received a collar allowance.");RecordProxy.Of(hinge).Values["WorldMatrix"]=worldH;SetModelAabb(hinge);
+        RecordProxy.Of(piston.Top).Values["WorldMatrix"]=MatrixD.CreateWorld(Vector3D.Zero,Vector3D.Backward,Vector3D.Down);SetModelAabb(piston.Top);
+        Check(!Allowed(piston.Top.EntityId,hinge.Top.EntityId),"Non-facing mounting received a collar allowance.");RecordProxy.Of(piston.Top).Values["WorldMatrix"]=worldP;SetModelAabb(piston.Top);
+        RecordProxy.Of(piston.Top).Values["BlockDefinition"]=ToolSwapFixture.Definition("ModdedTop");
+        Check(!Allowed(piston.Top.EntityId,hinge.Top.EntityId),"Unknown model received a collar allowance.");RecordProxy.Of(piston.Top).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargePistonTopReskin");
+        RecordProxy.Of(hinge.Top).Values["WorldAABB"]=new BoundingBoxD(new(-100),new(100));
+        Check(!Allowed(piston.Top.EntityId,hinge.Top.EntityId),"Changed model escaping its vanilla envelope retained a collar allowance.");SetModelAabb(hinge.Top);
+        // The same direct mounting works for a rotor base on the preceding top.
+        RecordProxy.Of(hinge).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargeAdvancedStator");RecordProxy.Of(hinge).Values["WorldMatrix"]=MatrixD.CreateTranslation(0,2.5,0);
+        RecordProxy.Of(hinge.Top).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargeAdvancedRotor");RecordProxy.Of(hinge.Top).Values["WorldMatrix"]=MatrixD.CreateTranslation(0,2.7,0);
+        SetModelAabb(hinge);SetModelAabb(hinge.Top);Check(Allowed(piston.Top.EntityId,hinge.Top.EntityId),"Direct piston/rotor mounting collars were not recognised.");
+        // A compatible-looking head on an unrelated arm is never the exact top
+        // of this mounted stator, even when the two happen to be coincident.
+        var unrelated=rig.Rotor("another arm",rig.Root,rig.Grid());
+        RecordProxy.Of(unrelated.Top).Values["BlockDefinition"]=ToolSwapFixture.Definition("LargeAdvancedRotor");RecordProxy.Of(unrelated.Top).Values["WorldMatrix"]=hinge.Top.WorldMatrix;SetModelAabb(unrelated.Top);
+        ((IDictionary)Get(service,"Parts")!)[unrelated.Top.EntityId]=unrelated.Top;
+        Check(!Allowed(piston.Top.EntityId,unrelated.Top.EntityId),"Coincident unrelated arm collar was exempted.");
+        RecordProxy.Of(middle).Values["GridSize"]=.5f;
+        Check(!Allowed(piston.Top.EntityId,hinge.Top.EntityId),"Unsupported grid scale received the vanilla collar exception.");
+        RecordProxy.Of(middle).Values["GridSize"]=2.5f;
+        Console.WriteLine("Mounted collars: exact facing vanilla top/stator mounting, rotated frames, bodies/armour/spacing/detached/pending/unknown-model protection PASS.");
     }
 }

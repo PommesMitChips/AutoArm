@@ -6,7 +6,7 @@ The runner submits paths to one Arm PB. It never writes joint velocities, switch
 
 ## Install
 
-1. Stop the Arm PB and replace its code with **v5.0.4** [AutoArm_Compact.txt](../AutoArm_Compact.txt). Keep its Custom Data. Install the updated [Collision script](../AutoArm_Collision_Compact.txt) too, keeping Collision Custom Data. Updating both enables sixteen collision constraints and live row-count/capacity telemetry. PID tuning is unchanged. Existing ToolSwap scripts remain compatible.
+1. Use **v5.0.4** [AutoArm_Compact.txt](../AutoArm_Compact.txt), or the reallocation experiment already installed, with **v5.0.5** [Collision](../AutoArm_Collision_Compact.txt). The joint-interface update only requires replacing Collision code, retaining its Custom Data. Both peers support sixteen constraints; PID tuning and existing ToolSwap scripts remain unchanged.
 2. Name another PB **`Arm Bench`** and replace its entire editor contents with [AutoArm_Bench_Compact.txt](../AutoArm_Bench_Compact.txt). Keep existing Custom Data. The [readable source](../AutoArm_Bench.txt) implements the same commands.
 3. In the Arm PB's existing `[global]` section, add the planner, preserving other peers:
 

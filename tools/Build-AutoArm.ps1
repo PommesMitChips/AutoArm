@@ -58,7 +58,7 @@ if (!$SourceOnly) { & (Join-Path $PSScriptRoot 'Build.ps1') -Source $toolSourceP
 $collisionSourcePath = Join-Path $workspace 'AutoArm_Collision_Source.txt'
 $collisionOutputPath = Join-Path $workspace 'AutoArm_Collision_Compact.txt'
 [IO.File]::WriteAllText($collisionSourcePath, [IO.File]::ReadAllText((Join-Path $workspace 'src/AutoArm.Collision.cs.txt')), [Text.UTF8Encoding]::new($false))
-if (!$SourceOnly) { & (Join-Path $PSScriptRoot 'Build.ps1') -Source $collisionSourcePath -Output $collisionOutputPath -GameBin $GameBin -Fast }
+if (!$SourceOnly) { & (Join-Path $PSScriptRoot 'Build.ps1') -Source $collisionSourcePath -Output $collisionOutputPath -GameBin $GameBin -Fast -PreserveBodies }
 $rewriteCliHome = $env:DOTNET_CLI_HOME
 $rewriteGameBin = $env:SE_BIN
 try {

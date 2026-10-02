@@ -1,6 +1,6 @@
 // Shared optional collision service. Paste the generated script into a third PB.
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "5.0.4";
+const string ControllerBuildVersion = "5.0.5";
 const string Tag = "AutoArm/5", Section = "Link";
 sealed class Shape
 {
@@ -43,7 +43,11 @@ sealed class Arm
     public bool Socket;
     public double[] Caps, Rates;
     public double[] Bias;
+    public int AuditIndex = -1;
+    public readonly List<string> ContactDetails = new List<string>();
+    public string AuditReport = "No contact query yet.";
     public readonly List<Group> Groups = new List<Group>();
+    public readonly HashSet<long> OwnParts = new HashSet<long>();
     public readonly Dictionary<long, int> Bodies = new Dictionary<long, int>();
     public readonly List<ContactPair> Contacts = new List<ContactPair>();
 }
@@ -61,7 +65,7 @@ double Clearance = .10, Influence = .75, AwaySpeed = .05, Horizon = .35;
 int MaxCells = 65536, MaxShapes = 8192;
 int TilesVisited, CandidatesSeen, NarrowChecks, LastCost, PeakCost, LastRows, LastRowLimit;
 string Status = "Collision service starting.";
-bool Ready;
+bool Ready, Detailed;
 public Program()
 {
     Runtime.UpdateFrequency = UpdateFrequency.Update1; IGC.UnicastListener.SetMessageCallback(Tag);
@@ -111,10 +115,11 @@ public void Main(string argument, UpdateType source)
     {
         if (argument != Tag && !string.IsNullOrWhiteSpace(argument))
         {
-            if (argument.Equals("On", StringComparison.OrdinalIgnoreCase) || argument.Equals("Reload", StringComparison.OrdinalIgnoreCase)) Configure();
+            if (argument.Equals("On", StringComparison.OrdinalIgnoreCase) || argument.Equals("Reload", StringComparison.OrdinalIgnoreCase)) { Detailed = false; Configure(); }
             else if (argument.Equals("Rescan", StringComparison.OrdinalIgnoreCase)) { RefreshScene(true); Status = "Geometry rescan."; }
             else if (argument.Equals("Off", StringComparison.OrdinalIgnoreCase) || argument.Equals("Stop", StringComparison.OrdinalIgnoreCase)) { Ready = false; Status = "Collision service OFF; supervised arms hold."; }
-            else if (!argument.Equals("Info", StringComparison.OrdinalIgnoreCase)) throw new Exception("Commands: On, Reload, Rescan, Off, Info.");
+            else if (argument.Equals("Info", StringComparison.OrdinalIgnoreCase)) Detailed = true;
+            else throw new Exception("Commands: On, Reload, Rescan, Off, Info.");
         }
         if (Ready && ScanAge >= 2) RefreshScene(false);
         if (Ready) { ScanStep(); ObserveScene(); }
@@ -133,7 +138,17 @@ public void Main(string argument, UpdateType source)
     catch (Exception e) { Ready = false; Status = "Collision service stopped: " + e.Message; }
     foreach (var grid in Scene.Values) if (Clock - grid.Observed > .000001) { grid.Previous = grid.Grid.WorldMatrix; grid.Observed = Clock; }
     Echo("AutoArm " + ControllerBuildVersion + " Collision | " + Arms.Count + " arms / " + Scene.Count + " grids\n" + Status +
-        "\nQuery: " + TilesVisited + " tiles / " + CandidatesSeen + " candidates / " + NarrowChecks + " checks; rows " + LastRows + "/" + LastRowLimit + "; instructions " + LastCost + " / peak " + PeakCost + "/" + Runtime.MaxInstructionCount);
+        "\nQuery: " + TilesVisited + " tiles / " + CandidatesSeen + " candidates / " + NarrowChecks + " checks; rows " + LastRows + "/" + LastRowLimit + "; instructions " + LastCost + " / peak " + PeakCost + "/" + Runtime.MaxInstructionCount + (Detailed ? ContactAudit() : ""));
+}
+string ContactAudit()
+{
+    var text = new System.Text.StringBuilder();
+    text.Append("\nContact audit: each row is required; the normal status shows the last nearby pair, not necessarily the limiting row.\n");
+    foreach (var arm in Arms.Values) {
+        if (text.Length + arm.AuditReport.Length > 12000) { text.Append("Audit display limit; additional arms omitted."); break; }
+        text.Append(arm.Name).Append("\n").Append(arm.AuditReport);
+    }
+    return text.ToString();
 }
 bool Budget() { return Runtime.MaxInstructionCount <= 0 || Runtime.CurrentInstructionCount < Runtime.MaxInstructionCount * .65; }
 void RefreshScene(bool force)
@@ -285,6 +300,7 @@ void ParseArm(Arm arm, MyIni ini)
                 (group.Rotary ? !(block is IMyMotorStator) || block is IMyMotorSuspension : !(block is IMyPistonBase)) ||
                 !(block.CubeGrid.EntityId == from && block.TopGrid.EntityId == dest || block.CubeGrid.EntityId == dest && block.TopGrid.EntityId == from)) throw new Exception("Collision topology changed.");
             group.Members.Add(new Joint { Block = block, From = from, To = dest, Sign = part[at - 1] == '+' ? 1 : -1 });
+            if (Attached(block)) { arm.OwnParts.Add(block.EntityId); arm.OwnParts.Add(block.Top.EntityId); }
             if (from != arm.Hull) arm.Bodies[from] = 0; if (dest != arm.Hull) arm.Bodies[dest] = 0;
         }
         arm.Groups.Add(group);
@@ -317,6 +333,7 @@ static string Number(double value) { return value.ToString("R", System.Globaliza
 static string Row(double[] values) { var text = new System.Text.StringBuilder(); foreach (double value in values) { if (text.Length > 0) text.Append(' '); text.Append(Number(value)); } return text.ToString(); }
 void Evaluate(Arm arm, MyIni response)
 {
+    arm.ContactDetails.Clear(); arm.AuditIndex = -1;
     Models.Clear();
     TilesVisited = CandidatesSeen = NarrowChecks = 0;
     int n = arm.Groups.Count; var bias = new double[n]; var rows = new List<double[]>(); bool hold = !Ready; string reason = hold ? "Collision service OFF." : "Clear."; double scale = 1;
@@ -343,14 +360,20 @@ void Evaluate(Arm arm, MyIni response)
                     if (Contact(arm, body, a, obstacle, b)) continue;
                     Shape x = a, y = b; bool knownX = false, knownY = false;
                     bool assembly = InterfacePair(body, a, obstacle, b);
-                    if (assembly && (!ClipModel(body, a, out x, out knownX) || !ClipModel(obstacle, b, out y, out knownY))) continue;
-                    double clearance = knownX && knownY ? -.075 : knownX || knownY ? -.04 : Clearance;
+                    bool refine = assembly || arm.OwnParts.Contains(a.Tag) && arm.OwnParts.Contains(b.Tag);
+                    if (refine && (!ClipModel(body, a, out x, out knownX) || !ClipModel(obstacle, b, out y, out knownY))) continue;
+                    // Actual actuator envelopes also replace empty allocation
+                    // cells between non-adjacent joints on this arm. Those pairs
+                    // retain the full clearance; only immediate assembly
+                    // interfaces have the existing padding allowance.
+                    double clearance = assembly ? knownX && knownY ? -.075 : knownX || knownY ? -.04 : Clearance : Clearance;
                     NarrowChecks++;
                     Vector3D axis; double d = Separation(body, x, obstacle, y, out axis);
                     if (d >= range) continue;
                     if (d < -Clearance) { hold = true; reason = "Overlapping geometry: grids " + body.Grid.EntityId + "/" + obstacle.Grid.EntityId + ", blocks " + a.Tag + "/" + b.Tag + "; inspect contact setup."; break; }
                     if (!AddConstraint(arm, pair.Value, obstacle, x, body, y, d, axis, clearance, !assembly, bias, rows))
                     { hold = true; reason = "Collision constraint capacity " + arm.ConstraintLimit + " exceeded; blocks " + a.Tag + "/" + b.Tag + "; hold."; break; }
+                    if (arm.AuditIndex >= 0) arm.ContactDetails[arm.AuditIndex] = "grids " + body.Grid.EntityId + "/" + obstacle.Grid.EntityId + "; blocks " + a.Tag + "/" + b.Tag + "; gap " + Number(d) + "; allowance " + Number(clearance) + "; assembly " + assembly + "; models " + knownX + "/" + knownY;
                     if (rows.Count > 0) reason = "Avoiding grid " + obstacle.Grid.EntityId + "; clearance " + d.ToString("0.000") + " m.";
                 }
                 if (hold) break;
@@ -365,6 +388,9 @@ void Evaluate(Arm arm, MyIni response)
     }
     arm.Bias = bias;
     LastRows = rows.Count; LastRowLimit = arm.ConstraintLimit;
+    var audit = new System.Text.StringBuilder();
+    for (int i = 0; i < rows.Count; i++) audit.Append(i + 1).Append(": ").Append(arm.ContactDetails[i]).Append("\n  coefficients + lower: ").Append(Row(rows[i])).Append('\n');
+    arm.AuditReport = audit.ToString();
     var text = new System.Text.StringBuilder(); foreach (var row in rows) { if (text.Length > 0) text.Append('\n'); text.Append(Row(row)); }
     response.Set(Section, "Bias", Row(bias)); response.Set(Section, "Rows", text.ToString()); response.Set(Section, "Scale", hold ? 0 : scale);
     response.Set(Section, "ConstraintLimit", arm.ConstraintLimit);
@@ -372,6 +398,7 @@ void Evaluate(Arm arm, MyIni response)
 }
 bool AddConstraint(Arm arm, int mask, GridShape obstacle, Shape a, GridShape body, Shape b, double distance, Vector3D normal, double clearance, bool repel, double[] bias, List<double[]> rows)
 {
+    arm.AuditIndex = -1;
     int n = arm.Groups.Count; var point = Support(body, a, -normal); var otherPoint = Support(obstacle, b, normal);
     int otherMask; bool own = arm.Bodies.TryGetValue(obstacle.Grid.EntityId, out otherMask);
     // A common ancestor rigidly carries both shapes: their separation is
@@ -397,9 +424,9 @@ bool AddConstraint(Arm arm, int mask, GridShape obstacle, Shape a, GridShape bod
         double error = 0; for (int i = 0; i < n; i++) error += Math.Abs(old[i] - row[i]) * arm.Caps[i];
         // Keep the old normal and tighten its lower bound by the worst possible
         // difference. This merged row implies BOTH original inequalities.
-        if (error <= .001) { old[n] = Math.Max(old[n], row[n] + error); duplicate = true; break; }
+        if (error <= .001) { if (row[n] + error > old[n]) { old[n] = row[n] + error; arm.AuditIndex = rows.IndexOf(old); } duplicate = true; break; }
     }
-    if (!duplicate) { if (rows.Count >= arm.ConstraintLimit) return false; rows.Add(row); }
+    if (!duplicate) { if (rows.Count >= arm.ConstraintLimit) return false; arm.AuditIndex = rows.Count; rows.Add(row); arm.ContactDetails.Add(""); }
     double gain = repel ? Math.Max(0, Math.Min(1, (Influence - distance) / (Influence - Clearance))) : 0;
     if (norm > 1e-12) for (int i = 0; i < n; i++) bias[i] += arm.Caps[i] * arm.Caps[i] * gradient[i] * AwaySpeed * gain / norm;
     return true;
@@ -546,6 +573,7 @@ bool Contact(Arm arm, GridShape a, Shape x, GridShape b, Shape y)
     IMyCubeBlock part;
     if (Parts.TryGetValue(x.Tag, out part)) { var joint = part as IMyMechanicalConnectionBlock; if (joint != null && Attached(joint) && y.Tag == joint.Top.EntityId) return true; }
     if (Parts.TryGetValue(y.Tag, out part)) { var joint = part as IMyMechanicalConnectionBlock; if (joint != null && Attached(joint) && x.Tag == joint.Top.EntityId) return true; }
+    if (MountedCollars(x.Tag, y.Tag) || MountedCollars(y.Tag, x.Tag)) return true;
     foreach (var pair in arm.Contacts)
     {
         if (pair.A != 0)
@@ -562,6 +590,34 @@ bool Contact(Arm arm, GridShape a, Shape x, GridShape b, Shape y)
             if (tip != null && top.Half.X <= tip.Grid.GridSize * .5 + 1e-6 && mount.Tag == pair.B && rotor != null && Vector3D.Dot(rotor.WorldMatrix.Up, arm.TipUp) > .998 &&
                 Contains(top, (Vector3D)arm.TipCell * tip.Grid.GridSize, tip.Grid.GridSize * .5)) return true;
         }
+    }
+    return false;
+}
+// A vanilla shaft collar used as the mounting face of the next stator is
+// part of that stator's immediate joint interface. Its padded box must not
+// oppose the next head's rotation. This exception covers those two exact
+// heads only; actuator bodies, armour and all other cells keep their checks.
+bool MountedCollars(long fixedId, long movingId)
+{
+    IMyCubeBlock fixedPart, movingPart; Vector3D min, max;
+    if (!Parts.TryGetValue(fixedId, out fixedPart) || !Parts.TryGetValue(movingId, out movingPart) ||
+        !(fixedPart is IMyMotorRotor || fixedPart is IMyPistonTop) || !(movingPart is IMyMotorRotor) ||
+        !ModelBounds(fixedPart, out min, out max) || !ModelBounds(movingPart, out min, out max)) return false;
+    bool owned = false;
+    foreach (var previous in Joints) if (Attached(previous) && previous.Top.EntityId == fixedId) { owned = true; break; }
+    if (!owned) return false;
+    List<IMyMechanicalConnectionBlock> joints;
+    if (!Bases.TryGetValue(fixedPart.CubeGrid.EntityId, out joints)) return false;
+    foreach (var joint in joints) {
+        var stator = joint as IMyMotorStator;
+        if (stator == null || !Attached(joint) || joint.Top.EntityId != movingId || !ModelBounds(stator, out min, out max)) continue;
+        string kind = stator.BlockDefinition.SubtypeName, fixedKind = fixedPart.BlockDefinition.SubtypeName;
+        Vector3D face = kind == "LargeHinge" ? stator.WorldMatrix.Right : stator.WorldMatrix.Down;
+        Vector3D mount = fixedKind == "LargeHingeHead" ? fixedPart.WorldMatrix.Left : fixedPart.WorldMatrix.Up;
+        double size = fixedPart.CubeGrid.GridSize;
+        if (Vector3D.Dot(face, mount) < -.999 &&
+            Vector3D.Distance(stator.GetPosition() + face * size, fixedPart.GetPosition()) < size * .01 &&
+            Vector3D.Distance(stator.GetPosition(), movingPart.GetPosition()) < size * .5 + .05) return true;
     }
     return false;
 }

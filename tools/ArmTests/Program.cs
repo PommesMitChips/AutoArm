@@ -118,7 +118,12 @@ internal static class Tests
                 return 0;
             }
             if((args.Length==2||args.Length==3)&&args[1]=="--collision")
-            { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.CollisionCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(args.Length==3?args[2]:Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))));return 0; }
+            {
+                Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
+                var arm=Script(File.ReadAllText(args[0]));string collisionPath=args.Length==3?args[2]:Path.Combine(Workspace,"AutoArm_Collision_Source.txt");var collision=Script(File.ReadAllText(collisionPath));
+                foreach(var pair in new[]{(arm,args[0]),(collision,collisionPath)})if(Path.GetFileName(pair.Item2).EndsWith("_Compact.txt"))PackedProgramChecks.Register(pair.Item1,Path.Combine(Workspace,"tools/ScriptPack/obj/"+Path.GetFileNameWithoutExtension(pair.Item2)+".names.json"));
+                Scenarios.CollisionCases(arm,collision);return 0;
+            }
             if(args.Length==2&&args[1]=="--self-pairs")
             {
                 Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;var script=Script(File.ReadAllText(args[0]));
@@ -151,14 +156,16 @@ internal static class Tests
             }
             if(args.Length==3&&args[1]=="--survey-geometry")
             { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.SurveyGeometryCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))),args[2]);return 0; }
+            if(args.Length==4&&args[1]=="--survey-posture")
+            { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.SurveyGeometryCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))),args[2],posture:args[3]);return 0; }
             if(args.Length==3&&args[1]=="--survey-encounters")
             { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.SurveyGeometryCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))),args[2],encounters:true);return 0; }
-            if((args.Length==3||args.Length==4)&&args[1]=="--collision-profile")
+            if((args.Length==3||args.Length==4||args.Length==5)&&args[1]=="--collision-profile")
             {
-                Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;string path=args.Length==4?args[3]:Path.Combine(Workspace,"AutoArm_Collision_Source.txt");
+                Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;string path=args.Length>=4?args[3]:Path.Combine(Workspace,"AutoArm_Collision_Source.txt");
                 var collision=Script(File.ReadAllText(path),true);
                 if(Path.GetFileName(path).EndsWith("_Compact.txt"))PackedProgramChecks.Register(collision,Path.Combine(Workspace,"tools/ScriptPack/obj/"+Path.GetFileNameWithoutExtension(path)+".names.json"));
-                Scenarios.SurveyGeometryCases(Script(File.ReadAllText(args[0])),collision,args[2],true);return 0;
+                Scenarios.SurveyGeometryCases(Script(File.ReadAllText(args[0])),collision,args[2],true,posture:args.Length==5?args[4]:null);return 0;
             }
             if(args.Length==5&&args[1]=="--self-profile")
             {

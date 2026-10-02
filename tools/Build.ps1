@@ -3,7 +3,8 @@ param(
     [string]$Output = 'AutoArm_Compact.txt',
     [string]$GameBin = 'C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64',
     [switch]$Test,
-    [switch]$Fast
+    [switch]$Fast,
+    [switch]$PreserveBodies
 )
 $ErrorActionPreference = 'Stop'
 $workspace = Split-Path -Parent $PSScriptRoot
@@ -19,7 +20,7 @@ try {
     $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
     $env:DOTNET_GENERATE_ASPNET_CERTIFICATE = 'false'
     $env:SE_BIN = $GameBin
-    $packingMode = if ($Fast) { 'pack-fast' } else { 'pack' }
+    $packingMode = if ($PreserveBodies) { 'pack-pb' } elseif ($Fast) { 'pack-fast' } else { 'pack' }
     & dotnet run --project tools/ScriptPack -- $packingMode $Source $Output
     if ($LASTEXITCODE -ne 0) { throw 'Packing/validation failed.' }
     if ($Test) {
