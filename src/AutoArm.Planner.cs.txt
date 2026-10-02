@@ -1,0 +1,272 @@
+// Optional whole-arm planning prototype. No native actuator writes.
+// ===== IMPLEMENTATION =====
+const string ControllerBuildVersion="1.1.0-prototype", Tag="AutoArm/5", S="Link";
+IMyProgrammableBlock Peer;
+string ArmName="Arm 1", Status="Planner idle.", Phase="Idle", Stamp="";
+long Epoch,Sequence,Remote,Generation,Seen,Received,PathId,ModelRequest,HelloRequest;
+double Clock,LastPoll,ReplyAt,Started;
+bool Execute,Submitted;
+Vector3D Requested;
+PlanningWorld World;
+MatrixD Goal,Start,AnchorPose;
+List<double[]> Route;
+List<double[]> Straight;
+int StraightIndex,StraightCount;
+bool HeadRoute;
+List<double[]> AxisRoute,AxisVerified;
+int AxisOrder,AxisIndex;
+readonly List<Node> A=new List<Node>(),B=new List<Node>();
+sealed class Node { public double[] Q; public int Parent; public Node(double[] q,int parent){Q=q;Parent=parent;} }
+Random Random=new Random(1701);
+double[] SolveQ,TargetQ,EdgeFrom,EdgeTo;
+MatrixD SolveGoal;
+bool OrientationOnly,EdgeRunning,EdgeResult,EdgeDone,Swapped;
+int Iteration,Attempts,Nodes,EdgePurpose,NearIndex,JoinIndex,RouteCursor,SentEnd;
+readonly Stack<double[][]> Segments=new Stack<double[][]>();
+readonly List<double[]> EdgeRoute=new List<double[]>();
+double AngleStep=.15,PistonStep=.15,Clearance=.15;
+int NodeLimit=256;
+public Program()
+{
+    Runtime.UpdateFrequency=UpdateFrequency.Update1;IGC.UnicastListener.SetMessageCallback(Tag);
+    var saved=new MyIni();if(!saved.TryParse(Storage))saved.Clear();long old=saved.Get("Planner","Epoch").ToInt64();
+    if(old<0||old==long.MaxValue)throw new Exception("Planner epoch exhausted.");Epoch=old+1;saved.Set("Planner","Epoch",Epoch);Storage=saved.ToString();
+    try{Configure();}catch(Exception e){Status=e.Message;}Echo(Status);
+}
+public void Save(){}
+void Configure()
+{
+    var ini=new MyIni();if(string.IsNullOrWhiteSpace(Me.CustomData)){ini.Set("Planner","Format",1);ini.Set("Planner","ArmPB","");ini.Set("Planner","Arm","Arm 1");ini.Set("Planner","Clearance",.15);ini.Set("Planner","NodeLimit",256);Me.CustomData=ini.ToString();}
+    if(!ini.TryParse(Me.CustomData)||ini.Get("Planner","Format").ToInt32()!=1)throw new Exception("Planner Format must be 1. Delete Custom Data.");
+    ArmName=ini.Get("Planner","Arm").ToString("Arm 1");Clearance=ini.Get("Planner","Clearance").ToDouble(.15);NodeLimit=ini.Get("Planner","NodeLimit").ToInt32(256);
+    if(!Finite(Clearance)||Clearance<.1||Clearance>2||NodeLimit<16||NodeLimit>1024)throw new Exception("Invalid planning clearance/node limit.");
+    string name=ini.Get("Planner","ArmPB").ToString();long id;
+    Peer=name.StartsWith("@")&&long.TryParse(name.Substring(1),out id)?GridTerminalSystem.GetBlockWithId(id) as IMyProgrammableBlock:GridTerminalSystem.GetBlockWithName(name) as IMyProgrammableBlock;
+    if(Peer==null) {var blocks=new List<IMyProgrammableBlock>();GridTerminalSystem.GetBlocksOfType(blocks,b=>b!=Me&&b.IsSameConstructAs(Me));foreach(var pb in blocks){var data=new MyIni();if(data.TryParse(pb.CustomData)&&data.Get("global","Format").ToInt32()==7&&data.ContainsSection(ArmName)){if(Peer!=null)throw new Exception("Several Arm PBs; set Planner.ArmPB.");Peer=pb;}}}
+    if(Peer==null||Peer.Closed||!Peer.IsFunctional||!Peer.IsSameConstructAs(Me))throw new Exception("Arm PB unavailable; configure Planner.ArmPB.");
+}
+bool Work(){return Runtime.MaxInstructionCount<=0||Runtime.CurrentInstructionCount<Runtime.MaxInstructionCount*.55;}
+public void Main(string argument,UpdateType source)
+{
+    double dt=Runtime.TimeSinceLastRun.TotalSeconds;if(Finite(dt)&&dt>0)Clock+=dt;
+    try
+    {
+        Receive();
+        if(!string.IsNullOrWhiteSpace(argument)&&argument!=Tag)Command(argument.Trim());
+        if(Phase!="Idle"&&Phase!="Complete"&&Phase!="Preview")
+        {
+            if(Peer==null||Peer.Closed||!Peer.IsFunctional||!Peer.IsSameConstructAs(Me))throw new Exception("Arm PB lost.");
+            if(Remote!=0&&Clock-ReplyAt>.4)throw new Exception("Arm reply lost.");
+            if(Clock-LastPoll>=.1){LastPoll=Clock;Send(Remote==0?"HELLO":Phase=="Model"&&ModelRequest==0?"MODEL":"PING");}
+            if(Phase!="Model"&&World!=null&&!World.Still(Submitted?new double[0]:null))throw new Exception("Scene/start moved: "+World.Problem+"; cancel and replan.");
+            if(World!=null)World.Audit();
+            if(!Submitted&&Clock-Started>45)throw new Exception("Planning time budget in "+Phase+"; "+(World==null?"":World.Problem)+"; no motion sent.");
+            if(Phase=="Scan"){World.Scan();if(World.Scanned){World.Prepare();BeginIK(new double[World.Lower.Length],Goal,false);Phase="GoalIK";}}
+            else if(Phase=="GoalIK"||Phase=="Project"||Phase=="StraightIK")IKStep();
+            else if(Phase=="StartCheck"||Phase=="GoalCheck")
+            {
+                World.CheckStep();if(World.Checked){if(!World.Clear){if(Phase=="StartCheck")throw new Exception("Start blocked: "+World.Problem);RetryGoal();}
+                else if(Phase=="StartCheck"){World.Begin(TargetQ);Phase="GoalCheck";}
+                else{A.Clear();B.Clear();A.Add(new Node(new double[TargetQ.Length],-1));B.Add(new Node(TargetQ,-1));Swapped=false;Straight=new List<double[]>{A[0].Q};StraightIndex=1;StraightCount=Math.Max(1,Math.Min(64,(int)Math.Ceiling(Vector3D.Distance(Start.Translation,Goal.Translation)/.5)));HeadRoute=true;BeginStraight();}}
+            }
+            else if(Phase=="Edge")EdgeStep();
+            else if(Phase=="Search")SearchStep();
+            else if(Phase=="Validate")ValidateStep();
+            else if(Phase=="Moving")MoveStep();
+        }
+    }
+    catch(Exception e){Abort(e.Message);}
+    Echo("AutoArm "+ControllerBuildVersion+" Planner | "+ArmName+"\n"+Phase+" | "+Status+"\nNodes "+Nodes+" / "+NodeLimit+". Cancel requests a stop.");
+}
+void Command(string text)
+{
+    string[] w=text.Split(new char[]{' ','\t'},StringSplitOptions.RemoveEmptyEntries);string verb=w[0].ToLowerInvariant();
+    if(verb=="cancel"||verb=="stop"){Abort("Canceled.");return;}
+    if(verb=="info"){Status=World==null?Status:Status+"; route "+(Route==null?0:Route.Count)+" configurations";return;}
+    if(Phase!="Idle"&&Phase!="Complete"&&Phase!="Preview")throw new Exception("Planner busy; Cancel first.");
+    if(verb=="select"&&w.Length>=2){ArmName=string.Join(" ",w.Skip(1));var ini=new MyIni();ini.TryParse(Me.CustomData);ini.Set("Planner","Arm",ArmName);Me.CustomData=ini.ToString();Peer=null;Remote=Seen=Received=Generation=0;Configure();return;}
+    if((verb!="moveto"&&verb!="previewto")||w.Length!=4)throw new Exception("Commands: MoveTo x y z, PreviewTo x y z, Select arm, Cancel, Info.");
+    Requested=new Vector3D(Parse(w[1]),Parse(w[2]),Parse(w[3]));Execute=verb=="moveto";Configure();World=null;Route=null;Validated=null;Remote=Received=Seen=Generation=0;ModelRequest=0;PathId=0;Submitted=false;Nodes=Attempts=EdgeChecks=0;Started=Clock;Phase="Model";Status="Requesting idle arm model; no motion.";LastPoll=Clock;Send("HELLO");
+}
+static double Parse(string value){double n;if(!double.TryParse(value,System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out n)||!Finite(n))throw new Exception("Non-finite coordinate.");return n;}
+static bool Finite(double n){return !double.IsNaN(n)&&!double.IsInfinity(n);}
+static double Clamp(double n,double lo,double hi){return Math.Max(lo,Math.Min(hi,n));}
+static string Number(double n){return n.ToString("R",System.Globalization.CultureInfo.InvariantCulture);}
+public static MatrixD Frame(MyIni ini,string key)
+{var p=Vector(ini,key+"P");var f=Vector(ini,key+"F");var u=Vector(ini,key+"U");if(f.Length()<.9||u.Length()<.9||Math.Abs(Vector3D.Dot(f,u))>.01)throw new Exception("Bad model frame.");return MatrixD.CreateWorld(p,Vector3D.Normalize(f),Vector3D.Normalize(u));}
+static Vector3D Vector(MyIni ini,string key){var words=ini.Get(S,key).ToString().Split(' ');if(words.Length!=3)throw new Exception("Bad model vector.");return new Vector3D(Parse(words[0]),Parse(words[1]),Parse(words[2]));}
+void Send(string op,MyIni payload=null)
+{
+    var ini=payload??new MyIni();ini.Set(S,"Version",5);ini.Set(S,"Service",1);ini.Set(S,"Arm",ArmName);ini.Set(S,"Epoch",Epoch);ini.Set(S,"Remote",Remote);ini.Set(S,"Generation",Generation);ini.Set(S,"Seen",Seen);ini.Set(S,"Sequence",++Sequence);ini.Set(S,"Operation",op);
+    if(op=="HELLO")HelloRequest=Sequence;if(op=="MODEL")ModelRequest=Sequence;if(op=="PATH"){PathId=Sequence;Submitted=true;}
+    string text=ini.ToString();if(text.Length>16000)throw new Exception("Planning packet exceeds limit.");IGC.SendUnicastMessage(Peer.EntityId,Tag,text);
+}
+MyIni State;
+void Receive()
+{
+    int count=0;while(IGC.UnicastListener.HasPendingMessage&&count++<8)
+    {
+        var message=IGC.UnicastListener.AcceptMessage();var text=message.Data as string;var ini=new MyIni();
+        if(Peer==null||message.Source!=Peer.EntityId||message.Tag!=Tag||text==null||text.Length>16000||!ini.TryParse(text)||ini.Get(S,"Version").ToInt32()!=5||ini.Get(S,"Service").ToInt32()!=1||ini.Get(S,"Arm").ToString()!=ArmName||ini.Get(S,"Remote").ToInt64()!=Epoch||ini.Get(S,"Operation").ToString()!="STATE")continue;
+        long epoch=ini.Get(S,"Epoch").ToInt64(),sequence=ini.Get(S,"Sequence").ToInt64(),ack=ini.Get(S,"Ack").ToInt64();if(epoch<=0||sequence<=0||ack<HelloRequest||ack<=0||ack>Sequence||ini.Get(S,"Role").ToString()!="Plan"||epoch<Remote||epoch==Remote&&sequence<=Received)continue;
+        if(Remote!=0&&epoch!=Remote)throw new Exception("Arm restarted; replan.");Remote=epoch;Received=Seen=sequence;ReplyAt=Clock;Generation=ini.Get(S,"Generation").ToInt64();State=ini;
+        string error=ini.Get(S,"Error").ToString();if(error.Length>0&&Phase!="Idle")throw new Exception(error);
+        if(Phase!="Model"&&Phase!="Idle"&&Phase!="Complete"&&Phase!="Preview"&&!Submitted&&ini.Get(S,"State").ToString()=="Canceled")throw new Exception("Arm canceled planning hold.");
+        if(Phase=="Model"&&ini.Get(S,"Ack").ToInt64()==ModelRequest&&ini.ContainsKey(S,"PlanFingerprint"))
+        {
+            if(!ini.Get(S,"Ready").ToBoolean()||!ini.Get(S,"Enabled").ToBoolean()||ini.Get(S,"Busy").ToBoolean()||!ini.Get(S,"SafetyRequired").ToBoolean()||!ini.Get(S,"SafetyReady").ToBoolean()||ini.Get(S,"SafetyHold").ToBoolean())throw new Exception("Planning requires an idle ON arm with fresh Safety.");
+            Stamp=ini.Get(S,"PlanFingerprint").ToString();World=new PlanningWorld(this,ini,Clearance);Start=Frame(ini,"Pose");Goal=Start;
+            var anchor=GridTerminalSystem.GetBlockWithId(World.BaseId);if(anchor==null)throw new Exception("Arm base lost.");AnchorPose=anchor.WorldMatrix;
+            Goal.Translation=anchor.GetPosition()+anchor.WorldMatrix.Forward*Requested.X+anchor.WorldMatrix.Left*Requested.Y+anchor.WorldMatrix.Up*Requested.Z;
+            Phase="Scan";Status="Scanning all construct cells, including empty cells.";
+        }
+    }
+}
+static Vector3D Rotation(MatrixD a,MatrixD b)
+{
+    var value=(Vector3D.Cross(a.Forward,b.Forward)+Vector3D.Cross(a.Up,b.Up)+Vector3D.Cross(a.Right,b.Right))*.5;
+    double dot=Clamp((Vector3D.Dot(a.Forward,b.Forward)+Vector3D.Dot(a.Up,b.Up)+Vector3D.Dot(a.Right,b.Right)-1)*.5,-1,1),angle=Math.Acos(dot);
+    if(angle<1e-8)return Vector3D.Zero;double length=value.Length();return length>1e-8?value*(angle/length):a.Up*angle;
+}
+void BeginIK(double[] seed,MatrixD goal,bool orientation)
+{SolveQ=(double[])seed.Clone();SolveGoal=goal;OrientationOnly=orientation;Iteration=0;}
+void RetryGoal()
+{
+    if(++Attempts>12)throw new Exception("No permitted goal configuration within budget: "+World.Problem);
+    var seed=new double[World.Lower.Length];for(int i=0;i<seed.Length;i++)seed[i]=World.Lower[i]+Random.NextDouble()*(World.Upper[i]-World.Lower[i]);BeginIK(seed,Goal,false);Phase="GoalIK";
+}
+void BeginStraight(){var goal=Goal;goal.Translation=Vector3D.Lerp(Start.Translation,Goal.Translation,(double)StraightIndex/StraightCount);BeginIK(Straight[Straight.Count-1],goal,false);Phase="StraightIK";}
+void BeginDetour(){HeadRoute=false;BeginEdge(A[0].Q,B[0].Q,0);}
+void BeginAxis()
+{
+    AxisRoute=new List<double[]>();AxisVerified=new List<double[]>();var q=(double[])A[0].Q.Clone();AxisRoute.Add(q);AxisVerified.Add(q);
+    for(int k=0;k<q.Length;k++){q=(double[])q.Clone();int i=AxisOrder==0?k:q.Length-1-k;q[i]=B[0].Q[i];AxisRoute.Add(q);}
+    AxisIndex=1;Nodes++;BeginEdge(AxisRoute[0],AxisRoute[1],5);
+}
+void IKStep()
+{
+    if(!Work())return;var pose=World.FK(SolveQ);var linear=OrientationOnly?Vector3D.Zero:SolveGoal.Translation-pose.Translation;var angular=Rotation(pose,SolveGoal);
+    if(linear.Length()<.004&&angular.Length()<.002)
+    {
+        if(Phase=="StraightIK"){BeginEdge(Straight[Straight.Count-1],SolveQ,4);return;}
+        if(OrientationOnly){BeginEdge((Swapped?B:A)[NearIndex].Q,SolveQ,1);return;}
+        TargetQ=(double[])SolveQ.Clone();World.Begin(new double[TargetQ.Length]);Phase="StartCheck";return;
+    }
+    if(++Iteration>80)
+    {
+        if(Phase=="StraightIK"){BeginDetour();return;}if(OrientationOnly){Phase="Search";return;}RetryGoal();return;
+    }
+    int n=SolveQ.Length;var columns=new double[6,n];var gram=new double[6,6];var rhs=new double[]{linear.X,linear.Y,linear.Z,angular.X,angular.Y,angular.Z};
+    for(int i=0;i<n;i++)
+    {
+        Vector3D l,a;World.Column(i,pose.Translation,out l,out a);double scale=World.Model.Groups[i].Rotary?AngleStep:PistonStep;
+        for(int r=0;r<6;r++)columns[r,i]=scale*(r<3?(OrientationOnly?0:r==0?l.X:r==1?l.Y:l.Z):r==3?a.X:r==4?a.Y:a.Z);
+    }
+    for(int r=0;r<6;r++)for(int c=0;c<6;c++){double value=r==c?.00001:0;for(int i=0;i<n;i++)value+=columns[r,i]*columns[c,i];gram[r,c]=value;}
+    var solution=Linear(gram,rhs);var delta=new double[n];double maximum=1;
+    for(int i=0;i<n;i++){for(int r=0;r<6;r++)delta[i]+=columns[r,i]*solution[r];maximum=Math.Max(maximum,Math.Abs(delta[i]));}
+    for(int i=0;i<n;i++)SolveQ[i]=Clamp(SolveQ[i]+(World.Model.Groups[i].Rotary?AngleStep:PistonStep)*delta[i]/maximum,World.Lower[i],World.Upper[i]);
+}
+static double[] Linear(double[,] a,double[] b)
+{
+    int n=b.Length;var l=new double[n,n];var x=new double[n];
+    for(int i=0;i<n;i++)for(int j=0;j<=i;j++){double s=a[i,j];for(int k=0;k<j;k++)s-=l[i,k]*l[j,k];l[i,j]=i==j?Math.Sqrt(Math.Max(s,1e-14)):s/l[j,j];}
+    for(int i=0;i<n;i++){double s=b[i];for(int k=0;k<i;k++)s-=l[i,k]*x[k];x[i]=s/l[i,i];}
+    for(int i=n-1;i>=0;i--){double s=x[i];for(int k=i+1;k<n;k++)s-=l[k,i]*x[k];x[i]=s/l[i,i];}return x;
+}
+double Distance(double[] x,double[] y){double s=0;for(int i=0;i<x.Length;i++){double d=(x[i]-y[i])/(World.Model.Groups[i].Rotary?AngleStep:PistonStep);s+=d*d;}return Math.Sqrt(s);}
+void SearchStep()
+{
+    if(!Work())return;if(++Nodes>NodeLimit)throw new Exception("No route found within node budget; no motion sent.");
+    var tree=Swapped?B:A;var other=Swapped?A:B;var sample=new double[World.Lower.Length];
+    if(Nodes%4==0)Array.Copy(other[0].Q,sample,sample.Length);else for(int i=0;i<sample.Length;i++)sample[i]=World.Lower[i]+Random.NextDouble()*(World.Upper[i]-World.Lower[i]);
+    NearIndex=Nearest(tree,sample);double distance=Distance(tree[NearIndex].Q,sample);double fraction=Math.Min(1,4/Math.Max(distance,1e-12));
+    for(int i=0;i<sample.Length;i++)sample[i]=tree[NearIndex].Q[i]+fraction*(sample[i]-tree[NearIndex].Q[i]);
+    var pose=World.FK(sample);pose.Forward=Goal.Forward;pose.Up=Goal.Up;pose.Right=Goal.Right;BeginIK(sample,pose,true);Phase="Project";
+}
+int Nearest(List<Node> tree,double[] q){int found=0;double best=double.MaxValue;for(int i=0;i<tree.Count;i++){double d=Distance(tree[i].Q,q);if(d<best){best=d;found=i;}}return found;}
+void BeginEdge(double[] from,double[] to,int purpose)
+{
+    EdgeFrom=(double[])from.Clone();EdgeTo=(double[])to.Clone();EdgePurpose=purpose;Segments.Clear();Segments.Push(new double[][]{EdgeFrom,EdgeTo});EdgeRoute.Clear();EdgeRoute.Add(EdgeFrom);EdgeRunning=false;EdgeResult=true;EdgeDone=false;Phase="Edge";
+}
+double[][] Segment;
+int EdgeChecks;
+void EdgeStep()
+{
+    if(!Work())return;
+    if(!EdgeRunning)
+    {
+        if(Segments.Count==0){FinishEdge();return;}if(++EdgeChecks>8192)throw new Exception("Swept configuration budget; no route certified.");
+        Segment=Segments.Pop();var mid=new double[EdgeFrom.Length];var half=new double[mid.Length];for(int i=0;i<mid.Length;i++){mid[i]=(Segment[0][i]+Segment[1][i])*.5;half[i]=(Segment[1][i]-Segment[0][i])*.5;}
+        World.Begin(mid,half);EdgeRunning=true;
+    }
+    World.CheckStep();if(!World.Checked)return;EdgeRunning=false;
+    var pose=World.CheckingHead;double rotation=Rotation(pose,Goal).Length();for(int i=0;i<EdgeFrom.Length;i++)if(World.Model.Groups[i].Rotary)rotation+=Math.Abs(Segment[1][i]-Segment[0][i])*.5;
+    bool orientation=rotation<.035;
+    if(EdgePurpose==4){var direction=Goal.Translation-Start.Translation;double t=direction.LengthSquared()>1e-12?Clamp(Vector3D.Dot(pose.Translation-Start.Translation,direction)/direction.LengthSquared(),0,1):0;orientation&=Vector3D.Distance(pose.Translation,Start.Translation+direction*t)+World.HeadPadding<=.05;}
+    if(World.Clear&&orientation){EdgeRoute.Add(Segment[1]);return;}
+    double d=Distance(Segment[0],Segment[1]);if(d<.01||Segments.Count>64){EdgeResult=false;Segments.Clear();FinishEdge();return;}
+    var middle=new double[EdgeFrom.Length];for(int i=0;i<middle.Length;i++)middle[i]=(Segment[0][i]+Segment[1][i])*.5;
+    Segments.Push(new double[][]{middle,Segment[1]});Segments.Push(new double[][]{Segment[0],middle});
+}
+void FinishEdge()
+{
+    if(EdgePurpose==5){if(!EdgeResult){if(++AxisOrder<2)BeginAxis();else Phase="Search";return;}AxisVerified.AddRange(EdgeRoute.Skip(1));if(++AxisIndex==AxisRoute.Count){Route=AxisVerified;ReadyRoute();}else BeginEdge(AxisRoute[AxisIndex-1],AxisRoute[AxisIndex],5);return;}
+    if(EdgePurpose==4){if(!EdgeResult){BeginDetour();return;}Straight.AddRange(EdgeRoute.Skip(1));if(++StraightIndex>StraightCount){Route=Straight;ReadyRoute();}else BeginStraight();return;}
+    if(EdgePurpose==0)
+    {
+        if(EdgeResult){Route=new List<double[]>(EdgeRoute.Select(q=>(double[])q.Clone()));ReadyRoute();return;}AxisOrder=0;BeginAxis();return;
+    }
+    var tree=Swapped?B:A;var other=Swapped?A:B;
+    if(EdgePurpose==1)
+    {
+        if(!EdgeResult){Swapped=!Swapped;Phase="Search";return;}tree.Add(new Node(EdgeTo,NearIndex));JoinIndex=Nearest(other,EdgeTo);BeginEdge(EdgeTo,other[JoinIndex].Q,2);return;
+    }
+    if(EdgePurpose==2)
+    {
+        if(!EdgeResult){Swapped=!Swapped;Phase="Search";return;}
+        var left=Trace(tree,tree.Count-1);var right=Trace(other,JoinIndex);right.Reverse();left.AddRange(right);
+        if(Swapped)left.Reverse();Route=left;RouteCursor=1;var first=Route[0];EdgeRoute.Clear();EdgeRoute.Add(first);Phase="Validate";return;
+    }
+    if(!EdgeResult)throw new Exception("Route edge validation failed.");
+    Validated.AddRange(EdgeRoute.Skip(1));RouteCursor++;Phase="Validate";
+}
+List<double[]> Trace(List<Node> tree,int index){var result=new List<double[]>();while(index>=0){result.Add(tree[index].Q);index=tree[index].Parent;}result.Reverse();return result;}
+List<double[]> Validated;
+void ValidateStep()
+{
+    if(Validated==null){Validated=new List<double[]>();Validated.Add(Route[0]);}
+    if(RouteCursor==Route.Count){Route=Validated;Validated=null;ReadyRoute();return;}
+    BeginEdge(Route[RouteCursor-1],Route[RouteCursor],3);
+}
+void ReadyRoute()
+{
+    // Always retain the subdivision points whose interval boxes were checked.
+    if(Route.Count<2)throw new Exception("Empty planning route.");
+    Status="Checked "+Route.Count+" joint configurations and connecting swept boxes; "+(HeadRoute?"head corridor retained.":"head detour used.");
+    if(!Execute){Send("RELEASEMODEL");Phase="Preview";return;}RouteCursor=0;SendChunk();
+}
+void SendChunk()
+{
+    int end=Math.Min(Route.Count-1,RouteCursor+7);var poses=new List<string>();var joints=new List<string>();var inverse=MatrixD.Invert(AnchorPose);
+    for(int k=RouteCursor;k<=end;k++)
+    {
+        var pose=World.FK(Route[k])*inverse;var p=pose.Translation;var f=pose.Forward;var u=pose.Up;
+        poses.Add(string.Join(" ",new double[]{p.X,p.Y,p.Z,f.X,f.Y,f.Z,u.X,u.Y,u.Z}.Select(Number)));joints.Add(World.NativeRow(Route[k]));
+    }
+    var ini=new MyIni();ini.Set(S,"Waypoints",string.Join("|",poses));ini.Set(S,"Joints",string.Join("|",joints));ini.Set(S,"Anchor",World.BaseId);ini.Set(S,"PlanFingerprint",Stamp);SentEnd=end;Send("PATH",ini);Phase="Moving";Status="Following checked joint route "+end+"/"+(Route.Count-1)+"; live Safety retained.";
+}
+void MoveStep()
+{
+    if(State==null)return;string state=State.Get(S,"State").ToString();long path=State.Get(S,"PathId").ToInt64();
+    if(path!=PathId){if(State.Get(S,"Ack").ToInt64()>=PathId)throw new Exception("Joint path refused/replaced.");return;}
+    if(state=="Canceled"||!State.Get(S,"Enabled").ToBoolean())throw new Exception("Arm canceled joint route.");
+    if(state!="Complete")return;Submitted=false;RouteCursor=SentEnd;
+    if(RouteCursor==Route.Count-1){var anchor=GridTerminalSystem.GetBlockWithId(World.BaseId);if(anchor==null)throw new Exception("Goal anchor lost.");var goal=Goal*MatrixD.Invert(AnchorPose)*anchor.WorldMatrix;var pose=Frame(State,"Pose");if(Vector3D.Distance(pose.Translation,goal.Translation)>.005||Rotation(pose,goal).Length()>.2*Math.PI/180)throw new Exception("Measured goal residual exceeds 5 mm / .2 deg.");Send("RELEASEMODEL");Phase="Complete";Status="Head goal reached; arm ON hold.";return;}
+    SendChunk();
+}
+void Abort(string reason)
+{
+    if(Peer!=null&&!Peer.Closed&&Remote!=0)try{Send(Submitted?"STOP":"RELEASEMODEL");}catch{}
+    Submitted=false;Phase="Idle";Status="Stopped: "+reason+" No automatic return.";World=null;Validated=null;
+}

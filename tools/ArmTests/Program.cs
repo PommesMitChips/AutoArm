@@ -127,6 +127,10 @@ internal static class Tests
                 Scenarios.MultiToolPilotCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_ToolSwap_Source.txt"))));
                 return 0;
             }
+            if(args.Length==3&&(args[1]=="--joint-planner"||args[1]=="--joint-planner-profile"))
+            {Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;bool profile=args[1].EndsWith("-profile");var arm=Script(File.ReadAllText(args[0]));var planner=Script(File.ReadAllText(args[2]),profile);foreach(var pair in new[]{(arm,args[0]),(planner,args[2])})if(Path.GetFileName(pair.Item2).EndsWith("_Compact.txt"))PackedProgramChecks.Register(pair.Item1,Path.Combine(Workspace,"tools/ScriptPack/obj/"+Path.GetFileNameWithoutExtension(pair.Item2)+".names.json"));Scenarios.JointPlannerCases(arm,planner,profile);return 0;}
+            if(args.Length==4&&args[1]=="--joint-planner-survey")
+            {Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.SurveyGeometryCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Collision_Source.txt"))),args[2],plannerType:Script(File.ReadAllText(args[3])));return 0;}
             if((args.Length==2||args.Length==3)&&args[1]=="--collision")
             {
                 Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
