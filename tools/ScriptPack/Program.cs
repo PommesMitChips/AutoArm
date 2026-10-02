@@ -262,6 +262,9 @@ internal static class ScriptPack
         var namespaceAliases = fast ? new NamespaceCompression.Result(packed, new List<RepetitionCompression.Decision>()) : NamespaceCompression.Run(packed);
         packed = namespaceAliases.Source;
         repetitions.Report.AddRange(namespaceAliases.Report);
+        var syntax=SyntaxCompression.Run(packed,!expressionBodies);
+        packed=syntax.Source;
+        repetitions.Report.AddRange(syntax.Report);
         if (fast) repetitions.Report.Add(new RepetitionCompression.Decision("mode", "token-only", 0, 0, true, "No forwarding helpers; preserve runtime call structure."));
         Check(Compile(packed, output));
         if (packed.Length > 100000) throw new Exception($"Packed script still exceeds 100,000 characters: {packed.Length}.");

@@ -15,7 +15,7 @@ Reproduce with `./tools/Test-JointPlanner.ps1 -Build -Profile` from the reposito
 | Planner instruction counting | Peak 3,032 / 50,000 in the two small articulated fixtures, using the installed SE resource rewriter. This is not a crowded-survey or in-game performance measurement. |
 | Existing Arm behavior | The full behavior/integration regression run passes 206,872 assertions. Ordinary configuration, pairing, manual control, ToolSwap, Bench and Collision behavior remain covered. |
 | Installed game compiler | Readable and compressed scripts pass C#6, type-safety/memory-safe rewriting and the combined resource-monitoring rewrite including normalized-text reparsing. |
-| Pasteable sizes | Arm: 95,570 UTF-16 characters. Planner: 40,082. Both fit the PB's 100,000-character limit. |
+| Pasteable sizes | Arm: 94,974 UTF-16 characters. Planner: 39,996 after the syntax compression pass. Both fit the PB's 100,000-character limit. |
 
 The surveyed geometry uses reported occupancy and installed model bounds. Physics is an ideal rigid-joint integration of the emitted velocities; gravity, inertia, flex and physical collision response are absent. Clearance is conservative, with bounded allowances for verified native mechanical interfaces.
 
