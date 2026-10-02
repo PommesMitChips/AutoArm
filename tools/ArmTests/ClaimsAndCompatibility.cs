@@ -141,9 +141,9 @@ internal static partial class Scenarios
 
     static void UserControlCompatibility(Type type)
     {
-        var rig=Fixtures.Serial(out _,out _,out var head,out var cockpit);var script=Start(type,rig);Run(script,"MiningArm On");
-        Check(Enabled(script),"Legacy MiningArm command prefix no longer enables.");
-        Run(script,"-s 0.15");Check(Convert.ToDouble(Get(script,"MoveMps"))==.15,"Legacy speed alias failed.");
+        var rig=Fixtures.Serial(out _,out _,out var head,out var cockpit);var script=Start(type,rig);Run(script,"On");
+        Check(Enabled(script),"On did not enable control.");
+        Run(script,"Speed 0.15");Check(Convert.ToDouble(Get(script,"MoveMps"))==.15,"Speed command failed.");
         RecordProxy.Of(cockpit).Values["MoveIndicator"]=new Vector3(0,0,-1);RecordProxy.Of(cockpit).Values["RollIndicator"]=1f;
         Run(script,"ReadKeyboard Off; ReadRoll Off");
         Check(((Vector3D)Get(script,"LastPilotLinear")!).LengthSquared()==0&&((Vector3D)Get(script,"LastPilotAngular")!).LengthSquared()==0,"Input-off flags ignored.");
@@ -164,7 +164,7 @@ internal static partial class Scenarios
         Run(script,"Hold; Yaw 2");
         Check(((Vector3D)Get(script,"LastFeedbackAngular")!).LengthSquared()>1e-8,"A 2-degree requested step was swallowed by the relaxed idle band.");
         Run(script,"OrientationTolerance 4");Check(!Enabled(script),"Changing orientation tolerance should stop before recapture.");
-        Console.WriteLine("User controls: familiar aliases/prefix, keyboard and roll toggles, idle deadbands, tighter aiming and TurnSpeed preset caps.");
+        Console.WriteLine("User controls: named commands, keyboard and roll toggles, idle deadbands, tighter aiming and TurnSpeed preset caps.");
     }
 
     static void IntegralConstraints(Type type)

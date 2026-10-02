@@ -144,7 +144,7 @@ internal static partial class Scenarios
         Check(!Enabled(script),"Reload unexpectedly enabled movement.");
         Check(Math.Abs(Convert.ToDouble(Get(Groups(script)[0],"MoveW"))-.25)<1e-12,"Translation preference not loaded.");
         Check(Math.Abs(Convert.ToDouble(Get(Groups(script)[0],"TurnW"))-2)<1e-12,"Orientation preference not loaded.");
-        var text=rig.PB.CustomData;Run(script,"DumpTrace");Check(rig.PB.CustomData==text,"Trace export overwrote configuration.");
+        var text=rig.PB.CustomData;Run(script,"Info");Check(rig.PB.CustomData==text,"Info overwrote configuration.");
         foreach(string bad in new[]{"NaN","-1","11","broken"})
         {
             var invalid=new MyIni();invalid.TryParse(text);

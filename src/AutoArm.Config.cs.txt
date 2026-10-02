@@ -8,7 +8,6 @@ sealed class AutoSettings
     static readonly double[] Min = { 0, .01, .01, .01, .01, .01, .01, 0, .01, .01, 0, 0, .01, 0, 0, 0, 0, 0, 0, 0 };
     static readonly double[] Max = { 5, 30, 180, 5, 2, 5, 2, 30, 20, 10, 5, 30, 10, 5, 5, 5, 30, 10, 3, 3 };
     static readonly string[] Units = { "Head translation m/s", "Head rotation deg/s", "Toolbar step deg", "Rotor/hinge RPM cap", "Piston m/s cap", "Home RPM cap", "Home m/s cap", "Idle orientation band deg", "Rotor RPM/s cap", "Piston m/s^2 cap", "Correction m/s cap", "Correction deg/s cap", "Target lead m", "Bias gain 1/s^2; 0=off", "Angular bias gain 1/s^2; 0=off", "Bias m/s cap", "Bias deg/s cap", "Mouse scale; total rotation capped", "Velocity error damping; 0=off", "Angular velocity error damping; 0=off" };
-    public static readonly string[] DefaultBindings = { "PitchUp", "Back", "PitchDown", "Left", "Down", "Right", "YawLeft", ForwardName, "YawRight" };
     public readonly double[] V = (double[])Defaults.Clone();
     public bool Keyboard = true, Roll = true, Mouse;
     public PilotMode Mode = PilotMode.HEAD;
@@ -49,7 +48,6 @@ sealed class AutoSettings
         ini.SetComment(ConfigSection, KeyboardKey, "Game movement input.");
         ini.SetComment(ConfigSection, RollKey, "Q/E: Head roll.");
         ini.SetComment(ConfigSection, MouseKey, "Optional view pitch/yaw.");
-        for (int i = 1; i <= 9; i++) ini.Delete(ConfigSection, "Bind" + i);
     }
     public static bool ReadMode(string text, out PilotMode mode)
     {

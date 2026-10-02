@@ -84,8 +84,8 @@ internal static partial class Scenarios
         Check(displayRig.Log.Last()==info,"Explicit Info output was immediately erased by routine status.");
         InvokeFrame(display,displayRig,"Status",UpdateType.Terminal,0);InvokeFrame(display,displayRig,"",UpdateType.Update1,1d/60);
         Check(displayRig.Log.Last().Contains("ON | input+feedback"),"Live status did not resume on request.");
-        InvokeFrame(display,displayRig,"OnOff Toggle",UpdateType.Terminal,0);
-        Check(!Enabled(display)&&displayRig.Log.Last().Contains("Toggle OFF"),"Cached display falsely reported On after OnOff Toggle.");
+        InvokeFrame(display,displayRig,"Toggle",UpdateType.Terminal,0);
+        Check(!Enabled(display)&&displayRig.Log.Last().Contains("Toggle OFF"),"Cached display falsely reported On after Toggle.");
         InvokeFrame(display,displayRig,"On",UpdateType.Terminal,0);
         RecordProxy.Of(displayRig.Runtime).Values["TimeSinceLastRun"]=TimeSpan.FromSeconds(1d/60); WaitForOn(display);
         InvokeFrame(display,displayRig,"OrientationTolerance 4",UpdateType.Terminal,0);

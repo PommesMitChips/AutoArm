@@ -970,30 +970,23 @@ void RunCommands(string argument)
 
 void RunCommand(string command)
 {
-    if (command.StartsWith("MiningArm ", StringComparison.OrdinalIgnoreCase)) command = command.Substring(10).Trim();
     string[] w = command.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
     if (w.Length == 0) return;
     string c = w[0].ToLowerInvariant();
     if (Tools != null && Tools.Handle(command)) { SwapBatchLock = true; return; }
-    if (Tools != null && Tools.Busy && c != "on" && c != "toggle" && c != "onoff" && c != "-oo" && c != "off" && c != "stop" && c != "info" && c != "status" && c != "version")
+    if (Tools != null && Tools.Busy && c != "on" && c != "toggle" && c != "off" && c != "stop" && c != "info" && c != "status" && c != "version")
         throw new Exception("Tool busy; SwapCancel/Stop first.");
-    if (c.Length == 1 && c[0] >= '1' && c[0] <= '9') { NumericAction(c[0] - '0'); return; }
     switch (c)
     {
         case "version": Say(Banner()); break;
         case "on": StartControl(); break;
         case "off": case "stop": if (Tools != null) { Tools.InhibitRecovery(); if (Tools.Busy) Tools.Cancel(c); } StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
         case "toggle": if (Enabled) { if (Tools != null) Tools.InhibitRecovery(); StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
-        case "onoff": case "-oo":
-            c = w.Length < 2 ? "" : w[1].ToLowerInvariant();
-            if (c != "on" && c != "off" && c != "toggle") throw new Exception("OnOff expects On, Off or Toggle.");
-            RunCommand(w[1]);
-            break;
         case "hold": HoldCurrent(); break;
         case "check": Check(); break;
         case "rescan": Discover(true); break;
         case "reload": Reload(); break;
-        case "info": case "headinfo": case "help": PrintInfo(); break;
+        case "info": case "help": PrintInfo(); break;
         case "pivotprobe":
             DisplayPinned = true;
             if (PivotProbe == null) PivotProbe = new PivotProbeTool(this, Topology);
@@ -1003,13 +996,13 @@ void RunCommand(string command)
         case "settings": PrintInfo(); break;
         case "joints": PrintJoints(); break;
         case "bindings": PrintBindings(); break;
-        case "sethome": case "-sh": CaptureHome(); break;
-        case "gohome": case "-gh": BeginHome(); break;
+        case "sethome": CaptureHome(); break;
+        case "gohome": BeginHome(); break;
         case "homeinfo": PrintHome(); break;
-        case "speed": case "-s": MoveMps = Number(w, 1, 0, 5, "Speed"); break;
-        case "readkeyboard": case "-rk": ReadKeyboard = InputToggle(w, ReadKeyboard); break;
+        case "speed": MoveMps = Number(w, 1, 0, 5, "Speed"); break;
+        case "readkeyboard": ReadKeyboard = InputToggle(w, ReadKeyboard); break;
         case "readroll": ReadRoll = InputToggle(w, ReadRoll); break;
-        case "readmouse": case "-rm": ReadMouse = InputToggle(w, ReadMouse); break;
+        case "readmouse": ReadMouse = InputToggle(w, ReadMouse); break;
         case "mode": case "movementmode": case "controlmode":
             if (w.Length != 2) throw new Exception("MovementMode expects HEAD, HRZ or VRT.");
             SetMovementMode(w[1]); break;
@@ -1033,14 +1026,10 @@ void RunCommand(string command)
         case "yawleft": case "yawright": Step("yaw", c == "yawleft" ? StepDeg : -StepDeg); break;
         case "pitchup": case "pitchdown": Step("pitch", c == "pitchup" ? StepDeg : -StepDeg); break;
         case "rollleft": case "rollright": Step("roll", c == "rollright" ? StepDeg : -StepDeg); break;
-        case "dumptrace": PrintInfo(); Say("See Info; Custom Data unchanged."); break;
-        case "traceclear": Say("No trace buffer."); break;
         case "moveto": PoseCommand(w, 1); break;
         case "orientto": PoseCommand(w, 2); break;
         case "movetoposori": PoseCommand(w, 3); break;
         case "path": PathCommand(command); break;
-        case "move": case "relmove": case "runfrompanel":
-            throw new Exception(c + " is not supported by AutoArm's discovered pose control.");
         default: throw new Exception("Unknown command '" + w[0] + "'. Use Info.");
     }
 }
@@ -1052,12 +1041,6 @@ static bool InputToggle(string[] words, bool current)
     if (value == "off") return false;
     if (value == "toggle") return !current;
     throw new Exception(words[0] + " expects On, Off or Toggle.");
-}
-
-void NumericAction(int n)
-{
-    string action = AutoSettings.DefaultBindings[n - 1].ToLowerInvariant();
-    if (action != "none") RunCommand(action);
 }
 
 void PrintBindings()
