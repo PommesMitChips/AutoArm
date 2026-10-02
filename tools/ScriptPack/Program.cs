@@ -42,7 +42,7 @@ internal static class ScriptPack
     {
         try
         {
-            if (args.Length < 2) throw new Exception("Usage: ScriptPack check|inspect|specialize|pack|pack-fast|pack-pb <source.txt> [output.txt]");
+            if (args.Length < 2) throw new Exception("Usage: ScriptPack check|inspect|specialize|blocks|pack|pack-fast|pack-pb|pack-safe <source.txt> [output.txt]");
             var source = File.ReadAllText(args[1]);
             var compilation = Compile(source, args[1]);
             if (args[0] == "specialize" && args.Length == 3)
@@ -55,13 +55,28 @@ internal static class ScriptPack
                 return;
             }
             Check(compilation);
+            if((args[0]=="blocks"||args[0]=="blocks-min")&&args.Length==3) {
+                var edits=new List<(int Start,int Length,string Text)>();
+                foreach(var method in compilation.SyntaxTrees.Single().GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().Where(m=>m.ExpressionBody!=null)) {
+                    StatementSyntax statement=method.ReturnType.ToString()=="void"?SyntaxFactory.ExpressionStatement(method.ExpressionBody!.Expression):SyntaxFactory.ReturnStatement(method.ExpressionBody!.Expression);
+                    var block=method.WithExpressionBody(null).WithSemicolonToken(default).WithBody(SyntaxFactory.Block(statement));
+                    edits.Add((method.SpanStart-Header.Length,method.Span.Length,args[0]=="blocks-min"?Compact(block.DescendantTokens().Select(t=>t.WithoutTrivia()).ToArray()):block.NormalizeWhitespace().ToFullString()));
+                }
+                foreach(var property in compilation.SyntaxTrees.Single().GetRoot().DescendantNodes().OfType<PropertyDeclarationSyntax>().Where(p=>p.ExpressionBody!=null)) {
+                    var getter=SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithBody(SyntaxFactory.Block(SyntaxFactory.ReturnStatement(property.ExpressionBody!.Expression)));
+                    var block=property.WithExpressionBody(null).WithSemicolonToken(default).WithAccessorList(SyntaxFactory.AccessorList(SyntaxFactory.SingletonList(getter)));
+                    edits.Add((property.SpanStart-Header.Length,property.Span.Length,args[0]=="blocks-min"?Compact(block.DescendantTokens().Select(t=>t.WithoutTrivia()).ToArray()):block.NormalizeWhitespace().ToFullString()));
+                }
+                foreach(var edit in edits.OrderByDescending(e=>e.Start))source=source.Remove(edit.Start,edit.Length).Insert(edit.Start,edit.Text);
+                Check(Compile(source,args[2]));File.WriteAllText(args[2],source,new UTF8Encoding(false));Console.WriteLine("Expanded expression bodies: "+edits.Count);return;
+            }
             Console.WriteLine($"C# 6 / installed SE API: PASS ({source.Length:N0} UTF-16 characters)");
             if (args[0] == "check") return;
             if (args[0] == "inspect") { Inspect(compilation); return; }
             if (args[0] == "test") { Regression.Run(args[1], args[2]); return; }
-            if (args[0] != "pack" && args[0] != "pack-fast" && args[0] != "pack-pb" || args.Length != 3) throw new Exception("Unknown command or missing output path.");
+            if (args[0] != "pack" && args[0] != "pack-fast" && args[0] != "pack-pb" && args[0] != "pack-safe" || args.Length != 3) throw new Exception("Unknown command or missing output path.");
             CompressionChecks.Run();
-            Pack(source, compilation, args[2], args[0] != "pack", args[0] != "pack-pb");
+            Pack(source, compilation, args[2], args[0] != "pack" && args[0] != "pack-safe", args[0] != "pack-pb" && args[0] != "pack-safe");
         }
         catch (Exception e) { Console.Error.WriteLine(e); Environment.ExitCode = 1; }
     }

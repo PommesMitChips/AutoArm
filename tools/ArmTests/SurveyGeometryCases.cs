@@ -218,8 +218,7 @@ internal static partial class Scenarios
                 }
             }
             if(encounters) {
-                var report=new MyIni();report.TryParse(benchRig.PB.CustomData);
-                File.WriteAllText(Path.Combine(Tests.Workspace,"tools/ArmTests/obj/encounter-"+command.ToLowerInvariant()+".txt"),report.EndContent);
+                File.WriteAllText(Path.Combine(Tests.Workspace,"tools/ArmTests/obj/encounter-"+command.ToLowerInvariant()+".txt"),(string)Get(bench,"SavedReport")!);
                 Console.WriteLine("Encounter report recorded for "+command+"; model results do not establish live physics clearance.");
             }
         }

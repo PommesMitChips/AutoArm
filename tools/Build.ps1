@@ -20,7 +20,7 @@ try {
     $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
     $env:DOTNET_GENERATE_ASPNET_CERTIFICATE = 'false'
     $env:SE_BIN = $GameBin
-    $packingMode = if ($PreserveBodies) { 'pack-pb' } elseif ($Fast) { 'pack-fast' } else { 'pack' }
+    $packingMode = if ($PreserveBodies) { if ($Fast) { 'pack-pb' } else { 'pack-safe' } } elseif ($Fast) { 'pack-fast' } else { 'pack' }
     & dotnet run --project tools/ScriptPack -- $packingMode $Source $Output
     if ($LASTEXITCODE -ne 0) { throw 'Packing/validation failed.' }
     if ($Test) {

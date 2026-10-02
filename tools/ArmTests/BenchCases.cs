@@ -121,7 +121,31 @@ internal static partial class Scenarios
         for(int i=0;i<40;i++)replyLoss.Tick();
         Check(status.StartsWith("ABORT:")&&replyLoss.Paths().Count==1&&!Enabled(Core(replyLoss.Arm,"Arm 1")),"Reply loss kept ownership alive or launched another arm.");
         EncounterCases(armType,benchType);
+        BenchReportCases(armType,benchType);
         Console.WriteLine("Head-only two-arm runner protocol: PASS ("+Tests.Assertions+" assertions; mock poses, not a physics simulation).");
+    }
+    static void BenchReportCases(Type armType,Type benchType)
+    {
+        var f=new BenchRig(armType,benchType);Check(f.Finish("Smoke").StartsWith("PASS:"),"Report fixture did not complete.");
+        var log=(System.Text.StringBuilder)Get(f.Bench,"Log")!;
+        for(int i=0;i<700;i++)log.Append("SAMPLE audit ").Append(i).Append(' ').Append(new string('x',160)).Append('\n');
+        f.Bench.GetType().GetMethod(PackedProgramChecks.Name(f.Bench.GetType(),"Complete"),All)!.Invoke(f.Bench,new object[]{"ABORT: report-retention fixture; no movement."});
+        string report=(string)Get(f.Bench,"SavedReport")!;
+        Check(report.Length>100000&&f.Client.PB.CustomData.Length<=60000,"Large report was truncated in durable storage or exceeded Custom Data export cap.");
+        Check(f.Client.PB.CustomData.Contains("RESULT ABORT: report-retention")&&f.Client.PB.CustomData.Contains("REPORT EXCERPT"),"Bounded Custom Data omitted terminal evidence/excerpt notice.");
+        long epoch=(long)Get(f.Bench,"Epoch")!;f.Client.Storage=((TestHost)f.Bench).Storage;
+        var resumed=Tests.Create(benchType,f.Client);
+        Check((string)Get(resumed,"SavedReport")! ==report&&(long)Get(resumed,"Epoch")! ==epoch+1,"Report failed to survive save/recompile with epoch advancement.");
+        var combined=new System.Text.StringBuilder();int pages=(report.Length+11999)/12000;
+        for(int page=1;page<=pages;page++) {
+            HostFrame(resumed,f.Client,"Page "+page);
+            var data=new MyIni();Check(data.TryParse(f.Client.PB.CustomData),"Page export destroyed INI settings.");
+            string text=data.EndContent;Check(text.StartsWith("REPORT PAGE "+page+"/"+pages)&&f.Client.PB.CustomData.Length<16000,"Page was read from the excerpt or exceeded the bounded export size.");
+            combined.Append(text[(text.IndexOf('\n')+1)..]);
+            Check(data.Get("Bench","ArmPB").ToString()=="Arm PB"&&data.ContainsSection("Baseline Arm 1"),"Page export changed setup/baselines.");
+        }
+        Check(combined.ToString()==report,"Concatenated page payloads did not reconstruct the complete durable report.");
+        Console.WriteLine("Bench reports: bounded result-preserving Custom Data, full Storage report, all-page reconstruction, save/recompile retention PASS.");
     }
     static void EncounterCases(Type armType,Type benchType)
     {

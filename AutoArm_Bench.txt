@@ -1,5 +1,5 @@
 // Repeatable head-only test through ArmService. Never writes actuators.
-const string ControllerBuildVersion = "Bench 4";
+const string ControllerBuildVersion = "Bench 5";
 const string Tag = "AutoArm/5", S = "Link";
 // ===== IMPLEMENTATION =====
 sealed class ArmSession {
@@ -15,6 +15,9 @@ sealed class ArmSession {
     public bool MotionObserved;
     public double ProgressTime, SampleTime = -1, Remaining = double.MaxValue;
     public bool Submitted, Returned;
+    public string NavKey = "";
+    public int NavStage;
+    public double NavBest = double.MaxValue, PeerBest = double.MaxValue, NavBudgetDistance;
     public readonly Dictionary<long, double> Sent = new Dictionary<long, double>();
     public readonly List<MatrixD> Path = new List<MatrixD>();
 }
@@ -30,12 +33,15 @@ double EncounterSpeed, CrossBeyond, BaseHeight, BaseSweep, TotalBudget, CaptureT
 bool Encounter, Preview;
 bool Truncated;
 string Mode, Status = "Rebase, Check, Smoke, Run, PreviewCross, Cross, PreviewBases, Bases, Info, Cancel.", Settings, AbortReason;
+string SavedReport = "";
 public Program() {
-    long n; long.TryParse(Storage, out n); Epoch = n > 0 && n < long.MaxValue ? n + 1 : 1; Save();
+    int split = Storage.IndexOf('\n'); long n; long.TryParse(split < 0 ? Storage : Storage.Substring(0, split), out n);
+    if (n > 0 && split >= 0) SavedReport = Storage.Substring(split + 1);
+    Epoch = n > 0 && n < long.MaxValue ? n + 1 : 1; Save();
     if (string.IsNullOrWhiteSpace(Me.CustomData)) Defaults();
     Echo(Status);
 }
-public void Save() { Storage = Epoch.ToString(); }
+public void Save() { Storage = Epoch + "\n" + SavedReport; }
 void Defaults() {
     var ini = new MyIni();
     ini.Set("Bench", "Format", 1); ini.Set("Bench", "ArmPB", "@101750135329216276");
@@ -54,9 +60,12 @@ public void Main(string argument, UpdateType source) {
         if (command.StartsWith("Page ", StringComparison.OrdinalIgnoreCase)) {
             int page; if (!int.TryParse(command.Substring(5), out page) || page < 1) throw new Exception("Page needs a positive number.");
             var saved = new MyIni(); if (!saved.TryParse(Me.CustomData)) throw new Exception("Invalid report data.");
-            string report = saved.EndContent; int pages = Math.Max(1, (report.Length + 11999) / 12000);
+            string report = Phase != 0 ? Log.ToString() : SavedReport.Length > 0 ? SavedReport : saved.EndContent;
+            int pages = Math.Max(1, (report.Length + 11999) / 12000);
             if (page > pages) throw new Exception("Report has " + pages + " pages.");
-            int offset = (page - 1) * 12000; Echo("REPORT PAGE " + page + "/" + pages + "\n" + report.Substring(offset, Math.Min(12000, report.Length - offset)));
+            int offset = (page - 1) * 12000; string part = "REPORT PAGE " + page + "/" + pages + "\n" + report.Substring(offset, Math.Min(12000, report.Length - offset));
+            if (Phase == 0) { saved.EndContent = ""; if (saved.ToString().Length > 12000) throw new Exception("Bench settings exceed report export budget."); saved.EndContent = part; Me.CustomData = saved.ToString(); }
+            Echo(part);
             return;
         }
         if (command.Equals("Cancel", StringComparison.OrdinalIgnoreCase)) {
@@ -147,7 +156,8 @@ void Begin(string mode) {
     Extent = mode == "SMOKE" ? Math.Min(.1, extent) : extent; Side = side; Speed = speed;
     Repeats = mode == "SMOKE" || mode == "CHECK" || Encounter ? 1 : repeats; Mode = mode; TotalBudget = 360;
     ArmIndex = Iteration = 0; LastPoll = Clock; Deadline = Clock + 5; StartTime = Clock;
-    Log.Clear(); Truncated = false; Add("AUTOARM BENCH 4 | " + mode + " | heads only; ArmService owner " + Owner.EntityId);
+    if (Settings.Length > 12000) throw new Exception("Bench settings exceed report export budget.");
+    Log.Clear(); Truncated = false; Add("AUTOARM BENCH 5 | " + mode + " | heads only; ArmService owner " + Owner.EntityId);
     Add("REFERENCE " + Reference.EntityId + " | " + Row(Reference.WorldMatrix));
     Add("SETTINGS extent=" + N(Extent) + " side=" + N(Side) + " speed=" + N(Speed) + " repeats=" + Repeats);
     Add("ARM CONFIG BEGIN\n" + Owner.CustomData + "\nARM CONFIG END");
@@ -307,6 +317,7 @@ void EncounterState() {
     var statuses = new List<string>();
     foreach (var arm in Arms) {
         var s = arm.State;
+        NavigationProgress(arm);
         if (!s.Get(S, "Ready").ToBoolean() || !s.Get(S, "Enabled").ToBoolean()) throw new Exception(arm.Name + " stopped/not ready.");
         RequireSafety(arm, false);
         if (arm.Returned) { RequireIdle(arm); continue; }
@@ -332,6 +343,22 @@ void EncounterState() {
     Status = "Bench " + Mode + " | " + string.Join(" / ", statuses);
     foreach (var arm in Arms) Status += "\n" + arm.Name + ": " + SafetyStatus(arm);
     Status += "\nCancel stops both test paths. Safety remains required.";
+}
+void NavigationProgress(ArmSession arm)
+{
+    var state = arm.State;
+    if (!state.Get(S, "NavActive").ToBoolean()) return;
+    string key = state.Get(S, "NavKey").ToString(); int stage = state.Get(S, "NavStage").ToInt32();
+    double remaining, peer, extra;
+    if (key.Length == 0 || stage < 1 || stage > 3 || !state.Get(S, "NavRemaining").TryGetDouble(out remaining) || !state.Get(S, "NavPeerRemaining").TryGetDouble(out peer) || !state.Get(S, "NavExtra").TryGetDouble(out extra) ||
+        !Finite(remaining) || !Finite(peer) || !Finite(extra) || remaining < 0 || peer < 0 || extra < 0 || extra > 100) throw new Exception("Invalid passing-lane progress.");
+    if (key != arm.NavKey) { arm.NavKey = key; arm.NavStage = 0; arm.NavBudgetDistance = 0; }
+    if (stage != arm.NavStage) { arm.NavStage = stage; arm.NavBest = arm.PeerBest = double.MaxValue; arm.ProgressTime = Clock; }
+    double speed = Math.Min(EncounterSpeed, state.Get(S, "DefaultMove").ToDouble());
+    if (extra > arm.NavBudgetDistance) { TotalBudget = Math.Min(3600, TotalBudget + (extra - arm.NavBudgetDistance) / speed); arm.NavBudgetDistance = extra; }
+    if (state.Get(S, "NavWait").ToBoolean()) {
+        if (peer < arm.PeerBest - .001) { arm.PeerBest = peer; arm.ProgressTime = Clock; }
+    } else if (remaining < arm.NavBest - .001) { arm.NavBest = remaining; arm.ProgressTime = Clock; }
 }
 void BuildPath(ArmSession arm) {
     var offsets = new List<Vector3D> { new Vector3D(0, Extent, 0) };
@@ -401,7 +428,8 @@ void Sample(ArmSession arm) {
     arm.SampleTime = Clock;
     Add("SAMPLE " + N(Clock - StartTime) + " | " + arm.Name + " | path " + s.Get(S, "PathId") + " | completed " + s.Get(S, "Completed") + " | error " + N(error) + " " + N(angle) +
         " | safety " + s.Get(S, "SafetyReady") + " " + s.Get(S, "SafetyHold") + " " + s.Get(S, "SafetyLimited") + " | solver " + s.Get(S, "SolverPasses") + " " + s.Get(S, "SolverBudget") + " | " + Row(LocalPose(arm)) +
-        " | fraction " + s.Get(S, "SafetyFraction") + " | rows " + s.Get(S, "SafetyConstraints") + "/" + s.Get(S, "SafetyConstraintLimit") + " | " + s.Get(S, "SafetyReason"));
+        " | fraction " + s.Get(S, "SafetyFraction") + " | rows " + s.Get(S, "SafetyConstraints") + "/" + s.Get(S, "SafetyConstraintLimit") +
+        " | nav " + s.Get(S, "NavActive") + "/" + s.Get(S, "NavStage") + " wait " + s.Get(S, "NavWait") + " remaining " + s.Get(S, "NavRemaining") + " | " + s.Get(S, "SafetyReason"));
 }
 void Abort(string reason) {
     if (Phase == 90) return;
@@ -420,8 +448,16 @@ void Complete(string result) {
     Phase = 0;
     foreach (var arm in Arms) Add("SUMMARY " + arm.Name + " | samples " + arm.Samples + " | max control error " + N(arm.MaxError) + " m " + N(arm.MaxAngle) + " deg | limited samples " + arm.LimitedSamples + " | hold sample estimate " + N(arm.HeldSeconds) + " s | budget samples " + arm.BudgetSamples);
     Add("RESULT " + result + " | elapsed " + N(Clock - StartTime));
-    Config.EndContent = Log.ToString(); Me.CustomData = Config.ToString();
-    Status = result + "\nCopy this PB's full Custom Data for the test report.";
+    SavedReport = Log.ToString(); Save(); Config.EndContent = "";
+    int room = 58000 - Config.ToString().Length;
+    string report = SavedReport;
+    if (report.Length > room) {
+        string note = "\nREPORT EXCERPT; full report retained in Storage. Run Page N to export each page.\n";
+        int prefix = Math.Min(18000, room / 3);
+        report = report.Substring(0, prefix) + note + report.Substring(report.Length - (room - prefix - note.Length));
+    }
+    Config.EndContent = report; Me.CustomData = Config.ToString();
+    Status = result + "\nCustom Data contains the result. Page N exports the complete report in sections.";
 }
 void Add(string line) {
     if (line.StartsWith("SAMPLE ", StringComparison.Ordinal) && Log.Length + line.Length > 350000) {
