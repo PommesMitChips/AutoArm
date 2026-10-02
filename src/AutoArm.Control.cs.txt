@@ -78,6 +78,8 @@ Vector3D TargetP, TargetF, TargetU, PreviousP, PreviousF, PreviousU;
 Vector3D FilteredV, FilteredW, PositionI, OrientationI;
 bool TargetValid, ObservationValid;
 IMyShipController InputController;
+long PilotSeatId => 0;
+bool SeatAvailable(IMyShipController c) { return true; }
 readonly List<IMyShipController> InputScratch = new List<IMyShipController>();
 int InputScan;
 double ControlElapsed, SetupElapsed, StatusElapsed;
@@ -819,7 +821,8 @@ bool HasPilotInput()
 
 bool InputScope(IMyShipController c)
 {
-    return c != null && !c.Closed && c.CubeGrid != null && c.IsSameConstructAs(Me);
+    return c != null && !c.Closed && c.CubeGrid != null && c.IsSameConstructAs(Me) &&
+        (PilotSeatId == 0 || c.EntityId == PilotSeatId) && SeatAvailable(c);
 }
 
 IMyShipController FindInputController(bool force = false)
@@ -831,7 +834,7 @@ IMyShipController FindInputController(bool force = false)
     InputScratch.Clear();
     GridTerminalSystem.GetBlocksOfType<IMyShipController>(InputScratch, b => InputScope(b) && b.IsUnderControl);
     InputController = null;
-    foreach (var b in InputScratch) if (InputController == null || b.EntityId < InputController.EntityId) InputController = b;
+    if (InputScratch.Count == 1) InputController = InputScratch[0];
     return InputController;
 }
 

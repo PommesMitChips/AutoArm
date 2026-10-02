@@ -5,7 +5,7 @@ using VRageMath;
 
 internal static partial class Scenarios
 {
-    internal static void RunHosts(Type armType,Type toolType) { StartupSavedDriveCases(armType); ConfigurationViewCases(armType,toolType); MultiArmCases(armType,toolType); Console.WriteLine($"Full host integration: PASS ({Tests.Assertions} assertions)."); }
+    internal static void RunHosts(Type armType,Type toolType) { StartupSavedDriveCases(armType); ConfigurationViewCases(armType,toolType); MultiArmCases(armType,toolType); PilotPairCases(armType); Console.WriteLine($"Full host integration: PASS ({Tests.Assertions} assertions)."); }
     static object Core(object host,string name)=>((IDictionary)Get(host,"Arms")!)[name]!;
     static void HostFrame(object host,Rig rig,string command="",double dt=1d/60,UpdateType? kind=null)
     { InvokeFrame(host,rig,command,kind??(command.Length==0?UpdateType.Update1:UpdateType.Terminal),command.Length==0?dt:0); }
@@ -85,6 +85,9 @@ internal static partial class Scenarios
     static void MultiToolHost(Type armType,Type toolType,bool automatic=false,bool split=false,bool manual=false)
     {
         var f=new ToolSwapFixture(headless:automatic); f.NoNamedArmReference(); var g=new ToolSwapFixture(headless:automatic); g.NoNamedArmReference();
+        // This fixture tests one operator and shared tool service. Independent
+        // occupied seats are exercised separately by PilotPairCases.
+        foreach(var cockpit in g.Rig.Blocks.OfType<IMyShipController>())RecordProxy.Of(cockpit).Values["IsUnderControl"]=false;
         if(automatic) { f.LockSource(); g.LockSource(); }
         var grids=new HashSet<object>(ReferenceEqualityComparer.Instance); var blocks=new HashSet<object>(ReferenceEqualityComparer.Instance);
         foreach(var terminal in g.Rig.Blocks)

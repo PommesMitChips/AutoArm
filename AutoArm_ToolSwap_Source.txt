@@ -15,6 +15,14 @@ int Next;
 long InputClock, InputOwner;
 
 
+
+sealed class PilotClaim {    }
+
+
+
+
+
+
 public Program()
 {
     Runtime.UpdateFrequency = UpdateFrequency.Update10;
@@ -131,7 +139,7 @@ void PublishConfig()
     foreach (var key in keys) if (!live.ContainsKey(key.Section, key.Name)) live.Set(key.Section, key.Name, Configuration.Get(key).ToString());
     string text = live.ToString(); if (text != Me.CustomData) Me.CustomData = text;
 }
-void SelectArm(string name, bool claim = true)
+void SelectArm(string name, bool claim = true, bool pair = false)
 {
     if (!Arms.ContainsKey(name)) throw new Exception("Unknown arm: " + name);
     Selected = name;
@@ -140,7 +148,9 @@ void SelectArm(string name, bool claim = true)
 void Command(string raw)
 {
     string text = raw.Trim(); if (text.Length == 0) return;
-    if (text.StartsWith("Select ", StringComparison.OrdinalIgnoreCase)) { SelectArm(text.Substring(7).Trim()); return; }
+    HostError = "";
+    if (text.StartsWith("Select ", StringComparison.OrdinalIgnoreCase)) { SelectArm(text.Substring(7).Trim(), true, true); return; }
+    if (text.StartsWith("Release ", StringComparison.OrdinalIgnoreCase)) { {throw new Exception("Release is an Arm PB command."); } }
     if (text.Equals("StopAll", StringComparison.OrdinalIgnoreCase)) { StopAll("StopAll command."); return; }
     int end = text.IndexOfAny(new char[] { ' ', '(', ',' }); string first = (end < 0 ? text : text.Substring(0, end)).ToLowerInvariant();
     if (first == "on" || first == "reload" || first == "rescan")
@@ -162,6 +172,8 @@ void Command(string raw)
     }
     ArmCore target; if (!Arms.TryGetValue(name, out target)) throw new Exception("Unknown arm: " + name);
     string action = command.Split(' ')[0].ToLowerInvariant();
+    if (action == "select") { int space = command.IndexOf(' '); string mode = space < 0 ? "" : command.Substring(space + 1).Trim().ToUpperInvariant(); if (mode.Length > 0 && mode != "HEAD" && mode != "HRZ" && mode != "VRT") throw new Exception("MovementMode expects HEAD, HRZ or VRT."); SelectArm(name, true, true); if (mode.Length > 0) target.Update("Mode " + mode, UpdateType.Terminal, 0); return; }
+    if (action == "release") { {throw new Exception("Release is an Arm PB command."); } }
     if (action == "on" || action == "reload" || action == "rescan")
     { target.Config = ConfigFor(name); target.ConfigChanged = false; }
     target.Update(command, UpdateType.Terminal, 0);
@@ -173,12 +185,19 @@ static int Arity(string verb)
     {
         case "on": case "off": case "stop": case "hold": case "check": case "info": case "joints": case "reload": case "rescan": case "sethome": case "gohome": case "toolscan": case "toolinfo": case "swapcancel": case "version": case "status": case "bindings": case "homeinfo": case "forward": case "back": case "left": case "right": case "up": case "down": case "yawleft": case "yawright": case "pitchup": case "pitchdown": case "rollleft": case "rollright": return 0;
         case "moveto": return 3;
+        case "release": return 0;
         case "orientto": return 6;
         case "movetoposori": return 9;
         case "homespeed": case "step": return 2;
         default: return 1;
     }
 }
+
+
+
+
+
+
 
 
 void CaptureDefaults(ArmCore core)

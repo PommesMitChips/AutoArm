@@ -150,12 +150,20 @@ class AutoTopology
         if (!ScopeEdges(out why)) return false;
         var root = Between(Hull, Start);
         if (!Has(root, Base.EntityId)) return Bad("Base marker attachment changed while scanning.", out why);
-        if (!AddGroup(root, out why)) return false;
-        Corridor.Add(Start); Corridor.Add(Hull);
+        Corridor.Add(Hull);
         var dist = Distances(EndGrid, out why); if (dist == null) return false;
         int d;
         if (!dist.TryGetValue(Start, out d)) return Bad("Head route returns through hull or is unreachable.", out why);
-        long at = Start;
+        // All mechanical roots in this moving component participate in the
+        // same split/rejoin recognition as later stages. The named root only
+        // defines the hull and reference frame; other members need no marker.
+        foreach (var edge in Edges) {
+            long child = edge.A == Hull ? edge.Z : edge.Z == Hull ? edge.A : 0; int depth;
+            if (child != 0 && (!dist.TryGetValue(child, out depth) || depth != d))
+                return Bad("Parallel base arms have unequal stage counts; variable-ratio closure is unsupported.", out why);
+        }
+        dist[Hull] = d + 1;
+        long at = Hull;
         while (at != EndGrid)
         {
             if (!Guard("corridor recognition", out why)) return false;
@@ -341,7 +349,7 @@ class AutoTopology
                 bool compatible = kind == 1
                     ? Vector3D.Dot(baseA, ang) >= AxisCos && (baseL - lin).Length() <= RotaryLineM
                     : Vector3D.Dot(baseL, lin) >= AxisCos;
-                if (!compatible) return Bad("Parallel " + (kind == 1 ? "rotors/hinges lack one coaxial full twist" : "pistons are not collinear") +
+                if (!compatible) return Bad("Parallel " + (kind == 1 ? "rotors/hinges lack one coaxial full twist" : "piston axes are not parallel") +
                     " at stage containing '" + l.E.B.CustomName + "'. General linkage ratios are unsupported.", out why);
             }
             m.Q0 = m.Last = Position(m);

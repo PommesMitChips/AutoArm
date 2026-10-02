@@ -64,6 +64,7 @@ internal static partial class Scenarios
     internal static void RunAll(Type type)
     {
         Discovery(type);
+        ParallelBaseCases(type);
         Configuration(type);
         Responsive(type);
         Faults(type);

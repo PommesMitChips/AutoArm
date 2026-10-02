@@ -23,11 +23,15 @@ function Specialize-Source([string]$path) {
 $source = ($parts | ForEach-Object { [IO.File]::ReadAllText((Join-Path $workspace ('src\' + $_))) }) -join "`n`n"
 function Build-HostScript([string]$engine, [bool]$tool) {
     $hostText = [IO.File]::ReadAllText((Join-Path $workspace 'src/AutoArm.Host.cs.txt')).Replace('@@TOOL@@',$(if ($tool) {'true'} else {'false'})).Replace('@@FORMAT@@',$(if ($tool) {'2'} else {'7'}))
-    $hostText = $hostText.Replace('@@VERSION@@',$(if ($tool) {'5.0.1'} else {'5.0.4'}))
+    $hostText = $hostText.Replace('@@VERSION@@',$(if ($tool) {'5.0.1'} else {'5.1.0'}))
     $coreText = [regex]::Replace($engine,'\bProgram\b','ArmCore')
     # Standalone fixtures supply their own input boundary; hosted arms use Config.
     $coreText = [regex]::Replace($coreText,'(?s)// BEGIN STANDALONE CONFIG.*?// END STANDALONE CONFIG','')
     $coreText = $coreText.Replace('readonly string ArmName = "Arm 1";','readonly string ArmName;')
+    if (-not $tool) {
+        $coreText = $coreText.Replace('long PilotSeatId => 0;', 'long PilotSeatId => Host.PilotSeatFor(Name);')
+        $coreText = $coreText.Replace('bool SeatAvailable(IMyShipController c) { return true; }', 'bool SeatAvailable(IMyShipController c) { return Host.SeatAvailableFor(Name, c.EntityId); }')
+    }
     $coreText = $coreText.Replace('Me.CustomData','CustomData').Replace('Runtime.UpdateFrequency','Frequency').Replace('Runtime.TimeSinceLastRun.TotalSeconds','Elapsed')
     $coreText = $coreText.Replace('P.IGC.UnicastListener.HasPendingMessage','P.Inbox.Count > 0').Replace('P.IGC.UnicastListener.AcceptMessage()','P.Inbox.Dequeue()')
     $coreText = $coreText.Replace('IGC.UnicastListener.HasPendingMessage','Inbox.Count > 0').Replace('IGC.UnicastListener.AcceptMessage()','Inbox.Dequeue()')
