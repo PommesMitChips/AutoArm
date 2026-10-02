@@ -8,7 +8,7 @@ internal static partial class Scenarios
 {
     // Import a read-only survey into proxy grids so the actual topology and
     // clearance implementations can consume its geometry. No game is touched.
-    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false,bool encounters=false,string? selfMode=null)
+    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false,bool encounters=false,string? selfMode=null,bool armProfile=false)
     {
         string[] lines=File.ReadAllLines(path);
         Check(lines.Any(l=>l.StartsWith("RESULT STABLE ENDPOINTS")),"Survey endpoints were not stable.");
@@ -71,7 +71,7 @@ internal static partial class Scenarios
         }
         var collisionRig=new Rig(rig,"Collision import host");rig.Blocks.Remove(collisionRig.PB);
         object? counter=null;int peak=0;var costs=new List<int>();
-        var injector=profile?Assembly.LoadFrom(Path.Combine(Tests.GameBin,"VRage.Library.dll")).GetType("VRage.Library.Compiler.IlInjector",true):null;
+        var injector=profile||armProfile?Assembly.LoadFrom(Path.Combine(Tests.GameBin,"VRage.Library.dll")).GetType("VRage.Library.Compiler.IlInjector",true):null;
         object CreateCollision()
         {
             if(!profile)return Tests.Create(collisionType,collisionRig);
@@ -96,10 +96,23 @@ internal static partial class Scenarios
         RecordProxy.Of(collisionRig.PB).Values["EntityId"]=collisionPB.EntityId;RecordProxy.Of(collisionRig.PB).Values["CustomName"]="Collision PB";
         RecordProxy.Of(collisionRig.PB).Values["CustomData"]=collisionPB.CustomData;RecordProxy.Of(collisionRig.PB).Values["CubeGrid"]=collisionPB.CubeGrid;
         var bus=new ModuleBus();bus.Bind(rig);bus.Bind(collisionRig);((TestHost)collision).IGC=collisionRig.IGC;
-        var arm=Tests.Create(armType,rig);HostReady(arm,rig,"Arm 1");HostReady(arm,rig,"Arm 2");
+        if(armProfile) {
+            var runtime=RecordProxy.Of(rig.Runtime);runtime.Values.Remove("CurrentInstructionCount");
+            runtime.Call=(m,a)=>m.Name=="get_CurrentInstructionCount"?(counter==null?0:(int)counter.GetType().GetProperty("InstructionCount")!.GetValue(counter)!):m.ReturnType.IsValueType?Activator.CreateInstance(m.ReturnType):null;
+        }
+        object arm;
+        if(armProfile) {counter=injector!.GetMethod("BeginRunBlock")!.Invoke(null,new object[]{50000,10000,false})!;try{arm=Tests.Create(armType,rig);}finally{((IDisposable)counter).Dispose();counter=null;}}
+        else arm=Tests.Create(armType,rig);
+        void ArmFrame(string command="") {
+            if(!armProfile){HostFrame(arm,rig,command);return;}
+            counter=injector!.GetMethod("BeginRunBlock")!.Invoke(null,new object[]{50000,10000,false})!;
+            try{HostFrame(arm,rig,command);}finally{int cost=(int)counter.GetType().GetProperty("InstructionCount")!.GetValue(counter)!;peak=Math.Max(peak,cost);costs.Add(cost);((IDisposable)counter).Dispose();counter=null;}
+        }
+        void ArmReady(string name) {ArmFrame("On("+name+")");for(int i=0;i<100&&!Enabled(Core(arm,name));i++)ArmFrame();Check(Enabled(Core(arm,name)),"Counted On failed for "+name);}
+        ArmReady("Arm 1");ArmReady("Arm 2");
         // Reload after substituting Me to ensure the imported config is authoritative.
         CollisionFrame(collision,"Reload");
-        for(int i=0;i<150;i++){HostFrame(arm,rig);CollisionFrame(collision);}
+        for(int i=0;i<150;i++){ArmFrame();CollisionFrame(collision);}
         if(profile)Console.WriteLine("Stationary counted runs: peak="+peak+" / 50000; last="+collisionRig.Log.Last());
         if(selfMode!=null) {
             var tables=(System.Collections.IDictionary)Get(collision,"SelfTables")!;
@@ -143,21 +156,21 @@ internal static partial class Scenarios
         }
         var benchRig=new Rig(rig,"Arm Bench");RecordProxy.Of(benchRig.PB).Values["CubeGrid"]=rig.PB.CubeGrid;bus.Bind(benchRig);
         var config=new MyIni();config.TryParse(rig.PB.CustomData);config.Set("global","Peers",config.Get("global","Peers").ToString()+"\nArm Bench | Plan");RecordProxy.Of(rig.PB).Values["CustomData"]=config.ToString();
-        HostReady(arm,rig,"Arm 1");HostReady(arm,rig,"Arm 2");
-        for(int i=0;i<100;i++){HostFrame(arm,rig);CollisionFrame(collision);}
+        ArmReady("Arm 1");ArmReady("Arm 2");
+        for(int i=0;i<100;i++){ArmFrame();CollisionFrame(collision);}
         var bench=Tests.Create(Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_Bench.txt"))),benchRig);
         foreach(string command in encounters?new[]{"Cross","Bases"}:new[]{"Smoke","Run"})
         {
             if(encounters) {
-                HostFrame(arm,rig,"StopAll");
+                ArmFrame("StopAll");
                 foreach(var j in joints)RecordProxy.Of(j).Values[j is IMyMotorStator?"Angle":"CurrentPosition"]=(float)initial[j.EntityId];
-                Kinematics();HostReady(arm,rig,"Arm 1");HostReady(arm,rig,"Arm 2");CollisionFrame(collision,"Reload");
-                for(int i=0;i<150;i++){HostFrame(arm,rig);CollisionFrame(collision);}
+                Kinematics();ArmReady("Arm 1");ArmReady("Arm 2");CollisionFrame(collision,"Reload");
+                for(int i=0;i<150;i++){ArmFrame();CollisionFrame(collision);}
                 benchRig.Storage=((TestHost)bench).Storage;
                 bench=Tests.Create(bench.GetType(),benchRig);
             }
             HostFrame(bench,benchRig,command);
-            for(int i=0;i<(encounters?216100:22000)&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();HostFrame(arm,rig);CollisionFrame(collision);HostFrame(bench,benchRig);}
+            for(int i=0;i<(encounters?216100:22000)&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();ArmFrame();CollisionFrame(collision);HostFrame(bench,benchRig);}
             Console.WriteLine("Imported ideal kinematic "+command+": "+benchRig.Log.Last());
             if(!benchRig.Log.Last().StartsWith("PASS:"))
             {
@@ -186,6 +199,9 @@ internal static partial class Scenarios
             if(guide.Get("Link","Hold").ToBoolean()&&guide.Get("Link","Reason").ToString().Contains("constraint capacity"))capacityHolds++;
         }
         Console.WriteLine("Replay constraint rows: peak "+peakRows+"; capacity holds "+capacityHolds);
-        if(profile)Console.WriteLine("Installed resource-monitoring rewrite: "+costs.Count+" runs, peak "+peak+" / 50000 instructions; median "+costs.Order().ElementAt(costs.Count/2)+".");
+        int reallocations=0,repairPasses=0,repairBudgets=0;
+        foreach(var item in bus.Sent.Where(s=>s.Source==rig.PB.EntityId)) {var state=new MyIni();state.TryParse(item.Data);if(state.Get("Link","Operation").ToString()!="STATE")continue;if(state.Get("Link","SafetyReallocated").ToBoolean())reallocations++;repairPasses=Math.Max(repairPasses,state.Get("Link","SafetyRepairPasses").ToInt32());if(state.Get("Link","SafetyRepairBudget").ToBoolean())repairBudgets++;}
+        Console.WriteLine("Repair telemetry: "+reallocations+" reallocated states; peak passes "+repairPasses+"; budget states "+repairBudgets);
+        if(profile||armProfile)Console.WriteLine("Installed resource-monitoring rewrite ("+(armProfile?"Arm":"Collision")+"): "+costs.Count+" runs, peak "+peak+" / 50000 instructions; median "+costs.Order().ElementAt(costs.Count/2)+".");
     }
 }

@@ -11,6 +11,7 @@ internal static partial class Scenarios
         internal object Arm, Bench;
         internal bool Move=true, Guides=true, Hold;
         internal double MockSpeed=.05;
+        internal string GuideRows="";
         readonly Dictionary<string,long> Seen=new(), Sequences=new();
         internal BenchRig(Type armType,Type benchType)
         {
@@ -38,7 +39,7 @@ internal static partial class Scenarios
                 {var ini=new MyIni();ini.TryParse(item.Data);if(item.Source==Rig.PB.EntityId&&item.Target==SafetyRig.PB.EntityId&&ini.Get("Link","Operation").ToString()=="CHECK"&&ini.Get("Link","Arm").ToString()==name){check=ini;break;}}
                 if(check==null)continue;long seq=check.Get("Link","Sequence").ToInt64();if(seq==Seen.GetValueOrDefault(name))continue;Seen[name]=seq;
                 long next=Sequences.GetValueOrDefault(name)+1;Sequences[name]=next;
-                SendGuide(Arm,Rig,SafetyRig,Bus,Guide(check,next,"0 0",hold:Hold));
+                SendGuide(Arm,Rig,SafetyRig,Bus,Guide(check,next,"0 0",GuideRows,hold:Hold));
             }
             // Protocol model: move markers toward accepted goals. This deliberately
             // does not claim to simulate SE joints, flex, collision or solver delivery.
@@ -83,7 +84,7 @@ internal static partial class Scenarios
         var blocked=new BenchRig(armType,benchType){Hold=true};for(int i=0;i<15;i++)blocked.Tick();
         status=blocked.Finish("Smoke");Check(status.Contains("Safety not granting")&&blocked.Paths().Count==0,"Held Safety permitted a test path.");
         var loss=new BenchRig(armType,benchType);status=loss.Finish("Smoke",step:i=>{if(i==35)loss.Guides=false;});
-        Check(status.StartsWith("ABORT:")&&loss.Report.Contains("Safety held without progress")&&loss.Paths().Count==1,"Safety expiry started the next arm or forced a return.");
+        Check(status.StartsWith("ABORT:")&&loss.Report.Contains("Safety stopped delivery without progress")&&loss.Paths().Count==1,"Safety expiry started the next arm or forced a return.");
         Check(!Enabled(Core(loss.Arm,"Arm 1"))&&Enabled(Core(loss.Arm,"Arm 2")),"Safety abort stopped the wrong scope.");
         var cancel=new BenchRig(armType,benchType);cancel.Tick("Run");for(int i=0;i<45;i++)cancel.Tick();
         status=cancel.Finish("Cancel");Check(status.StartsWith("ABORT:")&&cancel.Paths().Count==1&&!Enabled(Core(cancel.Arm,"Arm 1")),"Cancel failed to stop its owned path or forced recovery.");
@@ -109,6 +110,11 @@ internal static partial class Scenarios
         Check(status.StartsWith("ABORT:")&&lostCapture.Paths().Count==0&&rebased.Get("Baseline Arm 1","Pose").ToString()==baseline,"Lost telemetry committed a new baseline.");
         var cancelCapture=new BenchRig(armType,benchType);cancelCapture.Tick("Rebase");for(int i=0;i<20;i++)cancelCapture.Tick();status=cancelCapture.Finish("Cancel");
         Check(status.StartsWith("ABORT:")&&cancelCapture.Paths().Count==0,"Cancelling baseline capture sent motion.");
+        var throttled=new BenchRig(armType,benchType){Move=false,GuideRows="1 0 0.01"};throttled.Tick("Smoke");for(int i=0;i<100;i++)throttled.Tick();
+        Check(throttled.Client.Log.Last().Contains("Safety LIMITED; command scale 0.0%")&&throttled.Client.Log.Last().Contains("Head net speed 0.000"),"Fresh zero-scale guidance was displayed as movement permission.");
+        status=throttled.Finish("",frames:600);
+        Check(status.StartsWith("ABORT:")&&throttled.Report.Contains("Safety stopped delivery without progress")&&throttled.Paths().Count==1,"Fresh zero-scale stall did not stop the test safely.");
+        Check(throttled.Report.Contains(" | fraction ")&&throttled.Report.Contains(" | rows "),"Smoke report omitted scaling/row diagnostics.");
         var stopped=new BenchRig(armType,benchType);status=stopped.Finish("Run",step:i=>{if(i==40)HostFrame(stopped.Arm,stopped.Rig,"Stop(Arm 1)");});
         Check(status.StartsWith("ABORT:")&&stopped.Paths().Count==1&&!Enabled(Core(stopped.Arm,"Arm 1")),"External Stop triggered restart or return.");
         var replyLoss=new BenchRig(armType,benchType);status=replyLoss.Finish("Run",step:i=>{if(i==35)replyLoss.Bus.DropArm=true;});

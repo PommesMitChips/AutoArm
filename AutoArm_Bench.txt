@@ -9,6 +9,9 @@ sealed class ArmSession {
     public int LastCompleted, Samples, LimitedSamples, BudgetSamples;
     public MatrixD Start, Expected;
     public Vector3D Base;
+    public Vector3D MotionOrigin;
+    public double MotionTime, NetSpeed;
+    public bool MotionObserved;
     public double ProgressTime, SampleTime = -1, Remaining = double.MaxValue;
     public bool Submitted, Returned;
     public readonly Dictionary<long, double> Sent = new Dictionary<long, double>();
@@ -143,7 +146,7 @@ void Begin(string mode) {
     Extent = mode == "SMOKE" ? Math.Min(.1, extent) : extent; Side = side; Speed = speed;
     Repeats = mode == "SMOKE" || mode == "CHECK" || Encounter ? 1 : repeats; Mode = mode; TotalBudget = 360;
     ArmIndex = Iteration = 0; LastPoll = Clock; Deadline = Clock + 5; StartTime = Clock;
-    Log.Clear(); Truncated = false; Add("AUTOARM BENCH 3 | " + mode + " | heads only; ArmService owner " + Owner.EntityId);
+    Log.Clear(); Truncated = false; Add("AUTOARM BENCH 4 | " + mode + " | heads only; ArmService owner " + Owner.EntityId);
     Add("REFERENCE " + Reference.EntityId + " | " + Row(Reference.WorldMatrix));
     Add("SETTINGS extent=" + N(Extent) + " side=" + N(Side) + " speed=" + N(Speed) + " repeats=" + Repeats);
     Add("ARM CONFIG BEGIN\n" + Owner.CustomData + "\nARM CONFIG END");
@@ -192,6 +195,19 @@ void RequireSafety(ArmSession arm, bool clear) {
     var state = arm.State;
     if (!state.Get(S, "SafetyRequired").ToBoolean()) throw new Exception(arm.Name + ": live Safety telemetry missing. Install the updated Arm script; Safety must stay configured.");
     if (clear && (!state.Get(S, "SafetyReady").ToBoolean() || state.Get(S, "SafetyHold").ToBoolean())) throw new Exception(arm.Name + ": Safety not granting motion: " + state.Get(S, "SafetyReason"));
+}
+bool SafetyStopped(ArmSession arm) {
+    var s = arm.State;
+    return !s.Get(S, "SafetyReady").ToBoolean() || s.Get(S, "SafetyHold").ToBoolean() ||
+        s.Get(S, "SafetyLimited").ToBoolean() && s.Get(S, "SafetyFraction").ToDouble() <= 1e-6;
+}
+string SafetyStatus(ArmSession arm) {
+    var s = arm.State;
+    string label = !s.Get(S, "SafetyReady").ToBoolean() ? "WAIT" : s.Get(S, "SafetyHold").ToBoolean() ? "HOLD" : s.Get(S, "SafetyLimited").ToBoolean() ? "LIMITED" : "READY";
+    if ((label == "LIMITED" || label == "READY") && s.Get(S, "SafetyReallocated").ToBoolean()) label = "REALLOCATED";
+    double fraction = label == "WAIT" || label == "HOLD" ? 0 : s.Get(S, "SafetyFraction").ToDouble(double.NaN);
+    return "Safety " + label + "; command scale " + (Finite(fraction) ? (fraction * 100).ToString("0.0") + "%" : "unknown") +
+        (s.ContainsKey(S, "SafetyConstraints") ? "; rows " + s.Get(S, "SafetyConstraints") + "/" + s.Get(S, "SafetyConstraintLimit") : "") + "\n" + s.Get(S, "SafetyReason");
 }
 void RequireIdle(ArmSession arm) {
     var s = arm.State;
@@ -293,7 +309,7 @@ void EncounterState() {
         if (completed > arm.LastCompleted) { arm.LastCompleted = completed; arm.ProgressTime = Clock; arm.Remaining = double.MaxValue; }
         double remaining = Vector3D.Distance(LocalPose(arm).Translation, completed == arm.Path.Count ? arm.Start.Translation : arm.Path[completed].Translation);
         if (remaining < arm.Remaining - .002) { arm.Remaining = remaining; arm.ProgressTime = Clock; }
-        if (Clock - arm.ProgressTime > 8 && s.Get(S, "SafetyHold").ToBoolean()) throw new Exception(arm.Name + ": Safety held without progress: " + s.Get(S, "SafetyReason"));
+        if (Clock - arm.ProgressTime > 8 && SafetyStopped(arm)) throw new Exception(arm.Name + ": Safety stopped delivery without progress: " + s.Get(S, "SafetyReason"));
         if (Clock - arm.ProgressTime > 35) throw new Exception(arm.Name + ": encounter stalled; local avoidance may not have a route. " + s.Get(S, "SafetyReason"));
         if (completed == arm.Path.Count && s.Get(S, "State").ToString() == "Complete" && s.Get(S, "Owner").ToInt64() == 0) {
             double angle = Rotation(LocalPose(arm), arm.Start);
@@ -304,7 +320,9 @@ void EncounterState() {
     }
     if (Clock - StartTime > TotalBudget) throw new Exception("Encounter total timeout.");
     if (Arms.All(a => a.Returned)) { Phase = 3; Deadline = Clock + 1; }
-    Status = "Bench " + Mode + " | " + string.Join(" / ", statuses) + "\nCancel stops both test paths. Safety remains required.";
+    Status = "Bench " + Mode + " | " + string.Join(" / ", statuses);
+    foreach (var arm in Arms) Status += "\n" + arm.Name + ": " + SafetyStatus(arm);
+    Status += "\nCancel stops both test paths. Safety remains required.";
 }
 void BuildPath(ArmSession arm) {
     var offsets = new List<Vector3D> { new Vector3D(0, Extent, 0) };
@@ -345,7 +363,7 @@ void MoveState() {
     if (completed > active.LastCompleted) { active.LastCompleted = completed; LastProgress = Clock; BestRemaining = double.MaxValue; }
     double remaining = completed == active.Path.Count ? Vector3D.Distance(LocalPose(active).Translation, active.Start.Translation) : Vector3D.Distance(LocalPose(active).Translation, active.Path[completed].Translation);
     if (remaining < BestRemaining - .002) { BestRemaining = remaining; LastProgress = Clock; }
-    if (Clock - LastProgress > 8 && (!s.Get(S, "SafetyReady").ToBoolean() || s.Get(S, "SafetyHold").ToBoolean())) throw new Exception("Safety held without progress: " + s.Get(S, "SafetyReason"));
+    if (Clock - LastProgress > 8 && SafetyStopped(active)) throw new Exception("Safety stopped delivery without progress: " + s.Get(S, "SafetyReason"));
     if (Clock - LastProgress > 35) throw new Exception("No measured path progress for 35 s.");
     if (Clock - StartTime > 360) throw new Exception("Test total timeout.");
     if (completed == active.Path.Count && s.Get(S, "State").ToString() == "Complete" && s.Get(S, "Owner").ToInt64() == 0) {
@@ -354,7 +372,9 @@ void MoveState() {
         Add("RETURN " + active.Name + " iteration " + (Iteration + 1) + " | " + N(error) + " m " + N(angle) + " deg | " + Row(LocalPose(active)));
         Phase = 3; Deadline = Clock + 1; Status = "Returned " + active.Name + "; holding 1 s before the next path.";
     } else if (s.Get(S, "Owner").ToInt64() != Me.EntityId) throw new Exception("Path ownership lost/cancelled; no automatic return.");
-    else Status = "Bench " + Mode + " | " + active.Name + " | " + completed + "/" + active.Path.Count + " | remaining " + remaining.ToString("0.000") + " m\nSafety " + (s.Get(S, "SafetyHold").ToBoolean() ? "HOLD: " + s.Get(S, "SafetyReason") : "fresh=" + s.Get(S, "SafetyReady")) + ". Cancel stops this path.";
+    else Status = "Bench " + Mode + " | " + active.Name + " | " + completed + "/" + active.Path.Count + " | remaining " + remaining.ToString("0.000") + " m\n" +
+        SafetyStatus(active) + "\nHead net speed " + (active.MotionObserved ? active.NetSpeed.ToString("0.000") + " m/s (~1 s)" : "measuring") +
+        "; progress age " + (Clock - LastProgress).ToString("0.0") + " s. Cancel stops this path.";
 }
 void Sample(ArmSession arm) {
     var s = arm.State; arm.Samples++;
@@ -363,11 +383,14 @@ void Sample(ArmSession arm) {
     if (s.Get(S, "SafetyLimited").ToBoolean()) arm.LimitedSamples++;
     if (s.Get(S, "SolverBudget").ToBoolean()) arm.BudgetSamples++;
     if (s.Get(S, "SafetyHold").ToBoolean()) arm.HeldSeconds += .1;
-    if (Encounter && Clock - arm.SampleTime < .5) return;
+    var position = LocalPose(arm).Translation;
+    if (arm.MotionTime == 0) { arm.MotionTime = Clock; arm.MotionOrigin = position; }
+    else if (Clock - arm.MotionTime >= 1) { arm.NetSpeed = Vector3D.Distance(position, arm.MotionOrigin) / (Clock - arm.MotionTime); arm.MotionTime = Clock; arm.MotionOrigin = position; arm.MotionObserved = true; }
+    if (Clock - arm.SampleTime < .5) return;
     arm.SampleTime = Clock;
     Add("SAMPLE " + N(Clock - StartTime) + " | " + arm.Name + " | path " + s.Get(S, "PathId") + " | completed " + s.Get(S, "Completed") + " | error " + N(error) + " " + N(angle) +
         " | safety " + s.Get(S, "SafetyReady") + " " + s.Get(S, "SafetyHold") + " " + s.Get(S, "SafetyLimited") + " | solver " + s.Get(S, "SolverPasses") + " " + s.Get(S, "SolverBudget") + " | " + Row(LocalPose(arm)) +
-        (Encounter ? " | fraction " + s.Get(S, "SafetyFraction") + " | " + s.Get(S, "SafetyReason") : ""));
+        " | fraction " + s.Get(S, "SafetyFraction") + " | rows " + s.Get(S, "SafetyConstraints") + "/" + s.Get(S, "SafetyConstraintLimit") + " | " + s.Get(S, "SafetyReason"));
 }
 void Abort(string reason) {
     if (Phase == 90) return;

@@ -1,0 +1,88 @@
+// Experimental automatic-path reallocation. Uniform safety veto remains the
+// fallback. Accept only a bounded candidate satisfying every received row.
+double[,] RepairMetric, RepairDirections;
+double[] RepairSeed, RepairCandidate, RepairChecked, RepairBest, RepairDual, RepairDiagonal;
+public bool Reallocated, RepairBudget;
+public int RepairPasses;
+bool RepairWork() { return P.Runtime.MaxInstructionCount <= 0 || P.Runtime.CurrentInstructionCount < P.Runtime.MaxInstructionCount * .65; }
+double RepairDot(int k, int n, double[] x) {
+    if (k >= Rows.Count) { int i = (k - Rows.Count) / 2; return ((k - Rows.Count) % 2 == 0 ? 1 : -1) * x[i]; }
+    double sum = 0; for (int i = 0; i < n; i++) sum += Rows[k][i] * P.Scale[i] * x[i]; return sum;
+}
+double RepairLower(int k, int n) {
+    if (k < Rows.Count) return Rows[k][n];
+    int i = (k - Rows.Count) / 2; return (k - Rows.Count) % 2 == 0 ? P.Lo[i] : -P.Hi[i];
+}
+bool RepairFeasible(double[] x, int n) {
+    for (int i = 0; i < n; i++) if (!Finite(x[i]) || x[i] < P.Lo[i] - 1e-10 || x[i] > P.Hi[i] + 1e-10) return false;
+    foreach (var row in Rows) { double dot = 0; for (int i = 0; i < n; i++) dot += row[i] * P.Scale[i] * x[i]; if (dot < row[n] - 1e-10) return false; }
+    return true;
+}
+double RepairCost(double[] x, int n) {
+    double cost = 0;
+    for (int r = 0; r < 6; r++) { double e = -P.Task[r]; for (int i = 0; i < n; i++) e += P.B[r, i] * x[i]; cost += e * e; }
+    for (int i = 0; i < n; i++) { double e = x[i] - P.Bias[i]; cost += SolverDamping * SolverDamping * e * e; }
+    return cost;
+}
+public void Constrain(double[] rates) {
+    Reallocated = RepairBudget = false; RepairPasses = 0; int n = rates.Length, m = Rows.Count + 2 * n;
+    if (RepairCandidate == null || RepairCandidate.Length != n || RepairDual.Length != m) {
+        RepairMetric = new double[n, n]; RepairDirections = new double[m, n];
+        RepairSeed = new double[n]; RepairCandidate = new double[n]; RepairChecked = new double[n]; RepairBest = new double[n]; RepairDual = new double[m]; RepairDiagonal = new double[m];
+    }
+    for (int i = 0; i < n; i++) RepairSeed[i] = P.Scale[i] > 1e-12 ? rates[i] / P.Scale[i] : 0;
+    Limit(rates);
+    if (!P.ToolDriving || !Ready || Blocked || !Limited || Rows.Count == 0 || !P.LastSolverConverged || P.LastSolverBudgetLimited) return;
+    if (!RepairWork()) { RepairBudget = true; return; }
+    for (int i = 0; i < n; i++) { RepairCandidate[i] = RepairSeed[i]; RepairBest[i] = P.Scale[i] > 1e-12 ? rates[i] / P.Scale[i] : 0; }
+    bool baselineFeasible = RepairFeasible(RepairBest, n); double baseline = baselineFeasible ? RepairCost(RepairBest, n) : double.MaxValue, best = baseline;
+    P.BuildTaskMatrix(n, SolverDamping * SolverDamping, false);
+    Array.Clear(P.Rhs, 0, 6);
+    if (!Cholesky(P.Gram, P.Rhs, P.Chol, P.Temp, P.Solution)) return;
+    // Woodbury: ridge * (B'B + ridge I)^-1. The common positive
+    // scale cancels in each dual coordinate update.
+    for (int col = 0; col < n; col++) {
+        if (!RepairWork()) { RepairBudget = true; return; }
+        for (int r = 0; r < 6; r++) { double v = P.B[r, col]; for (int j = 0; j < r; j++) v -= P.Chol[r, j] * P.Temp[j]; P.Temp[r] = v / P.Chol[r, r]; }
+        for (int r = 5; r >= 0; r--) { double v = P.Temp[r]; for (int j = r + 1; j < 6; j++) v -= P.Chol[j, r] * P.Solution[j]; P.Solution[r] = v / P.Chol[r, r]; }
+        for (int i = 0; i < n; i++) { double v = i == col ? 1 : 0; for (int r = 0; r < 6; r++) v -= P.B[r, i] * P.Solution[r]; RepairMetric[i, col] = P.Scale[i] > 1e-12 && P.Scale[col] > 1e-12 ? v : 0; }
+    }
+    for (int i = 0; i < n; i++) for (int j = 0; j < i; j++) RepairMetric[i, j] = RepairMetric[j, i] = (RepairMetric[i, j] + RepairMetric[j, i]) * .5;
+    for (int k = 0; k < m; k++) {
+        if (!RepairWork()) { RepairBudget = true; return; }
+        RepairDual[k] = 0;
+        for (int i = 0; i < n; i++) {
+            double v = 0;
+            if (k < Rows.Count) for (int j = 0; j < n; j++) v += RepairMetric[i, j] * Rows[k][j] * P.Scale[j];
+            else v = RepairMetric[i, (k - Rows.Count) / 2] * ((k - Rows.Count) % 2 == 0 ? 1 : -1);
+            RepairDirections[k, i] = v;
+        }
+        double diagonal = k < Rows.Count ? 0 : RepairDirections[k, (k - Rows.Count) / 2] * ((k - Rows.Count) % 2 == 0 ? 1 : -1);
+        if (k < Rows.Count) for (int i = 0; i < n; i++) diagonal += Rows[k][i] * P.Scale[i] * RepairDirections[k, i];
+        if (!Finite(diagonal) || diagonal < -1e-10) return; RepairDiagonal[k] = diagonal;
+    }
+    for (int pass = 0; pass < 12; pass++) {
+        RepairPasses = pass + 1;
+        for (int k = 0; k < m; k++) {
+            if (!RepairWork()) { RepairBudget = true; return; }
+            double unmet = RepairLower(k, n) - RepairDot(k, n, RepairCandidate);
+            if (RepairDiagonal[k] <= 1e-14) { if (unmet > 1e-10) return; continue; }
+            double next = Math.Max(0, RepairDual[k] + unmet / RepairDiagonal[k]), change = next - RepairDual[k]; RepairDual[k] = next;
+            for (int i = 0; i < n; i++) RepairCandidate[i] += change * RepairDirections[k, i];
+        }
+        if (!RepairFeasible(RepairCandidate, n)) continue;
+        for (int i = 0; i < n; i++) RepairChecked[i] = Clamp(RepairCandidate[i], P.Lo[i], P.Hi[i]);
+        if (!RepairFeasible(RepairChecked, n)) continue;
+        double cost = RepairCost(RepairChecked, n);
+        if (Finite(cost) && cost < best - 1e-14) { best = cost; Array.Copy(RepairChecked, RepairBest, n); Reallocated = true; }
+        if (Reallocated) break;
+    }
+    if (!Reallocated) return;
+    for (int i = 0; i < n; i++) rates[i] = RepairBest[i] * P.Scale[i];
+    // Retain the original strict row veto after numerical projection too.
+    Limit(rates);
+    for (int i = 0; i < n; i++) RepairChecked[i] = P.Scale[i] > 1e-12 ? rates[i] / P.Scale[i] : 0;
+    if (!RepairFeasible(RepairChecked, n) || RepairCost(RepairChecked, n) >= baseline - 1e-14) {
+        for (int i = 0; i < n; i++) rates[i] = RepairSeed[i] * P.Scale[i]; Limit(rates); Reallocated = false;
+    } else Limited = true;
+}
