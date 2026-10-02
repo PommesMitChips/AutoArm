@@ -60,10 +60,6 @@ double ResumeSeconds;
 int ResumeRetries;
 bool ExplicitStop;
 int CompletedWaypoints;
-bool ReadKeyboard = true, ReadMouse, ReadRoll = true;
-bool PilotSelected = true;
-readonly List<IMyShipController> Controllers = new List<IMyShipController>();
-int ControllerPoll;
 double DefaultMove = .2, DefaultTurn = 5;
 public Program()
 {
@@ -136,7 +132,7 @@ public void Main(string argument, UpdateType source)
         if (Tools.Busy && Acquired)
         {
             if (RemoteError.Length > 0) throw new Exception(RemoteError);
-            if (Tools.Automatic && (RemotePilot || HasPilotInput())) { Tools.Cancel("Pilot canceled swap."); }
+            if (Tools.Automatic && RemotePilot) { Tools.Cancel("Pilot canceled swap."); }
             else if (timed && Clock > .000001)
             { double dt = Clock; Clock = 0; if (dt > .5) throw new Exception("Tool update gap."); Tools.Tick(Math.Min(dt, .1), dt); }
         }
@@ -199,9 +195,7 @@ void Receive()
         Link.RemoteEpoch = epoch; Link.Generation = ini.Get(LinkSection, "Generation").ToInt64(); Link.Received = sequence; Link.Age = 0;
         Ack = ini.Get(LinkSection, "Ack").ToInt64(); RemoteReady = ini.Get(LinkSection, "Ready").ToBoolean(); RemoteStopped = ini.Get(LinkSection, "Stopped").ToBoolean();
         RemoteSettled = ini.Get(LinkSection, "Settled").ToBoolean(); RemotePilot = ini.Get(LinkSection, "Pilot").ToBoolean(); RemoteError = ini.Get(LinkSection, "Error").ToString();
-        PilotSelected = ini.Get(LinkSection, "PilotSelected").ToBoolean(true);
         ReportedPath = ini.Get(LinkSection, "PathId").ToInt64(); CompletedWaypoints = ini.Get(LinkSection, "Completed").ToInt32();
-        ReadKeyboard = ini.Get(LinkSection, "Keyboard").ToBoolean(true); ReadMouse = ini.Get(LinkSection, "Mouse").ToBoolean(); ReadRoll = ini.Get(LinkSection, "Roll").ToBoolean(true);
         DefaultMove = ini.Get(LinkSection, "DefaultMove").ToDouble(.2); DefaultTurn = ini.Get(LinkSection, "DefaultTurn").ToDouble(5);
         Acquired = ini.Get(LinkSection, "Lease").ToBoolean();
         if (ResumeRequested && Ack >= ResumeRequest && !Acquired && (ini.Get(LinkSection, "Enabled").ToBoolean() || RemoteError.Length > 0))
@@ -290,11 +284,4 @@ MyIni EquipmentPacket(string operation)
     var focus = Tools.Focus; ini.Set(LinkSection, "Focus", focus != null);
     if (focus != null) { ini.Set(LinkSection, "Part", focus.EntityId); WriteFrame(ini, "Local", focus.Local); }
     ini.Set(LinkSection, "ExplicitStop", ExplicitStop); Tools.WriteEquipment(ini); return ini;
-}
-bool HasPilotInput()
-{
-    if (!PilotSelected) return false;
-    if (ControllerPoll-- <= 0) { GridTerminalSystem.GetBlocksOfType(Controllers); ControllerPoll = 9; }
-    foreach (var c in Controllers) if (!c.Closed && c.IsUnderControl && c.IsSameConstructAs(Me) && (ReadKeyboard && c.MoveIndicator.LengthSquared() > 1e-8 || ReadMouse && c.RotationIndicator.LengthSquared() > 1e-8 || ReadRoll && Math.Abs(c.RollIndicator) > 1e-4)) return true;
-    return false;
 }

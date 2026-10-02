@@ -6,7 +6,7 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 
 1. Stop your existing arm controller before replacing it.
 2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v5.1.0/AutoArm_Compact.txt) into an arm programmable block.
-3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v5.0.1/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
+3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/feature/v5.0.1-arm-bench/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
 4. Name the parts as shown below. You do not need to edit the code or enter configuration for a quick start.
 5. Run `On` on the Arm PB. For another arm, use `On(Arm 2)`. Then use `Select Arm 2` to give it cockpit control.
 
@@ -93,6 +93,8 @@ For two players:
 1. Only Player 1 is seated. Run `Select(HRZ, Arm 1)` to pair their cockpit and choose HRZ.
 2. Player 1 briefly leaves their seat. Player 2 sits in their own cockpit and runs `Select(VRT, Arm 2)`.
 3. Both players can now sit and control their paired arms independently.
+
+During a tool operation, enabled pilot input from the cockpit controlling that arm cancels its swap. Another operator's cockpit input does not cancel it.
 
 If selection is attempted with multiple occupied cockpits, it fails immediately: **More than one cockpit is occupied. Please ensure exactly one cockpit is occupied.** Existing pairings and selection remain unchanged. After making exactly one seat occupied, run the selection command again.
 

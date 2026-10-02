@@ -121,6 +121,12 @@ internal static class Tests
                 CheckPackedPrograms();
                 return 0;
             }
+            if(args.Length==2&&args[1]=="--tool-pilot")
+            {
+                Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
+                Scenarios.MultiToolPilotCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_ToolSwap_Source.txt"))));
+                return 0;
+            }
             if((args.Length==2||args.Length==3)&&args[1]=="--collision")
             {
                 Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;
