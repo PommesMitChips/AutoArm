@@ -129,6 +129,14 @@ internal static class Tests
             { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.SurveyCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Survey.txt"))));return 0; }
             if(args.Length==2&&args[1]=="--bench")
             { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.BenchCases(Script(File.ReadAllText(args[0])),Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Bench.txt"))));return 0; }
+            if(args.Length==2&&args[1]=="--bench-compact")
+            {
+                Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;var bench=Script(File.ReadAllText(Path.Combine(Workspace,"AutoArm_Bench_Compact.txt")));
+                PackedProgramChecks.Register(bench,Path.Combine(Workspace,"tools/ScriptPack/obj/AutoArm_Bench_Compact.names.json"));
+                Scenarios.BenchCases(Script(File.ReadAllText(args[0])),bench);return 0;
+            }
+            if(args.Length==2&&args[1]=="--counted-compile")
+            { Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Script(File.ReadAllText(args[0]),true);Console.WriteLine("Installed resource-monitoring rewrite + C#6 compile: PASS ("+Path.GetFileName(args[0])+")");return 0; }
             if(args.Length==2&&args[1]=="--repair")
             {
                 Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;var script=Script(File.ReadAllText(args[0]));

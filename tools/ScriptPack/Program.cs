@@ -42,7 +42,7 @@ internal static class ScriptPack
     {
         try
         {
-            if (args.Length < 2) throw new Exception("Usage: ScriptPack check|inspect|specialize|pack|pack-fast <source.txt> [output.txt]");
+            if (args.Length < 2) throw new Exception("Usage: ScriptPack check|inspect|specialize|pack|pack-fast|pack-pb <source.txt> [output.txt]");
             var source = File.ReadAllText(args[1]);
             var compilation = Compile(source, args[1]);
             if (args[0] == "specialize" && args.Length == 3)
@@ -59,9 +59,9 @@ internal static class ScriptPack
             if (args[0] == "check") return;
             if (args[0] == "inspect") { Inspect(compilation); return; }
             if (args[0] == "test") { Regression.Run(args[1], args[2]); return; }
-            if (args[0] != "pack" && args[0] != "pack-fast" || args.Length != 3) throw new Exception("Unknown command or missing output path.");
+            if (args[0] != "pack" && args[0] != "pack-fast" && args[0] != "pack-pb" || args.Length != 3) throw new Exception("Unknown command or missing output path.");
             CompressionChecks.Run();
-            Pack(source, compilation, args[2], args[0] == "pack-fast");
+            Pack(source, compilation, args[2], args[0] != "pack", args[0] != "pack-pb");
         }
         catch (Exception e) { Console.Error.WriteLine(e); Environment.ExitCode = 1; }
     }
@@ -88,10 +88,10 @@ internal static class ScriptPack
             Console.WriteLine($"{m.Span.Length,6} {m.Identifier.Text}");
     }
 
-    static void Pack(string source, CSharpCompilation compilation, string output, bool fast = false)
+    static void Pack(string source, CSharpCompilation compilation, string output, bool fast = false, bool expressionBodies = true)
     {
         var originalCompilation = compilation;
-        source = ShortDeclarations(source, compilation);
+        source = ShortDeclarations(source, compilation, expressionBodies);
         compilation = Compile(source, "declaration compression");
         Check(compilation);
         var tree = compilation.SyntaxTrees.Single();
@@ -258,7 +258,7 @@ internal static class ScriptPack
         Console.WriteLine($"Packed: {packed.Length:N0} characters; {100000 - packed.Length:N0} free to 100,000. Base packing token/IL checks and repetition expansion check: PASS. Renamed {symbols.Count} symbols.");
     }
 
-    static string ShortDeclarations(string source, CSharpCompilation compilation)
+    static string ShortDeclarations(string source, CSharpCompilation compilation, bool expressionBodies = true)
     {
         int boundary = source.IndexOf("static string MiningTuningError", StringComparison.Ordinal);
         if (boundary < 0) boundary = source.IndexOf("// ===== IMPLEMENTATION =====", StringComparison.Ordinal);
@@ -282,6 +282,7 @@ internal static class ScriptPack
             }
         foreach (var method in tree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>())
         {
+            if (!expressionBodies) continue;
             var body = method.Body;
             if (body == null || body.SpanStart < Header.Length + boundary || body.Statements.Count != 1 ||
                 body.Statements[0] is not ReturnStatementSyntax { Expression: not null } statement) continue;

@@ -7,7 +7,7 @@ The runner submits paths to one Arm PB. It never writes joint velocities, switch
 ## Install
 
 1. Stop the Arm PB and replace its code with **v5.0.4** [AutoArm_Compact.txt](../AutoArm_Compact.txt). Keep its Custom Data. Install the updated [Collision script](../AutoArm_Collision_Compact.txt) too, keeping Collision Custom Data. Updating both enables sixteen collision constraints and live row-count/capacity telemetry. PID tuning is unchanged. Existing ToolSwap scripts remain compatible.
-2. Name another PB **`Arm Bench`** and paste the complete [AutoArm_Bench.txt](../AutoArm_Bench.txt) into it. This file is already ready to paste, without compression.
+2. Name another PB **`Arm Bench`** and replace its entire editor contents with [AutoArm_Bench_Compact.txt](../AutoArm_Bench_Compact.txt). Keep existing Custom Data. The [readable source](../AutoArm_Bench.txt) implements the same commands.
 3. In the Arm PB's existing `[global]` section, add the planner, preserving other peers:
 
    ```ini
@@ -22,7 +22,7 @@ The runner submits paths to one Arm PB. It never writes joint velocities, switch
 
 The runner's generated settings already contain your Arm PB and reference block IDs and the surveyed starting poses. You do not need to enter coordinates. Those IDs must still refer to the original blocks. The reference is the first arm's base block on the hull. Paths use its frame, so moving the whole build to another world location does not require new world coordinates.
 
-If an arm has moved and you cannot restore the original pose, replace only Arm Bench's code with the current script, keeping Custom Data, and run **`Rebase`** on Arm Bench. Both arms must be ON, ready, idle and unowned, with fresh Safety permission. Leave cockpit input neutral. Rebase observes for one second, requiring less than 5 mm / 0.2 degrees of pose variation, and saves both current head poses as the new comparison baseline. It sends no path or joint commands. Movement restarts the observation window; failure to settle within ten seconds, a Safety hold, cancellation or lost replies leaves the baselines unchanged. Rebase records the previous and captured baselines in its report. It is not a geometry/clearance test or an avoidance pass. Run `Check`, then `Smoke` afterwards.
+If an arm has moved and you cannot restore the original pose, replace only Arm Bench's code with the current compact script, keeping Custom Data, and run **`Rebase`** on Arm Bench. Both arms must be ON, ready, idle and unowned, with fresh Safety permission. Leave cockpit input neutral. Rebase observes for one second, requiring less than 5 mm / 0.2 degrees of pose variation, and saves both current head poses as the new comparison baseline. It sends no path or joint commands. Movement restarts the observation window; failure to settle within ten seconds, a Safety hold, cancellation or lost replies leaves the baselines unchanged. Rebase records the previous and captured baselines in its report. It is not a geometry/clearance test or an avoidance pass. Run `Check`, then `Smoke` afterwards.
 
 ## Run
 

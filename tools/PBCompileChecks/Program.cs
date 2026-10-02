@@ -21,10 +21,24 @@ internal static class Program
                 .Concat(new[] { "netstandard.dll", "Sandbox.Common.dll", "Sandbox.Game.dll", "SpaceEngineers.Game.dll", "VRage.dll", "VRage.Game.dll", "VRage.Library.dll", "VRage.Math.dll", "VRage.Scripting.dll" }.Select(p => Path.Combine(GameBin, p)))
                 .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p)).ToArray();
             Regression(rewriter, references);
-            foreach (string path in args)
+            bool full=args.Contains("--full");
+            foreach (string path in args.Where(p=>p!="--full"))
             {
                 var result = Rewrite(File.ReadAllText(path), path, rewriter, references);
                 RequireCompilation(result.Compilation);
+                if(full) {
+                    var resource=assembly.GetType("VRage.Scripting.Rewriters.ResourceMonitoringRewriter",true)!;
+                    var compiler=assembly.GetType("VRage.Scripting.MyScriptCompiler",true)!;
+                    var input=result.Compilation.SyntaxTrees.Single();
+                    var visitor=(CSharpSyntaxRewriter)Activator.CreateInstance(resource,BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance,
+                        null,new object[]{compiler.GetField("Static",BindingFlags.Public|BindingFlags.Static)!.GetValue(null)!,result.Compilation,input,true},null)!;
+                    var output=CSharpSyntaxTree.Create((CSharpSyntaxNode)visitor.Visit(input.GetRoot())!,Options,path);
+                    RequireCompilation(result.Compilation.ReplaceSyntaxTree(input,output));
+                    var normalized=output.GetRoot().NormalizeWhitespace().ToFullString();
+                    var reparsed=CSharpSyntaxTree.ParseText(normalized,Options,path);
+                    RequireCompilation(result.Compilation.ReplaceSyntaxTree(input,reparsed));
+                    Console.WriteLine($"Combined installed SE type-safety + resource-monitoring rewrite: PASS ({Path.GetFileName(path)})");
+                }
                 Console.WriteLine($"Installed SE type-safety/memory-safe rewrite + C#6: PASS ({Path.GetFileName(path)})");
             }
             if (args.Length == 0) throw new Exception("Supply PB script paths to validate.");

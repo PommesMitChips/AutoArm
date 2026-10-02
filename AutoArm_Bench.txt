@@ -1,4 +1,5 @@
 // Repeatable head-only test through ArmService. Never writes actuators.
+const string ControllerBuildVersion = "Bench 4";
 const string Tag = "AutoArm/5", S = "Link";
 // ===== IMPLEMENTATION =====
 sealed class ArmSession {
@@ -160,9 +161,12 @@ double Setting(MyIni ini, string key, double fallback, double minimum, double ma
     return value;
 }
 IMyTerminalBlock Find(List<IMyTerminalBlock> blocks, string name) {
-    var matches = blocks.Where(b => Matches(b, name.Trim())).ToList();
-    if (matches.Count > 1) throw new Exception("Ambiguous block: " + name);
-    return matches.Count == 1 ? matches[0] : null;
+    IMyTerminalBlock match = null; name = name.Trim();
+    foreach (var block in blocks) if (Matches(block, name)) {
+        if (match != null) throw new Exception("Ambiguous block: " + name);
+        match = block;
+    }
+    return match;
 }
 void Send(ArmSession arm, string op, MyIni payload = null) {
     var ini = payload ?? new MyIni();
@@ -203,11 +207,16 @@ bool SafetyStopped(ArmSession arm) {
 }
 string SafetyStatus(ArmSession arm) {
     var s = arm.State;
-    string label = !s.Get(S, "SafetyReady").ToBoolean() ? "WAIT" : s.Get(S, "SafetyHold").ToBoolean() ? "HOLD" : s.Get(S, "SafetyLimited").ToBoolean() ? "LIMITED" : "READY";
+    string label = "READY";
+    if (!s.Get(S, "SafetyReady").ToBoolean()) label = "WAIT";
+    else if (s.Get(S, "SafetyHold").ToBoolean()) label = "HOLD";
+    else if (s.Get(S, "SafetyLimited").ToBoolean()) label = "LIMITED";
     if ((label == "LIMITED" || label == "READY") && s.Get(S, "SafetyReallocated").ToBoolean()) label = "REALLOCATED";
     double fraction = label == "WAIT" || label == "HOLD" ? 0 : s.Get(S, "SafetyFraction").ToDouble(double.NaN);
-    return "Safety " + label + "; command scale " + (Finite(fraction) ? (fraction * 100).ToString("0.0") + "%" : "unknown") +
-        (s.ContainsKey(S, "SafetyConstraints") ? "; rows " + s.Get(S, "SafetyConstraints") + "/" + s.Get(S, "SafetyConstraintLimit") : "") + "\n" + s.Get(S, "SafetyReason");
+    string scale = "unknown"; if (Finite(fraction)) scale = (fraction * 100).ToString("0.0") + "%";
+    string text = "Safety " + label + "; command scale " + scale;
+    if (s.ContainsKey(S, "SafetyConstraints")) text += "; rows " + s.Get(S, "SafetyConstraints") + "/" + s.Get(S, "SafetyConstraintLimit");
+    return text + "\n" + s.Get(S, "SafetyReason");
 }
 void RequireIdle(ArmSession arm) {
     var s = arm.State;
@@ -372,9 +381,11 @@ void MoveState() {
         Add("RETURN " + active.Name + " iteration " + (Iteration + 1) + " | " + N(error) + " m " + N(angle) + " deg | " + Row(LocalPose(active)));
         Phase = 3; Deadline = Clock + 1; Status = "Returned " + active.Name + "; holding 1 s before the next path.";
     } else if (s.Get(S, "Owner").ToInt64() != Me.EntityId) throw new Exception("Path ownership lost/cancelled; no automatic return.");
-    else Status = "Bench " + Mode + " | " + active.Name + " | " + completed + "/" + active.Path.Count + " | remaining " + remaining.ToString("0.000") + " m\n" +
-        SafetyStatus(active) + "\nHead net speed " + (active.MotionObserved ? active.NetSpeed.ToString("0.000") + " m/s (~1 s)" : "measuring") +
-        "; progress age " + (Clock - LastProgress).ToString("0.0") + " s. Cancel stops this path.";
+    else {
+        string speed = "measuring"; if (active.MotionObserved) speed = active.NetSpeed.ToString("0.000") + " m/s (~1 s)";
+        Status = "Bench " + Mode + " | " + active.Name + " | " + completed + "/" + active.Path.Count + " | remaining " + remaining.ToString("0.000") + " m\n" +
+            SafetyStatus(active) + "\nHead net speed " + speed + "; progress age " + (Clock - LastProgress).ToString("0.0") + " s. Cancel stops this path.";
+    }
 }
 void Sample(ArmSession arm) {
     var s = arm.State; arm.Samples++;
@@ -397,7 +408,11 @@ void Abort(string reason) {
     AbortReason = reason;
     if (Phase == 2 && Arms.Any(a => a.Submitted)) {
         Phase = 90; Deadline = Clock + .75;
-        foreach (var arm in Arms.Where(a => a.Submitted)) try { Send(arm, "STOP"); } catch { }
+        foreach (var arm in Arms) {
+            if (!arm.Submitted) continue;
+            try { Send(arm, "STOP"); }
+            catch (Exception) { Deadline = Math.Min(Deadline, Clock + .75); }
+        }
         Status = "Bench abort: " + reason + " Waiting for own-path Stop acknowledgement.";
     } else Complete("ABORT: " + reason + " No new motion sent; no automatic return.");
 }
