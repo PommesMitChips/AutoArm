@@ -1,82 +1,62 @@
-AutoArm 4.0.9 — Consolidate configuration, weights and startup recovery
+AutoArm 5.0.4 — Negotiated collision constraint capacity
 
-Three GPT-6.1 Sol medium workers implemented separate refactors with a coordinated
-config/weight boundary. Hosted cores now consume a direct MyIni effective view;
-private configuration serialization and private-format validators are removed
-from playable scripts. Dirty default publication preserves live edits and keeps
-ordinary ticks free of configuration enumeration. Public inheritance, explicit
-empty overrides, arm substitution and strict Formats 7/2 remain.
+Update both AutoArm_Compact.txt (Arm PB) and AutoArm_Collision_Compact.txt
+(Collision PB), keeping Custom Data and movement/PID settings. ToolSwap does
+not need updating. Run Reload on Collision PB, On(Arm 1) and On(Arm 2) on
+Arm PB, then Check and Smoke on Arm Bench. The self-pair prototype has also
+been rebuilt from this base and needs the new Arm PB for expanded capacity.
 
-One Stage/Kind parser and renderer handles body templates. Signed physical
-preferences persist across parked tools, merges, restart and topology changes.
-Saved identity rows remain for startup recovery; corrupt metadata and malformed
-weights refuse atomically. Parked preferences survive explicit body resets.
+The live Arm 2 refusal was a row-capacity hold before any path was submitted.
+Its reported block IDs are the stage-8 rotor top and stage-9 hinge top. A
+small posture change adds a ninth row; the previous implementation allowed
+only eight. The new Arm advertises sixteen, Collision echoes that limit,
+and both sides retain and validate every row. Legacy clients/replies remain
+limited to eight. Overflow, invalid limits/rows, packet size, instruction
+budget, overlap and freshness still fail closed. No geometry or required
+contact constraints are removed; PID and the allocation law are unchanged.
+State replies expose SafetyConstraints/SafetyConstraintLimit; Collision Info
+shows rows/capacity. Public formats and wire Version 5 remain unchanged.
 
-One startup helper zeros saved current and parked actuators through direct block
-ID lookups. It runs both before host config loading and during each new core's
-construction, including arms added later. PB/arm/format/signed-ID guards remain;
-individual lookup, construct-check or write failures do not prevent other stops.
+Validation: full source/compact harness 198,493 assertions; installed SE C#6,
+type-safety/memory-safe rewriting and packing checks pass. Exact compact
+Collision resource-counting replay peaks at 17,556/50,000 over 4,354 calls,
+retains nine rows with zero capacity holds and passes both Smoke paths.
+Cross/Bases advance beyond the old refusal but still stall under local
+clearance limiting; those are not passing autonomous avoidance routes.
+Compact sizes: Arm 93,292; ToolSwap 57,902; Collision 24,516 characters.
 
-Validation: installed SE C#6/type-safety rewrite for all four artifacts, packing
-and specialization proofs, and 194,995 simulated assertions including actual
-compact scripts. Tests cover the new boundary, live edits, empty overrides,
-public format refusal, saved identity/cache faults, stage ordering/bounds,
-restart, both startup timing points and existing multi-arm/tool-swap behavior.
-PID, solver and docking motion are unchanged; live physics is not retested here.
+AutoArm 5.0.3 — Collision PB spatial-query instruction cost
 
-Update both PB scripts, retain current Format 7/2 Custom Data, and run On.
-Arm: 88,948 characters, 11,052 free (1,849 saved versus v4.0.8).
-ToolSwap: 57,720, 42,280 free (75 saved); combined saving 1,924.
+Replace only AutoArm_Collision_Compact.txt. Keep Collision Custom Data and
+current Arm / Bench code and PID settings. Run Reload on Collision PB,
+On(Arm 1) and On(Arm 2) on Arm PB, then Check and Smoke on Arm Bench.
+Submit the Smoke report and Collision Info if a hold remains.
 
-AutoArm 4.0.8 — Fix programmable-block compilation after compression
+The captured two-arm/column/overhead fixture remains the minimum test case;
+no obstacles are removed. Distant shapes sharing 20 m spatial tiles are now
+rejected against the conservative projected search box before detailed SAT.
+Outward numerical slack preserves coverage near projection boundaries. Budget
+checks also run inside long candidate lists. Another request starts only with
+fresh instruction headroom; pending requests continue on Update1. The 65% work
+guard, incomplete-query holds and request-bound freshness limits remain.
 
-The v4.0.7 alias compressor was incompatible with SE's memory-safety rewrite.
-StringBuilder aliases produced nonexistent MemorySafe<alias> type names. Closed
-collection aliases could bypass memory instrumentation without a compile error.
-Both were reproduced with the installed game's TypeSafetyAndBlockRewriter.
+Collision packing now uses symbol/token/literal minification with exact method
+IL checks, without compression-generated forwarding methods or host bridges.
+Those helpers saved characters but added substantial counted runtime calls.
+Arm and ToolSwap packing remain unchanged. Collision Info includes tile,
+candidate and detailed-check counts plus instruction-use diagnostics.
 
-The packer now retains StringBuilder and collection type spellings, including
-types containing them. Safe API/type aliases and repetition compression remain.
-The build runs the installed game rewriter using the game's Roslyn assemblies,
-then compiles all four source/compact artifacts at C#6. Regression fixtures
-reproduce the original error and silent bypass and verify normal instrumentation.
-This tests the type-rewriting stage, not the full game whitelist or live physics.
+Validation: installed ResourceMonitoringRewriter and IlInjector reproduced the
+v5.0.2 spatial-budget refusal at 33,195 instructions on the captured stationary
+proxy scene. An intermediate forwarding-packed update also failed at 35,241.
+The exact shipped compact script peaks at 17,165 stationary and 17,428 across
+4,354 ideal-plant invocations under a 50,000-instruction cap; both arms complete
+Smoke. Source and compact files pass installed SE C#6/type-safety/memory-safe
+rewrite checks. Full suite: 198,267 assertions, including actual packed scripts,
+crowded-tile rejection, 70 rotated/coalesced SAT-oracle fixtures and in-list
+budget refusal. Model AABBs and terminal APIs remain emulated in this replay;
+these counts do not establish live SE physics, API or wall-clock performance.
+The larger sideways Run remains conservatively aborted in the ideal model.
 
-Update BOTH PB scripts, keep current Format 7/2 Custom Data, and run On once.
-PID, merge approach/capture, commands, settings and protocol are unchanged.
-All 194,866 simulated assertions, including actual compact-host tests, pass.
-Arm: 90,797 characters, 9,203 free. ToolSwap: 57,795, 42,205 free.
-
-AutoArm 4.0.7 — Merge while approaching, stop on actual capture
-
-Parking now enables the selected tool's head merges during approach, after the
-Arm PB acknowledges the path with capture monitoring installed. It does not
-wait for measured vibration to die away before allowing the merge to happen.
-The parking clearance waypoint also uses geometric admission without a quiet
-velocity prerequisite. Pickup and generic path admission retain their policies.
-
-The Arm PB checks safety merges of the previously mounted tool before every
-path solve and topology validation. Any connection immediately zeros drives,
-cancels the path and pauses stale topology. This does not depend on the next
-ToolSwap callback, endpoint settling, or a timeout.
-
-ToolSwap independently observes capture and waits stopped for all intended
-reciprocal stand pairs. Partial/unproven support cannot detach the rotor. The
-existing continuous connection proofs, stopped mutation acknowledgements,
-rebuild and confirmed resume remain. Wrong upstream attachments still fail.
-
-Update BOTH scripts, keep existing Custom Data, and run On once. Formats and
-protocol are unchanged. Capture is optional metadata on the scoped ToolSwap
-lease; other planner paths do not enable this behavior. Manual control/PID
-is unchanged. The final capture-gap fallback and saved mating pose remain.
-
-Validation: C#6 against installed SE interfaces, source specialization, committed
-baseline packing with exact token/compilation/method-IL checks, and 194,723
-standard simulated assertions. Capture tests connect while the path is moving
-and filtered velocity is above old thresholds, run the Arm alone to prove local
-stopping, refuse partial/unproven support, and complete automatic swap/resume.
-The reviewed repetition/namespace packer also passes compact-host tests via the
-integrated test adapter (194,866 total assertions). Live SE capture/contact
-still requires confirmation. No features or diagnostics were removed.
-
-Arm: 90,452 characters, 9,548 free. ToolSwap: 57,716, 42,284 free.
+Collision compact: 24,240 UTF-16 characters, 75,760 free. Formats and wire
+version remain unchanged. No manual geometry/configuration reduction is needed.

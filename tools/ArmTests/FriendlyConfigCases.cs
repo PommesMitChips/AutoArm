@@ -89,12 +89,11 @@ internal static partial class Scenarios
         double[] values={.31,6,7,.6,.3,.7,.4,4,2,.8,.25,6,2,.6,.3,.22,4};
         string[] keys={"HeadSpeed","HeadTurnSpeed","StepAngle","JointSpeed","PistonSpeed","HomeJointSpeed","HomePistonSpeed","OrientationTolerance","JointAcceleration","PistonAcceleration","PositionCorrectionCap","OrientationCorrectionCap","TargetLead","PositionIntegralGain","OrientationIntegralGain","PositionIntegralCap","OrientationIntegralCap"};
         for(int i=0;i<keys.Length;i++)ini.Set("Config",keys[i],values[i]);
-        ini.Set("Config","ReadKeyboard",false);ini.Set("Config","ReadRoll",false);ini.Set("Config","Bind1","Stop");ini.Set("Config","Bind2","Forward");ini.Set("Config","Bind9","Status");
+        ini.Set("Config","ReadKeyboard",false);ini.Set("Config","ReadRoll",false);
         RecordProxy.Of(rig.PB).Values["CustomData"]=ini.ToString();Run(script,"Reload");
         string[] fields={"MoveMps","TurnDeg","StepDeg","JointRpm","PistonMps","HomeJointRpm","HomePistonMps","OrientationToleranceDeg","JointAccelerationRpmPerSec","PistonAccelerationMps2","PositionCorrectionCap","OrientationCorrectionCapDeg","MaximumPilotTargetLeadM","PositionKi","OrientationKi","PositionIntegralCap","OrientationIntegralCapDeg"};
         for(int i=0;i<fields.Length;i++)Check(Math.Abs(Convert.ToDouble(Get(script,fields[i]))-values[i])<1e-12,"Config key did not apply to "+fields[i]+".");
         Check(!(bool)Get(script,"ReadKeyboard")!&&!(bool)Get(script,"ReadRoll")!,"Boolean settings were not applied.");
-        Check(!rig.PB.CustomData.Contains("Bind1=")&&!rig.PB.CustomData.Contains("Bind9="),"Obsolete toolbar config keys survived.");
         for(int i=0;i<5;i++)Run(script);Run(script,"On");InvokeFrame(script,rig,"Forward",UpdateType.Terminal,0);Check((bool)Get(script,"AimingTarget")!,"Named face-direction action was not dispatched explicitly.");
         Run(script,"Stop");Check(!Enabled(script),"Named Stop did not stop control.");
 

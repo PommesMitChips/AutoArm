@@ -6,7 +6,7 @@ The working tree contains the current script, source fragments, examples and dev
 | --- | --- | ---: |
 | `v2.0` | Automatic topology discovery, signed parallel groups, task-space control and additive pose correction | 45,140 |
 | `v2.1-preview` | Manual-priority correction, bounded target lead and adversarial comparison with the supplied HeadOnly script; earlier branding | 47,363 |
-| `v2.1` | AutoArm naming and documented compatibility; includes the preserved review | 47,349 |
+| `v2.1` | AutoArm naming and documented compatibility; includes the preserved review | 47,343 |
 | `v2.2` | Zero-time command handling, topology snapshots every 30 active passes, cached status formatting and passive pivot comparison | 56,732 |
 | `v2.3` | Readable configuration and retained load compensation for gravity hold | 66,629 |
 | `v2.4` | HEAD/HRZ/VRT frames, active cockpit selection, optional mouse input and named toolbar actions | 69,408 |
@@ -29,6 +29,11 @@ The working tree contains the current script, source fragments, examples and dev
 | `v4.0.7` | Live merge magnets during acknowledged parking approach, Arm-side capture stop before topology validation and no quiet-motion parking admission | Arm 90,452; ToolSwap 57,716 |
 | `v4.0.8` | PB memory-safe rewrite compatibility: retain collection/StringBuilder spellings and validate both roles with the installed game rewriter | Arm 90,797; ToolSwap 57,795 |
 | `v4.0.9` | Direct per-arm config views, shared stage-weight parsing with durable signed preferences and consolidated startup stopping | Arm 88,948; ToolSwap 57,720 |
+| `v5.0` | Optional shared Collision PB, fresh Safety overlays, bounded posture preferences, clearance velocity filters and scoped docking allowances | Arm 92,657; ToolSwap 57,901; Collision 18,496 |
+| `v5.0.1` | Read-only arm survey, scoped head-path test runner, live Safety telemetry and overlap block IDs; control gains unchanged | Arm 93,047; ToolSwap 57,907; Collision 18,543 |
+| `v5.0.2` | Collision-only mechanical-interface geometry correction, common-ancestor cancellation and conservative row reduction | Arm 93,047; ToolSwap 57,907; Collision 22,037 |
+| `v5.0.3` | Collision spatial prefilter, request headroom, query diagnostics and runtime-efficient token packing | Arm 93,047; ToolSwap 57,907; Collision 24,240 |
+| `v5.0.4` | Negotiated sixteen-row collision capacity, legacy eight-row fallback and row-count telemetry | Arm 93,292; ToolSwap 57,902; Collision 24,516 |
 
 Read a previous script without changing your working tree:
 

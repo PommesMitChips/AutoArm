@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.9";
+const string ControllerBuildVersion = "5.1.0";
 
 const int HostFormat = 7;
 const string WireTag = "AutoArm/5", GlobalSection = "global";
@@ -15,6 +15,14 @@ IMyBroadcastListener Selection;
 long InputClock, InputOwner;
 double InputAge;
 const string SelectionTag = "AutoArm/Select/1";
+const string PilotTag = "AutoArm/Pilots/1";
+sealed class PilotClaim { public long Seat, Clock, PB; public string Arm; public double Age; }
+readonly Dictionary<string, PilotClaim> Pilots = new Dictionary<string, PilotClaim>();
+readonly Dictionary<long, PilotClaim> RemotePilots = new Dictionary<long, PilotClaim>();
+readonly Dictionary<long, long> PilotSnapshots = new Dictionary<long, long>();
+IMyBroadcastListener PilotListener;
+bool Pairing;
+string InputNote = "";
 public Program()
 {
     Runtime.UpdateFrequency = UpdateFrequency.Update10;
@@ -24,9 +32,14 @@ public Program()
         if (!Saved.TryParse(Storage)) { Saved.Clear(); Saved.EndContent = Storage; }
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId) { InputClock = Saved.Get("AutoArm Host", "InputClock").ToInt64(); InputOwner = Saved.Get("AutoArm Host", "InputOwner").ToInt64(); }
         { Selection = IGC.RegisterBroadcastListener(SelectionTag); if (Selection != null) Selection.SetMessageCallback(WireTag); }
+        { PilotListener = IGC.RegisterBroadcastListener(PilotTag); if (PilotListener != null) PilotListener.SetMessageCallback(WireTag); Pairing = Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Saved.Get("AutoArm Host", "Pairing").ToBoolean(); }
         {StopSaved();
 }
         LoadHost();
+        if ((Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId)) foreach (string name in Order) {
+            long seat = Saved.Get("Pilot " + name, "Seat").ToInt64(), clock = Saved.Get("Pilot " + name, "Clock").ToInt64();
+            if (seat != 0 && clock > 0) Pilots[name] = new PilotClaim { Seat = seat, Clock = clock, PB = Me.EntityId, Arm = name };
+        }
         string prior = Saved.Get("AutoArm Host", "Selected").ToString();
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Arms.ContainsKey(prior)) Selected = prior;
         SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
@@ -40,6 +53,13 @@ public void Save()
     if (Order.Count == 0) return;
     bool changed = Saved.Get("AutoArm Host", "PB").ToInt64() != Me.EntityId || Saved.Get("AutoArm Host", "Selected").ToString() != Selected || Saved.Get("AutoArm Host", "InputClock").ToInt64() != InputClock || Saved.Get("AutoArm Host", "InputOwner").ToInt64() != InputOwner;
     if (changed) { Saved.Set("AutoArm Host", "Format", 1); Saved.Set("AutoArm Host", "PB", Me.EntityId); Saved.Set("AutoArm Host", "Selected", Selected); Saved.Set("AutoArm Host", "InputClock", InputClock); Saved.Set("AutoArm Host", "InputOwner", InputOwner); }
+    {
+        if (Saved.Get("AutoArm Host", "Pairing").ToBoolean() != Pairing) { Saved.Set("AutoArm Host", "Pairing", Pairing); changed = true; }
+        foreach (string name in Order) {
+            PilotClaim pilot; long seat = Pilots.TryGetValue(name, out pilot) ? pilot.Seat : 0, clock = pilot == null ? 0 : pilot.Clock;
+            if (Saved.Get("Pilot " + name, "Seat").ToInt64() != seat || Saved.Get("Pilot " + name, "Clock").ToInt64() != clock) { Saved.Set("Pilot " + name, "Seat", seat); Saved.Set("Pilot " + name, "Clock", clock); changed = true; }
+        }
+    }
     foreach (var pair in Arms) if (pair.Value.Storage != pair.Value.SavedData) { Saved.Set("State " + pair.Key, "Data", pair.Value.Storage); pair.Value.SavedData = pair.Value.Storage; changed = true; }
     if (!changed) return;
     string text = Saved.ToString(); if (text != Storage) Storage = text;
@@ -85,7 +105,7 @@ void LoadHost()
         }
     }
     var removed = new List<string>(); foreach (string name in Order) if (!names.Contains(name)) removed.Add(name);
-    foreach (string name in removed) { Arms[name].Stop("Arm removed from configuration."); Saved.Set("State " + name, "Data", Arms[name].Storage); Arms.Remove(name); }
+    foreach (string name in removed) { Arms[name].Stop("Arm removed from configuration."); Saved.Set("State " + name, "Data", Arms[name].Storage); Arms.Remove(name); {Pilots.Remove(name); } }
     Configuration = ini; Order.Clear(); Order.AddRange(names);
     AutoLinks();
     foreach (string name in names) if (!Arms.ContainsKey(name))
@@ -95,7 +115,7 @@ void LoadHost()
     }
     if (!Arms.ContainsKey(Selected))
     { string configured = ini.Get(GlobalSection, "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
-    {foreach (var core in Arms.Values) core.Select(core.Name == Selected && InputOwner == Me.EntityId);
+    {UpdatePilots();
 }
     HostError = "";
 }
@@ -171,17 +191,20 @@ void PublishConfig()
     foreach (var key in keys) if (!live.ContainsKey(key.Section, key.Name)) live.Set(key.Section, key.Name, Configuration.Get(key).ToString());
     string text = live.ToString(); if (text != Me.CustomData) Me.CustomData = text;
 }
-void SelectArm(string name, bool claim = true)
+void SelectArm(string name, bool claim = true, bool pair = false)
 {
     if (!Arms.ContainsKey(name)) throw new Exception("Unknown arm: " + name);
+    if (pair) PairPilot(name);
     Selected = name;
-    { if (claim) { InputClock++; InputOwner = Me.EntityId; } foreach (var core in Arms.Values) core.Select(core.Name == name && InputOwner == Me.EntityId); if (InputOwner == Me.EntityId) AnnounceInput(); }
+    { if (claim) { InputClock++; InputOwner = Me.EntityId; } UpdatePilots(); if (InputOwner == Me.EntityId) AnnounceInput(); }
     Save();
 }
 void Command(string raw)
 {
     string text = raw.Trim(); if (text.Length == 0) return;
-    if (text.StartsWith("Select ", StringComparison.OrdinalIgnoreCase)) { SelectArm(text.Substring(7).Trim()); return; }
+    HostError = "";
+    if (text.StartsWith("Select ", StringComparison.OrdinalIgnoreCase)) { SelectArm(text.Substring(7).Trim(), true, true); return; }
+    if (text.StartsWith("Release ", StringComparison.OrdinalIgnoreCase)) { { ReleasePilot(text.Substring(8).Trim()); return; } }
     if (text.Equals("StopAll", StringComparison.OrdinalIgnoreCase)) { StopAll("StopAll command."); return; }
     int end = text.IndexOfAny(new char[] { ' ', '(', ',' }); string first = (end < 0 ? text : text.Substring(0, end)).ToLowerInvariant();
     if (first == "on" || first == "reload" || first == "rescan")
@@ -203,6 +226,8 @@ void Command(string raw)
     }
     ArmCore target; if (!Arms.TryGetValue(name, out target)) throw new Exception("Unknown arm: " + name);
     string action = command.Split(' ')[0].ToLowerInvariant();
+    if (action == "select") { int space = command.IndexOf(' '); string mode = space < 0 ? "" : command.Substring(space + 1).Trim().ToUpperInvariant(); if (mode.Length > 0 && mode != "HEAD" && mode != "HRZ" && mode != "VRT") throw new Exception("MovementMode expects HEAD, HRZ or VRT."); SelectArm(name, true, true); if (mode.Length > 0) target.Update("Mode " + mode, UpdateType.Terminal, 0); return; }
+    if (action == "release") { { ReleasePilot(name); return; } }
     if (action == "on" || action == "reload" || action == "rescan")
     { target.Config = ConfigFor(name); target.ConfigChanged = false; }
     target.Update(command, UpdateType.Terminal, 0);
@@ -214,6 +239,7 @@ static int Arity(string verb)
     {
         case "on": case "off": case "stop": case "hold": case "check": case "info": case "joints": case "reload": case "rescan": case "sethome": case "gohome": case "toolscan": case "toolinfo": case "swapcancel": case "version": case "status": case "bindings": case "homeinfo": case "forward": case "back": case "left": case "right": case "up": case "down": case "yawleft": case "yawright": case "pitchup": case "pitchdown": case "rollleft": case "rollright": return 0;
         case "moveto": return 3;
+        case "release": return 0;
         case "orientto": return 6;
         case "movetoposori": return 9;
         case "homespeed": case "step": return 2;
@@ -221,7 +247,63 @@ static int Arity(string verb)
     }
 }
 void AnnounceInput()
-{ if (Selection != null) IGC.SendBroadcastMessage(SelectionTag, InputClock + "|" + Selected, TransmissionDistance.CurrentConstruct); }
+{
+    if (Selection != null) IGC.SendBroadcastMessage(SelectionTag, InputClock + "|" + Selected, TransmissionDistance.CurrentConstruct);
+    if (PilotListener != null) { var text = new System.Text.StringBuilder(InputClock.ToString()); foreach (var pilot in Pilots.Values) text.Append('|').Append(pilot.Arm).Append('@').Append(pilot.Seat).Append('@').Append(pilot.Clock); IGC.SendBroadcastMessage(PilotTag, text.ToString(), TransmissionDistance.CurrentConstruct); }
+}
+long PilotSeatFor(string name) { PilotClaim pilot; return Pilots.TryGetValue(name, out pilot) ? pilot.Seat : 0; }
+bool SeatAvailableFor(string name, long seat)
+{
+    foreach (var pilot in Pilots.Values) if (pilot.Seat == seat && pilot.Arm != name) return false;
+    PilotClaim remote; return !RemotePilots.TryGetValue(seat, out remote) || remote.Age > .5;
+}
+void UpdatePilots()
+{ foreach (var core in Arms.Values) core.Select(Pilots.ContainsKey(core.Name) || !Pairing && core.Name == Selected && InputOwner == Me.EntityId); }
+void ReleasePilot(string name)
+{
+    if (!Arms.ContainsKey(name)) throw new Exception("Unknown arm: " + name);
+    Pairing = true; Pilots.Remove(name); InputClock++; UpdatePilots(); AnnounceInput(); Save(); InputNote = name + ": cockpit released; arm holds. Select pairs again.";
+}
+void PairPilot(string name)
+{
+    var seats = new List<IMyShipController>(); GridTerminalSystem.GetBlocksOfType(seats, c => !c.Closed && c.IsSameConstructAs(Me) && c.IsUnderControl);
+    if (seats.Count > 1) throw new Exception("More than one cockpit is occupied. Please ensure exactly one cockpit is occupied.");
+    if (seats.Count == 0) throw new Exception("No cockpit is occupied. Please ensure exactly one cockpit is occupied.");
+    var found = seats[0]; Pairing = true;
+    var remove = new List<string>(); foreach (var pilot in Pilots.Values) if (pilot.Seat == found.EntityId) remove.Add(pilot.Arm); foreach (string old in remove) { Pilots.Remove(old); Arms[old].Select(false); } Arms[name].Select(false);
+    RemotePilots.Remove(found.EntityId); InputClock++; Pilots[name] = new PilotClaim { Arm = name, Seat = found.EntityId, Clock = InputClock, PB = Me.EntityId };
+    InputNote = name + " paired to " + found.CustomName + " (" + found.EntityId + ").";
+}
+void ReadPilotClaims(double elapsed)
+{
+    foreach (var pilot in RemotePilots.Values) if (elapsed > 0 && !double.IsNaN(elapsed) && !double.IsInfinity(elapsed)) pilot.Age += elapsed;
+    if (PilotListener == null) return; int count = 0;
+    while (PilotListener.HasPendingMessage && count++ < 8) {
+        var message = PilotListener.AcceptMessage(); var text = message.Data as string; var peer = GridTerminalSystem.GetBlockWithId(message.Source) as IMyProgrammableBlock;
+        if (message.Tag != PilotTag || message.Source == Me.EntityId || text == null || text.Length > 2048 || peer == null || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me)) continue;
+        var config = new MyIni(); if (!config.TryParse(peer.CustomData) || config.Get(GlobalSection, "Format").ToInt32() != 7) continue;
+        string[] rows = text.Split('|'); long snapshot, previous;
+        if (rows.Length > 9 || !long.TryParse(rows[0], out snapshot) || snapshot <= 0 || PilotSnapshots.TryGetValue(message.Source, out previous) && snapshot < previous) continue;
+        var incoming = new List<PilotClaim>(); var seen = new HashSet<long>(); var names = new HashSet<string>(); bool valid = true;
+        for (int i = 1; i < rows.Length; i++) {
+            int last = rows[i].LastIndexOf('@'), middle = last > 0 ? rows[i].LastIndexOf('@', last - 1) : -1; long seat, clock;
+            string arm = middle < 0 ? "" : rows[i].Substring(0, middle);
+            if (middle <= 0 || !long.TryParse(rows[i].Substring(middle + 1, last - middle - 1), out seat) || !long.TryParse(rows[i].Substring(last + 1), out clock) || seat == 0 || clock <= 0 || clock > snapshot || !seen.Add(seat) || !names.Add(arm) || !config.ContainsSection(arm)) { valid = false; break; }
+            var controller = GridTerminalSystem.GetBlockWithId(seat) as IMyShipController;
+            if (controller == null || controller.Closed || !controller.IsSameConstructAs(Me)) { valid = false; break; }
+            incoming.Add(new PilotClaim { PB = message.Source, Seat = seat, Clock = clock, Arm = arm });
+        }
+        if (!valid) continue; PilotSnapshots[message.Source] = snapshot; InputClock = Math.Max(InputClock, snapshot);
+        var erase = new List<long>(); foreach (var pilot in RemotePilots.Values) if (pilot.PB == message.Source) erase.Add(pilot.Seat); foreach (long seat in erase) RemotePilots.Remove(seat);
+        foreach (var claim in incoming) {
+            PilotClaim remote; if (RemotePilots.TryGetValue(claim.Seat, out remote) && (remote.Clock > claim.Clock || remote.Clock == claim.Clock && remote.PB > claim.PB)) continue;
+            string lost = ""; bool keep = false; foreach (var local in Pilots.Values) if (local.Seat == claim.Seat) { if (local.Clock > claim.Clock || local.Clock == claim.Clock && Me.EntityId > claim.PB) keep = true; else lost = local.Arm; break; }
+            if (keep) continue; if (lost.Length > 0) { Pilots.Remove(lost); InputNote = lost + ": cockpit claimed by another Arm PB."; }
+            RemotePilots[claim.Seat] = claim;
+        }
+        UpdatePilots();
+    }
+}
 void ReceiveSelection(double elapsed)
 {
     if (Selection == null) return;
@@ -235,10 +317,11 @@ void ReceiveSelection(double elapsed)
         var peer = GridTerminalSystem.GetBlockWithId(message.Source) as IMyProgrammableBlock; var config = new MyIni();
         if (peer == null || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me) || !config.TryParse(peer.CustomData) || config.Get(GlobalSection, "Format").ToInt32() != 7 || !config.ContainsSection(cells[1])) continue;
         InputClock = clock; InputOwner = message.Source;
-        foreach (var core in Arms.Values) core.Select(false);
+        UpdatePilots();
     }
+    ReadPilotClaims(elapsed);
     if (elapsed > 0 && !double.IsInfinity(elapsed) && !double.IsNaN(elapsed)) InputAge += elapsed;
-    if (InputAge >= .1 && InputOwner == Me.EntityId) { InputAge = 0; AnnounceInput(); }
+    if (InputAge >= .1) { InputAge = 0; if (InputOwner == Me.EntityId || Pilots.Count > 0) AnnounceInput(); }
 }
 void CaptureDefaults(ArmCore core)
 {
@@ -297,7 +380,8 @@ void StopAll(string why)
 void Display()
 {
     var lines = new List<string>(); lines.Add("AutoArm " + ControllerBuildVersion + " " + ("Arm") + " | Selected: " + Selected);
-    if ((InputOwner != Me.EntityId)) lines.Add("Cockpit input inactive here. Run Select " + Selected + ".");
+    if ((!Pairing ) && InputOwner != Me.EntityId) lines.Add("Cockpit input inactive here. Run Select " + Selected + ".");
+    if ((InputNote.Length > 0)) lines.Add(InputNote);
     if (HostError.Length > 0) lines.Add(HostError);
     foreach (string name in Order) lines.Add(name + ": " + Arms[name].Summary);
     ArmCore current; if (Arms.TryGetValue(Selected, out current)) lines.Add(current.Report);
@@ -330,7 +414,7 @@ public void Update(string argument, UpdateType source, double elapsed)
 readonly string ArmName;
 
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.9";
+const string ControllerBuildVersion = "5.1.0";
 
 
 // C# 6 programmable-block fragment. Paste inside ArmCore.
@@ -485,12 +569,20 @@ class AutoTopology
         if (!ScopeEdges(out why)) return false;
         var root = Between(Hull, Start);
         if (!Has(root, Base.EntityId)) return Bad("Base marker attachment changed while scanning.", out why);
-        if (!AddGroup(root, out why)) return false;
-        Corridor.Add(Start); Corridor.Add(Hull);
+        Corridor.Add(Hull);
         var dist = Distances(EndGrid, out why); if (dist == null) return false;
         int d;
         if (!dist.TryGetValue(Start, out d)) return Bad("Head route returns through hull or is unreachable.", out why);
-        long at = Start;
+        // All mechanical roots in this moving component participate in the
+        // same split/rejoin recognition as later stages. The named root only
+        // defines the hull and reference frame; other members need no marker.
+        foreach (var edge in Edges) {
+            long child = edge.A == Hull ? edge.Z : edge.Z == Hull ? edge.A : 0; int depth;
+            if (child != 0 && (!dist.TryGetValue(child, out depth) || depth != d))
+                return Bad("Parallel base arms have unequal stage counts; variable-ratio closure is unsupported.", out why);
+        }
+        dist[Hull] = d + 1;
+        long at = Hull;
         while (at != EndGrid)
         {
             if (!Guard("corridor recognition", out why)) return false;
@@ -676,7 +768,7 @@ class AutoTopology
                 bool compatible = kind == 1
                     ? Vector3D.Dot(baseA, ang) >= AxisCos && (baseL - lin).Length() <= RotaryLineM
                     : Vector3D.Dot(baseL, lin) >= AxisCos;
-                if (!compatible) return Bad("Parallel " + (kind == 1 ? "rotors/hinges lack one coaxial full twist" : "pistons are not collinear") +
+                if (!compatible) return Bad("Parallel " + (kind == 1 ? "rotors/hinges lack one coaxial full twist" : "piston axes are not parallel") +
                     " at stage containing '" + l.E.B.CustomName + "'. General linkage ratios are unsupported.", out why);
             }
             m.Q0 = m.Last = Position(m);
@@ -967,7 +1059,6 @@ sealed class AutoSettings
     static readonly double[] Min = { 0, .01, .01, .01, .01, .01, .01, 0, .01, .01, 0, 0, .01, 0, 0, 0, 0, 0, 0, 0 };
     static readonly double[] Max = { 5, 30, 180, 5, 2, 5, 2, 30, 20, 10, 5, 30, 10, 5, 5, 5, 30, 10, 3, 3 };
     static readonly string[] Units = { "Head translation m/s", "Head rotation deg/s", "Toolbar step deg", "Rotor/hinge RPM cap", "Piston m/s cap", "Home RPM cap", "Home m/s cap", "Idle orientation band deg", "Rotor RPM/s cap", "Piston m/s^2 cap", "Correction m/s cap", "Correction deg/s cap", "Target lead m", "Bias gain 1/s^2; 0=off", "Angular bias gain 1/s^2; 0=off", "Bias m/s cap", "Bias deg/s cap", "Mouse scale; total rotation capped", "Velocity error damping; 0=off", "Angular velocity error damping; 0=off" };
-    public static readonly string[] DefaultBindings = { "PitchUp", "Back", "PitchDown", "Left", "Down", "Right", "YawLeft", ForwardName, "YawRight" };
     public readonly double[] V = (double[])Defaults.Clone();
     public bool Keyboard = true, Roll = true, Mouse;
     public PilotMode Mode = PilotMode.HEAD;
@@ -1008,7 +1099,6 @@ sealed class AutoSettings
         ini.SetComment(ConfigSection, KeyboardKey, "Game movement input.");
         ini.SetComment(ConfigSection, RollKey, "Q/E: Head roll.");
         ini.SetComment(ConfigSection, MouseKey, "Optional view pitch/yaw.");
-        for (int i = 1; i <= 9; i++) ini.Delete(ConfigSection, "Bind" + i);
     }
     public static bool ReadMode(string text, out PilotMode mode)
     {
@@ -1192,7 +1282,7 @@ const string MovementModeKey = "MovementMode";
 const string ToolWeightsSection = "AutoArm Tool Weights";
 const string OrientationToleranceKey = "OrientationTolerance";
 const string MouseKey = "ReadMouse";
-const string ForwardName = "Forward";
+
 const string RollKey = "ReadRoll";
 
 // ======================= DIRECT POSE CONTROL =======================
@@ -1255,6 +1345,8 @@ Vector3D TargetP, TargetF, TargetU, PreviousP, PreviousF, PreviousU;
 Vector3D FilteredV, FilteredW, PositionI, OrientationI;
 bool TargetValid, ObservationValid;
 IMyShipController InputController;
+long PilotSeatId => Host.PilotSeatFor(Name);
+bool SeatAvailable(IMyShipController c) { return Host.SeatAvailableFor(Name, c.EntityId); }
 readonly List<IMyShipController> InputScratch = new List<IMyShipController>();
 int InputScan;
 double ControlElapsed, SetupElapsed, StatusElapsed;
@@ -1274,7 +1366,7 @@ int LastSolverPasses, LastActiveBounds;
 bool LastSolverConverged, LastSolverBudgetLimited;
 
 double[,] J, B, Gram, Chol;
-double[] Scale, Lo, Hi, X, Trial, Task, Residual, Rhs, Temp, Solution, LastQdot;
+double[] Scale, Lo, Hi, X, Trial, Task, Residual, Rhs, Temp, Solution, LastQdot, Bias;
 int[] BoundState;
 readonly Dictionary<long, double> Home = new Dictionary<long, double>();
 string HomeFingerprint = "";
@@ -1468,7 +1560,7 @@ void Allocate(int n)
     Gram = new double[6, 6];
     Chol = new double[6, 6];
     Scale = new double[n]; Lo = new double[n]; Hi = new double[n];
-    X = new double[n]; Trial = new double[n]; LastQdot = new double[n];
+    X = new double[n]; Trial = new double[n]; LastQdot = new double[n]; Bias = new double[n];
     BoundState = new int[n];
     Task = new double[6]; Residual = new double[6]; Rhs = new double[6];
     Temp = new double[6]; Solution = new double[6];
@@ -1588,6 +1680,8 @@ void UpdateControl(double dt, double observationDt)
         FilteredW += (measuredW - FilteredW) * blend;
     }
     PreviousP = p; PreviousF = f; PreviousU = u; ObservationValid = true;
+    var safety = Services == null ? null : Services.Safety;
+    if (safety != null && (!safety.Ready || safety.Blocked)) { safety.Hold(); return; }
 
     Vector3D pe = TargetP - p;
     Vector3D oe = RotationError(f, u, TargetF, TargetU);
@@ -1625,9 +1719,12 @@ void UpdateControl(double dt, double observationDt)
     LastCounterCorrectionLimited |= angularLimited;
 
     // Core invariant: tracking correction is added to live pilot demand. Pose error,
-    // recovery state and target advancement never multiply or suppress pilot input.
+    // recovery state and target advancement never suppress pilot input. Explicit
+    // collision supervision can restrict accepted motion after demand formation.
     LastRequestedLinear = LastPilotLinear + LastFeedbackLinear;
     LastRequestedAngular = LastPilotAngular + LastFeedbackAngular;
+    double motionScale = safety == null ? 1 : safety.Scale;
+    LastRequestedLinear *= motionScale; LastRequestedAngular *= motionScale;
     if (!Solve(p, dt, LastRequestedLinear, LastRequestedAngular, out LastAchievedLinear,
         out LastAchievedAngular, out why))
     {
@@ -1636,8 +1733,8 @@ void UpdateControl(double dt, double observationDt)
     }
     if (!Commit()) return;
 
-    Vector3D positionClipResidual = rawPositionFeedback - LastFeedbackLinear;
-    Vector3D orientationClipResidual = rawOrientationFeedback - LastFeedbackAngular;
+    Vector3D positionClipResidual = rawPositionFeedback - LastFeedbackLinear * motionScale;
+    Vector3D orientationClipResidual = rawOrientationFeedback - LastFeedbackAngular * motionScale;
     // Only loss caused by command bounds inhibits bias learning. Damping and
     // unreachable task components exist even in the unconstrained reference.
     Vector3D positionAllocationResidual = LastUnconstrainedLinear - LastAchievedLinear;
@@ -1648,8 +1745,9 @@ void UpdateControl(double dt, double observationDt)
         Math.Min(OrientationIntegralCapDeg * Math.PI / 180, ToolDriving ? ToolDriveTurnCap : Math.Min(TurnDeg, OrientationCorrectionCapDeg) * Math.PI / 180), ToolDriving ? double.MaxValue : 10.0 * Math.PI / 180,
         dt, LastSolverConverged && !LastSolverBudgetLimited);
 
-    LastLinearAdvance = PilotAdvance(LastPilotLinear, LastAchievedLinear - LastFeedbackLinear);
-    LastAngularAdvance = PilotAdvance(LastPilotAngular, LastAchievedAngular - LastFeedbackAngular);
+    LastLinearAdvance = PilotAdvance(LastPilotLinear, LastAchievedLinear - LastFeedbackLinear * motionScale);
+    LastAngularAdvance = PilotAdvance(LastPilotAngular, LastAchievedAngular - LastFeedbackAngular * motionScale);
+    if (safety != null) { LastLinearAdvance = Math.Min(LastLinearAdvance, motionScale * safety.Fraction); LastAngularAdvance = Math.Min(LastAngularAdvance, motionScale * safety.Fraction); }
     // Allocation is a kinematic prediction, not measured delivery. Bound newly
     // requested target lead even when physical contact prevents predicted motion.
     LastLinearAdvance *= TargetLeadAdvance(pe, LastPilotLinear * (dt * LastLinearAdvance), MaximumPilotTargetLeadM);
@@ -1711,6 +1809,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         double preference = demand > 1e-9 ? (moveDemand * g.MoveW + turnDemand * g.TurnW) / demand :
             0.5 * (g.MoveW + g.TurnW);
         double s = Scale[i] = preference > 0 ? cap * Math.Sqrt(preference) : 0;
+        Bias[i] = s > 1e-12 && Services != null && Services.Safety != null ? Services.Safety.Preferred(i) / s : 0;
         Lo[i] = s > 1e-12 ? lo / s : 0;
         Hi[i] = s > 1e-12 ? hi / s : 0;
         X[i] = s > 1e-12 ? Clamp(LastQdot[i] / s, Lo[i], Hi[i]) : 0;
@@ -1748,7 +1847,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         {
             Trial[i] = X[i];
             if (BoundState[i] != 0) continue;
-            double value = 0;
+            double value = Bias[i];
             for (int r = 0; r < 6; r++) value += B[r, i] * Solution[r];
             Trial[i] = value;
             double delta = value - X[i];
@@ -1779,7 +1878,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         for (int i = 0; i < n; i++)
         {
             if (BoundState[i] == 0 || BoundState[i] == 2) continue;
-            double gradient = ridge * X[i];
+            double gradient = ridge * (X[i] - Bias[i]);
             for (int r = 0; r < 6; r++) gradient += B[r, i] * Residual[r];
             double violation = BoundState[i] < 0 ? -gradient : gradient;
             if (violation > worst) { worst = violation; release = i; }
@@ -1795,11 +1894,12 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         if (!Finite(velocity)) { why = "non-finite group velocity"; return false; }
         LastQdot[i] = velocity;
         if (BoundState[i] != 0) LastActiveBounds++;
-        achievedLinear += Topology.Groups[i].Lin * velocity;
-        achievedAngular += Topology.Groups[i].Ang * velocity;
     }
+    var protection = Services == null ? null : Services.Safety;
+    if (protection != null) protection.Limit(LastQdot);
+    for (int i = 0; i < n; i++) { achievedLinear += Topology.Groups[i].Lin * LastQdot[i]; achievedAngular += Topology.Groups[i].Ang * LastQdot[i]; }
     LastUnconstrainedLinear = achievedLinear; LastUnconstrainedAngular = achievedAngular;
-    if (LastActiveBounds > 0 && LastSolverConverged && !LastSolverBudgetLimited)
+    if ((LastActiveBounds > 0 || protection != null && protection.Limited) && LastSolverConverged && !LastSolverBudgetLimited)
     {
         if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.68) LastSolverBudgetLimited = true;
         else if (!UnconstrainedTask(n, ridge, out LastUnconstrainedLinear, out LastUnconstrainedAngular))
@@ -1819,6 +1919,7 @@ void BuildTaskMatrix(int n, double ridge, bool bounded)
     {
         Rhs[r] = Task[r];
         if (bounded) for (int i = 0; i < n; i++) if (BoundState[i] != 0) Rhs[r] -= B[r, i] * X[i];
+        for (int i = 0; i < n; i++) if (!bounded || BoundState[i] == 0) Rhs[r] -= B[r, i] * Bias[i];
         for (int c = 0; c <= r; c++)
         {
             double total = r == c ? ridge : 0;
@@ -1835,7 +1936,7 @@ bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D an
     if (!Cholesky(Gram, Rhs, Chol, Temp, Solution)) return false;
     for (int i = 0; i < n; i++)
     {
-        double rate = 0;
+        double rate = Bias[i];
         for (int r = 0; r < 6; r++) rate += B[r, i] * Solution[r];
         rate *= Scale[i];
         linear += Topology.Groups[i].Lin * rate; angular += Topology.Groups[i].Ang * rate;
@@ -1845,6 +1946,8 @@ bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D an
 
 bool Commit()
 {
+    if (GoingHome && Services != null && Services.Safety != null)
+    { if (!Services.Safety.Ready || Services.Safety.Blocked) { Services.Safety.Hold(); return false; } Services.Safety.Limit(LastQdot); }
     if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.88)
     {
         Fault("Instruction budget exhausted before output commit.");
@@ -1981,7 +2084,8 @@ bool HasPilotInput()
 
 bool InputScope(IMyShipController c)
 {
-    return c != null && !c.Closed && c.CubeGrid != null && c.IsSameConstructAs(Me);
+    return c != null && !c.Closed && c.CubeGrid != null && c.IsSameConstructAs(Me) &&
+        (PilotSeatId == 0 || c.EntityId == PilotSeatId) && SeatAvailable(c);
 }
 
 IMyShipController FindInputController(bool force = false)
@@ -1993,7 +2097,7 @@ IMyShipController FindInputController(bool force = false)
     InputScratch.Clear();
     GridTerminalSystem.GetBlocksOfType<IMyShipController>(InputScratch, b => InputScope(b) && b.IsUnderControl);
     InputController = null;
-    foreach (var b in InputScratch) if (InputController == null || b.EntityId < InputController.EntityId) InputController = b;
+    if (InputScratch.Count == 1) InputController = InputScratch[0];
     return InputController;
 }
 
@@ -2129,30 +2233,23 @@ void RunCommands(string argument)
 
 void RunCommand(string command)
 {
-    if (command.StartsWith("MiningArm ", StringComparison.OrdinalIgnoreCase)) command = command.Substring(10).Trim();
     string[] w = command.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
     if (w.Length == 0) return;
     string c = w[0].ToLowerInvariant();
     if (Tools != null && Tools.Handle(command)) { SwapBatchLock = true; return; }
-    if (Tools != null && Tools.Busy && c != "on" && c != "toggle" && c != "onoff" && c != "-oo" && c != "off" && c != "stop" && c != "info" && c != "status" && c != "version")
+    if (Tools != null && Tools.Busy && c != "on" && c != "toggle" && c != "off" && c != "stop" && c != "info" && c != "status" && c != "version")
         throw new Exception("Tool busy; SwapCancel/Stop first.");
-    if (c.Length == 1 && c[0] >= '1' && c[0] <= '9') { NumericAction(c[0] - '0'); return; }
     switch (c)
     {
         case "version": Say(Banner()); break;
         case "on": StartControl(); break;
         case "off": case "stop": if (Tools != null) { Tools.InhibitRecovery(); if (Tools.Busy) Tools.Cancel(c); } StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
         case "toggle": if (Enabled) { if (Tools != null) Tools.InhibitRecovery(); StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
-        case "onoff": case "-oo":
-            c = w.Length < 2 ? "" : w[1].ToLowerInvariant();
-            if (c != "on" && c != "off" && c != "toggle") throw new Exception("OnOff expects On, Off or Toggle.");
-            RunCommand(w[1]);
-            break;
         case "hold": HoldCurrent(); break;
         case "check": Check(); break;
         case "rescan": Discover(true); break;
         case "reload": Reload(); break;
-        case "info": case "headinfo": case "help": PrintInfo(); break;
+        case "info": case "help": PrintInfo(); break;
         case "pivotprobe":
             DisplayPinned = true;
             if (PivotProbe == null) PivotProbe = new PivotProbeTool(this, Topology);
@@ -2162,13 +2259,13 @@ void RunCommand(string command)
         case "settings": PrintInfo(); break;
         case "joints": PrintJoints(); break;
         case "bindings": PrintBindings(); break;
-        case "sethome": case "-sh": CaptureHome(); break;
-        case "gohome": case "-gh": BeginHome(); break;
+        case "sethome": CaptureHome(); break;
+        case "gohome": BeginHome(); break;
         case "homeinfo": PrintHome(); break;
-        case "speed": case "-s": MoveMps = Number(w, 1, 0, 5, "Speed"); break;
-        case "readkeyboard": case "-rk": ReadKeyboard = InputToggle(w, ReadKeyboard); break;
+        case "speed": MoveMps = Number(w, 1, 0, 5, "Speed"); break;
+        case "readkeyboard": ReadKeyboard = InputToggle(w, ReadKeyboard); break;
         case "readroll": ReadRoll = InputToggle(w, ReadRoll); break;
-        case "readmouse": case "-rm": ReadMouse = InputToggle(w, ReadMouse); break;
+        case "readmouse": ReadMouse = InputToggle(w, ReadMouse); break;
         case "mode": case "movementmode": case "controlmode":
             if (w.Length != 2) throw new Exception("MovementMode expects HEAD, HRZ or VRT.");
             SetMovementMode(w[1]); break;
@@ -2192,14 +2289,10 @@ void RunCommand(string command)
         case "yawleft": case "yawright": Step("yaw", c == "yawleft" ? StepDeg : -StepDeg); break;
         case "pitchup": case "pitchdown": Step("pitch", c == "pitchup" ? StepDeg : -StepDeg); break;
         case "rollleft": case "rollright": Step("roll", c == "rollright" ? StepDeg : -StepDeg); break;
-        case "dumptrace": PrintInfo(); Say("See Info; Custom Data unchanged."); break;
-        case "traceclear": Say("No trace buffer."); break;
         case "moveto": PoseCommand(w, 1); break;
         case "orientto": PoseCommand(w, 2); break;
         case "movetoposori": PoseCommand(w, 3); break;
         case "path": PathCommand(command); break;
-        case "move": case "relmove": case "runfrompanel":
-            throw new Exception(c + " is not supported by AutoArm's discovered pose control.");
         default: throw new Exception("Unknown command '" + w[0] + "'. Use Info.");
     }
 }
@@ -2211,12 +2304,6 @@ static bool InputToggle(string[] words, bool current)
     if (value == "off") return false;
     if (value == "toggle") return !current;
     throw new Exception(words[0] + " expects On, Off or Toggle.");
-}
-
-void NumericAction(int n)
-{
-    string action = AutoSettings.DefaultBindings[n - 1].ToLowerInvariant();
-    if (action != "none") RunCommand(action);
 }
 
 void PrintBindings()
@@ -3166,6 +3253,7 @@ sealed class ToolSwapLink
     ArmTipInfo Tip;
     IMyTerminalBlock End;
     string PeerName = "", Queued = "", Error = "";
+    public string Contacts = "";
     long Ignore, Request, MoveRequest;
     bool Lease, Rebuilding, Driving, Permitted, Settled, Changing, Transition, ResumePending;
     bool RecoverBare, Resumed;
@@ -3185,7 +3273,7 @@ sealed class ToolSwapLink
         why = ""; MyIni ini;
         if (!AutoConfig.ReadCurrent(P, P.CustomData, out ini, out why)) return false;
         PeerName = ini.Get("Modules", "ToolSwapPB").ToString().Trim();
-        Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = Transition = ResumePending = false; Error = "";
+        Queued = ""; Lease = Driving = Rebuilding = Permitted = Changing = Transition = ResumePending = false; Error = ""; Contacts = "";
         RecoverBare = Resumed = false;
         if (!Configured) { Link.Peer = null; End = null; Frame = null; Tip = null; Couplers.Clear(); Markers.Clear(); Tops.Clear(); Merges.Clear(); return true; }
         Link.Resolve(PeerName); Link.Generation++; Link.RemoteEpoch = Link.Received = 0; Link.Age = 0;
@@ -3313,6 +3401,8 @@ sealed class ToolSwapLink
                     Path = P.ReadPath(ini.Get(LinkSection, "Waypoints").ToString(), ini.Get(LinkSection, "Anchor").ToInt64(), seq, Move, Turn, PosTol, AngleTol);
                     P.ConfigurePathStages(Path, ini);
                     Path.Capture = ini.Get(LinkSection, "Capture").ToBoolean();
+                    Contacts = ini.Get(LinkSection, "Contacts").ToString();
+                    if (Contacts.Length > 2048) throw new Exception("Docking contact limit.");
                     Driving = true; Settled = false; MoveRequest = seq;
                 }
                 else if (op == "RESUME" || op == "RELEASE")
@@ -3444,6 +3534,7 @@ sealed class ArmServices
     Client Owner;
     string Config = "";
     long Revision = 1;
+    public SafetyOverlay Safety;
     public ArmServices(ArmCore p) { P = p; }
     public void Load(MyIni ini)
     {
@@ -3453,14 +3544,16 @@ sealed class ArmServices
         {
             if (row.Trim().Length == 0) continue;
             string[] cells = row.Split('|');
-            if (cells.Length != 2 || peers.Count >= 16) throw new Exception("Modules.Peers needs PB name | Observe, Plan or Stop (max 16).");
+            if (cells.Length != 2 || peers.Count >= 16) throw new Exception("Modules.Peers needs PB name | Observe, Plan, Stop or Safety (max 16).");
             string name = cells[0].Trim(), role = cells[1].Trim();
-            if (role != "Observe" && role != "Plan" && role != "Stop" || name == ini.Get("Modules", "ToolSwapPB").ToString().Trim()) throw new Exception("Invalid/duplicate module role.");
+            if (role != "Observe" && role != "Plan" && role != "Stop" && role != "Safety" || name == ini.Get("Modules", "ToolSwapPB").ToString().Trim()) throw new Exception("Invalid/duplicate module role.");
             var link = new ModuleLink(P); link.Resolve(name);
             if (peers.ContainsKey(link.Peer.EntityId)) throw new Exception("Duplicate module PB.");
             peers.Add(link.Peer.EntityId, new Client { Link = link, Role = role });
         }
-        Revoke("Configuration reloaded."); Peers.Clear();
+        SafetyOverlay safety = null;
+        foreach (var pair in peers) if (pair.Value.Role == "Safety") { if (safety != null) throw new Exception("One Safety service per arm."); safety = new SafetyOverlay(P, pair.Value.Link); }
+        Revoke("Configuration reloaded."); Peers.Clear(); Safety = safety;
         foreach (var pair in peers) Peers.Add(pair.Key, pair.Value);
         Config = text;
     }
@@ -3468,10 +3561,12 @@ sealed class ArmServices
     public void Revoke(string reason)
     {
         Revision++;
+        if (Safety != null) Safety.Reset();
         if (Owner != null) { Owner.State = "Canceled"; Owner.Error = reason; Owner = null; }
     }
     public void Tick(double elapsed)
     {
+        if (Safety != null) Safety.Tick(elapsed, Revision);
         if (Owner == null) return;
         var client = Owner;
         if (Finite(elapsed) && elapsed > 0) client.Link.Age += elapsed;
@@ -3499,6 +3594,7 @@ sealed class ArmServices
             if (epoch < link.RemoteEpoch || remote != 0 && remote != link.Epoch) return true;
             if (epoch != link.RemoteEpoch)
             {
+                if (client.Role == "Safety") Safety.Reset();
                 if (Owner == client) P.StopMotion("Planner restarted.");
                 link.RemoteEpoch = epoch; link.Received = 0;
                 client.Seen = 0;
@@ -3516,11 +3612,13 @@ sealed class ArmServices
             if (op == "HELLO" || op == "STATUS" || op == "PING") { }
             else if (op == "STOP")
             {
-                if (client.Role != "Stop" && Owner != client) throw new Exception("Module has no stop authority.");
+                if (client.Role != "Stop" && client.Role != "Safety" && Owner != client) throw new Exception("Module has no stop authority.");
                 P.Tools.InhibitRecovery();
                 if (P.Tools.Busy) P.Tools.Cancel("Module emergency stop.");
                 P.StopMotion("Module stop: " + link.Peer.CustomName); P.Say(P.Status);
             }
+            else if (op == "GUIDE")
+            { if (client.Role != "Safety" || seen == 0) throw new Exception("No collision authority/acknowledgement."); Safety.Read(ini); }
             else if (op == "PATH")
             {
                 string why;
@@ -3542,7 +3640,7 @@ sealed class ArmServices
             else throw new Exception("Unsupported service operation.");
         }
         catch (Exception e) { client.Error = e.Message; }
-        Reply(client, seq); return true;
+        if (op != "GUIDE") Reply(client, seq); return true;
     }
     void Reply(Client client, long ack)
     {
@@ -3556,9 +3654,133 @@ sealed class ArmServices
         ini.Set(LinkSection, "Completed", client.Path == null ? 0 : client.Path.Completed);
         ini.Set(LinkSection, "Count", client.Path == null ? 0 : client.Path.Waypoints.Count);
         ini.Set(LinkSection, "DefaultMove", P.MoveMps); ini.Set(LinkSection, "DefaultTurn", P.TurnDeg);
+        ini.Set(LinkSection, "SafetyRequired", Safety != null);
+        if (Safety != null) Safety.WriteStatus(ini);
+        ini.Set(LinkSection, "PositionError", P.LastPositionError); ini.Set(LinkSection, "AngleError", P.LastOrientationErrorDeg);
+        ini.Set(LinkSection, "SolverPasses", P.LastSolverPasses); ini.Set(LinkSection, "SolverBudget", P.LastSolverBudgetLimited);
         if (P.Topology.Ready) WriteFrame(ini, "Pose", P.Topology.EndPose);
         // Failure to reply to an idle observer must not fault a healthy arm.
         try { link.Send(ini); } catch { if (Owner == client) P.Fault("Planner reply failed."); }
+    }
+}
+
+
+// Optional safety overlay. Geometry stays in the shared Collision PB.
+sealed class SafetyOverlay
+{
+    readonly ArmCore P;
+    public readonly ModuleLink Link;
+    public double Age = 1e6, SendAge, Scale;
+    public bool Limited;
+    public bool Blocked = true;
+    public double Fraction = 1;
+    string Stamp = "", Reason = "Waiting for collision service.";
+    double[] Bias = new double[0];
+    readonly List<double[]> Rows = new List<double[]>();
+    readonly Dictionary<long, double> Sent = new Dictionary<long, double>();
+    double Clock;
+    int ConstraintLimit = 8;
+    public void Reset() { Age = 1e6; Sent.Clear(); SendAge = 1; }
+    public SafetyOverlay(ArmCore p, ModuleLink link) { P = p; Link = link; }
+    double Cap(int i) { return P.Topology.Groups[i].Rotary ? (P.GoingHome ? P.HomeJointRpm : P.JointRpm) * Math.PI / 30 : P.GoingHome ? P.HomePistonMps : P.PistonMps; }
+    string Identity() { return P.Topology.Fingerprint + "/" + P.Topology.Head.CubeGrid.EntityId + "/" + P.Tools.Contacts; }
+    public void Tick(double elapsed, long revision)
+    {
+        if (Finite(elapsed) && elapsed > 0) { Clock += elapsed; Age += elapsed; SendAge += elapsed; }
+        if (!P.Topology.Ready || P.Topology.Groups.Count == 0) { Age = 1e6; Stamp = ""; return; }
+        string stamp = Identity();
+        if (stamp != Stamp) { Stamp = stamp; Age = 1e6; Sent.Clear(); SendAge = 1; }
+        if (SendAge < .1) return;
+        SendAge = 0;
+        var ini = Link.Packet("CHECK"); ini.Set(LinkSection, "Service", 1); ini.Set(LinkSection, "Generation", revision);
+        ini.Set(LinkSection, "ConstraintLimit", 16);
+        ini.Set(LinkSection, "Fingerprint", Stamp); ini.Set(LinkSection, "Groups", P.Topology.Fingerprint);
+        ini.Set(LinkSection, "Hull", P.Topology.Base.CubeGrid.EntityId); ini.Set(LinkSection, "ToolGrid", P.Topology.Head.CubeGrid.EntityId);
+        ini.Set(LinkSection, "Contacts", P.Tools.Contacts);
+        var focus = P.Tools.Focus;
+        var cell = focus == null ? P.Topology.End.Position : focus.Position;
+        ini.Set(LinkSection, "Socket", focus != null);
+        ini.Set(LinkSection, "TipGrid", P.Topology.End.CubeGrid.EntityId);
+        ini.Set(LinkSection, "TipCell", cell.X + " " + cell.Y + " " + cell.Z);
+        WriteVector(ini, "TipUp", P.Topology.EndPose.Up);
+        var caps = new System.Text.StringBuilder(); var rates = new System.Text.StringBuilder();
+        for (int i = 0; i < P.Topology.Groups.Count; i++)
+        {
+            if (i > 0) { caps.Append(' '); rates.Append(' '); }
+            caps.Append(AutoSettings.Number(Cap(i)));
+            rates.Append(AutoSettings.Number(P.LastQdot == null ? 0 : P.LastQdot[i]));
+        }
+        ini.Set(LinkSection, "Caps", caps.ToString()); ini.Set(LinkSection, "Rates", rates.ToString());
+        if (Sent.Count >= 16) Sent.Clear(); Sent[Link.Sequence] = Clock;
+        try { Link.Send(ini); } catch { Age = 1e6; Reason = "Collision service unavailable."; }
+    }
+    public void Read(MyIni ini)
+    {
+        long ack = ini.Get(LinkSection, "Ack").ToInt64(); double time;
+        if (!Sent.TryGetValue(ack, out time) || Clock - time > .25 || ini.Get(LinkSection, "Fingerprint").ToString() != Stamp) return;
+        int n = P.Topology.Groups.Count; double scale; bool blocked;
+        if (!ini.Get(LinkSection, "Hold").TryGetBoolean(out blocked)) throw new Exception("Missing collision permission.");
+        if (!ini.Get(LinkSection, "Scale").TryGetDouble(out scale) || !Finite(scale) || scale < 0 || scale > 1) throw new Exception("Invalid collision speed scale.");
+        var bias = Numbers(ini.Get(LinkSection, "Bias").ToString(), n);
+        for (int i = 0; i < n; i++)
+            if (Math.Abs(bias[i]) > Cap(i) * .25 + 1e-9) throw new Exception("Collision preference exceeds cap.");
+        var rows = new List<double[]>();
+        int limit = 8;
+        if (ini.ContainsKey(LinkSection, "ConstraintLimit") && (!ini.Get(LinkSection, "ConstraintLimit").TryGetInt32(out limit) || limit != 8 && limit != 16)) throw new Exception("Invalid collision constraint capacity.");
+        foreach (string text in ini.Get(LinkSection, "Rows").ToString().Split('\n'))
+        {
+            if (text.Length == 0) continue;
+            if (rows.Count >= limit) throw new Exception("Too many collision constraints.");
+            var row = Numbers(text, n + 1);
+            foreach (double value in row) if (Math.Abs(value) > 1e6) throw new Exception("Collision constraint out of range.");
+            rows.Add(row);
+        }
+        // Commit only a complete, fresh, matching reply. Replay cannot extend expiry.
+        Sent.Remove(ack); Bias = bias; Rows.Clear(); Rows.AddRange(rows); Scale = scale; Blocked = blocked;
+        ConstraintLimit = limit;
+        Reason = ini.Get(LinkSection, "Reason").ToString(); Age = Clock - time;
+    }
+    static double[] Numbers(string text, int count)
+    {
+        string[] parts = text.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != count) throw new Exception("Collision row size mismatch.");
+        var values = new double[count];
+        for (int i = 0; i < count; i++) if (!ReadDouble(parts[i], out values[i])) throw new Exception("Invalid collision number.");
+        return values;
+    }
+    public bool Ready { get { return Age <= .25 && P.Topology.Ready && Stamp == Identity(); } }
+    public void WriteStatus(MyIni ini)
+    {
+        ini.Set(LinkSection, "SafetyReady", Ready); ini.Set(LinkSection, "SafetyHold", !Ready || Blocked);
+        ini.Set(LinkSection, "SafetyAge", Age); ini.Set(LinkSection, "SafetyScale", Scale);
+        ini.Set(LinkSection, "SafetyLimited", Limited); ini.Set(LinkSection, "SafetyFraction", Fraction);
+        ini.Set(LinkSection, "SafetyConstraints", Rows.Count); ini.Set(LinkSection, "SafetyConstraintLimit", ConstraintLimit);
+        ini.Set(LinkSection, "SafetyReason", Ready ? Reason : "Waiting for fresh collision guidance.");
+    }
+    public double Preferred(int i) { return Ready && i < Bias.Length ? Bias[i] : 0; }
+    public void Hold()
+    {
+        P.Topology.ZeroOwned(); if (P.LastQdot != null) Array.Clear(P.LastQdot, 0, P.LastQdot.Length);
+        P.LastAchievedLinear = P.LastAchievedAngular = Vector3D.Zero;
+        P.Say("COLLISION hold | " + (Ready ? Reason : "Waiting for fresh collision guidance."));
+    }
+    public void Limit(double[] rates)
+    {
+        Limited = false; Fraction = 1;
+        if (!Ready || Blocked) { Array.Clear(rates, 0, rates.Length); Limited = true; Fraction = 0; return; }
+        double alpha = P.GoingHome ? Scale : 1, minimum = 0;
+        foreach (var row in Rows)
+        {
+            double dot = 0; for (int i = 0; i < rates.Length; i++) dot += row[i] * rates[i];
+            double lower = row[rates.Length];
+            if (dot > 1e-10) minimum = Math.Max(minimum, lower / dot);
+            else if (dot < -1e-10) alpha = Math.Min(alpha, lower / dot);
+            else if (lower > 1e-8) minimum = 2;
+        }
+        if (minimum > alpha + 1e-8 || minimum > 1 || alpha < 0) alpha = 0;
+        alpha = Clamp(alpha, 0, 1);
+        Fraction = alpha;
+        if (alpha < 1) { Limited = true; for (int i = 0; i < rates.Length; i++) rates[i] *= alpha; }
     }
 }
 

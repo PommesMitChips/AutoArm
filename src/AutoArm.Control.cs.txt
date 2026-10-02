@@ -78,6 +78,8 @@ Vector3D TargetP, TargetF, TargetU, PreviousP, PreviousF, PreviousU;
 Vector3D FilteredV, FilteredW, PositionI, OrientationI;
 bool TargetValid, ObservationValid;
 IMyShipController InputController;
+long PilotSeatId => 0;
+bool SeatAvailable(IMyShipController c) { return true; }
 readonly List<IMyShipController> InputScratch = new List<IMyShipController>();
 int InputScan;
 double ControlElapsed, SetupElapsed, StatusElapsed;
@@ -97,7 +99,7 @@ int LastSolverPasses, LastActiveBounds;
 bool LastSolverConverged, LastSolverBudgetLimited;
 
 double[,] J, B, Gram, Chol;
-double[] Scale, Lo, Hi, X, Trial, Task, Residual, Rhs, Temp, Solution, LastQdot;
+double[] Scale, Lo, Hi, X, Trial, Task, Residual, Rhs, Temp, Solution, LastQdot, Bias;
 int[] BoundState;
 readonly Dictionary<long, double> Home = new Dictionary<long, double>();
 string HomeFingerprint = "";
@@ -295,7 +297,7 @@ void Allocate(int n)
     Gram = new double[6, 6];
     Chol = new double[6, 6];
     Scale = new double[n]; Lo = new double[n]; Hi = new double[n];
-    X = new double[n]; Trial = new double[n]; LastQdot = new double[n];
+    X = new double[n]; Trial = new double[n]; LastQdot = new double[n]; Bias = new double[n];
     BoundState = new int[n];
     Task = new double[6]; Residual = new double[6]; Rhs = new double[6];
     Temp = new double[6]; Solution = new double[6];
@@ -415,6 +417,8 @@ void UpdateControl(double dt, double observationDt)
         FilteredW += (measuredW - FilteredW) * blend;
     }
     PreviousP = p; PreviousF = f; PreviousU = u; ObservationValid = true;
+    var safety = Services == null ? null : Services.Safety;
+    if (safety != null && (!safety.Ready || safety.Blocked)) { safety.Hold(); return; }
 
     Vector3D pe = TargetP - p;
     Vector3D oe = RotationError(f, u, TargetF, TargetU);
@@ -452,9 +456,12 @@ void UpdateControl(double dt, double observationDt)
     LastCounterCorrectionLimited |= angularLimited;
 
     // Core invariant: tracking correction is added to live pilot demand. Pose error,
-    // recovery state and target advancement never multiply or suppress pilot input.
+    // recovery state and target advancement never suppress pilot input. Explicit
+    // collision supervision can restrict accepted motion after demand formation.
     LastRequestedLinear = LastPilotLinear + LastFeedbackLinear;
     LastRequestedAngular = LastPilotAngular + LastFeedbackAngular;
+    double motionScale = safety == null ? 1 : safety.Scale;
+    LastRequestedLinear *= motionScale; LastRequestedAngular *= motionScale;
     if (!Solve(p, dt, LastRequestedLinear, LastRequestedAngular, out LastAchievedLinear,
         out LastAchievedAngular, out why))
     {
@@ -463,8 +470,8 @@ void UpdateControl(double dt, double observationDt)
     }
     if (!Commit()) return;
 
-    Vector3D positionClipResidual = rawPositionFeedback - LastFeedbackLinear;
-    Vector3D orientationClipResidual = rawOrientationFeedback - LastFeedbackAngular;
+    Vector3D positionClipResidual = rawPositionFeedback - LastFeedbackLinear * motionScale;
+    Vector3D orientationClipResidual = rawOrientationFeedback - LastFeedbackAngular * motionScale;
     // Only loss caused by command bounds inhibits bias learning. Damping and
     // unreachable task components exist even in the unconstrained reference.
     Vector3D positionAllocationResidual = LastUnconstrainedLinear - LastAchievedLinear;
@@ -475,8 +482,9 @@ void UpdateControl(double dt, double observationDt)
         Math.Min(OrientationIntegralCapDeg * Math.PI / 180, ToolDriving ? ToolDriveTurnCap : Math.Min(TurnDeg, OrientationCorrectionCapDeg) * Math.PI / 180), ToolDriving ? double.MaxValue : 10.0 * Math.PI / 180,
         dt, LastSolverConverged && !LastSolverBudgetLimited);
 
-    LastLinearAdvance = PilotAdvance(LastPilotLinear, LastAchievedLinear - LastFeedbackLinear);
-    LastAngularAdvance = PilotAdvance(LastPilotAngular, LastAchievedAngular - LastFeedbackAngular);
+    LastLinearAdvance = PilotAdvance(LastPilotLinear, LastAchievedLinear - LastFeedbackLinear * motionScale);
+    LastAngularAdvance = PilotAdvance(LastPilotAngular, LastAchievedAngular - LastFeedbackAngular * motionScale);
+    if (safety != null) { LastLinearAdvance = Math.Min(LastLinearAdvance, motionScale * safety.Fraction); LastAngularAdvance = Math.Min(LastAngularAdvance, motionScale * safety.Fraction); }
     // Allocation is a kinematic prediction, not measured delivery. Bound newly
     // requested target lead even when physical contact prevents predicted motion.
     LastLinearAdvance *= TargetLeadAdvance(pe, LastPilotLinear * (dt * LastLinearAdvance), MaximumPilotTargetLeadM);
@@ -538,6 +546,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         double preference = demand > 1e-9 ? (moveDemand * g.MoveW + turnDemand * g.TurnW) / demand :
             0.5 * (g.MoveW + g.TurnW);
         double s = Scale[i] = preference > 0 ? cap * Math.Sqrt(preference) : 0;
+        Bias[i] = s > 1e-12 && Services != null && Services.Safety != null ? Services.Safety.Preferred(i) / s : 0;
         Lo[i] = s > 1e-12 ? lo / s : 0;
         Hi[i] = s > 1e-12 ? hi / s : 0;
         X[i] = s > 1e-12 ? Clamp(LastQdot[i] / s, Lo[i], Hi[i]) : 0;
@@ -575,7 +584,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         {
             Trial[i] = X[i];
             if (BoundState[i] != 0) continue;
-            double value = 0;
+            double value = Bias[i];
             for (int r = 0; r < 6; r++) value += B[r, i] * Solution[r];
             Trial[i] = value;
             double delta = value - X[i];
@@ -606,7 +615,7 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         for (int i = 0; i < n; i++)
         {
             if (BoundState[i] == 0 || BoundState[i] == 2) continue;
-            double gradient = ridge * X[i];
+            double gradient = ridge * (X[i] - Bias[i]);
             for (int r = 0; r < 6; r++) gradient += B[r, i] * Residual[r];
             double violation = BoundState[i] < 0 ? -gradient : gradient;
             if (violation > worst) { worst = violation; release = i; }
@@ -622,11 +631,12 @@ bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D 
         if (!Finite(velocity)) { why = "non-finite group velocity"; return false; }
         LastQdot[i] = velocity;
         if (BoundState[i] != 0) LastActiveBounds++;
-        achievedLinear += Topology.Groups[i].Lin * velocity;
-        achievedAngular += Topology.Groups[i].Ang * velocity;
     }
+    var protection = Services == null ? null : Services.Safety;
+    if (protection != null) protection.Limit(LastQdot);
+    for (int i = 0; i < n; i++) { achievedLinear += Topology.Groups[i].Lin * LastQdot[i]; achievedAngular += Topology.Groups[i].Ang * LastQdot[i]; }
     LastUnconstrainedLinear = achievedLinear; LastUnconstrainedAngular = achievedAngular;
-    if (LastActiveBounds > 0 && LastSolverConverged && !LastSolverBudgetLimited)
+    if ((LastActiveBounds > 0 || protection != null && protection.Limited) && LastSolverConverged && !LastSolverBudgetLimited)
     {
         if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.68) LastSolverBudgetLimited = true;
         else if (!UnconstrainedTask(n, ridge, out LastUnconstrainedLinear, out LastUnconstrainedAngular))
@@ -646,6 +656,7 @@ void BuildTaskMatrix(int n, double ridge, bool bounded)
     {
         Rhs[r] = Task[r];
         if (bounded) for (int i = 0; i < n; i++) if (BoundState[i] != 0) Rhs[r] -= B[r, i] * X[i];
+        for (int i = 0; i < n; i++) if (!bounded || BoundState[i] == 0) Rhs[r] -= B[r, i] * Bias[i];
         for (int c = 0; c <= r; c++)
         {
             double total = r == c ? ridge : 0;
@@ -662,7 +673,7 @@ bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D an
     if (!Cholesky(Gram, Rhs, Chol, Temp, Solution)) return false;
     for (int i = 0; i < n; i++)
     {
-        double rate = 0;
+        double rate = Bias[i];
         for (int r = 0; r < 6; r++) rate += B[r, i] * Solution[r];
         rate *= Scale[i];
         linear += Topology.Groups[i].Lin * rate; angular += Topology.Groups[i].Ang * rate;
@@ -672,6 +683,8 @@ bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D an
 
 bool Commit()
 {
+    if (GoingHome && Services != null && Services.Safety != null)
+    { if (!Services.Safety.Ready || Services.Safety.Blocked) { Services.Safety.Hold(); return false; } Services.Safety.Limit(LastQdot); }
     if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.88)
     {
         Fault("Instruction budget exhausted before output commit.");
@@ -808,7 +821,8 @@ bool HasPilotInput()
 
 bool InputScope(IMyShipController c)
 {
-    return c != null && !c.Closed && c.CubeGrid != null && c.IsSameConstructAs(Me);
+    return c != null && !c.Closed && c.CubeGrid != null && c.IsSameConstructAs(Me) &&
+        (PilotSeatId == 0 || c.EntityId == PilotSeatId) && SeatAvailable(c);
 }
 
 IMyShipController FindInputController(bool force = false)
@@ -820,7 +834,7 @@ IMyShipController FindInputController(bool force = false)
     InputScratch.Clear();
     GridTerminalSystem.GetBlocksOfType<IMyShipController>(InputScratch, b => InputScope(b) && b.IsUnderControl);
     InputController = null;
-    foreach (var b in InputScratch) if (InputController == null || b.EntityId < InputController.EntityId) InputController = b;
+    if (InputScratch.Count == 1) InputController = InputScratch[0];
     return InputController;
 }
 
@@ -956,30 +970,23 @@ void RunCommands(string argument)
 
 void RunCommand(string command)
 {
-    if (command.StartsWith("MiningArm ", StringComparison.OrdinalIgnoreCase)) command = command.Substring(10).Trim();
     string[] w = command.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
     if (w.Length == 0) return;
     string c = w[0].ToLowerInvariant();
     if (Tools != null && Tools.Handle(command)) { SwapBatchLock = true; return; }
-    if (Tools != null && Tools.Busy && c != "on" && c != "toggle" && c != "onoff" && c != "-oo" && c != "off" && c != "stop" && c != "info" && c != "status" && c != "version")
+    if (Tools != null && Tools.Busy && c != "on" && c != "toggle" && c != "off" && c != "stop" && c != "info" && c != "status" && c != "version")
         throw new Exception("Tool busy; SwapCancel/Stop first.");
-    if (c.Length == 1 && c[0] >= '1' && c[0] <= '9') { NumericAction(c[0] - '0'); return; }
     switch (c)
     {
         case "version": Say(Banner()); break;
         case "on": StartControl(); break;
         case "off": case "stop": if (Tools != null) { Tools.InhibitRecovery(); if (Tools.Busy) Tools.Cancel(c); } StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
         case "toggle": if (Enabled) { if (Tools != null) Tools.InhibitRecovery(); StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
-        case "onoff": case "-oo":
-            c = w.Length < 2 ? "" : w[1].ToLowerInvariant();
-            if (c != "on" && c != "off" && c != "toggle") throw new Exception("OnOff expects On, Off or Toggle.");
-            RunCommand(w[1]);
-            break;
         case "hold": HoldCurrent(); break;
         case "check": Check(); break;
         case "rescan": Discover(true); break;
         case "reload": Reload(); break;
-        case "info": case "headinfo": case "help": PrintInfo(); break;
+        case "info": case "help": PrintInfo(); break;
         case "pivotprobe":
             DisplayPinned = true;
             if (PivotProbe == null) PivotProbe = new PivotProbeTool(this, Topology);
@@ -989,13 +996,13 @@ void RunCommand(string command)
         case "settings": PrintInfo(); break;
         case "joints": PrintJoints(); break;
         case "bindings": PrintBindings(); break;
-        case "sethome": case "-sh": CaptureHome(); break;
-        case "gohome": case "-gh": BeginHome(); break;
+        case "sethome": CaptureHome(); break;
+        case "gohome": BeginHome(); break;
         case "homeinfo": PrintHome(); break;
-        case "speed": case "-s": MoveMps = Number(w, 1, 0, 5, "Speed"); break;
-        case "readkeyboard": case "-rk": ReadKeyboard = InputToggle(w, ReadKeyboard); break;
+        case "speed": MoveMps = Number(w, 1, 0, 5, "Speed"); break;
+        case "readkeyboard": ReadKeyboard = InputToggle(w, ReadKeyboard); break;
         case "readroll": ReadRoll = InputToggle(w, ReadRoll); break;
-        case "readmouse": case "-rm": ReadMouse = InputToggle(w, ReadMouse); break;
+        case "readmouse": ReadMouse = InputToggle(w, ReadMouse); break;
         case "mode": case "movementmode": case "controlmode":
             if (w.Length != 2) throw new Exception("MovementMode expects HEAD, HRZ or VRT.");
             SetMovementMode(w[1]); break;
@@ -1019,14 +1026,10 @@ void RunCommand(string command)
         case "yawleft": case "yawright": Step("yaw", c == "yawleft" ? StepDeg : -StepDeg); break;
         case "pitchup": case "pitchdown": Step("pitch", c == "pitchup" ? StepDeg : -StepDeg); break;
         case "rollleft": case "rollright": Step("roll", c == "rollright" ? StepDeg : -StepDeg); break;
-        case "dumptrace": PrintInfo(); Say("See Info; Custom Data unchanged."); break;
-        case "traceclear": Say("No trace buffer."); break;
         case "moveto": PoseCommand(w, 1); break;
         case "orientto": PoseCommand(w, 2); break;
         case "movetoposori": PoseCommand(w, 3); break;
         case "path": PathCommand(command); break;
-        case "move": case "relmove": case "runfrompanel":
-            throw new Exception(c + " is not supported by AutoArm's discovered pose control.");
         default: throw new Exception("Unknown command '" + w[0] + "'. Use Info.");
     }
 }
@@ -1038,12 +1041,6 @@ static bool InputToggle(string[] words, bool current)
     if (value == "off") return false;
     if (value == "toggle") return !current;
     throw new Exception(words[0] + " expects On, Off or Toggle.");
-}
-
-void NumericAction(int n)
-{
-    string action = AutoSettings.DefaultBindings[n - 1].ToLowerInvariant();
-    if (action != "none") RunCommand(action);
 }
 
 void PrintBindings()

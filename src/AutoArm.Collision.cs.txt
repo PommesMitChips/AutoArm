@@ -1,0 +1,718 @@
+// Shared optional collision service. Paste the generated script into a third PB.
+// ===== IMPLEMENTATION =====
+const string ControllerBuildVersion = "5.0.5";
+const string Tag = "AutoArm/5", Section = "Link";
+sealed class Shape
+{
+    public Vector3D Centre, Half;
+    public long Tag;
+}
+sealed class GridShape
+{
+    public IMyCubeGrid Grid;
+    public Vector3I Min, Max, Cursor;
+    public readonly List<Shape> Shapes = new List<Shape>();
+    public readonly Dictionary<Vector3I, long> Tags = new Dictionary<Vector3I, long>();
+    public readonly Dictionary<Vector3I, List<Shape>> Tiles = new Dictionary<Vector3I, List<Shape>>();
+    public bool Ready;
+    public MatrixD Previous;
+    public double Observed;
+    public Vector3D Velocity;
+}
+sealed class Joint
+{
+    public IMyMechanicalConnectionBlock Block;
+    public long From, To;
+    public int Sign;
+}
+sealed class Group
+{
+    public bool Rotary;
+    public readonly List<Joint> Members = new List<Joint>();
+}
+sealed class Arm
+{
+    public int ConstraintLimit = 8;
+    public IMyProgrammableBlock PB;
+    public string Name, Fingerprint;
+    public long Epoch, Remote, Received, Sequence, Generation;
+    public double SeenAt;
+    public long Hull, Tool, TipGrid;
+    public Vector3I TipCell;
+    public Vector3D TipUp;
+    public bool Socket;
+    public double[] Caps, Rates;
+    public double[] Bias;
+    public int AuditIndex = -1;
+    public readonly List<string> ContactDetails = new List<string>();
+    public string AuditReport = "No contact query yet.";
+    public readonly List<Group> Groups = new List<Group>();
+    public readonly HashSet<long> OwnParts = new HashSet<long>();
+    public readonly Dictionary<long, int> Bodies = new Dictionary<long, int>();
+    public readonly List<ContactPair> Contacts = new List<ContactPair>();
+}
+sealed class ContactPair { public long A, B; public string Axis; }
+readonly Dictionary<string, Arm> Arms = new Dictionary<string, Arm>();
+readonly Dictionary<long, GridShape> Scene = new Dictionary<long, GridShape>();
+readonly List<IMyTerminalBlock> Blocks = new List<IMyTerminalBlock>();
+readonly List<IMyMechanicalConnectionBlock> Joints = new List<IMyMechanicalConnectionBlock>();
+readonly Dictionary<long, IMyCubeBlock> Parts = new Dictionary<long, IMyCubeBlock>();
+readonly Dictionary<long, List<IMyMechanicalConnectionBlock>> Bases = new Dictionary<long, List<IMyMechanicalConnectionBlock>>();
+readonly Dictionary<long, Shape> Models = new Dictionary<long, Shape>();
+long Epoch;
+double Clock, ScanAge;
+double Clearance = .10, Influence = .75, AwaySpeed = .05, Horizon = .35;
+int MaxCells = 65536, MaxShapes = 8192;
+int TilesVisited, CandidatesSeen, NarrowChecks, LastCost, PeakCost, LastRows, LastRowLimit;
+string Status = "Collision service starting.";
+bool Ready, Detailed;
+public Program()
+{
+    Runtime.UpdateFrequency = UpdateFrequency.Update1; IGC.UnicastListener.SetMessageCallback(Tag);
+    var state = new MyIni(); if (!state.TryParse(Storage)) { state.Clear(); state.EndContent = Storage; }
+    long old = state.Get("AutoArm Collision", "Epoch").ToInt64();
+    if (old < 0 || old == long.MaxValue) throw new Exception("Invalid collision epoch.");
+    Epoch = old + 1; state.Set("AutoArm Collision", "Epoch", Epoch); Storage = state.ToString();
+    try { Configure(); } catch (Exception e) { Status = e.Message; }
+    Echo(Status);
+}
+public void Save() { }
+void Configure()
+{
+    var ini = new MyIni();
+    if (string.IsNullOrWhiteSpace(Me.CustomData))
+    {
+        ini.Set("Collision", "Format", 1); ini.Set("Collision", "Clearance", .10); ini.Set("Collision", "Influence", .75);
+        ini.Set("Collision", "AwaySpeed", .05); ini.Set("Collision", "Horizon", .35); ini.Set("Collision", "MaxCells", 65536);
+        ini.Set("Collision", "MaxShapes", 8192); Me.CustomData = ini.ToString();
+    }
+    if (!ini.TryParse(Me.CustomData) || ini.Get("Collision", "Format").ToInt32() != 1) throw new Exception("Collision Format must be 1. Delete Custom Data.");
+    double clearance = Value(ini, "Clearance", .10, .01, 2), influence = Value(ini, "Influence", .75, .05, 10);
+    if (influence <= clearance) throw new Exception("Influence must exceed Clearance.");
+    double speed = Value(ini, "AwaySpeed", .05, .001, .2), horizon = Value(ini, "Horizon", .35, .25, 2);
+    int cells = (int)Value(ini, "MaxCells", 65536, 1, 262144), shapes = (int)Value(ini, "MaxShapes", 8192, 1, 32768);
+    if (Ready || Arms.Count > 0)
+    {
+        if (Epoch == long.MaxValue) throw new Exception("Collision epoch exhausted.");
+        Epoch++; var state = new MyIni(); if (!state.TryParse(Storage)) { state.Clear(); state.EndContent = Storage; }
+        state.Set("AutoArm Collision", "Epoch", Epoch); Storage = state.ToString();
+    }
+    Clearance = clearance; Influence = influence; AwaySpeed = speed; Horizon = horizon; MaxCells = cells; MaxShapes = shapes;
+    Ready = true; Arms.Clear(); RefreshScene(true); Status = "Scanning geometry; registered arms hold until ready.";
+}
+static double Value(MyIni ini, string key, double fallback, double min, double max)
+{
+    double value;
+    if (!ini.ContainsKey("Collision", key)) return fallback;
+    if (!ini.Get("Collision", key).TryGetDouble(out value) || !Finite(value) || value < min || value > max) throw new Exception("Invalid Collision." + key);
+    return value;
+}
+public void Main(string argument, UpdateType source)
+{
+    double dt = Runtime.TimeSinceLastRun.TotalSeconds;
+    if (Finite(dt) && dt > 0) { Clock += dt; ScanAge += dt; }
+    try
+    {
+        if (argument != Tag && !string.IsNullOrWhiteSpace(argument))
+        {
+            if (argument.Equals("On", StringComparison.OrdinalIgnoreCase) || argument.Equals("Reload", StringComparison.OrdinalIgnoreCase)) { Detailed = false; Configure(); }
+            else if (argument.Equals("Rescan", StringComparison.OrdinalIgnoreCase)) { RefreshScene(true); Status = "Geometry rescan."; }
+            else if (argument.Equals("Off", StringComparison.OrdinalIgnoreCase) || argument.Equals("Stop", StringComparison.OrdinalIgnoreCase)) { Ready = false; Status = "Collision service OFF; supervised arms hold."; }
+            else if (argument.Equals("Info", StringComparison.OrdinalIgnoreCase)) Detailed = true;
+            else throw new Exception("Commands: On, Reload, Rescan, Off, Info.");
+        }
+        if (Ready && ScanAge >= 2) RefreshScene(false);
+        if (Ready) { ScanStep(); ObserveScene(); }
+        int count = 0;
+        // Leave a fresh evaluation enough headroom; queued requests continue on
+        // Update1 rather than starting a second arm near the budget ceiling.
+        while (IGC.UnicastListener.HasPendingMessage && count++ < 8 && (Runtime.MaxInstructionCount <= 0 || Runtime.CurrentInstructionCount < Runtime.MaxInstructionCount * .15))
+        {
+            var message = IGC.UnicastListener.AcceptMessage();
+            try { Receive(message); } catch (Exception e) { Status = "Collision request refused: " + e.Message; }
+            LastCost = Runtime.CurrentInstructionCount; PeakCost = Math.Max(PeakCost, LastCost);
+        }
+        // Keep expired ownership until explicit reload: never silently classify a
+        // formerly moving arm as static after its communication disappears.
+    }
+    catch (Exception e) { Ready = false; Status = "Collision service stopped: " + e.Message; }
+    foreach (var grid in Scene.Values) if (Clock - grid.Observed > .000001) { grid.Previous = grid.Grid.WorldMatrix; grid.Observed = Clock; }
+    Echo("AutoArm " + ControllerBuildVersion + " Collision | " + Arms.Count + " arms / " + Scene.Count + " grids\n" + Status +
+        "\nQuery: " + TilesVisited + " tiles / " + CandidatesSeen + " candidates / " + NarrowChecks + " checks; rows " + LastRows + "/" + LastRowLimit + "; instructions " + LastCost + " / peak " + PeakCost + "/" + Runtime.MaxInstructionCount + (Detailed ? ContactAudit() : ""));
+}
+string ContactAudit()
+{
+    var text = new System.Text.StringBuilder();
+    text.Append("\nContact audit: each row is required; the normal status shows the last nearby pair, not necessarily the limiting row.\n");
+    foreach (var arm in Arms.Values) {
+        if (text.Length + arm.AuditReport.Length > 12000) { text.Append("Audit display limit; additional arms omitted."); break; }
+        text.Append(arm.Name).Append("\n").Append(arm.AuditReport);
+    }
+    return text.ToString();
+}
+bool Budget() { return Runtime.MaxInstructionCount <= 0 || Runtime.CurrentInstructionCount < Runtime.MaxInstructionCount * .65; }
+void RefreshScene(bool force)
+{
+    ScanAge = 0; Blocks.Clear(); GridTerminalSystem.GetBlocks(Blocks); Joints.Clear();
+    var alive = new HashSet<long>();
+    foreach (var block in Blocks)
+    {
+        if (block.Closed || !block.IsSameConstructAs(Me)) continue;
+        AddGrid(block.CubeGrid, alive, force);
+        var joint = block as IMyMechanicalConnectionBlock;
+        if (joint != null) { Joints.Add(joint); if (joint.TopGrid != null) AddGrid(joint.TopGrid, alive, force); }
+    }
+    Parts.Clear(); Bases.Clear(); Models.Clear();
+    foreach (var joint in Joints) {
+        Parts[joint.EntityId] = joint; if (joint.Top != null) Parts[joint.Top.EntityId] = joint.Top;
+        List<IMyMechanicalConnectionBlock> list;
+        if (!Bases.TryGetValue(joint.CubeGrid.EntityId, out list)) { list = new List<IMyMechanicalConnectionBlock>(); Bases.Add(joint.CubeGrid.EntityId, list); }
+        list.Add(joint);
+    }
+    var removed = new List<long>(); foreach (var pair in Scene) if (!alive.Contains(pair.Key)) removed.Add(pair.Key);
+    foreach (long id in removed) Scene.Remove(id);
+    foreach (var grid in Scene.Values) if (!grid.Ready)
+    {
+        grid.Tags.Clear();
+        foreach (var block in Blocks) if (block.CubeGrid.EntityId == grid.Grid.EntityId) TagCells(grid, block, block.EntityId);
+        foreach (var joint in Joints) if (joint.Top != null && joint.Top.CubeGrid.EntityId == grid.Grid.EntityId) TagCells(grid, joint.Top, joint.Top.EntityId);
+    }
+}
+void AddGrid(IMyCubeGrid native, HashSet<long> alive, bool force)
+{
+    if (native == null) return; alive.Add(native.EntityId); GridShape shape;
+    if (!Scene.TryGetValue(native.EntityId, out shape)) { shape = new GridShape { Grid = native, Previous = native.WorldMatrix, Observed = Clock }; Scene.Add(native.EntityId, shape); force = true; }
+    if (force || shape.Min != native.Min || shape.Max != native.Max)
+    { shape.Min = native.Min; shape.Max = native.Max; shape.Cursor = shape.Min; shape.Shapes.Clear(); shape.Tiles.Clear(); shape.Ready = false; }
+}
+void TagCells(GridShape grid, IMyCubeBlock block, long tag)
+{
+    var min = block.Min; var max = block.Max;
+    double count = (double)(max.X - min.X + 1) * (max.Y - min.Y + 1) * (max.Z - min.Z + 1);
+    if (count > 512) return;
+    for (int z = min.Z; z <= max.Z; z++) for (int y = min.Y; y <= max.Y; y++) for (int x = min.X; x <= max.X; x++) grid.Tags[new Vector3I(x, y, z)] = tag;
+}
+void ScanStep()
+{
+    foreach (var grid in Scene.Values)
+    {
+        if (grid.Ready) continue;
+        double cells = ((double)grid.Max.X - grid.Min.X + 1) * ((double)grid.Max.Y - grid.Min.Y + 1) * ((double)grid.Max.Z - grid.Min.Z + 1);
+        if (cells > MaxCells) { Status = "Grid " + grid.Grid.EntityId + " exceeds MaxCells; increase limit or simplify geometry."; return; }
+        int work = 0;
+        while (grid.Cursor.Z <= grid.Max.Z && work++ < 512 && Budget())
+        {
+            var cell = grid.Cursor;
+            if (grid.Grid.CubeExists(cell))
+            {
+                long tag; grid.Tags.TryGetValue(cell, out tag);
+                int last = cell.X;
+                while (last < grid.Max.X && work++ < 512 && Budget())
+                {
+                    var next = new Vector3I(last + 1, cell.Y, cell.Z); long other; grid.Tags.TryGetValue(next, out other);
+                    if (other != tag || !grid.Grid.CubeExists(next)) break; last++;
+                }
+                double size = grid.Grid.GridSize;
+                var shape = new Shape { Centre = new Vector3D((cell.X + (double)last) * .5, cell.Y, cell.Z) * size,
+                    Half = new Vector3D((last - cell.X + 1) * .5, .5, .5) * size, Tag = tag };
+                grid.Shapes.Add(shape);
+                for (int x = Tile(cell.X); x <= Tile(last); x++)
+                {
+                    var key = new Vector3I(x, Tile(cell.Y), Tile(cell.Z)); List<Shape> list;
+                    if (!grid.Tiles.TryGetValue(key, out list)) { list = new List<Shape>(); grid.Tiles.Add(key, list); } list.Add(shape);
+                }
+                if (grid.Shapes.Count > MaxShapes) { Status = "Grid exceeds MaxShapes; increase limit or simplify geometry."; return; }
+                grid.Cursor.X = last;
+            }
+            grid.Cursor.X++;
+            if (grid.Cursor.X > grid.Max.X) { grid.Cursor.X = grid.Min.X; grid.Cursor.Y++; }
+            if (grid.Cursor.Y > grid.Max.Y) { grid.Cursor.Y = grid.Min.Y; grid.Cursor.Z++; }
+        }
+        grid.Ready = grid.Cursor.Z > grid.Max.Z;
+        if (!Budget()) return;
+    }
+}
+bool Authorised(IMyProgrammableBlock pb, string arm)
+{
+    var data = new MyIni();
+    if (pb == null || pb == Me || pb.Closed || !pb.IsFunctional || !pb.IsSameConstructAs(Me) || !data.TryParse(pb.CustomData) ||
+        data.Get("global", "Format").ToInt32() != 7 || !data.ContainsSection(arm)) return false;
+    string peers = data.Get(data.ContainsKey(arm, "Peers") ? arm : "global", "Peers").ToString().Replace("{arm}", arm);
+    foreach (string row in peers.Split('\n'))
+    {
+        string[] cells = row.Split('|');
+        if (cells.Length == 2 && cells[1].Trim() == "Safety" && (cells[0].Trim() == Me.CustomName || cells[0].Trim() == "@" + Me.EntityId)) return true;
+    }
+    return false;
+}
+void Receive(MyIGCMessage message)
+{
+    var text = message.Data as string; var ini = new MyIni();
+    if (message.Tag != Tag || text == null || text.Length > 16000 || !ini.TryParse(text) || ini.Get(Section, "Version").ToInt32() != 5 || ini.Get(Section, "Service").ToInt32() != 1 || ini.Get(Section, "Operation").ToString() != "CHECK") return;
+    string name = ini.Get(Section, "Arm").ToString(); var pb = GridTerminalSystem.GetBlockWithId(message.Source) as IMyProgrammableBlock;
+    if (!Authorised(pb, name)) return;
+    long epoch = ini.Get(Section, "Epoch").ToInt64(), seq = ini.Get(Section, "Sequence").ToInt64(), remote = ini.Get(Section, "Remote").ToInt64();
+    if (epoch <= 0 || seq <= 0) return;
+    string key = message.Source + "/" + name; Arm arm;
+    if (!Arms.TryGetValue(key, out arm)) { if (Arms.Count >= 32) return; arm = new Arm { PB = pb, Name = name }; Arms.Add(key, arm); }
+    if (epoch < arm.Epoch || epoch == arm.Epoch && seq <= arm.Received) return;
+    if (epoch != arm.Epoch) { arm.Epoch = epoch; arm.Received = 0; arm.Sequence = 0; }
+    arm.Generation = ini.Get(Section, "Generation").ToInt64(); arm.Received = seq; arm.SeenAt = Clock;
+    var response = Packet(arm, remote != Epoch ? "HELLO" : "GUIDE");
+    if (remote != Epoch) { Send(arm, response); return; }
+    var frame = new Arm { PB = pb, Name = name, Epoch = arm.Epoch, Remote = arm.Remote, Received = arm.Received,
+        Sequence = arm.Sequence, Generation = arm.Generation, SeenAt = Clock, Fingerprint = ini.Get(Section, "Fingerprint").ToString() };
+    ParseArm(frame, ini); if (arm.Fingerprint == frame.Fingerprint) frame.Bias = arm.Bias; else RefreshScene(true); Arms[key] = frame;
+    response.Set(Section, "Fingerprint", frame.Fingerprint);
+    Evaluate(frame, response); Send(frame, response);
+}
+MyIni Packet(Arm arm, string operation)
+{
+    var ini = new MyIni(); ini.Set(Section, "Version", 5); ini.Set(Section, "Service", 1); ini.Set(Section, "Arm", arm.Name);
+    ini.Set(Section, "Epoch", Epoch); ini.Set(Section, "Remote", arm.Epoch); ini.Set(Section, "Generation", arm.Generation);
+    ini.Set(Section, "Sequence", ++arm.Sequence); ini.Set(Section, "Ack", arm.Received); ini.Set(Section, "Seen", arm.Received); ini.Set(Section, "Operation", operation); return ini;
+}
+void Send(Arm arm, MyIni ini)
+{
+    string text = ini.ToString(); if (text.Length > 16000) throw new Exception("Collision response too large.");
+    IGC.SendUnicastMessage(arm.PB.EntityId, Tag, text);
+}
+void ParseArm(Arm arm, MyIni ini)
+{
+    int limit = 8;
+    if (ini.ContainsKey(Section, "ConstraintLimit") && (!ini.Get(Section, "ConstraintLimit").TryGetInt32(out limit) || limit != 8 && limit != 16)) throw new Exception("Invalid collision constraint capacity.");
+    arm.ConstraintLimit = limit;
+    arm.Groups.Clear(); arm.Bodies.Clear(); arm.Contacts.Clear();
+    arm.Hull = ini.Get(Section, "Hull").ToInt64(); arm.Tool = ini.Get(Section, "ToolGrid").ToInt64();
+    arm.TipGrid = ini.Get(Section, "TipGrid").ToInt64(); arm.Socket = ini.Get(Section, "Socket").ToBoolean();
+    var cell = Numbers(ini.Get(Section, "TipCell").ToString(), 3); arm.TipCell = new Vector3I((int)cell[0], (int)cell[1], (int)cell[2]);
+    var up = Numbers(ini.Get(Section, "TipUp").ToString(), 3); arm.TipUp = new Vector3D(up[0], up[1], up[2]);
+    foreach (string row in ini.Get(Section, "Groups").ToString().Split('|'))
+    {
+        string[] parts = row.Split(':'); if (parts.Length < 2 || parts[0] != "R" && parts[0] != "P" || arm.Groups.Count >= 24) throw new Exception("Invalid collision topology.");
+        var group = new Group { Rotary = parts[0] == "R" };
+        for (int i = 1; i < parts.Length; i++)
+        {
+            string part = parts[i]; int at = part.IndexOf('@'), to = part.IndexOf('>'); long id, from, dest;
+            if (at < 2 || to <= at || !long.TryParse(part.Substring(0, at - 1), out id) || !long.TryParse(part.Substring(at + 1, to - at - 1), out from) || !long.TryParse(part.Substring(to + 1), out dest) || part[at - 1] != '+' && part[at - 1] != '-') throw new Exception("Invalid collision member.");
+            var block = GridTerminalSystem.GetBlockWithId(id) as IMyMechanicalConnectionBlock;
+            if (block == null || block.Closed || !block.IsSameConstructAs(Me) || !block.IsAttached || block.TopGrid == null ||
+                (group.Rotary ? !(block is IMyMotorStator) || block is IMyMotorSuspension : !(block is IMyPistonBase)) ||
+                !(block.CubeGrid.EntityId == from && block.TopGrid.EntityId == dest || block.CubeGrid.EntityId == dest && block.TopGrid.EntityId == from)) throw new Exception("Collision topology changed.");
+            group.Members.Add(new Joint { Block = block, From = from, To = dest, Sign = part[at - 1] == '+' ? 1 : -1 });
+            if (Attached(block)) { arm.OwnParts.Add(block.EntityId); arm.OwnParts.Add(block.Top.EntityId); }
+            if (from != arm.Hull) arm.Bodies[from] = 0; if (dest != arm.Hull) arm.Bodies[dest] = 0;
+        }
+        arm.Groups.Add(group);
+    }
+    if (arm.Groups.Count == 0 || arm.Tool == arm.Hull) throw new Exception("Collision endpoint/hull invalid.");
+    if (!arm.Groups[0].Members.Any(m => m.Block.CustomName.StartsWith(arm.Name + " - Base", StringComparison.OrdinalIgnoreCase) && m.Block.CubeGrid.EntityId == arm.Hull)) throw new Exception("Collision base identity mismatch.");
+    int n = arm.Groups.Count; arm.Caps = Numbers(ini.Get(Section, "Caps").ToString(), n); arm.Rates = Numbers(ini.Get(Section, "Rates").ToString(), n);
+    for (int i = 0; i < n; i++)
+    {
+        if (arm.Caps[i] <= 0 || arm.Caps[i] > 2 || Math.Abs(arm.Rates[i]) > arm.Caps[i] + 1e-6) throw new Exception("Invalid collision joint rates.");
+        var downstream = new HashSet<long>(); foreach (var member in arm.Groups[i].Members) downstream.Add(member.To);
+        for (int j = i + 1; j < n; j++) foreach (var member in arm.Groups[j].Members) if (downstream.Contains(member.From)) downstream.Add(member.To);
+        foreach (long grid in downstream) if (arm.Bodies.ContainsKey(grid)) arm.Bodies[grid] |= 1 << i;
+    }
+    if (!arm.Bodies.ContainsKey(arm.Tool)) arm.Bodies[arm.Tool] = (1 << n) - 1;
+    foreach (string row in ini.Get(Section, "Contacts").ToString().Split('|'))
+    {
+        if (row.Length == 0) continue; string[] cells = row.Split(','); long a, b;
+        if (cells.Length < 2 || cells.Length > 3 || !long.TryParse(cells[0], out a) || !long.TryParse(cells[1], out b) || arm.Contacts.Count >= 17) throw new Exception("Invalid collision contact.");
+        arm.Contacts.Add(new ContactPair { A = a, B = b, Axis = cells.Length == 3 ? cells[2] : "Auto" });
+    }
+}
+static double[] Numbers(string text, int n)
+{
+    string[] parts = text.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries); if (parts.Length != n) throw new Exception("Collision vector size.");
+    var values = new double[n]; for (int i = 0; i < n; i++) if (!double.TryParse(parts[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out values[i]) || !Finite(values[i])) throw new Exception("Nonfinite collision vector."); return values;
+}
+static bool Finite(double value) { return !double.IsNaN(value) && !double.IsInfinity(value); }
+static string Number(double value) { return value.ToString("R", System.Globalization.CultureInfo.InvariantCulture); }
+static string Row(double[] values) { var text = new System.Text.StringBuilder(); foreach (double value in values) { if (text.Length > 0) text.Append(' '); text.Append(Number(value)); } return text.ToString(); }
+void Evaluate(Arm arm, MyIni response)
+{
+    arm.ContactDetails.Clear(); arm.AuditIndex = -1;
+    Models.Clear();
+    TilesVisited = CandidatesSeen = NarrowChecks = 0;
+    int n = arm.Groups.Count; var bias = new double[n]; var rows = new List<double[]>(); bool hold = !Ready; string reason = hold ? "Collision service OFF." : "Clear."; double scale = 1;
+    foreach (var grid in Scene.Values) if (!grid.Ready) { hold = true; reason = "Geometry scanning/limit; run Info on Collision PB."; }
+    foreach (var grid in Scene.Values) if (grid.Min != grid.Grid.Min || grid.Max != grid.Grid.Max) { RefreshScene(false); hold = true; reason = "Grid bounds changed; rebuilding geometry."; break; }
+    foreach (long id in arm.Bodies.Keys) if (!Scene.ContainsKey(id)) { RefreshScene(false); hold = true; reason = "Geometry changed; rebuilding."; }
+    if (!hold)
+    {
+        foreach (var pair in arm.Bodies)
+        {
+            GridShape body = Scene[pair.Key];
+            foreach (var obstacle in Scene.Values)
+            {
+                if (obstacle.Grid.EntityId == pair.Key || arm.Bodies.ContainsKey(obstacle.Grid.EntityId) && obstacle.Grid.EntityId < pair.Key) continue;
+                double range = QueryRange(arm, pair.Value, body, obstacle);
+                if (!NearGrids(body, obstacle, range)) continue;
+                if (UnknownMovingArm(arm, obstacle.Grid.EntityId)) { hold = true; reason = "Other arm observation expired; hold."; break; }
+                foreach (var other in Arms.Values) if (other != arm && other.Bodies.ContainsKey(obstacle.Grid.EntityId) &&
+                    string.CompareOrdinal(other.PB.EntityId + "/" + other.Name, arm.PB.EntityId + "/" + arm.Name) < 0 && other.Rates != null && other.Rates.Any(rate => Math.Abs(rate) > 1e-7)) scale = 0;
+                foreach (var a in BodyShapes(arm, body)) foreach (var b in Candidates(body, a, obstacle, range))
+                {
+                    if (hold) break;
+                    if (!Budget()) { hold = true; reason = "Collision query budget; hold."; break; }
+                    if (Contact(arm, body, a, obstacle, b)) continue;
+                    Shape x = a, y = b; bool knownX = false, knownY = false;
+                    bool assembly = InterfacePair(body, a, obstacle, b);
+                    bool refine = assembly || arm.OwnParts.Contains(a.Tag) && arm.OwnParts.Contains(b.Tag);
+                    if (refine && (!ClipModel(body, a, out x, out knownX) || !ClipModel(obstacle, b, out y, out knownY))) continue;
+                    // Actual actuator envelopes also replace empty allocation
+                    // cells between non-adjacent joints on this arm. Those pairs
+                    // retain the full clearance; only immediate assembly
+                    // interfaces have the existing padding allowance.
+                    double clearance = assembly ? knownX && knownY ? -.075 : knownX || knownY ? -.04 : Clearance : Clearance;
+                    NarrowChecks++;
+                    Vector3D axis; double d = Separation(body, x, obstacle, y, out axis);
+                    if (d >= range) continue;
+                    if (d < -Clearance) { hold = true; reason = "Overlapping geometry: grids " + body.Grid.EntityId + "/" + obstacle.Grid.EntityId + ", blocks " + a.Tag + "/" + b.Tag + "; inspect contact setup."; break; }
+                    if (!AddConstraint(arm, pair.Value, obstacle, x, body, y, d, axis, clearance, !assembly, bias, rows))
+                    { hold = true; reason = "Collision constraint capacity " + arm.ConstraintLimit + " exceeded; blocks " + a.Tag + "/" + b.Tag + "; hold."; break; }
+                    if (arm.AuditIndex >= 0) arm.ContactDetails[arm.AuditIndex] = "grids " + body.Grid.EntityId + "/" + obstacle.Grid.EntityId + "; blocks " + a.Tag + "/" + b.Tag + "; gap " + Number(d) + "; allowance " + Number(clearance) + "; assembly " + assembly + "; models " + knownX + "/" + knownY;
+                    if (rows.Count > 0) reason = "Avoiding grid " + obstacle.Grid.EntityId + "; clearance " + d.ToString("0.000") + " m.";
+                }
+                if (hold) break;
+            }
+            if (hold) break;
+        }
+    }
+    for (int i = 0; i < n; i++)
+    {
+        double previous = arm.Bias == null || arm.Bias.Length != n ? 0 : arm.Bias[i];
+        bias[i] = hold ? 0 : Math.Max(-arm.Caps[i] * .25, Math.Min(arm.Caps[i] * .25, previous + .3 * (bias[i] - previous)));
+    }
+    arm.Bias = bias;
+    LastRows = rows.Count; LastRowLimit = arm.ConstraintLimit;
+    var audit = new System.Text.StringBuilder();
+    for (int i = 0; i < rows.Count; i++) audit.Append(i + 1).Append(": ").Append(arm.ContactDetails[i]).Append("\n  coefficients + lower: ").Append(Row(rows[i])).Append('\n');
+    arm.AuditReport = audit.ToString();
+    var text = new System.Text.StringBuilder(); foreach (var row in rows) { if (text.Length > 0) text.Append('\n'); text.Append(Row(row)); }
+    response.Set(Section, "Bias", Row(bias)); response.Set(Section, "Rows", text.ToString()); response.Set(Section, "Scale", hold ? 0 : scale);
+    response.Set(Section, "ConstraintLimit", arm.ConstraintLimit);
+    response.Set(Section, "Hold", hold); response.Set(Section, "Reason", reason); Status = arm.Name + ": " + reason;
+}
+bool AddConstraint(Arm arm, int mask, GridShape obstacle, Shape a, GridShape body, Shape b, double distance, Vector3D normal, double clearance, bool repel, double[] bias, List<double[]> rows)
+{
+    arm.AuditIndex = -1;
+    int n = arm.Groups.Count; var point = Support(body, a, -normal); var otherPoint = Support(obstacle, b, normal);
+    int otherMask; bool own = arm.Bodies.TryGetValue(obstacle.Grid.EntityId, out otherMask);
+    // A common ancestor rigidly carries both shapes: their separation is
+    // invariant under that joint, including rotation of the contact normal.
+    var gradient = Gradient(arm, own ? mask & ~otherMask : mask, point, normal);
+    if (own)
+    { var other = Gradient(arm, otherMask & ~mask, otherPoint, normal); for (int i = 0; i < n; i++) gradient[i] -= other[i]; }
+    double otherSpeed = arm.Bodies.ContainsKey(obstacle.Grid.EntityId) ? 0 : OtherSpeed(arm, obstacle.Grid.EntityId, otherPoint, normal), closing = otherSpeed;
+    for (int i = 0; i < n; i++) closing -= gradient[i] * arm.Rates[i];
+    var row = new double[n + 1]; double norm = 0, possible = 0;
+    for (int i = 0; i < n; i++) { row[i] = gradient[i]; norm += gradient[i] * gradient[i] * arm.Caps[i] * arm.Caps[i]; possible += Math.Abs(gradient[i]) * arm.Caps[i]; }
+    row[n] = otherSpeed - .5 * Math.Max(0, distance - clearance - Math.Max(0, closing) * Horizon);
+    // All cap-bounded commands satisfy this row: it cannot restrict motion.
+    if (-possible >= row[n]) return true;
+    // Positive rescaling preserves the inequality and lets repeated support
+    // faces share one row even when their lever arms differ.
+    double rescale = possible;
+    if (rescale > 1e-12 && row.All(value => Math.Abs(value / rescale) <= 1e6))
+        for (int i = 0; i <= n; i++) row[i] /= rescale;
+    bool duplicate = false;
+    foreach (var old in rows)
+    {
+        double error = 0; for (int i = 0; i < n; i++) error += Math.Abs(old[i] - row[i]) * arm.Caps[i];
+        // Keep the old normal and tighten its lower bound by the worst possible
+        // difference. This merged row implies BOTH original inequalities.
+        if (error <= .001) { if (row[n] + error > old[n]) { old[n] = row[n] + error; arm.AuditIndex = rows.IndexOf(old); } duplicate = true; break; }
+    }
+    if (!duplicate) { if (rows.Count >= arm.ConstraintLimit) return false; arm.AuditIndex = rows.Count; rows.Add(row); arm.ContactDetails.Add(""); }
+    double gain = repel ? Math.Max(0, Math.Min(1, (Influence - distance) / (Influence - Clearance))) : 0;
+    if (norm > 1e-12) for (int i = 0; i < n; i++) bias[i] += arm.Caps[i] * arm.Caps[i] * gradient[i] * AwaySpeed * gain / norm;
+    return true;
+}
+double QueryRange(Arm arm, int mask, GridShape body, GridShape obstacle)
+{
+    var centre = Vector3D.Transform(((Vector3D)body.Min + (Vector3D)body.Max) * (body.Grid.GridSize * .5), body.Grid.WorldMatrix);
+    var velocity = Vector3D.Zero; double angular = 0;
+    for (int i = 0; i < arm.Groups.Count; i++) if ((mask & (1 << i)) != 0)
+    {
+        var group = arm.Groups[i]; var member = group.Members[0]; double sign = (member.Block.CubeGrid.EntityId == member.From ? 1 : -1) * member.Sign;
+        var axis = member.Block.WorldMatrix.Up * sign;
+        velocity += (group.Rotary ? Vector3D.Cross(-axis, centre - member.Block.GetPosition()) : axis) * arm.Rates[i];
+        if (group.Rotary) angular += Math.Abs(arm.Rates[i]);
+    }
+    double radius = (((Vector3D)body.Max - (Vector3D)body.Min + Vector3D.One) * (body.Grid.GridSize * .5)).Length();
+    double other = 0; foreach (var axis in Axes(obstacle.Grid.WorldMatrix)) other = Math.Max(other, Math.Abs(OtherSpeed(arm, obstacle.Grid.EntityId, centre, axis)));
+    return Math.Max(Influence, Clearance + Horizon * (velocity.Length() + angular * radius + other * 1.7321) + .05);
+}
+static int Tile(int cell) { return (int)Math.Floor(cell / 8.0); }
+List<Shape> BodyShapes(Arm arm, GridShape grid)
+{
+    if (!arm.Socket || arm.TipGrid != grid.Grid.EntityId) return grid.Shapes;
+    var shapes = new List<Shape>(); double half = grid.Grid.GridSize * .5; var tip = (Vector3D)arm.TipCell * grid.Grid.GridSize;
+    foreach (var box in grid.Shapes)
+    {
+        if (!Contains(box, tip, half) || box.Half.X <= half + 1e-6) { shapes.Add(box); continue; }
+        double left = tip.X - half - (box.Centre.X - box.Half.X), right = box.Centre.X + box.Half.X - tip.X - half;
+        if (left > 1e-6) shapes.Add(new Shape { Centre = new Vector3D(tip.X - half - left * .5, tip.Y, tip.Z), Half = new Vector3D(left * .5, half, half), Tag = box.Tag });
+        shapes.Add(new Shape { Centre = tip, Half = new Vector3D(half), Tag = box.Tag });
+        if (right > 1e-6) shapes.Add(new Shape { Centre = new Vector3D(tip.X + half + right * .5, tip.Y, tip.Z), Half = new Vector3D(right * .5, half, half), Tag = box.Tag });
+    }
+    return shapes;
+}
+List<Shape> Candidates(GridShape body, Shape shape, GridShape obstacle, double range)
+{
+    var world = body.Grid.WorldMatrix; var inverse = MatrixD.Transpose(obstacle.Grid.WorldMatrix.GetOrientation());
+    Vector3D centre = Vector3D.TransformNormal(Vector3D.Transform(shape.Centre, world) - obstacle.Grid.WorldMatrix.Translation, inverse);
+    var axes = Axes(world); Vector3D half = Vector3D.Zero;
+    foreach (var axis in Axes(obstacle.Grid.WorldMatrix))
+    {
+        double extent = Radius(shape, axes, axis) + range;
+        int i = axis == obstacle.Grid.WorldMatrix.Right ? 0 : axis == obstacle.Grid.WorldMatrix.Up ? 1 : 2;
+        if (i == 0) half.X = extent; else if (i == 1) half.Y = extent; else half.Z = extent;
+    }
+    // Outward slack for native float orientations and coordinate projection.
+    half += new Vector3D(1e-6 * (1 + half.Length() + centre.Length()));
+    double size = obstacle.Grid.GridSize;
+    var min = new Vector3I(Tile((int)Math.Floor((centre.X - half.X) / size)), Tile((int)Math.Floor((centre.Y - half.Y) / size)), Tile((int)Math.Floor((centre.Z - half.Z) / size)));
+    var max = new Vector3I(Tile((int)Math.Ceiling((centre.X + half.X) / size)), Tile((int)Math.Ceiling((centre.Y + half.Y) / size)), Tile((int)Math.Ceiling((centre.Z + half.Z) / size)));
+    var found = new HashSet<Shape>();
+    Vector3D low = centre - half, high = centre + half;
+    for (int z = min.Z; z <= max.Z; z++) for (int y = min.Y; y <= max.Y; y++) for (int x = min.X; x <= max.X; x++)
+    {
+        if (!Budget()) throw new Exception("Collision spatial query budget."); List<Shape> list;
+        TilesVisited++;
+        if (obstacle.Tiles.TryGetValue(new Vector3I(x, y, z), out list)) foreach (var candidate in list)
+        {
+            if ((++CandidatesSeen & 31) == 0 && !Budget()) throw new Exception("Collision candidate query budget.");
+            // Tiles are 20 m wide on large grids. Reject their distant contents
+            // against the conservative projected search box before SAT.
+            if (candidate.Centre.X + candidate.Half.X < low.X || candidate.Centre.X - candidate.Half.X > high.X ||
+                candidate.Centre.Y + candidate.Half.Y < low.Y || candidate.Centre.Y - candidate.Half.Y > high.Y ||
+                candidate.Centre.Z + candidate.Half.Z < low.Z || candidate.Centre.Z - candidate.Half.Z > high.Z) continue;
+            found.Add(candidate);
+        }
+    }
+    return new List<Shape>(found);
+}
+void ObserveScene()
+{
+    foreach (var grid in Scene.Values)
+    {
+        double dt = Clock - grid.Observed;
+        if (dt <= .000001) continue;
+        grid.Velocity = (grid.Grid.WorldMatrix.Translation - grid.Previous.Translation) / dt;
+        // The previous frame is held until the next timed observation; point
+        // velocity includes rotation via the local-point transform below.
+    }
+}
+bool NearGrids(GridShape a, GridShape b, double range)
+{
+    var ac = new Shape { Centre = ((Vector3D)a.Min + (Vector3D)a.Max) * (a.Grid.GridSize * .5), Half = ((Vector3D)a.Max - (Vector3D)a.Min + Vector3D.One) * (a.Grid.GridSize * .5) };
+    var bc = new Shape { Centre = ((Vector3D)b.Min + (Vector3D)b.Max) * (b.Grid.GridSize * .5), Half = ((Vector3D)b.Max - (Vector3D)b.Min + Vector3D.One) * (b.Grid.GridSize * .5) };
+    Vector3D normal; return Separation(a, ac, b, bc, out normal) < range;
+}
+static Vector3D[] Axes(MatrixD frame) { return new Vector3D[] { frame.Right, frame.Up, frame.Backward }; }
+static double Radius(Shape box, Vector3D[] axes, Vector3D normal)
+{ return Math.Abs(Vector3D.Dot(normal, axes[0])) * box.Half.X + Math.Abs(Vector3D.Dot(normal, axes[1])) * box.Half.Y + Math.Abs(Vector3D.Dot(normal, axes[2])) * box.Half.Z; }
+static double Separation(GridShape a, Shape x, GridShape b, Shape y, out Vector3D normal)
+{
+    var aa = Axes(a.Grid.WorldMatrix); var bb = Axes(b.Grid.WorldMatrix);
+    Vector3D delta = Vector3D.Transform(x.Centre, a.Grid.WorldMatrix) - Vector3D.Transform(y.Centre, b.Grid.WorldMatrix);
+    double distance = -double.MaxValue; normal = Vector3D.Up;
+    for (int i = 0; i < 15; i++)
+    {
+        Vector3D axis = i < 3 ? aa[i] : i < 6 ? bb[i - 3] : Vector3D.Cross(aa[(i - 6) / 3], bb[(i - 6) % 3]);
+        double length = axis.Length(); if (length < 1e-7) continue; axis /= length;
+        double dot = Vector3D.Dot(delta, axis), gap = Math.Abs(dot) - Radius(x, aa, axis) - Radius(y, bb, axis);
+        if (gap > distance) { distance = gap; normal = dot < 0 ? -axis : axis; }
+    }
+    return distance;
+}
+static Vector3D Support(GridShape grid, Shape box, Vector3D normal)
+{
+    var axes = Axes(grid.Grid.WorldMatrix); Vector3D point = Vector3D.Transform(box.Centre, grid.Grid.WorldMatrix);
+    // A face centre, avoiding arbitrary corner switches on parallel faces.
+    point += axes[0] * box.Half.X * Math.Sign(Vector3D.Dot(normal, axes[0]));
+    point += axes[1] * box.Half.Y * Math.Sign(Vector3D.Dot(normal, axes[1]));
+    point += axes[2] * box.Half.Z * Math.Sign(Vector3D.Dot(normal, axes[2])); return point;
+}
+double[] Gradient(Arm arm, int mask, Vector3D point, Vector3D normal)
+{
+    var values = new double[arm.Groups.Count];
+    for (int i = 0; i < values.Length; i++) if ((mask & (1 << i)) != 0)
+    {
+        var g = arm.Groups[i]; var m = g.Members[0];
+        double sign = (m.Block.CubeGrid.EntityId == m.From ? 1 : -1) * m.Sign;
+        Vector3D axis = m.Block.WorldMatrix.Up * sign;
+        Vector3D velocity = g.Rotary ? Vector3D.Cross(-axis, point - m.Block.GetPosition()) : axis;
+        values[i] = Vector3D.Dot(normal, velocity);
+    }
+    return values;
+}
+bool UnknownMovingArm(Arm arm, long grid)
+{
+    foreach (var other in Arms.Values) if (other != arm && other.Bodies.ContainsKey(grid) && Clock - other.SeenAt > .25) return true;
+    return false;
+}
+double OtherSpeed(Arm arm, long grid, Vector3D point, Vector3D normal)
+{
+    GridShape obstacle, hull;
+    if (!Scene.TryGetValue(grid, out obstacle) || !Scene.TryGetValue(arm.Hull, out hull)) return 0;
+    return Vector3D.Dot(normal, PointVelocity(obstacle, point) - PointVelocity(hull, point));
+}
+Vector3D PointVelocity(GridShape grid, Vector3D point)
+{
+    double dt = Clock - grid.Observed; if (dt <= .000001) return grid.Velocity;
+    var local = Vector3D.TransformNormal(point - grid.Grid.WorldMatrix.Translation, MatrixD.Transpose(grid.Grid.WorldMatrix.GetOrientation()));
+    return (point - Vector3D.Transform(local, grid.Previous)) / dt;
+}
+bool Contact(Arm arm, GridShape a, Shape x, GridShape b, Shape y)
+{
+    IMyCubeBlock part;
+    if (Parts.TryGetValue(x.Tag, out part)) { var joint = part as IMyMechanicalConnectionBlock; if (joint != null && Attached(joint) && y.Tag == joint.Top.EntityId) return true; }
+    if (Parts.TryGetValue(y.Tag, out part)) { var joint = part as IMyMechanicalConnectionBlock; if (joint != null && Attached(joint) && x.Tag == joint.Top.EntityId) return true; }
+    if (MountedCollars(x.Tag, y.Tag) || MountedCollars(y.Tag, x.Tag)) return true;
+    foreach (var pair in arm.Contacts)
+    {
+        if (pair.A != 0)
+        {
+            if (!(x.Tag == pair.A && y.Tag == pair.B || y.Tag == pair.A && x.Tag == pair.B)) continue;
+            var first = GridTerminalSystem.GetBlockWithId(pair.A) as IMyShipMergeBlock; var second = GridTerminalSystem.GetBlockWithId(pair.B) as IMyShipMergeBlock;
+            if (first != null && second != null && Vector3D.Dot(MergeNormal(first, pair.Axis), MergeNormal(second, pair.Axis)) < -.99) return true;
+        }
+        else if (arm.Socket)
+        {
+            GridShape tip = a.Grid.EntityId == arm.TipGrid ? a : b.Grid.EntityId == arm.TipGrid ? b : null;
+            Shape top = tip == a ? x : y, mount = tip == a ? y : x;
+            var rotor = GridTerminalSystem.GetBlockWithId(pair.B) as IMyMotorStator;
+            if (tip != null && top.Half.X <= tip.Grid.GridSize * .5 + 1e-6 && mount.Tag == pair.B && rotor != null && Vector3D.Dot(rotor.WorldMatrix.Up, arm.TipUp) > .998 &&
+                Contains(top, (Vector3D)arm.TipCell * tip.Grid.GridSize, tip.Grid.GridSize * .5)) return true;
+        }
+    }
+    return false;
+}
+// A vanilla shaft collar used as the mounting face of the next stator is
+// part of that stator's immediate joint interface. Its padded box must not
+// oppose the next head's rotation. This exception covers those two exact
+// heads only; actuator bodies, armour and all other cells keep their checks.
+bool MountedCollars(long fixedId, long movingId)
+{
+    IMyCubeBlock fixedPart, movingPart; Vector3D min, max;
+    if (!Parts.TryGetValue(fixedId, out fixedPart) || !Parts.TryGetValue(movingId, out movingPart) ||
+        !(fixedPart is IMyMotorRotor || fixedPart is IMyPistonTop) || !(movingPart is IMyMotorRotor) ||
+        !ModelBounds(fixedPart, out min, out max) || !ModelBounds(movingPart, out min, out max)) return false;
+    bool owned = false;
+    foreach (var previous in Joints) if (Attached(previous) && previous.Top.EntityId == fixedId) { owned = true; break; }
+    if (!owned) return false;
+    List<IMyMechanicalConnectionBlock> joints;
+    if (!Bases.TryGetValue(fixedPart.CubeGrid.EntityId, out joints)) return false;
+    foreach (var joint in joints) {
+        var stator = joint as IMyMotorStator;
+        if (stator == null || !Attached(joint) || joint.Top.EntityId != movingId || !ModelBounds(stator, out min, out max)) continue;
+        string kind = stator.BlockDefinition.SubtypeName, fixedKind = fixedPart.BlockDefinition.SubtypeName;
+        Vector3D face = kind == "LargeHinge" ? stator.WorldMatrix.Right : stator.WorldMatrix.Down;
+        Vector3D mount = fixedKind == "LargeHingeHead" ? fixedPart.WorldMatrix.Left : fixedPart.WorldMatrix.Up;
+        double size = fixedPart.CubeGrid.GridSize;
+        if (Vector3D.Dot(face, mount) < -.999 &&
+            Vector3D.Distance(stator.GetPosition() + face * size, fixedPart.GetPosition()) < size * .01 &&
+            Vector3D.Distance(stator.GetPosition(), movingPart.GetPosition()) < size * .5 + .05) return true;
+    }
+    return false;
+}
+// Only joint-base volumes against their own mounted assembly get model bounds.
+// Armour, other arms and unrelated ship contacts keep their original cell boxes.
+bool InterfacePair(GridShape a, Shape x, GridShape b, Shape y)
+{
+    return InterfaceSide(a, x, b, y) || InterfaceSide(b, y, a, x);
+}
+bool InterfaceSide(GridShape parent, Shape baseBox, GridShape child, Shape box)
+{
+    IMyCubeBlock part; List<IMyMechanicalConnectionBlock> joints;
+    if (!Parts.TryGetValue(baseBox.Tag, out part) || part.CubeGrid.EntityId != parent.Grid.EntityId || !Bases.TryGetValue(parent.Grid.EntityId, out joints)) return false;
+    foreach (var joint in joints)
+    {
+        if (parent.Grid.EntityId != joint.CubeGrid.EntityId || !Attached(joint)) continue;
+        bool valid = baseBox.Tag == joint.EntityId;
+        if (!valid) foreach (var previous in Joints) if (Attached(previous) && previous.Top.CubeGrid.EntityId == parent.Grid.EntityId && previous.Top.EntityId == baseBox.Tag) { valid = true; break; }
+        if (!valid) continue;
+        if (child.Grid.EntityId == joint.TopGrid.EntityId) return true;
+        List<IMyMechanicalConnectionBlock> nexts;
+        if (!Bases.TryGetValue(joint.TopGrid.EntityId, out nexts)) continue;
+        foreach (var next in nexts) if (Attached(next) && next.CubeGrid.EntityId == joint.TopGrid.EntityId &&
+            child.Grid.EntityId == next.TopGrid.EntityId && box.Tag == next.Top.EntityId) return true;
+    }
+    return false;
+}
+static bool Attached(IMyMechanicalConnectionBlock joint)
+{ return !joint.Closed && joint.IsAttached && !joint.PendingAttachment && joint.Top != null && !joint.Top.Closed && joint.TopGrid != null && joint.Top.CubeGrid.EntityId == joint.TopGrid.EntityId; }
+bool ClipModel(GridShape grid, Shape box, out Shape result, out bool known)
+{
+    result = box; known = false; IMyCubeBlock block; Shape model; Vector3D min, max;
+    if (!Parts.TryGetValue(box.Tag, out block) || block.Closed || block.CubeGrid.EntityId != grid.Grid.EntityId) return true;
+    if (!Models.TryGetValue(box.Tag, out model)) {
+        if (ModelBounds(block, out min, out max)) {
+            var basis = block.WorldMatrix * MatrixD.Invert(grid.Grid.WorldMatrix); var half = (max - min) * .5;
+            model = new Shape { Centre = Vector3D.Transform((max + min) * .5, basis), Half = Abs(basis.Right) * half.X + Abs(basis.Up) * half.Y + Abs(basis.Backward) * half.Z, Tag = box.Tag };
+        }
+        Models[box.Tag] = model;
+    }
+    if (model == null) return true; known = true;
+    min = Vector3D.Max(box.Centre - box.Half, model.Centre - model.Half); max = Vector3D.Min(box.Centre + box.Half, model.Centre + model.Half);
+    if (min.X >= max.X || min.Y >= max.Y || min.Z >= max.Z) return false;
+    result = new Shape { Centre = (min + max) * .5, Half = (max - min) * .5, Tag = box.Tag }; return true;
+}
+static Vector3D Abs(Vector3D v) { return new Vector3D(Math.Abs(v.X), Math.Abs(v.Y), Math.Abs(v.Z)); }
+static bool ModelBounds(IMyCubeBlock block, out Vector3D min, out Vector3D max)
+{
+    min = max = Vector3D.Zero;
+    if (Math.Abs(block.CubeGrid.GridSize - 2.5) > 1e-6) return false;
+    string name = block.BlockDefinition.SubtypeName;
+    // Bounds from the installed vanilla MWM assets, rounded outward + 25 mm.
+    if (block is IMyMotorStator && !(block is IMyMotorSuspension)) {
+        if (name == "LargeAdvancedStator" || name == "LargeStator") { min = new Vector3D(-1.247, -1.265, -1.247); max = new Vector3D(1.247, .55, 1.247); }
+        else if (name == "LargeHinge") { min = new Vector3D(-.925, -1.103, -.925); max = new Vector3D(1.251, 1.103, .925); }
+        else return false;
+    } else if (block is IMyPistonBase) {
+        if (name == "LargePistonBase") { min = new Vector3D(-1.247, -2.527, -1.247); max = new Vector3D(1.247, 1.804, 1.247); }
+        else if (name == "LargePistonBaseReskin") { min = new Vector3D(-1.255, -2.502, -1.259); max = new Vector3D(1.255, 1.417, 1.259); }
+        else return false;
+    } else if (block is IMyMotorRotor) {
+        if (name == "LargeHingeHead") { min = new Vector3D(-1.251, -.782, -1.131); max = new Vector3D(1.131, .782, 1.131); }
+        else if (name == "LargeAdvancedRotor" || name == "LargeRotor") { min = new Vector3D(-1.126, -.612, -1.053); max = new Vector3D(1.126, 1.251, 1.053); }
+        else return false;
+    } else if (block is IMyPistonTop) {
+        if (name == "LargePistonTop") { min = new Vector3D(-1.249, .757, -1.249); max = new Vector3D(1.249, 1.251, 1.249); }
+        else if (name == "LargePistonTopReskin") { min = new Vector3D(-1.257, .886, -1.251); max = new Vector3D(1.257, 1.252, 1.251); }
+        else return false;
+    }
+    else return false;
+    min -= new Vector3D(.025); max += new Vector3D(.025);
+    // Fail closed if a replacement/changed model exceeds the baked envelope.
+    var native = block.WorldAABB;
+    if (!Finite(native.Min.X) || !Finite(native.Min.Y) || !Finite(native.Min.Z) || !Finite(native.Max.X) || !Finite(native.Max.Y) || !Finite(native.Max.Z) ||
+        native.Max.X <= native.Min.X || native.Max.Y <= native.Min.Y || native.Max.Z <= native.Min.Z) return false;
+    var world = block.WorldMatrix; var centre = Vector3D.Transform((min + max) * .5, world); var half = (max - min) * .5;
+    var extent = Abs(world.Right) * half.X + Abs(world.Up) * half.Y + Abs(world.Backward) * half.Z + new Vector3D(.001);
+    return native.Min.X >= centre.X - extent.X && native.Min.Y >= centre.Y - extent.Y && native.Min.Z >= centre.Z - extent.Z &&
+        native.Max.X <= centre.X + extent.X && native.Max.Y <= centre.Y + extent.Y && native.Max.Z <= centre.Z + extent.Z;
+}
+static Vector3D MergeNormal(IMyShipMergeBlock block, string axis)
+{
+    string name = axis.ToLowerInvariant();
+    if (name == "auto")
+    {
+        string subtype = block.BlockDefinition.SubtypeName;
+        name = subtype == "SmallShipSmallMergeBlock" ? "up" : subtype == "LargeShipMergeBlock" || subtype == "SmallShipMergeBlock" ? "right" : "";
+    }
+    switch (name)
+    {
+        case "right": return block.WorldMatrix.Right; case "left": return block.WorldMatrix.Left;
+        case "up": return block.WorldMatrix.Up; case "down": return block.WorldMatrix.Down;
+        case "forward": return block.WorldMatrix.Forward; case "backward": return block.WorldMatrix.Backward;
+        default: return Vector3D.Zero;
+    }
+}
+static bool Contains(Shape box, Vector3D centre, double half)
+{ var d = centre - box.Centre; return Math.Abs(d.X) + half <= box.Half.X + 1e-6 && Math.Abs(d.Y) + half <= box.Half.Y + 1e-6 && Math.Abs(d.Z) + half <= box.Half.Z + 1e-6; }

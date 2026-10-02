@@ -94,6 +94,7 @@ Other PB automation can also invoke the arm's public `Path` Run argument with wo
 | `Observe` | Read readiness, pose, defaults, path progress and current motion owner |
 | `Plan` | Submit a complete path while the arm is ON, ready and unowned; cancel its own path |
 | `Stop` | Stop manual control, Home, any planner or an active ToolSwap operation |
+| `Safety` | Mandatory fresh collision guidance and stop authority; no path ownership or actuator writes |
 
 Unicast is a transport choice, not a two-node topology restriction. Every authorized PB addresses the Arm PB directly. One helper can serve multiple arms if it keeps separate sessions keyed by destination EntityId and arm name; each Arm PB independently lists that helper. No ToolSwap relay or central star is required. Multiple helpers can offload planning, geometry or monitoring into their own instruction budgets. Native joint state and the numerical solver still belong to the Arm PB; this release does not split a solver across PBs.
 

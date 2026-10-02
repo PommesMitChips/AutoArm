@@ -5,7 +5,7 @@ using VRageMath;
 
 internal static partial class Scenarios
 {
-    internal static void RunHosts(Type armType,Type toolType) { StartupSavedDriveCases(armType); ConfigurationViewCases(armType,toolType); MultiArmCases(armType,toolType); Console.WriteLine($"Full host integration: PASS ({Tests.Assertions} assertions)."); }
+    internal static void RunHosts(Type armType,Type toolType) { StartupSavedDriveCases(armType); ConfigurationViewCases(armType,toolType); MultiArmCases(armType,toolType); PilotPairCases(armType); MultiToolPilotCases(armType,toolType); Console.WriteLine($"Full host integration: PASS ({Tests.Assertions} assertions)."); }
     static object Core(object host,string name)=>((IDictionary)Get(host,"Arms")!)[name]!;
     static void HostFrame(object host,Rig rig,string command="",double dt=1d/60,UpdateType? kind=null)
     { InvokeFrame(host,rig,command,kind??(command.Length==0?UpdateType.Update1:UpdateType.Terminal),command.Length==0?dt:0); }
@@ -82,9 +82,17 @@ internal static partial class Scenarios
         HostFrame(a,rig,"Select Arm 1"); for(int i=0;i<10;i++) { HostFrame(a,rig); HostFrame(b,peerRig); }
         Check((bool)Get(Core(a,"Arm 1"),"PilotSelected")!&&!(bool)Get(Core(b,"Arm 2"),"PilotSelected")!,"Construct-wide selection did not transfer input ownership.");
     }
-    static void MultiToolHost(Type armType,Type toolType,bool automatic=false,bool split=false,bool manual=false)
+    internal static void MultiToolPilotCases(Type armType, Type toolType)
+    {
+        foreach(bool split in new[]{false,true}) foreach(string channel in new[]{"keyboard","mouse","roll"})
+            MultiToolHost(armType,toolType,split:split,pilotChannel:channel);
+        Console.WriteLine("ToolSwap pilot isolation: paired neutral owner, moving neighbor, keyboard/mouse/roll and owner cancellation across shared/split Arm PBs PASS.");
+    }
+    static void MultiToolHost(Type armType,Type toolType,bool automatic=false,bool split=false,bool manual=false,string pilotChannel="")
     {
         var f=new ToolSwapFixture(headless:automatic); f.NoNamedArmReference(); var g=new ToolSwapFixture(headless:automatic); g.NoNamedArmReference();
+        // Pair seats after setup when exercising independent operators.
+        foreach(var cockpit in g.Rig.Blocks.OfType<IMyShipController>())RecordProxy.Of(cockpit).Values["IsUnderControl"]=false;
         if(automatic) { f.LockSource(); g.LockSource(); }
         var grids=new HashSet<object>(ReferenceEqualityComparer.Instance); var blocks=new HashSet<object>(ReferenceEqualityComparer.Instance);
         foreach(var terminal in g.Rig.Blocks)
@@ -106,7 +114,7 @@ internal static partial class Scenarios
         NameFixture(f,"Arm 1",fData); NameFixture(g,"Arm 2",gData);
         RecordProxy.Of(f.Rig.PB).Values["CustomName"]="Arm PB"; var toolRig=new Rig(f.Rig,"ToolSwap PB");
         var inventory=f.Rig.Blocks.Concat(g.Rig.Blocks.Where(x=>split||x!=g.Rig.PB)).ToList(); f.Rig.ExternalInventory=toolRig.ExternalInventory=inventory; g.Rig.ExternalInventory=inventory;
-        var config=new MyIni(); config.Set("global","Format",7); config.Set("global","ToolSwapPB","ToolSwap PB"); config.Set("Arm 1","HeadSpeed",.3); config.Set("Arm 2","HeadSpeed",.4); RecordProxy.Of(f.Rig.PB).Values["CustomData"]=config.ToString();
+        var config=new MyIni(); config.Set("global","Format",7); config.Set("global","ToolSwapPB","ToolSwap PB"); config.Set("Arm 1","HeadSpeed",.3); config.Set("Arm 2","HeadSpeed",.4); if(pilotChannel.Length>0)config.Set("global","ReadMouse",true); RecordProxy.Of(f.Rig.PB).Values["CustomData"]=config.ToString();
         var toolData=new MyIni(); toolData.Set("global","Format",2); toolData.Set("global","Link.ArmPB","Arm PB");
         foreach(var tuple in new[]{(Name:"Arm 1",Data:fData),(Name:"Arm 2",Data:gData)})
         {
@@ -132,9 +140,14 @@ internal static partial class Scenarios
         }
         if(split)
         {
-            var owner=new MyIni(); owner.Set("global","Format",7); owner.Set("Arm 1","ToolSwapPB","@"+toolRig.PB.EntityId); RecordProxy.Of(f.Rig.PB).Values["CustomData"]=owner.ToString();
-            var other=new MyIni(); other.Set("global","Format",7); other.Set("Arm 2","ToolSwapPB","@"+toolRig.PB.EntityId); RecordProxy.Of(g.Rig.PB).Values["CustomData"]=other.ToString();
-            RecordProxy.Of(toolRig.PB).Values["CustomData"]="";
+            var owner=new MyIni(); owner.Set("global","Format",7); owner.Set("Arm 1","ToolSwapPB","@"+toolRig.PB.EntityId); if(pilotChannel.Length>0)owner.Set("global","ReadMouse",true); RecordProxy.Of(f.Rig.PB).Values["CustomData"]=owner.ToString();
+            var other=new MyIni(); other.Set("global","Format",7); other.Set("Arm 2","ToolSwapPB","@"+toolRig.PB.EntityId); if(pilotChannel.Length>0)other.Set("global","ReadMouse",true); RecordProxy.Of(g.Rig.PB).Values["CustomData"]=other.ToString();
+            if(automatic)RecordProxy.Of(toolRig.PB).Values["CustomData"]="";
+            else
+            {
+                toolData.Set("Arm 1","Link.ArmPB","@"+f.Rig.PB.EntityId);toolData.Set("Arm 2","Link.ArmPB","@"+g.Rig.PB.EntityId);
+                RecordProxy.Of(toolRig.PB).Values["CustomData"]=toolData.ToString();
+            }
         }
         var bus=new ModuleBus{ArmId=f.Rig.PB.EntityId,ToolId=toolRig.PB.EntityId}; bus.Bind(f.Rig); bus.Bind(toolRig);
         if(split) bus.Bind(g.Rig);
@@ -170,8 +183,25 @@ internal static partial class Scenarios
             Check(f.Markers[1].CustomData.Contains("Original opaque tool notes"),"Head discovery overwrote unrelated Custom Data.");
             Check(!toolRig.PB.CustomData.Contains("Tool01.Mount")&&!toolRig.PB.CustomData.Contains("Tools.Heads"),"Automatic setup filled PB configuration with hardware-name requirements.");
         }
+        var firstSeat=f.Rig.Blocks.OfType<IMyShipController>().First(); var secondSeat=g.Rig.Blocks.OfType<IMyShipController>().First();
+        void Input(IMyShipController seat,bool active)
+        {
+            var values=RecordProxy.Of(seat).Values;
+            values["MoveIndicator"]=active&&pilotChannel=="keyboard"?new Vector3(0,0,-1):Vector3.Zero;
+            values["RotationIndicator"]=active&&pilotChannel=="mouse"?new Vector2(1,0):Vector2.Zero;
+            values["RollIndicator"]=active&&pilotChannel=="roll"?1f:0f;
+        }
+        if(pilotChannel.Length>0)
+        {
+            HostFrame(arm,f.Rig,"Select(HRZ,Arm 1)");
+            RecordProxy.Of(firstSeat).Values["IsUnderControl"]=false; RecordProxy.Of(secondSeat).Values["IsUnderControl"]=true;
+            HostFrame(Owner("Arm 2"),OwnerRig("Arm 2"),"Select(VRT,Arm 2)"); RecordProxy.Of(firstSeat).Values["IsUnderControl"]=true;
+            for(int i=0;i<12;i++)Tick();
+            Check((long)Get(Core(arm,"Arm 1"),"PilotSeatId")! ==firstSeat.EntityId&&(long)Get(Core(otherArm,"Arm 2"),"PilotSeatId")! ==secondSeat.EntityId,"ToolSwap two-player pairing failed.");
+        }
         foreach(var target in new[]{(Name:"Arm 1",Fixture:f),(Name:"Arm 2",Fixture:g)})
         {
+            if(pilotChannel.Length>0) Input(target.Name=="Arm 1"?secondSeat:firstSeat,true);
             int chosen=automatic&&target.Name=="Arm 1"?1:2;
             HostFrame(Owner(target.Name),OwnerRig(target.Name),"Tool("+chosen+","+target.Name+")"); string previous=""; int phaseTicks=0;
             for(int i=0;i<7000;i++)
@@ -196,9 +226,11 @@ internal static partial class Scenarios
                 }
                 if(phase=="ApproachDock"||phase=="Dock")target.Fixture.CaptureSource(source);
                 Tick(); previous=phase;
+                if(pilotChannel.Length>0)Check(!((string)Get(SwapController(core),"Last")!).Contains("Pilot canceled")&&!((bool)Get(SwapController(core),"Recovery")!),"Another cockpit canceled "+target.Name+" swap via "+pilotChannel+" input.");
             }
             Check(Enabled(Core(Owner(target.Name),target.Name))&&target.Fixture.Couplers[chosen-1].Top==target.Fixture.ArmTip,"Shared ToolSwap failed to mount/resume "+target.Name+": "+string.Join(" | ",toolRig.Log.TakeLast(3)));
             string neighbor=target.Name=="Arm 1"?"Arm 2":"Arm 1"; Check(Enabled(Core(Owner(neighbor),neighbor)),"Scoped tool change stopped the other hosted arm.");
+            if(pilotChannel.Length>0){Input(firstSeat,false);Input(secondSeat,false);}
             if(manual&&target.Name=="Arm 1")
             {
                 target.Fixture.LockSource(source:chosen-1); target.Fixture.Couplers[chosen-1].Detach();
@@ -222,6 +254,15 @@ internal static partial class Scenarios
                     "Repeated On after tool pickup lost cockpit input.");
                 RecordProxy.Of(cockpit).Values["MoveIndicator"]=Vector3.Zero;
             }
+        }
+        if(pilotChannel.Length>0)
+        {
+            HostFrame(arm,f.Rig,"Park(Arm 1)");
+            for(int i=0;i<100&&!(bool)Get(SwapController(Core(tools,"Arm 1")),"Automatic")!;i++)Tick();
+            Check((bool)Get(SwapController(Core(tools,"Arm 1")),"Automatic")!,"Owner cancellation setup did not acquire a swap.");
+            Input(firstSeat,true);for(int i=0;i<20;i++)Tick();
+            Check(!(bool)Get(Get(Core(arm,"Arm 1"),"Tools")!,"Busy")!&&SwapPhase(Core(tools,"Arm 1"))=="Idle"&&!Enabled(Core(arm,"Arm 1")),"Paired operator failed to cancel its own swap via "+pilotChannel+".");
+            Check(Enabled(Core(otherArm,"Arm 2")),"Owner cancellation stopped its neighbor.");Input(firstSeat,false);NoVelocity(f.Rig);
         }
         Check(inventory.All(x=>!RecordProxy.Of(x).ActorWrites.Any(w=>w.Actor=="ToolSwap"&&w.Name is "Velocity" or "TargetVelocityRad")),"Multi-arm ToolSwap wrote joint velocities.");
         if(automatic)

@@ -5,12 +5,12 @@ AutoArm is a mechanical-arm control program for the Space Engineers programmable
 ## Installation
 
 1. Stop your existing arm controller before replacing it.
-2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.9/AutoArm_Compact.txt) into an arm programmable block.
-3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/v4.0.9/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
+2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v5.1.0/AutoArm_Compact.txt) into an arm programmable block.
+3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/feature/v5.0.1-arm-bench/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
 4. Name the parts as shown below. You do not need to edit the code or enter configuration for a quick start.
 5. Run `On` on the Arm PB. For another arm, use `On(Arm 2)`. Then use `Select Arm 2` to give it cockpit control.
 
-When upgrading an older setup, delete the old PB Custom Data and let this version generate the new layout. Arm PBs use `[global] Format=7`; ToolSwap PBs use `[global] Format=2`. Incorrect formats produce an error; they are not converted.
+Keep existing Custom Data when its format matches: Arm PBs use `[global] Format=7`; ToolSwap PBs use `[global] Format=2`. If a format error asks you to delete old data, let this version generate the new layout. Incorrect formats are not converted.
 
 ## Choose a setup
 
@@ -19,6 +19,31 @@ When upgrading an older setup, delete the old PB Custom Data and let this versio
 Name the first attached joint **`Arm 1 - Base - Rotor`** (or `Arm 1 - Base - Piston` / `Arm 1 - Base - Hinge`). Name exactly one terminal block on the moving end **`Arm 1 - Head - Drill`**, or another description after `Head -`.
 
 Intermediate pistons, rotors and hinges do not need special names. Use only the Arm PB. Run `On` and pilot from your active cockpit.
+
+For a parallel base, name only one member `Arm 1 - Base`. Parallel hinges/rotors must share the same rotation axis; opposite-facing members are supported. Parallel pistons may be offset from one another. Partners can share a top grid or follow matching branches that join farther up the arm. Branches must have equal stage counts and compatible joints. The arm limit is 48 physical actuators in 24 stages, including the base partners.
+
+### Optional collision avoidance
+
+Install the [Collision script](https://github.com/PommesMitChips/AutoArm/blob/v5.0.5/AutoArm_Collision_Compact.txt) in another PB on the same construct and name it **`Collision PB`**. Add this key to the Arm PB's existing `[global]` section, retaining any other peer rows:
+
+```ini
+Peers=
+|Collision PB | Safety
+```
+
+Run `On` on the Arm PB. Collision PB generates its own settings and scans the ship and arm grids automatically. One Collision PB can supervise several arms across several Arm PBs; add the same peer entry to each owner. To supervise only one arm, put `Peers` in that arm's section instead of `[global]`.
+
+AutoArm uses spare joint movement to improve clearance while tracking the head. When necessary it limits motion toward obstacles or holds. Moving away remains allowed. An enabled Safety service must remain running; lost or stale guidance holds the arm until fresh guidance returns. Basic arms need no Collision PB and no Safety peer entry.
+
+Collision PB commands are `Info`, `Rescan`, `On`, `Reload` and `Off`. Run `Rescan` after adding or removing ship blocks. Adjust `Clearance`, `Influence` and `AwaySpeed` in its Custom Data, then `Reload`. If `Info` reports a scan limit, increase `MaxCells` or `MaxShapes` within the accepted range.
+
+For a repeatable two-arm test, first collect a read-only geometry report with [Arm Survey](docs/IN_GAME_SURVEY.md). It records starting head poses without commanding movement; use that report to prepare the head paths before testing through ArmService with Safety enabled.
+
+The [two-arm test runner](docs/IN_GAME_BENCH.md) provides a readiness check, small outward-and-return tests, simultaneous head crossing and sweeps past the opposite arm's base. `Rebase` records a new test start from both idle arms without commanding movement. Preview commands show the requested paths before movement. It requires live Safety permission and operates through ArmService; inability to pass safely stops the test.
+
+An optional [self-collision filter prototype](docs/SELF_PAIR_PROTOTYPE.md) can report which segment pairs can safely be excluded from repeated checking. It starts in Shadow mode, retaining the normal checks; the guide explains how to test enabled exclusions and revert.
+
+This first version uses conservative occupied-block volumes, rather than exact model shapes. Intended joint and docking contacts have limited allowances. It covers construct geometry and registered arms; terrain, unrelated ships and automatic routes around traps are not covered. Clearance checks do not model every SE physics effect, so begin with low movement speeds and confirm clearance on your build.
 
 ### Tool parking and swapping
 
@@ -59,11 +84,23 @@ Pickup slows at the point in front of the mount, then continues into it. Parking
 
 ### Several arms
 
-One Arm PB can host up to eight arms within its instruction budget. Each arm has its own state, targets, joint settings, Home, tool session and faults. Only the selected arm receives cockpit input; the others continue holding or following their commanded paths. Larger setups can distribute arms across more Arm PBs.
+One Arm PB can host up to eight arms within its instruction budget. Each arm has its own state, targets, joint settings, Home, tool session and faults. Different cockpits can control different arms simultaneously. Larger setups can distribute arms across more Arm PBs.
 
-Name each arm's base and heads using its own name. `Select Arm 1` or `Select Arm 2` changes live control. Selecting on another Arm PB releases direct cockpit control on the previous PB. Each PB keeps its own selected command target. An arm name must belong to exactly one Arm PB.
+Name each arm's base and heads using its own name. While exactly one cockpit is occupied, run `Select Arm 1` to pair that seat with Arm 1. Cockpits need no special names or configuration. Pairings survive PB restarts. An arm name must belong to exactly one Arm PB; update every Arm PB to v5.1.0 when using cockpit pairing across several PBs.
 
-Commands without a target go to the selected arm. Add the arm as the last argument to target another:
+For two players:
+
+1. Only Player 1 is seated. Run `Select(HRZ, Arm 1)` to pair their cockpit and choose HRZ.
+2. Player 1 briefly leaves their seat. Player 2 sits in their own cockpit and runs `Select(VRT, Arm 2)`.
+3. Both players can now sit and control their paired arms independently.
+
+During a tool operation, enabled pilot input from the cockpit controlling that arm cancels its swap. Another operator's cockpit input does not cancel it.
+
+If selection is attempted with multiple occupied cockpits, it fails immediately: **More than one cockpit is occupied. Please ensure exactly one cockpit is occupied.** Existing pairings and selection remain unchanged. After making exactly one seat occupied, run the selection command again.
+
+`Release Arm 1` removes its cockpit pairing and leaves it holding. Selecting another arm from the same seat transfers that seat's control, including across Arm PBs. A missing or empty paired cockpit never falls back to another player's seat. Use `MovementMode` in each arm's Custom Data for its startup view; pairing remembers the seat, while runtime `Mode` choices reset on reload.
+
+Commands without a target go to that PB's selected arm, which is a shared command target. In multiplayer, use explicit arm arguments for toolbar commands, including `Mode(HRZ, Arm 1)` and `Mode(VRT, Arm 2)` while both players are seated:
 
 ```text
 On(Arm 2)
@@ -85,7 +122,7 @@ One ToolSwap PB can serve several arms, including arms hosted by different Arm P
 | `HRZ` | Cockpit Forward/Back | Cockpit Left/Right | Cockpit Down/Up |
 | `VRT` | Cockpit screen Up/Down | Cockpit Left/Right | Into/out of the view |
 
-Translation holds head orientation. Q/E rolls around the head. Optional mouse input controls pitch/yaw. AutoArm uses your active cockpit; it needs no special name.
+Translation holds head orientation. Q/E rolls around the head. Optional mouse input controls pitch/yaw. AutoArm uses the arm's paired cockpit; a basic unpaired setup uses the sole active cockpit. Neither needs a special name.
 
 Set `MovementMode=HEAD`, `HRZ` or `VRT` in Custom Data for the default. `Mode VRT` changes the selected arm's current view; `Mode(VRT,Arm 2)` targets Arm 2. Use `ReadMouse On` / `ReadMouse Off` to enable/disable mouse turning.
 
@@ -96,6 +133,8 @@ Use a programmable block **Run** action with one of these arguments. The optiona
 | Argument | Action |
 | --- | --- |
 | `On` | Load settings, discover/scan and enable control |
+| `Select Arm 1` / `Select(HRZ, Arm 1)` | Pair the sole occupied cockpit; optionally choose its view |
+| `Release Arm 1` | Remove that arm's cockpit pairing |
 | `Off` / `Stop` | Stop the target arm |
 | `Hold` | Hold its current head pose |
 | `Reload` / `Rescan` | Reload settings / rediscover while OFF |

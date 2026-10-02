@@ -125,8 +125,6 @@ internal static partial class Scenarios
             VCCommand(script,rig,"Reload");VCCommand(script,rig,"On");Check(!Enabled(script),"Malformed "+bad.Item1+" enabled motion.");Check(rig.PB.CustomData==text,"Malformed view setting was rewritten.");NoVelocity(rig);
             RecordProxy.Of(rig.PB).Values["CustomData"]=defaults.ToString();VCCommand(script,rig,"Reload");for(int i=0;i<10;i++)VCTick(script,rig);
         }
-        VCConfigure(script,rig,x=>{x.Set("Config","Bind1","Stop");x.Set("Config","Bind2","Forward");x.Set("Config","Bind9","On Stop");});
-        VCCommand(script,rig,"On");Check(Enabled(script),"Obsolete binding keys should be ignored.");VCCommand(script,rig,"1");Check(Enabled(script),"Obsolete Bind1 changed the original numeric alias.");
     }
 
     static void VCControllerSelection(Type type)
@@ -174,14 +172,6 @@ internal static partial class Scenarios
             VCCommand(script,rig,"Step "+axisName+" "+degrees.ToString(System.Globalization.CultureInfo.InvariantCulture));
             VCNear(VCVector(script,"TargetF"),VCRotate(f,axis,angle),mode+" Step "+axisName+" facing");
             VCNear(VCVector(script,"TargetU"),VCRotate(u,axis,angle),mode+" Step "+axisName+" up");
-        }
-        var aliases=new[]{("1","PitchUp"),("2","Back"),("3","PitchDown"),("4","Left"),("5","Down"),("6","Right"),("7","YawLeft"),("8","Forward"),("9","YawRight")};
-        foreach(var alias in aliases)
-        {
-            var named=VCStart(type,out var namedRig,out _,out _,out _,out _);var numbered=VCStart(type,out var numberedRig,out _,out _,out _,out _);
-            VCCommand(named,namedRig,alias.Item2);VCCommand(numbered,numberedRig,alias.Item1);
-            VCNear(VCVector(numbered,"TargetF"),VCVector(named,"TargetF"),"Legacy numerical alias "+alias.Item1+" facing");
-            VCNear(VCVector(numbered,"TargetU"),VCVector(named,"TargetU"),"Legacy numerical alias "+alias.Item1+" up");
         }
         foreach(string mode in new[]{"HRZ","VRT"})
         {

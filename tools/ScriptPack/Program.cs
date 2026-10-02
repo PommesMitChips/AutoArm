@@ -42,7 +42,7 @@ internal static class ScriptPack
     {
         try
         {
-            if (args.Length < 2) throw new Exception("Usage: ScriptPack check|inspect|specialize|pack <source.txt> [output.txt]");
+            if (args.Length < 2) throw new Exception("Usage: ScriptPack check|inspect|specialize|blocks|pack|pack-fast|pack-pb|pack-safe <source.txt> [output.txt]");
             var source = File.ReadAllText(args[1]);
             var compilation = Compile(source, args[1]);
             if (args[0] == "specialize" && args.Length == 3)
@@ -55,13 +55,28 @@ internal static class ScriptPack
                 return;
             }
             Check(compilation);
+            if((args[0]=="blocks"||args[0]=="blocks-min")&&args.Length==3) {
+                var edits=new List<(int Start,int Length,string Text)>();
+                foreach(var method in compilation.SyntaxTrees.Single().GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().Where(m=>m.ExpressionBody!=null)) {
+                    StatementSyntax statement=method.ReturnType.ToString()=="void"?SyntaxFactory.ExpressionStatement(method.ExpressionBody!.Expression):SyntaxFactory.ReturnStatement(method.ExpressionBody!.Expression);
+                    var block=method.WithExpressionBody(null).WithSemicolonToken(default).WithBody(SyntaxFactory.Block(statement));
+                    edits.Add((method.SpanStart-Header.Length,method.Span.Length,args[0]=="blocks-min"?Compact(block.DescendantTokens().Select(t=>t.WithoutTrivia()).ToArray()):block.NormalizeWhitespace().ToFullString()));
+                }
+                foreach(var property in compilation.SyntaxTrees.Single().GetRoot().DescendantNodes().OfType<PropertyDeclarationSyntax>().Where(p=>p.ExpressionBody!=null)) {
+                    var getter=SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithBody(SyntaxFactory.Block(SyntaxFactory.ReturnStatement(property.ExpressionBody!.Expression)));
+                    var block=property.WithExpressionBody(null).WithSemicolonToken(default).WithAccessorList(SyntaxFactory.AccessorList(SyntaxFactory.SingletonList(getter)));
+                    edits.Add((property.SpanStart-Header.Length,property.Span.Length,args[0]=="blocks-min"?Compact(block.DescendantTokens().Select(t=>t.WithoutTrivia()).ToArray()):block.NormalizeWhitespace().ToFullString()));
+                }
+                foreach(var edit in edits.OrderByDescending(e=>e.Start))source=source.Remove(edit.Start,edit.Length).Insert(edit.Start,edit.Text);
+                Check(Compile(source,args[2]));File.WriteAllText(args[2],source,new UTF8Encoding(false));Console.WriteLine("Expanded expression bodies: "+edits.Count);return;
+            }
             Console.WriteLine($"C# 6 / installed SE API: PASS ({source.Length:N0} UTF-16 characters)");
             if (args[0] == "check") return;
             if (args[0] == "inspect") { Inspect(compilation); return; }
             if (args[0] == "test") { Regression.Run(args[1], args[2]); return; }
-            if (args[0] != "pack" || args.Length != 3) throw new Exception("Unknown command or missing output path.");
+            if (args[0] != "pack" && args[0] != "pack-fast" && args[0] != "pack-pb" && args[0] != "pack-safe" || args.Length != 3) throw new Exception("Unknown command or missing output path.");
             CompressionChecks.Run();
-            Pack(source, compilation, args[2]);
+            Pack(source, compilation, args[2], args[0] != "pack" && args[0] != "pack-safe", args[0] != "pack-pb" && args[0] != "pack-safe");
         }
         catch (Exception e) { Console.Error.WriteLine(e); Environment.ExitCode = 1; }
     }
@@ -88,10 +103,10 @@ internal static class ScriptPack
             Console.WriteLine($"{m.Span.Length,6} {m.Identifier.Text}");
     }
 
-    static void Pack(string source, CSharpCompilation compilation, string output)
+    static void Pack(string source, CSharpCompilation compilation, string output, bool fast = false, bool expressionBodies = true)
     {
         var originalCompilation = compilation;
-        source = ShortDeclarations(source, compilation);
+        source = ShortDeclarations(source, compilation, expressionBodies);
         compilation = Compile(source, "declaration compression");
         Check(compilation);
         var tree = compilation.SyntaxTrees.Single();
@@ -225,7 +240,7 @@ internal static class ScriptPack
             "// Starts OFF. Stop before replacing; Check, then On. No collision avoidance.\n" +
             "// Settings remain editable. Full source: " + Path.GetFileName(tree.FilePath) + ".\n" + settings +
             "// Generated implementation: edit the readable source and run tools/" + (automaticArm ? "Build-AutoArm.ps1" : "Build.ps1") + ".\n" + compact + "\n";
-        if (automaticArm) packed = "// AutoArm " + version.Trim('"') + "\n// OFF. Check/On. No collision avoidance.\n" + settings + compact + "\n";
+        if (automaticArm) packed = "// AutoArm " + version.Trim('"') + "\n// PB script. Settings: Custom Data.\n" + settings + compact + "\n";
         var packedCompilation = Compile(packed, output);
         Check(packedCompilation);
         CompareIL(originalCompilation, packedCompilation);
@@ -242,11 +257,12 @@ internal static class ScriptPack
             }
             if (restored != tokens[i].Text) throw new Exception("Source token round-trip failed.");
         }
-        var repetitions = RepetitionCompression.Run(packed, packed.Length - compact.Length - 1);
+        var repetitions = fast ? new RepetitionCompression.Result(packed, new List<RepetitionCompression.Decision>()) : RepetitionCompression.Run(packed, packed.Length - compact.Length - 1);
         packed = repetitions.Source;
-        var namespaceAliases = NamespaceCompression.Run(packed);
+        var namespaceAliases = fast ? new NamespaceCompression.Result(packed, new List<RepetitionCompression.Decision>()) : NamespaceCompression.Run(packed);
         packed = namespaceAliases.Source;
         repetitions.Report.AddRange(namespaceAliases.Report);
+        if (fast) repetitions.Report.Add(new RepetitionCompression.Decision("mode", "token-only", 0, 0, true, "No forwarding helpers; preserve runtime call structure."));
         Check(Compile(packed, output));
         if (packed.Length > 100000) throw new Exception($"Packed script still exceeds 100,000 characters: {packed.Length}.");
         File.WriteAllText(output, packed, new UTF8Encoding(false));
@@ -257,7 +273,7 @@ internal static class ScriptPack
         Console.WriteLine($"Packed: {packed.Length:N0} characters; {100000 - packed.Length:N0} free to 100,000. Base packing token/IL checks and repetition expansion check: PASS. Renamed {symbols.Count} symbols.");
     }
 
-    static string ShortDeclarations(string source, CSharpCompilation compilation)
+    static string ShortDeclarations(string source, CSharpCompilation compilation, bool expressionBodies = true)
     {
         int boundary = source.IndexOf("static string MiningTuningError", StringComparison.Ordinal);
         if (boundary < 0) boundary = source.IndexOf("// ===== IMPLEMENTATION =====", StringComparison.Ordinal);
@@ -281,6 +297,7 @@ internal static class ScriptPack
             }
         foreach (var method in tree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>())
         {
+            if (!expressionBodies) continue;
             var body = method.Body;
             if (body == null || body.SpanStart < Header.Length + boundary || body.Statements.Count != 1 ||
                 body.Statements[0] is not ReturnStatementSyntax { Expression: not null } statement) continue;

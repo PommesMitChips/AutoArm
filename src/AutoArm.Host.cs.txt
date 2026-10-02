@@ -1,7 +1,7 @@
 // One PB hosts isolated arm instances. Block prefixes are the section names.
 const string DefaultArm = "Arm 1";
 // ===== IMPLEMENTATION =====
-const string ControllerBuildVersion = "4.0.9";
+const string ControllerBuildVersion = "@@VERSION@@";
 const bool ToolHost = @@TOOL@@;
 const int HostFormat = @@FORMAT@@;
 const string WireTag = "AutoArm/5", GlobalSection = "global";
@@ -15,6 +15,14 @@ IMyBroadcastListener Selection;
 long InputClock, InputOwner;
 double InputAge;
 const string SelectionTag = "AutoArm/Select/1";
+const string PilotTag = "AutoArm/Pilots/1";
+sealed class PilotClaim { public long Seat, Clock, PB; public string Arm; public double Age; }
+readonly Dictionary<string, PilotClaim> Pilots = new Dictionary<string, PilotClaim>();
+readonly Dictionary<long, PilotClaim> RemotePilots = new Dictionary<long, PilotClaim>();
+readonly Dictionary<long, long> PilotSnapshots = new Dictionary<long, long>();
+IMyBroadcastListener PilotListener;
+bool Pairing;
+string InputNote = "";
 public Program()
 {
     Runtime.UpdateFrequency = UpdateFrequency.Update10;
@@ -24,8 +32,13 @@ public Program()
         if (!Saved.TryParse(Storage)) { Saved.Clear(); Saved.EndContent = Storage; }
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId) { InputClock = Saved.Get("AutoArm Host", "InputClock").ToInt64(); InputOwner = Saved.Get("AutoArm Host", "InputOwner").ToInt64(); }
         if (!ToolHost) { Selection = IGC.RegisterBroadcastListener(SelectionTag); if (Selection != null) Selection.SetMessageCallback(WireTag); }
+        if (!ToolHost) { PilotListener = IGC.RegisterBroadcastListener(PilotTag); if (PilotListener != null) PilotListener.SetMessageCallback(WireTag); Pairing = Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Saved.Get("AutoArm Host", "Pairing").ToBoolean(); }
         if (!ToolHost) StopSaved();
         LoadHost();
+        if (!ToolHost && Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId) foreach (string name in Order) {
+            long seat = Saved.Get("Pilot " + name, "Seat").ToInt64(), clock = Saved.Get("Pilot " + name, "Clock").ToInt64();
+            if (seat != 0 && clock > 0) Pilots[name] = new PilotClaim { Seat = seat, Clock = clock, PB = Me.EntityId, Arm = name };
+        }
         string prior = Saved.Get("AutoArm Host", "Selected").ToString();
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Arms.ContainsKey(prior)) Selected = prior;
         SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
@@ -39,6 +52,13 @@ public void Save()
     if (Order.Count == 0) return;
     bool changed = Saved.Get("AutoArm Host", "PB").ToInt64() != Me.EntityId || Saved.Get("AutoArm Host", "Selected").ToString() != Selected || Saved.Get("AutoArm Host", "InputClock").ToInt64() != InputClock || Saved.Get("AutoArm Host", "InputOwner").ToInt64() != InputOwner;
     if (changed) { Saved.Set("AutoArm Host", "Format", 1); Saved.Set("AutoArm Host", "PB", Me.EntityId); Saved.Set("AutoArm Host", "Selected", Selected); Saved.Set("AutoArm Host", "InputClock", InputClock); Saved.Set("AutoArm Host", "InputOwner", InputOwner); }
+    if (!ToolHost) {
+        if (Saved.Get("AutoArm Host", "Pairing").ToBoolean() != Pairing) { Saved.Set("AutoArm Host", "Pairing", Pairing); changed = true; }
+        foreach (string name in Order) {
+            PilotClaim pilot; long seat = Pilots.TryGetValue(name, out pilot) ? pilot.Seat : 0, clock = pilot == null ? 0 : pilot.Clock;
+            if (Saved.Get("Pilot " + name, "Seat").ToInt64() != seat || Saved.Get("Pilot " + name, "Clock").ToInt64() != clock) { Saved.Set("Pilot " + name, "Seat", seat); Saved.Set("Pilot " + name, "Clock", clock); changed = true; }
+        }
+    }
     foreach (var pair in Arms) if (pair.Value.Storage != pair.Value.SavedData) { Saved.Set("State " + pair.Key, "Data", pair.Value.Storage); pair.Value.SavedData = pair.Value.Storage; changed = true; }
     if (!changed) return;
     string text = Saved.ToString(); if (text != Storage) Storage = text;
@@ -91,7 +111,7 @@ void LoadHost()
         }
     }
     var removed = new List<string>(); foreach (string name in Order) if (!names.Contains(name)) removed.Add(name);
-    foreach (string name in removed) { Arms[name].Stop("Arm removed from configuration."); Saved.Set("State " + name, "Data", Arms[name].Storage); Arms.Remove(name); }
+    foreach (string name in removed) { Arms[name].Stop("Arm removed from configuration."); Saved.Set("State " + name, "Data", Arms[name].Storage); Arms.Remove(name); if (!ToolHost) Pilots.Remove(name); }
     Configuration = ini; Order.Clear(); Order.AddRange(names);
     AutoLinks();
     foreach (string name in names) if (!Arms.ContainsKey(name))
@@ -101,7 +121,7 @@ void LoadHost()
     }
     if (!Arms.ContainsKey(Selected))
     { string configured = ini.Get(GlobalSection, "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
-    if (!ToolHost) foreach (var core in Arms.Values) core.Select(core.Name == Selected && InputOwner == Me.EntityId);
+    if (!ToolHost) UpdatePilots();
     HostError = "";
 }
 string Effective(string arm, string key)
@@ -181,17 +201,20 @@ void PublishConfig()
     foreach (var key in keys) if (!live.ContainsKey(key.Section, key.Name)) live.Set(key.Section, key.Name, Configuration.Get(key).ToString());
     string text = live.ToString(); if (text != Me.CustomData) Me.CustomData = text;
 }
-void SelectArm(string name, bool claim = true)
+void SelectArm(string name, bool claim = true, bool pair = false)
 {
     if (!Arms.ContainsKey(name)) throw new Exception("Unknown arm: " + name);
+    if (!ToolHost && pair) PairPilot(name);
     Selected = name;
-    if (!ToolHost) { if (claim) { InputClock++; InputOwner = Me.EntityId; } foreach (var core in Arms.Values) core.Select(core.Name == name && InputOwner == Me.EntityId); if (InputOwner == Me.EntityId) AnnounceInput(); }
+    if (!ToolHost) { if (claim) { InputClock++; InputOwner = Me.EntityId; } UpdatePilots(); if (InputOwner == Me.EntityId) AnnounceInput(); }
     Save();
 }
 void Command(string raw)
 {
     string text = raw.Trim(); if (text.Length == 0) return;
-    if (text.StartsWith("Select ", StringComparison.OrdinalIgnoreCase)) { SelectArm(text.Substring(7).Trim()); return; }
+    HostError = "";
+    if (text.StartsWith("Select ", StringComparison.OrdinalIgnoreCase)) { SelectArm(text.Substring(7).Trim(), true, true); return; }
+    if (text.StartsWith("Release ", StringComparison.OrdinalIgnoreCase)) { if (ToolHost) throw new Exception("Release is an Arm PB command."); else { ReleasePilot(text.Substring(8).Trim()); return; } }
     if (text.Equals("StopAll", StringComparison.OrdinalIgnoreCase)) { StopAll("StopAll command."); return; }
     int end = text.IndexOfAny(new char[] { ' ', '(', ',' }); string first = (end < 0 ? text : text.Substring(0, end)).ToLowerInvariant();
     if (first == "on" || first == "reload" || first == "rescan")
@@ -213,6 +236,8 @@ void Command(string raw)
     }
     ArmCore target; if (!Arms.TryGetValue(name, out target)) throw new Exception("Unknown arm: " + name);
     string action = command.Split(' ')[0].ToLowerInvariant();
+    if (action == "select") { int space = command.IndexOf(' '); string mode = space < 0 ? "" : command.Substring(space + 1).Trim().ToUpperInvariant(); if (mode.Length > 0 && mode != "HEAD" && mode != "HRZ" && mode != "VRT") throw new Exception("MovementMode expects HEAD, HRZ or VRT."); SelectArm(name, true, true); if (mode.Length > 0) target.Update("Mode " + mode, UpdateType.Terminal, 0); return; }
+    if (action == "release") { if (ToolHost) throw new Exception("Release is an Arm PB command."); else { ReleasePilot(name); return; } }
     if (action == "on" || action == "reload" || action == "rescan")
     { target.Config = ConfigFor(name); target.ConfigChanged = false; }
     target.Update(command, UpdateType.Terminal, 0);
@@ -224,6 +249,7 @@ static int Arity(string verb)
     {
         case "on": case "off": case "stop": case "hold": case "check": case "info": case "joints": case "reload": case "rescan": case "sethome": case "gohome": case "toolscan": case "toolinfo": case "swapcancel": case "version": case "status": case "bindings": case "homeinfo": case "forward": case "back": case "left": case "right": case "up": case "down": case "yawleft": case "yawright": case "pitchup": case "pitchdown": case "rollleft": case "rollright": return 0;
         case "moveto": return 3;
+        case "release": return 0;
         case "orientto": return 6;
         case "movetoposori": return 9;
         case "homespeed": case "step": return 2;
@@ -231,7 +257,63 @@ static int Arity(string verb)
     }
 }
 void AnnounceInput()
-{ if (Selection != null) IGC.SendBroadcastMessage(SelectionTag, InputClock + "|" + Selected, TransmissionDistance.CurrentConstruct); }
+{
+    if (Selection != null) IGC.SendBroadcastMessage(SelectionTag, InputClock + "|" + Selected, TransmissionDistance.CurrentConstruct);
+    if (PilotListener != null) { var text = new System.Text.StringBuilder(InputClock.ToString()); foreach (var pilot in Pilots.Values) text.Append('|').Append(pilot.Arm).Append('@').Append(pilot.Seat).Append('@').Append(pilot.Clock); IGC.SendBroadcastMessage(PilotTag, text.ToString(), TransmissionDistance.CurrentConstruct); }
+}
+long PilotSeatFor(string name) { PilotClaim pilot; return Pilots.TryGetValue(name, out pilot) ? pilot.Seat : 0; }
+bool SeatAvailableFor(string name, long seat)
+{
+    foreach (var pilot in Pilots.Values) if (pilot.Seat == seat && pilot.Arm != name) return false;
+    PilotClaim remote; return !RemotePilots.TryGetValue(seat, out remote) || remote.Age > .5;
+}
+void UpdatePilots()
+{ foreach (var core in Arms.Values) core.Select(Pilots.ContainsKey(core.Name) || !Pairing && core.Name == Selected && InputOwner == Me.EntityId); }
+void ReleasePilot(string name)
+{
+    if (!Arms.ContainsKey(name)) throw new Exception("Unknown arm: " + name);
+    Pairing = true; Pilots.Remove(name); InputClock++; UpdatePilots(); AnnounceInput(); Save(); InputNote = name + ": cockpit released; arm holds. Select pairs again.";
+}
+void PairPilot(string name)
+{
+    var seats = new List<IMyShipController>(); GridTerminalSystem.GetBlocksOfType(seats, c => !c.Closed && c.IsSameConstructAs(Me) && c.IsUnderControl);
+    if (seats.Count > 1) throw new Exception("More than one cockpit is occupied. Please ensure exactly one cockpit is occupied.");
+    if (seats.Count == 0) throw new Exception("No cockpit is occupied. Please ensure exactly one cockpit is occupied.");
+    var found = seats[0]; Pairing = true;
+    var remove = new List<string>(); foreach (var pilot in Pilots.Values) if (pilot.Seat == found.EntityId) remove.Add(pilot.Arm); foreach (string old in remove) { Pilots.Remove(old); Arms[old].Select(false); } Arms[name].Select(false);
+    RemotePilots.Remove(found.EntityId); InputClock++; Pilots[name] = new PilotClaim { Arm = name, Seat = found.EntityId, Clock = InputClock, PB = Me.EntityId };
+    InputNote = name + " paired to " + found.CustomName + " (" + found.EntityId + ").";
+}
+void ReadPilotClaims(double elapsed)
+{
+    foreach (var pilot in RemotePilots.Values) if (elapsed > 0 && !double.IsNaN(elapsed) && !double.IsInfinity(elapsed)) pilot.Age += elapsed;
+    if (PilotListener == null) return; int count = 0;
+    while (PilotListener.HasPendingMessage && count++ < 8) {
+        var message = PilotListener.AcceptMessage(); var text = message.Data as string; var peer = GridTerminalSystem.GetBlockWithId(message.Source) as IMyProgrammableBlock;
+        if (message.Tag != PilotTag || message.Source == Me.EntityId || text == null || text.Length > 2048 || peer == null || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me)) continue;
+        var config = new MyIni(); if (!config.TryParse(peer.CustomData) || config.Get(GlobalSection, "Format").ToInt32() != 7) continue;
+        string[] rows = text.Split('|'); long snapshot, previous;
+        if (rows.Length > 9 || !long.TryParse(rows[0], out snapshot) || snapshot <= 0 || PilotSnapshots.TryGetValue(message.Source, out previous) && snapshot < previous) continue;
+        var incoming = new List<PilotClaim>(); var seen = new HashSet<long>(); var names = new HashSet<string>(); bool valid = true;
+        for (int i = 1; i < rows.Length; i++) {
+            int last = rows[i].LastIndexOf('@'), middle = last > 0 ? rows[i].LastIndexOf('@', last - 1) : -1; long seat, clock;
+            string arm = middle < 0 ? "" : rows[i].Substring(0, middle);
+            if (middle <= 0 || !long.TryParse(rows[i].Substring(middle + 1, last - middle - 1), out seat) || !long.TryParse(rows[i].Substring(last + 1), out clock) || seat == 0 || clock <= 0 || clock > snapshot || !seen.Add(seat) || !names.Add(arm) || !config.ContainsSection(arm)) { valid = false; break; }
+            var controller = GridTerminalSystem.GetBlockWithId(seat) as IMyShipController;
+            if (controller == null || controller.Closed || !controller.IsSameConstructAs(Me)) { valid = false; break; }
+            incoming.Add(new PilotClaim { PB = message.Source, Seat = seat, Clock = clock, Arm = arm });
+        }
+        if (!valid) continue; PilotSnapshots[message.Source] = snapshot; InputClock = Math.Max(InputClock, snapshot);
+        var erase = new List<long>(); foreach (var pilot in RemotePilots.Values) if (pilot.PB == message.Source) erase.Add(pilot.Seat); foreach (long seat in erase) RemotePilots.Remove(seat);
+        foreach (var claim in incoming) {
+            PilotClaim remote; if (RemotePilots.TryGetValue(claim.Seat, out remote) && (remote.Clock > claim.Clock || remote.Clock == claim.Clock && remote.PB > claim.PB)) continue;
+            string lost = ""; bool keep = false; foreach (var local in Pilots.Values) if (local.Seat == claim.Seat) { if (local.Clock > claim.Clock || local.Clock == claim.Clock && Me.EntityId > claim.PB) keep = true; else lost = local.Arm; break; }
+            if (keep) continue; if (lost.Length > 0) { Pilots.Remove(lost); InputNote = lost + ": cockpit claimed by another Arm PB."; }
+            RemotePilots[claim.Seat] = claim;
+        }
+        UpdatePilots();
+    }
+}
 void ReceiveSelection(double elapsed)
 {
     if (Selection == null) return;
@@ -245,10 +327,11 @@ void ReceiveSelection(double elapsed)
         var peer = GridTerminalSystem.GetBlockWithId(message.Source) as IMyProgrammableBlock; var config = new MyIni();
         if (peer == null || peer.Closed || !peer.IsFunctional || !peer.IsSameConstructAs(Me) || !config.TryParse(peer.CustomData) || config.Get(GlobalSection, "Format").ToInt32() != 7 || !config.ContainsSection(cells[1])) continue;
         InputClock = clock; InputOwner = message.Source;
-        foreach (var core in Arms.Values) core.Select(false);
+        UpdatePilots();
     }
+    ReadPilotClaims(elapsed);
     if (elapsed > 0 && !double.IsInfinity(elapsed) && !double.IsNaN(elapsed)) InputAge += elapsed;
-    if (InputAge >= .1 && InputOwner == Me.EntityId) { InputAge = 0; AnnounceInput(); }
+    if (InputAge >= .1) { InputAge = 0; if (InputOwner == Me.EntityId || Pilots.Count > 0) AnnounceInput(); }
 }
 void CaptureDefaults(ArmCore core)
 {
@@ -307,7 +390,8 @@ void StopAll(string why)
 void Display()
 {
     var lines = new List<string>(); lines.Add("AutoArm " + ControllerBuildVersion + " " + (ToolHost ? "ToolSwap" : "Arm") + " | Selected: " + Selected);
-    if (!ToolHost && InputOwner != Me.EntityId) lines.Add("Cockpit input inactive here. Run Select " + Selected + ".");
+    if (!ToolHost && !Pairing && InputOwner != Me.EntityId) lines.Add("Cockpit input inactive here. Run Select " + Selected + ".");
+    if (!ToolHost && InputNote.Length > 0) lines.Add(InputNote);
     if (HostError.Length > 0) lines.Add(HostError);
     foreach (string name in Order) lines.Add(name + ": " + Arms[name].Summary);
     ArmCore current; if (Arms.TryGetValue(Selected, out current)) lines.Add(current.Report);
