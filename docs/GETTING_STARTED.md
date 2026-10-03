@@ -84,6 +84,6 @@ Sit in your cockpit or take control of your ship controller. Use **WASD** and **
 
 ## 9. Go further with AutoArm
 
-See the [full documentation](../README.md) for configuration, tool swapping and more detailed instructions. Also see [troubleshooting](TROUBLESHOOTING.md) and [modules and paths](MODULES.md).
+See the [full documentation](../README.md) for configuration, tool swapping and more detailed instructions. Also see [troubleshooting](TROUBLESHOOTING.md).
 
 Diagrams use simplified schematic proportions. The terminal mockups are independently drawn vectors based on the supplied game screenshots.

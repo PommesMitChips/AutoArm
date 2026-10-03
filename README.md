@@ -41,10 +41,7 @@ their original names; they are not new Workshop release numbers.
 ## Guides and tools
 
 - [Getting Started](docs/GETTING_STARTED.md) · [HTML guide](docs/getting-started.html)
-- [Collision Safety](docs/COLLISION.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
-- [External script integration](docs/MODULES.md) · [Configuration examples](docs/examples)
-- [Motion Bench](docs/IN_GAME_BENCH.md) · [Read-only Survey](docs/IN_GAME_SURVEY.md)
-- [Workshop material](docs/steam-workshop)
+- [Troubleshooting](docs/TROUBLESHOOTING.md) · [Configuration examples](docs/examples)
 - [Panel assembler](tools/panel-assembler/dist/AutoArm-Panel-Assembler.html)
   · [Instructions](tools/panel-assembler/README.md)
 - [Editable SVG panels](docs/assets/workshop/svg-panels)
@@ -93,7 +90,3 @@ tools/           Build helpers, tests, generators and the panel assembler
 docs/            User-facing guides and configuration examples
 docs/assets/     Block graphics, assembled models, panels and graphic exports
 ```
-
-Developer records are under [tools/development](tools/development).
-See [attribution](docs/ATTRIBUTION.md) and [history](docs/HISTORY.md) for origins
-and earlier development.

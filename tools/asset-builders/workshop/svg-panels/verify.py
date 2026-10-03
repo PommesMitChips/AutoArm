@@ -49,8 +49,13 @@ for index, panel in enumerate(manifest["panels"]):
     source = "/" + str(png.relative_to(REPO)).replace("\\", "/")
     rows.append('<section><p>SVG · ' + panel["filename"] + '</p><p>Original PNG</p><div>' + vector + '</div><img src="' + source + '"></section>')
 
+missing_source_inputs = []
 for relative, expected in manifest["sourceHashes"].items():
-    assert hashlib.sha256((REPO / relative).read_bytes()).hexdigest() == expected
+    path = REPO / relative
+    if not path.exists():
+        missing_source_inputs.append(relative)
+        continue
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == expected
 with zipfile.ZipFile(WORKSHOP / "AutoArm-Editable-SVG-Panels.zip") as archive:
     assert archive.testzip() is None
     assert len([name for name in archive.namelist() if name.endswith(".svg")]) == len(manifest["panels"]) + len(manifest.get("components", []))
@@ -58,4 +63,4 @@ with zipfile.ZipFile(WORKSHOP / "AutoArm-Editable-SVG-Panels.zip") as archive:
 proof = REPO / "docs/assets/review/svg-panel-review.html"
 proof.parent.mkdir(parents=True, exist_ok=True)
 proof.write_text('<!doctype html><meta charset="utf-8"><title>SVG export comparison</title><style>body{margin:0;background:#1b2838;color:#dce7ed;font:14px sans-serif}section{display:grid;grid-template-columns:620px 620px;gap:12px;margin:20px 0}p{margin:8px 24px}svg,img{display:block;width:620px;height:auto}div{min-width:0}</style>' + ''.join(rows), encoding="utf-8")
-print(json.dumps({"panels": len(manifest["panels"]), "rasterImages": 0, "editableText": True, "uniqueIds": True, "dimensionsMatchPNGs": True, "copySourcesUnchanged": True, "zipVerified": True, "proofPage": str(proof)}))
+print(json.dumps({"panels": len(manifest["panels"]), "rasterImages": 0, "editableText": True, "uniqueIds": True, "dimensionsMatchPNGs": True, "copySourcesUnchanged": not missing_source_inputs, "missingHistoricalInputs": missing_source_inputs, "zipVerified": True, "proofPage": str(proof)}))

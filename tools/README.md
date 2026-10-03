@@ -10,8 +10,6 @@ host adapters, specialization, validated packing and guarded prototype recipes.
 | `ArmTests/` | Readable and actual compact regression harness and fixtures. |
 | `panel-assembler/` | Offline panel editor; shipped HTML and ZIP are in dist. |
 | `asset-builders/` | Graphics/model generators; outputs go to docs/assets. |
-| `development/` | Developer notes, validation records and migration path map. |
-| `reference/` | Original MiningArm compatibility reference. |
 | `design/` | Design guidance and internal visual-workflow records. |
 | `Test-JointPlanner.ps1` | Prototype simulation and optional profiling. |
 | `PivotEvidence.ps1` | Empirical pivot evidence utility. |
@@ -23,6 +21,9 @@ need Node.js and sharp, whose module path may be passed as their first argument.
 `Build.ps1 -Collection Assets` refreshes the existing SVG pack without discarding
 manual text/artwork edits, then rebuilds the standalone assembler. Individual
 full generators are in asset-builders; output paths are repository-relative.
+Legacy PNG-from-BBCode generators require their historical copy inputs, which
+have been removed. The existing editable SVG panels and assembler remain usable;
+the default Assets collection preserves those SVGs and rebuilds the assembler.
 
 The preserved WIP `*.Program.cs.txt` files are the normal prototype build inputs.
 `-RefreshPrototypes` applies the original guarded recipes to current core sources.
