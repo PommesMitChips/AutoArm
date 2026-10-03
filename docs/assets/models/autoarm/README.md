@@ -19,8 +19,8 @@ are listed in `manifest.json`.
 To rebuild the artwork, run these commands from the repository root:
 
 ```powershell
-./Build.ps1 -Scripts Blocks
-./Build.ps1 -Scripts Models
+./tools/Build.ps1 -Scripts Blocks
+./tools/Build.ps1 -Scripts Models
 ```
 
 Requires Python and fontTools. To rebuild only the arm diagrams and keep the

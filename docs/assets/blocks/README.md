@@ -22,7 +22,7 @@ Open the files in a vector editor to resize, rotate or recolour them. Each has a
 To rebuild the diagrams, run this from the repository root:
 
 ```powershell
-./Build.ps1 -Scripts Blocks
+./tools/Build.ps1 -Scripts Blocks
 ```
 
 Requires Python. The PNG contact sheet and preview page are separate files.

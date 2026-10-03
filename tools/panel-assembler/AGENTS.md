@@ -13,6 +13,6 @@ Offline panel library and assembly editor; runtime output belongs in dist.
 - `README.md`: Tool use and development instructions.
 - `style.css`: Window-fit layout, control styling and responsive panes.
 
-Do not overwrite user-edited SVGs or copy. Regenerate through root Build.ps1 or
+Do not overwrite user-edited SVGs or copy. Regenerate through tools/Build.ps1 or
 the named Python generator. Keep tool code outside docs/assets and retain
 source provenance for generated artwork.

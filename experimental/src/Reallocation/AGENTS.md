@@ -3,7 +3,7 @@
 Experimental arm constrained-rate repair variant. Its editable repair algorithm is
 `../shared/AutoArm.ConstraintRepair.cs.txt`; the guarded insertion recipe is
 `../../../tools/build/Recipes.psm1` (`Invoke-ReallocationRecipe`). There is no
-duplicated algorithm in this folder. Build with `./Build.ps1 -Track experimental
+duplicated algorithm in this folder. Build with `./tools/Build.ps1 -Track experimental
 -Scripts Reallocation` from the repository root. Do not edit generated outputs.
 
 ## Existing WIP snapshot

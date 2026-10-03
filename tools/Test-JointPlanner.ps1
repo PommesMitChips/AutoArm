@@ -5,7 +5,7 @@ $previousCli=$env:DOTNET_CLI_HOME
 Push-Location $workspace
 try {
     $env:DOTNET_CLI_HOME=Join-Path $PSScriptRoot '.dotnet'
-    if($Build){& (Join-Path $workspace 'Build.ps1') -Track experimental -Collection JointPlanner}
+    if($Build){& (Join-Path $PSScriptRoot 'Build.ps1') -Track experimental -Collection JointPlanner}
     function Check-Run([string[]]$arguments){
         & dotnet run --project tools/ArmTests -- @arguments
         if($LASTEXITCODE -ne 0){throw "Joint planning simulation failed: $arguments"}

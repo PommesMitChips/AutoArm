@@ -387,7 +387,7 @@ def main():
                 "sourceScreenshots": ["codex-clipboard-01627974-45fb-48a1-a885-8da0f1b0d10a.png", "codex-clipboard-faf1a543-7121-490d-a5a8-9a1c595642c3.png"]}
     (ROOT/"manifest.json").write_text(json.dumps(manifest, indent=2)+"\n", encoding="utf-8")
     with zipfile.ZipFile(DOCS/"assets/exports/autoarm-getting-started.zip", "w", zipfile.ZIP_DEFLATED) as z:
-        for file in [DOCS/"getting-started.html", DOCS/"GETTING_STARTED.md", DOCS/"TROUBLESHOOTING.md", DOCS/"MODULES.md", DOCS.parent/"README.md"]:
+        for file in [DOCS/"getting-started.html", DOCS/"GETTING_STARTED.md", DOCS/"TROUBLESHOOTING.md", DOCS/"MODULES.md", DOCS.parent/"README.md", DOCS.parent/"LICENSE"]:
             if file.exists():
                 z.write(file, file.relative_to(DOCS.parent))
         for folder in (ROOT, DOCS/"assets/blocks", DOCS/"assets/fonts"):

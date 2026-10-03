@@ -2,7 +2,7 @@
 
 Both views project the same small geometric models. These are schematic
 illustrations, not dimensionally exact copies of the Space Engineers meshes.
-Run: python docs/assets/blocks/build.py
+Run: python tools/asset-builders/blocks/build.py
 """
 from __future__ import annotations
 
@@ -449,6 +449,7 @@ def main():
         for filename in ("contact-sheet.svg", "manifest.json", "README.md", "preview.html"):
             if (ROOT/filename).exists():
                 archive.write(ROOT/filename, filename)
+        archive.write(REPO/"LICENSE", "LICENSE")
     print(f"Built {len(manifest['assets'])} SVGs, a vector contact sheet, manifest and ZIP in {ROOT}")
 
 

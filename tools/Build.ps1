@@ -2,11 +2,11 @@
 .SYNOPSIS
 Build selected Space Engineers scripts or the shared graphics/tool assets.
 .EXAMPLE
-./Build.ps1 -Track experimental -Scripts AutoArm,ToolSwap
+./tools/Build.ps1 -Track experimental -Scripts AutoArm,ToolSwap
 .EXAMPLE
-./Build.ps1 -Track stable -Collection Release -Test
+./tools/Build.ps1 -Track stable -Collection Release -Test
 .EXAMPLE
-./Build.ps1 -Collection Assets
+./tools/Build.ps1 -Collection Assets
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
@@ -22,7 +22,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if ($Test -and $SourceOnly) { throw '-Test requires packed scripts; omit -SourceOnly.' }
-$RepositoryRoot = $PSScriptRoot
+$RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $trackRoot = Join-Path $RepositoryRoot $Track
 Import-Module (Join-Path $RepositoryRoot 'tools/build/Recipes.psm1') -Force -DisableNameChecking
 Set-BuildContext -TrackRoot $trackRoot -RepoRoot $RepositoryRoot -GameBin $GameBin

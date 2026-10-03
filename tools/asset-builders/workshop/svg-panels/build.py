@@ -138,6 +138,7 @@ def package(manifest):
     with zipfile.ZipFile(WORKSHOP / "AutoArm-Editable-SVG-Panels.zip", "w", zipfile.ZIP_DEFLATED) as archive:
         for path in publish:
             archive.write(path, str(path.relative_to(ROOT)))
+        archive.write(REPO / "LICENSE", "LICENSE")
     print(json.dumps({"svgPanels": len(manifest["panels"]), "svgComponents": len(manifest["components"]),
                       "editableText": True, "rasterImages": 0,
                       "restoredTerminalLabels": manifest['totalRestoredTerminalLabels']}))

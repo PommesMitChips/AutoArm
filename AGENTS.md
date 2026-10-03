@@ -9,7 +9,7 @@
 - Stable is the user-approved 1.1 non-prototype baseline. Experimental contains
   WIP and prototypes. Builds do not promote between tracks. Promote matching
   sources, dependencies and outputs only after explicit confirmation.
-- Use the single root `Build.ps1`. Readable iteration: `-Track experimental
+- Use `tools/Build.ps1`. Readable iteration: `-Track experimental
   -Scripts AutoArm -SourceOnly`. Full regression: `-Track experimental -Collection
   Release -Test`. Use `-List` for available targets.
 - Retain C#6, the 100,000 UTF-16 compact limit, ScriptPack semantic/token/IL checks

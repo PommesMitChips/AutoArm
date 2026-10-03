@@ -42,9 +42,9 @@ folder. Use `-GameBin` if that folder is somewhere other than the default Steam
 location. Run these commands from the repository root:
 
 ```powershell
-./Build.ps1 -Track experimental -Scripts AutoArm
-./Build.ps1 -Track experimental -Scripts AutoArm,ToolSwap
-./Build.ps1 -Track stable -Collection Release -Test
+./tools/Build.ps1 -Track experimental -Scripts AutoArm
+./tools/Build.ps1 -Track experimental -Scripts AutoArm,ToolSwap
+./tools/Build.ps1 -Track stable -Collection Release -Test
 ```
 
 Builds write source and compact files into the selected track. Edit the files in
@@ -65,3 +65,7 @@ tools/           Build tools, tests, asset generators and the panel assembler
 docs/            Guides and configuration examples
 docs/assets/     Diagrams, models, panels and image exports
 ```
+
+## License
+
+[MIT](LICENSE)

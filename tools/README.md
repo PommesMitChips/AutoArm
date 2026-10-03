@@ -1,6 +1,6 @@
 # Tools
 
-Run `Build.ps1` from the repository root to build scripts and assets.
+Run `./tools/Build.ps1` from the repository root to build scripts and assets.
 
 ## Build scripts
 
@@ -9,11 +9,11 @@ Engineers' `Bin64` folder for API and compiler checks. Set `-GameBin` to that fo
 if it is outside the default Steam location.
 
 ```powershell
-./Build.ps1 -Track experimental -Scripts All
-./Build.ps1 -Track experimental -Scripts AutoArm,ToolSwap
-./Build.ps1 -Track stable -Collection Release
-./Build.ps1 -Track experimental -Scripts AutoArm -SourceOnly
-./Build.ps1 -List
+./tools/Build.ps1 -Track experimental -Scripts All
+./tools/Build.ps1 -Track experimental -Scripts AutoArm,ToolSwap
+./tools/Build.ps1 -Track stable -Collection Release
+./tools/Build.ps1 -Track experimental -Scripts AutoArm -SourceOnly
+./tools/Build.ps1 -List
 ```
 
 | Option | Use |
@@ -44,7 +44,7 @@ refresh currently exceeds the programmable block's 100,000-character limit.
 Requires Python and Pillow. Update the SVG pack and panel assembler with:
 
 ```powershell
-./Build.ps1 -Collection Assets
+./tools/Build.ps1 -Collection Assets
 ```
 
 Use `-Python` to choose a Python executable. Generated artwork goes into
@@ -57,7 +57,7 @@ converters use Node.js and sharp.
 ## Tests
 
 ```powershell
-./Build.ps1 -Track experimental -Collection Release -Test
+./tools/Build.ps1 -Track experimental -Collection Release -Test
 node --test tools/panel-assembler/core.test.cjs
 ```
 
@@ -65,6 +65,7 @@ node --test tools/panel-assembler/core.test.cjs
 
 | Folder or file | Purpose |
 | --- | --- |
+| `Build.ps1` | Build scripts, tests and assets |
 | `build/` | Script assembly and build recipes |
 | `ScriptPack/` | C# checks and script compaction |
 | `PBCompileChecks/` | Compile checks against the game assemblies |

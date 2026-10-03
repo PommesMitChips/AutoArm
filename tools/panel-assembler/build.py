@@ -101,6 +101,7 @@ def main():
     with zipfile.ZipFile(ROOT / 'dist/AutoArm-Panel-Assembler.zip', "w", zipfile.ZIP_DEFLATED) as archive:
         archive.write(output, output.name)
         archive.write(ROOT / "README.md", "README.md")
+        archive.write(ROOT.parents[1] / "LICENSE", "LICENSE")
         for path in samples.glob("*.json"):
             archive.write(path, "templates/" + path.name)
         for path in (PANELS / "fonts").glob("*.txt"):

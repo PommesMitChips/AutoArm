@@ -54,7 +54,7 @@ a vector editor and add it with **Import SVG files**.
 Rebuild the bundled tool after editing its code or panel library:
 
 ```powershell
-./Build.ps1 -Scripts PanelAssembler
+./tools/Build.ps1 -Scripts PanelAssembler
 ```
 
 Run from the repository root with Python and Pillow installed. The HTML and ZIP
