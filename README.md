@@ -40,8 +40,9 @@ rotor head on the arm. Name the tool references `Arm 1 - Head 1`,
 
 ## Build
 
-Requires PowerShell 7, .NET 10 and an installed copy of Space Engineers.
-Run these commands from the repository root:
+Requires PowerShell 7, the .NET 10 SDK and the DLLs in Space Engineers' `Bin64`
+folder. Use `-GameBin` if that folder is somewhere other than the default Steam
+location. Run these commands from the repository root:
 
 ```powershell
 ./Build.ps1 -Track experimental -Scripts AutoArm

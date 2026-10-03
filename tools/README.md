@@ -4,7 +4,9 @@ Run `Build.ps1` from the repository root to build scripts and assets.
 
 ## Build scripts
 
-Script builds require PowerShell 7, .NET 10 and the Space Engineers game files.
+Script builds require PowerShell 7, the .NET 10 SDK and the DLLs in Space
+Engineers' `Bin64` folder for API and compiler checks. Set `-GameBin` to that folder
+if it is outside the default Steam location.
 
 ```powershell
 ./Build.ps1 -Track experimental -Scripts All
@@ -19,7 +21,7 @@ Script builds require PowerShell 7, .NET 10 and the Space Engineers game files.
 | `-Track` | Choose `stable` or `experimental`. Default: `experimental`. |
 | `-Scripts` | Build one script, a comma-separated list, or `All`. |
 | `-Collection` | Build a set of scripts; see the table below. |
-| `-SourceOnly` | Assemble readable source without compiling or compacting it. |
+| `-SourceOnly` | Generate and compile-check readable source without creating a compact file. |
 | `-Test` | Build the release scripts and run the regression tests. |
 | `-GameBin` | Set the path to Space Engineers' `Bin64` folder. |
 | `-WhatIf` | Show what would be built. |
