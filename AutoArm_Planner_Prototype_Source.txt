@@ -20,7 +20,7 @@ sealed class Node { public double[] Q; public int Parent; public Node(double[] q
 Random Random=new Random(1701);
 double[] SolveQ,TargetQ,EdgeFrom,EdgeTo;
 MatrixD SolveGoal;
-bool OrientationOnly,EdgeRunning,EdgeResult,EdgeDone,Swapped;
+bool OrientationOnly,EdgeRunning,EdgeResult,Swapped;
 int Iteration,Attempts,Nodes,EdgePurpose,NearIndex,JoinIndex,RouteCursor,SentEnd;
 readonly Stack<double[][]> Segments=new Stack<double[][]>();
 readonly List<double[]> EdgeRoute=new List<double[]>();
@@ -187,7 +187,7 @@ void SearchStep()
 int Nearest(List<Node> tree,double[] q){int found=0;double best=double.MaxValue;for(int i=0;i<tree.Count;i++){double d=Distance(tree[i].Q,q);if(d<best){best=d;found=i;}}return found;}
 void BeginEdge(double[] from,double[] to,int purpose)
 {
-    EdgeFrom=(double[])from.Clone();EdgeTo=(double[])to.Clone();EdgePurpose=purpose;Segments.Clear();Segments.Push(new double[][]{EdgeFrom,EdgeTo});EdgeRoute.Clear();EdgeRoute.Add(EdgeFrom);EdgeRunning=false;EdgeResult=true;EdgeDone=false;Phase="Edge";
+    EdgeFrom=(double[])from.Clone();EdgeTo=(double[])to.Clone();EdgePurpose=purpose;Segments.Clear();Segments.Push(new double[][]{EdgeFrom,EdgeTo});EdgeRoute.Clear();EdgeRoute.Add(EdgeFrom);EdgeRunning=false;EdgeResult=true;Phase="Edge";
 }
 double[][] Segment;
 int EdgeChecks;
@@ -358,7 +358,7 @@ double Clock
     {
         return P.Clock;
     }
-} double ScanAge;
+}
 double Clearance = .10   ;
 int MaxCells = 65536, MaxShapes = 8192;
 int TilesVisited, CandidatesSeen     ;
@@ -367,7 +367,7 @@ string Status = "Collision service starting.";
 bool Budget() { return Runtime.MaxInstructionCount <= 0 || Runtime.CurrentInstructionCount < Runtime.MaxInstructionCount * .65; }
 void RefreshScene(bool force)
 {
-    ScanAge = 0; Blocks.Clear(); GridTerminalSystem.GetBlocks(Blocks); Joints.Clear();
+     Blocks.Clear(); GridTerminalSystem.GetBlocks(Blocks); Joints.Clear();
     var alive = new HashSet<long>();
     foreach (var block in Blocks)
     {

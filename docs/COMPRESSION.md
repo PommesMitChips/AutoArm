@@ -22,7 +22,7 @@ Measured ordinary outputs before/after this pass:
 | Collision | 26,573 | 26,519 | 54 |
 | Bench | 23,565 | 23,536 | 29 |
 | Prototype Arm | 95,570 | 94,974 | 596 |
-| Prototype Planner | 40,082 | 39,996 | 86 |
+| Prototype Planner | 40,082 | 39,980 | 102 |
 
 Counts are UTF-16 code units, matching the PB limit. Arm now has 4,164 characters free. These are compression changes; motion gains, ownership, pairing and configuration formats remain unchanged.
 

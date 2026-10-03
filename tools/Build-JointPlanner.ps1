@@ -59,7 +59,8 @@ $start=$world.IndexOf('bool Authorised(');$end=$world.IndexOf('void ParseArm(');
 foreach($receiver in @('body','obstacle','grid','a','b')){$world=$world.Replace("$receiver.Grid.WorldMatrix","World($receiver)")}
 $world=$world.Replace('sealed class Arm','public sealed class Arm').Replace('sealed class Group','public sealed class Group').Replace('sealed class Joint','public sealed class Joint').Replace('sealed class ContactPair','public sealed class ContactPair')
 $world=$world.Replace('static double Separation(','double Separation(').Replace('static Vector3D Support(','Vector3D Support(')
-$world=$world.Replace('double Clock, ScanAge;','double Clock => P.Clock; double ScanAge;')
+$world=Change-One $world 'double Clock, ScanAge;' 'double Clock => P.Clock;'
+$world=Change-One $world 'ScanAge = 0;' ''
 $world=$world.Replace('public long Tag;','public long Tag; public bool Rod;')
 $world="sealed class PlanningWorld { readonly Program P; IMyGridTerminalSystem GridTerminalSystem => P.GridTerminalSystem; IMyGridProgramRuntimeInfo Runtime => P.Runtime; IMyProgrammableBlock Me => P.Me;`n"+$world+"`n"+[IO.File]::ReadAllText((Join-Path $workspace 'src/AutoArm.PlanningWorld.cs.txt'))+"`n}`n"
 $planner=[IO.File]::ReadAllText((Join-Path $workspace 'src/AutoArm.Planner.cs.txt'))+"`n"+$world
@@ -85,4 +86,6 @@ if(-not $SourceOnly){
     }
     & dotnet run --project (Join-Path $PSScriptRoot 'PBCompileChecks') -- --full $armPath (Join-Path $workspace 'AutoArm_JointPlanner_Prototype_Compact.txt') $plannerPath (Join-Path $workspace 'AutoArm_Planner_Prototype_Compact.txt')
     if($LASTEXITCODE -ne 0){throw 'Installed PB compiler rewrite failed.'}
+    & dotnet run --project (Join-Path $PSScriptRoot 'PBCompileChecks') -- --full --no-unused $plannerPath (Join-Path $workspace 'AutoArm_Planner_Prototype_Compact.txt')
+    if($LASTEXITCODE -ne 0){throw 'Planner has unused fields or failed game compilation.'}
 }

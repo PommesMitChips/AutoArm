@@ -21,11 +21,11 @@ internal static class Program
                 .Concat(new[] { "netstandard.dll", "Sandbox.Common.dll", "Sandbox.Game.dll", "SpaceEngineers.Game.dll", "VRage.dll", "VRage.Game.dll", "VRage.Library.dll", "VRage.Math.dll", "VRage.Scripting.dll" }.Select(p => Path.Combine(GameBin, p)))
                 .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p)).ToArray();
             Regression(rewriter, references);
-            bool full=args.Contains("--full"),combined=full||args.Contains("--combined");
-            foreach (string path in args.Where(p=>p!="--full"&&p!="--combined"))
+            bool full=args.Contains("--full"),combined=full||args.Contains("--combined"),noUnused=args.Contains("--no-unused");
+            foreach (string path in args.Where(p=>p!="--full"&&p!="--combined"&&p!="--no-unused"))
             {
                 var result = Rewrite(File.ReadAllText(path), path, rewriter, references);
-                RequireCompilation(result.Compilation);
+                RequireCompilation(result.Compilation,noUnused);
                 if(combined) {
                     var resource=assembly.GetType("VRage.Scripting.Rewriters.ResourceMonitoringRewriter",true)!;
                     var compiler=assembly.GetType("VRage.Scripting.MyScriptCompiler",true)!;
@@ -33,10 +33,10 @@ internal static class Program
                     var visitor=(CSharpSyntaxRewriter)Activator.CreateInstance(resource,BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance,
                         null,new object[]{compiler.GetField("Static",BindingFlags.Public|BindingFlags.Static)!.GetValue(null)!,result.Compilation,input,true},null)!;
                     var output=CSharpSyntaxTree.Create((CSharpSyntaxNode)visitor.Visit(input.GetRoot())!,Options,path);
-                    RequireCompilation(result.Compilation.ReplaceSyntaxTree(input,output));
+                    RequireCompilation(result.Compilation.ReplaceSyntaxTree(input,output),noUnused);
                     if(full){var normalized=output.GetRoot().NormalizeWhitespace().ToFullString();
                     var reparsed=CSharpSyntaxTree.ParseText(normalized,Options,path);
-                    RequireCompilation(result.Compilation.ReplaceSyntaxTree(input,reparsed));}
+                    RequireCompilation(result.Compilation.ReplaceSyntaxTree(input,reparsed),noUnused);}
                     Console.WriteLine($"Combined installed SE type-safety + resource-monitoring rewrite: PASS ({Path.GetFileName(path)})");
                 }
                 Console.WriteLine($"Installed SE type-safety/memory-safe rewrite + C#6: PASS ({Path.GetFileName(path)})");
@@ -64,12 +64,13 @@ internal static class Program
         return (compilation.ReplaceSyntaxTree(tree, rewritten), rewritten.ToString());
     }
 
-    static void RequireCompilation(CSharpCompilation compilation)
+    static void RequireCompilation(CSharpCompilation compilation,bool noUnused=false)
     {
         using var stream = new MemoryStream();
         var result = compilation.Emit(stream);
-        if (result.Success) return;
-        throw new Exception(string.Join(Environment.NewLine, result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Take(15)));
+        var rejected=result.Diagnostics.Where(d=>d.Severity==DiagnosticSeverity.Error||noUnused&&(d.Id=="CS0414"||d.Id=="CS0649"||d.Id=="CS0169")).ToArray();
+        if (result.Success&&rejected.Length==0) return;
+        throw new Exception(string.Join(Environment.NewLine,rejected.Take(15)));
     }
 
     static void Regression(Type rewriter, MetadataReference[] references)
