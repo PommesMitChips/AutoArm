@@ -1,5 +1,5 @@
 {
-  "backup": "C:/Users/Leo/Desktop/Workspaces/SpaceEngineers/Backups/AArmOS-before-cleanup-20261003-202322.zip",
+  "backup": "AArmOS-before-cleanup-20261003-202322.zip",
   "backupFiles": 2881,
   "backupCRCVerified": true,
   "release": "1.1",
@@ -17,5 +17,6 @@
   "experimentalPrototypeInputs": "preserved working-tree snapshots with version labels normalized; explicit refresh uses original guarded recipes",
   "refreshLimitation": "Current-core reallocation recipe packs to 101272 UTF-16 units; hard limit remains enforced.",
   "installedCopiesChanged": false,
-  "historicalTagsChanged": false
+  "historicalTagsChanged": false,
+  "backupLocation": "Stored outside this repository in the workspace Backups directory."
 }

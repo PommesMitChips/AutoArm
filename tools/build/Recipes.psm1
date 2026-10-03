@@ -86,7 +86,7 @@ if (-not $SourceOnly) { & ${function:Invoke-Pack} -Source AutoArm_Reallocation_P
 function Invoke-SelfPairsRecipe {
 param([string]$workspace,[string]$RepositoryRoot,[switch]$SourceOnly)
 $ErrorActionPreference = 'Stop'
-$script:source = [IO.File]::ReadAllText((Join-Path $workspace (Resolve-PartName 'AutoArm.Collision.cs.txt')))
+$script:source = (Read-Part 'AutoArm.Collision.cs.txt')
 function Replace-One([string]$old, [string]$new) {
     if (($script:source.Split(@($old), [StringSplitOptions]::None)).Count -ne 2) { throw "Prototype hook changed: $old" }
     $script:source = $script:source.Replace($old, $new)
@@ -206,7 +206,7 @@ $arm=Change-One $arm 'double s = Scale[i] = preference > 0 ? cap * Math.Sqrt(pre
 $arm=Change-One $arm 'Lo[i] = s > 1e-12 ? lo / s : 0;' 'if (GuidedRates != null && s > 1e-12) Bias[i] = Clamp(GuidedRates[i], -cap, cap) / s; Lo[i] = s > 1e-12 ? lo / s : 0;'
 $arm=Change-One $arm 'P.Tools.Contacts; }' 'P.Tools.Contacts + "/" + P.JointRpm + "/" + P.HomeJointRpm + "/" + P.PistonMps + "/" + P.HomePistonMps; }'
 $arm=$arm.TrimEnd();$arm=$arm.Substring(0,$arm.Length-1)+[IO.File]::ReadAllText((Join-Path $workspace (Resolve-PartName 'AutoArm.JointGuide.cs.txt')))+"`n}`n"
-$world=[IO.File]::ReadAllText((Join-Path $workspace (Resolve-PartName 'AutoArm.Collision.cs.txt')))
+$world=(Read-Part 'AutoArm.Collision.cs.txt')
 $start=$world.IndexOf('public Program()');$end=$world.IndexOf('bool Budget()');$world=$world.Remove($start,$end-$start)
 $start=$world.IndexOf('bool Authorised(');$end=$world.IndexOf('void ParseArm(');$world=$world.Remove($start,$end-$start)
 foreach($receiver in @('body','obstacle','grid','a','b')){$world=$world.Replace("$receiver.Grid.WorldMatrix","World($receiver)")}

@@ -1175,25 +1175,37 @@ static class AutoConfig
 }
 
 
-const string ConfigSection = "Config";
-const string ToolsSection = "Tools";
+const string ConfigSection = "Config";
+
+const string ToolsSection = "Tools";
 
 
 
-const string HomeSection = "AutoArm Home";
 
-const string ThreeDecimals = "0.000";
-const string EnabledKey = "Enabled";
-const string KeyboardKey = "ReadKeyboard";
-
-const string MovementModeKey = "MovementMode";
+const string HomeSection = "AutoArm Home";
 
 
-const string ToolWeightsSection = "AutoArm Tool Weights";
-const string OrientationToleranceKey = "OrientationTolerance";
-const string MouseKey = "ReadMouse";
-const string ForwardName = "Forward";
-const string RollKey = "ReadRoll";
+const string ThreeDecimals = "0.000";
+
+const string EnabledKey = "Enabled";
+
+const string KeyboardKey = "ReadKeyboard";
+
+
+const string MovementModeKey = "MovementMode";
+
+
+
+const string ToolWeightsSection = "AutoArm Tool Weights";
+
+const string OrientationToleranceKey = "OrientationTolerance";
+
+const string MouseKey = "ReadMouse";
+
+const string ForwardName = "Forward";
+
+const string RollKey = "ReadRoll";
+
 
 // ======================= DIRECT POSE CONTROL =======================
 // The topology/config fragment supplies AutoTopology, AutoGroup, AutoMember and
