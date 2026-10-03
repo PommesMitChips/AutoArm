@@ -3,7 +3,7 @@
 Use one Arm PB for both arms and keep Collision PB enabled. The survey is a separate, temporary PB. It reads equipment and ArmService poses; it does not drive joints, switch tools, stop an arm or start a path.
 
 1. Install the current Arm and Collision scripts. Configure both arms on the same Arm PB. For the second arm, use its own base and head names, such as `Arm 2 - Base - Rotor` and `Arm 2 - Head - Drill`. Tool-equipped arms can use their usual numbered head markers.
-2. Name a temporary programmable block **`Arm Survey`** and paste the entire [AutoArm_Survey.txt](../AutoArm_Survey.txt) into it.
+2. Name a temporary programmable block **`Arm Survey`** and paste the entire [AutoArm_Survey.txt](../experimental/AutoArm_Survey_Source.txt) into it.
 3. In the Arm PB's existing `[global]` section, retain the Safety peer and add the observer:
 
    ```ini

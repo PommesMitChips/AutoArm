@@ -1,0 +1,1406 @@
+const string ConfigSection = "Config";
+const string ToolsSection = "Tools";
+const string GeometryBudgetMessage = "Geometry budget; retry.";
+const string SwapSection = "AutoArm Swap";
+const string ApproachDockPhase = "ApproachDock";
+const string HomeSection = "AutoArm Home";
+const string ApproachTopPhase = "ApproachTop";
+const string ThreeDecimals = "0.000";
+const string EnabledKey = "Enabled";
+const string KeyboardKey = "ReadKeyboard";
+const string AlignTopPhase = "AlignTop";
+const string MovementModeKey = "MovementMode";
+const string ArmSection = "AutoArm";
+const string RetreatPhase = "Retreat";
+const string ToolWeightsSection = "AutoArm Tool Weights";
+const string OrientationToleranceKey = "OrientationTolerance";
+const string MouseKey = "ReadMouse";
+const string ForwardName = "Forward";
+const string RollKey = "ReadRoll";
+
+// ======================= DIRECT POSE CONTROL =======================
+// The topology/config fragment supplies AutoTopology, AutoGroup, AutoMember and
+// AutoConfig. This fragment owns commands, pose state, allocation and saved Home.
+
+const double PositionKp = 1.50;
+double PositionKi = 0.50;
+const double OrientationKp = 1.00;
+double OrientationKi = 0.25;
+double PositionCorrectionCap = 0.20;
+double OrientationCorrectionCapDeg = 5.0;
+const double PositionDeadbandM = 0.003;
+const double AimToleranceDeg = 0.15;
+const double ManualCounterCorrectionFraction = 0.50;
+double MaximumPilotTargetLeadM = 1.50;
+double PositionIntegralCap = 0.20;
+double OrientationIntegralCapDeg = 5.0;
+double PositionDamping, OrientationDamping;
+const double IntegralUnwindSeconds = 2.0;
+double JointAccelerationRpmPerSec = 1.0;
+double PistonAccelerationMps2 = 0.40;
+const double SolverDamping = 0.002;
+const double PositionTaskWeight = 1.0;
+const double OrientationTaskWeight = 5.0;
+const double StatusRefreshSeconds = 0.25;
+
+AutoTopology Topology;
+ToolSwapLink Tools;
+ArmServices Services;
+PivotProbeTool PivotProbe;
+bool Enabled, GoingHome, PendingOn, ConfigValid;
+bool PilotSelected = true;
+bool ReadKeyboard = true, ReadRoll = true, AimingTarget, LastCounterCorrectionLimited;
+bool ReadMouse;
+bool ToolDriving, SwapBatchLock;
+double ToolDriveMoveCap, ToolDriveTurnCap, ToolPositionBand, ToolOrientationBand;
+readonly Dictionary<string, double[]> ToolWeights = new Dictionary<string, double[]>();
+bool ToolWeightsLoaded;
+PilotMode MovementMode = PilotMode.HEAD;
+double MouseSensitivity = .025;
+string Status = "Starting OFF", LastFault = "";
+double MoveMps = 0.20, TurnDeg = 5.0, StepDeg = 5.0;
+double OrientationToleranceDeg = 3.0;
+double JointRpm = 0.50, PistonMps = 0.20;
+double HomeJointRpm = 0.50, HomePistonMps = 0.20;
+
+void ApplySettings(AutoSettings s)
+{
+    MoveMps = s.V[0]; TurnDeg = s.V[1]; StepDeg = s.V[2]; JointRpm = s.V[3]; PistonMps = s.V[4];
+    HomeJointRpm = s.V[5]; HomePistonMps = s.V[6]; OrientationToleranceDeg = s.V[7];
+    JointAccelerationRpmPerSec = s.V[8]; PistonAccelerationMps2 = s.V[9];
+    PositionCorrectionCap = s.V[10]; OrientationCorrectionCapDeg = s.V[11]; MaximumPilotTargetLeadM = s.V[12];
+    PositionKi = s.V[13]; OrientationKi = s.V[14]; PositionIntegralCap = s.V[15]; OrientationIntegralCapDeg = s.V[16];
+    ReadKeyboard = s.Keyboard; ReadRoll = s.Roll; ReadMouse = s.Mouse; MovementMode = s.Mode; MouseSensitivity = s.V[17];
+    PositionDamping = s.V[18]; OrientationDamping = s.V[19];
+    InputController = null; InputScan = 10;
+}
+Vector3D TargetP, TargetF, TargetU, PreviousP, PreviousF, PreviousU;
+Vector3D FilteredV, FilteredW, PositionI, OrientationI;
+bool TargetValid, ObservationValid;
+IMyShipController InputController;
+long PilotSeatId => 0;
+bool SeatAvailable(IMyShipController c) { return true; }
+readonly List<IMyShipController> InputScratch = new List<IMyShipController>();
+int InputScan;
+double ControlElapsed, SetupElapsed, StatusElapsed;
+string DisplayText = "";
+bool DisplayWritten, DisplayPinned;
+int RoutineStatusBuilds;
+
+// Kept as explicit fields so the additive-input invariant is testable and visible.
+Vector3D LastPilotLinear, LastPilotAngular;
+Vector3D LastFeedbackLinear, LastFeedbackAngular;
+Vector3D LastRequestedLinear, LastRequestedAngular;
+Vector3D LastAchievedLinear, LastAchievedAngular;
+Vector3D LastUnconstrainedLinear, LastUnconstrainedAngular;
+double LastLinearAdvance = 1, LastAngularAdvance = 1;
+double LastPositionError, LastOrientationErrorDeg;
+int LastSolverPasses, LastActiveBounds;
+bool LastSolverConverged, LastSolverBudgetLimited;
+
+double[,] J, B, Gram, Chol;
+double[] Scale, Lo, Hi, X, Trial, Task, Residual, Rhs, Temp, Solution, LastQdot, Bias;
+int[] BoundState;
+readonly Dictionary<long, double> Home = new Dictionary<long, double>();
+string HomeFingerprint = "";
+
+public Program()
+{
+    Runtime.UpdateFrequency = UpdateFrequency.Update10;
+    Topology = new AutoTopology(this, ArmName);
+    Tools = new ToolSwapLink(this);
+    Services = new ArmServices(this);
+    try { ZeroSavedDrives(); Discover(false); }
+    catch (Exception e)
+    {
+        Enabled = GoingHome = PendingOn = ConfigValid = false;
+        Status = LastFault = "Startup discovery exception: " + e.Message;
+        try { Topology.ZeroOwned(); } catch { }
+    }
+    Say(Banner() + "\n" + Status);
+    Echo(DisplayText);
+}
+
+public void Save()
+{
+    // Home is written immediately by SetHome. Save intentionally has no motion side effects.
+}
+
+// Reloading the PB does not clear native actuator velocities. Recover only
+// identities scoped to this PB/arm, before configuration can fail discovery.
+void ZeroSavedDrives()
+{
+    SavedDrives.Stop(AutoConfig.Saved(Storage), ArmName, Me, GridTerminalSystem);
+}
+
+public void Main(string argument, UpdateType source)
+{
+    DisplayWritten = false;
+    double elapsed = Runtime.TimeSinceLastRun.TotalSeconds;
+    bool timed = (source & (UpdateType.Update1 | UpdateType.Update10 | UpdateType.Update100 | UpdateType.Once)) != 0;
+    if (Finite(elapsed) && elapsed > 0)
+    {
+        if (Enabled || (Tools != null && Tools.Busy)) ControlElapsed += elapsed;
+        if (!Topology.Ready) SetupElapsed = Math.Min(0.5, SetupElapsed + elapsed);
+        StatusElapsed = Math.Min(StatusRefreshSeconds, StatusElapsed + elapsed);
+    }
+    try
+    {
+        if (Tools != null) Tools.Receive(elapsed);
+        if (Services != null) Services.Tick(elapsed);
+        if (!string.IsNullOrWhiteSpace(argument) && !((source & UpdateType.IGC) != 0 && argument == LinkTag)) RunCommands(argument);
+        if (Tools != null && Tools.Busy)
+        {
+            if (!ConfigValid) { Tools.Cancel("Invalid configuration; Reload required."); return; }
+            if (Tools.Automatic && HasPilotInput()) { Tools.Cancel("Pilot canceled swap."); return; }
+            if (ControlElapsed > 0.5) { Fault("Tool operation update gap exceeded 0.5 seconds."); return; }
+            if (!timed) return;
+            if (!Finite(elapsed) || elapsed < 0) { Fault("Invalid tool operation interval."); return; }
+            double toolDt = ControlElapsed;
+            if (toolDt <= 0.000001) return;
+            ControlElapsed = 0;
+            Tools.Tick(Math.Min(toolDt, .1), toolDt);
+            return;
+        }
+        if (!Topology.Ready)
+        {
+            // A validation failure must require a new explicit On. Stable setup may
+            // recover diagnostics while Off, but it must never resume old commands.
+            if (Enabled || GoingHome)
+            {
+                StopMotion("Topology lost readiness; stopped. Run Check/Rescan/Reload, then On.");
+                Say(Status);
+                return;
+            }
+            if (!timed || !Finite(elapsed) || elapsed < 0 || SetupElapsed <= 0.000001) return;
+            SetupElapsed = 0;
+            MaintainSetup();
+            if (!Topology.Ready) return;
+        }
+        if (PendingOn)
+        {
+            PendingOn = false;
+            EnableControl();
+        }
+        if (!Enabled) return;
+        if (ControlElapsed > 0.5) { Fault("Control update gap exceeded 0.5 seconds."); return; }
+        // Commands can run in the same simulation frame as the previous call.
+        // They change state immediately, but only timed updates advance motion.
+        if (!timed) return;
+        if (!Finite(elapsed) || elapsed < 0) { Fault("Invalid negative/non-finite control interval."); return; }
+        double dt = ControlElapsed;
+        if (dt <= 0.000001) return;
+        ControlElapsed = 0;
+        if (dt > 0.5) { Fault("Control update gap exceeded 0.5 seconds."); return; }
+        if (LocalPath != null)
+        {
+            string why; if (HasPilotInput()) { StopMotion("Pilot canceled path."); Say(Status); return; }
+            if (!Tools.AllowManual(out why) || !StepPath(LocalPath, Math.Min(dt, .1), dt, out why)) { Fault(why); return; }
+            if (LocalPath.Done) { LocalPath = null; EnableControl(); Say("Path complete; ON hold."); }
+        }
+        else if (GoingHome) UpdateHome(Math.Min(dt, 0.1));
+        else UpdateControl(Math.Min(dt, 0.1), dt);
+    }
+    catch (Exception e)
+    {
+        Fault("Controller exception: " + e.Message);
+    }
+    finally
+    {
+        // SE clears the PB display on every invocation. Replay cached output;
+        // routine numeric formatting happens at 4 Hz, not every control tick.
+        Echo(DisplayText);
+    }
+}
+
+void Say(string text)
+{
+    DisplayText = DisplayWritten ? DisplayText + "\n" + text : text;
+    if (DisplayText.Length > 8000) DisplayText = DisplayText.Substring(DisplayText.Length - 8000);
+    DisplayWritten = true;
+}
+
+string Banner()
+{
+    return "AutoArm " + ControllerBuildVersion + " | " + ArmName;
+}
+
+void Discover(bool explicitRequest)
+{
+    StopMotion("");
+    PivotProbe = null;
+    SetupElapsed = 0;
+    ConfigValid = false;
+    string why;
+    AutoConfig.EnsureDefaults(this);
+    MyIni toolConfig; var options = new AutoSettings();
+    if (!AutoConfig.ReadCurrent(this, Me.CustomData, out toolConfig, out why) || !options.Read(toolConfig, out why)) throw new Exception(why);
+    if (Tools != null && !Tools.Load(out why)) throw new Exception(why);
+    Services.Load(toolConfig);
+    if (Tools != null && Tools.Configured)
+    {
+        string preserved; bool differs;
+        if (!AutoConfig.LoadOrGenerate(this, Topology, Me.CustomData, out preserved, out differs, out why, true)) throw new Exception(why);
+        foreach (var group in Topology.Groups)
+        { double[] values; if (ToolWeights.TryGetValue(ToolGroupKey(group), out values)) { group.MoveW = values[0]; group.TurnW = values[1]; } }
+        ApplySettings(options); ConfigValid = true; Runtime.UpdateFrequency = UpdateFrequency.Update1;
+        Status = "Waiting for ToolSwap setup."; if (explicitRequest) Say(Status); return;
+    }
+    Topology.SetEndpointOverride(Tools == null ? null : Tools.Endpoint, Tools == null ? 0 : Tools.IgnoredMount, Tools == null ? null : Tools.EndFrame, Tools == null ? null : Tools.Focus);
+    if (!Topology.Discover(out why))
+    {
+        Status = "Discovery failed: " + why;
+        if (explicitRequest) Say(Status);
+        return;
+    }
+    Topology.ZeroOwned();
+    string updated;
+    bool changed;
+    if (!AutoConfig.LoadOrGenerate(this, Topology, Me.CustomData, out updated, out changed, out why))
+    {
+        Status = "Custom Data refused: " + why;
+        if (explicitRequest) Say(Status);
+        return;
+    }
+    ConfigValid = true;
+    Allocate(Topology.Groups.Count);
+    LoadHome();
+    Status = (changed ? "Configuration generated/updated; " : "Configuration loaded; ") +
+        Topology.Groups.Count + " groups found. Waiting for stable stopped scans.";
+    Runtime.UpdateFrequency = Tools != null && Tools.Busy ? UpdateFrequency.Update1 : UpdateFrequency.Update10;
+    if (explicitRequest) Say(Status + "\n" + Topology.Report);
+}
+
+void MaintainSetup()
+{
+    if (!ConfigValid) return;
+    string why;
+    Topology.ZeroOwned();
+    if (!Topology.StableSetup(out why))
+    {
+        Status = "Setup waiting: " + why;
+        return;
+    }
+    Status = "Ready and OFF. Run On.";
+    if (!CheckArmLayout(out why)) { Topology.Ready = false; if (why.StartsWith("Waiting", StringComparison.Ordinal)) { Status = why; return; } ConfigValid = false; Fault(why); return; }
+    PruneToolWeights();
+    Say(Banner() + "\n" + Status);
+}
+
+// The host supplies per-arm shared-layout validation in the multi-arm build.
+bool CheckArmLayout(out string why) { why = ""; return true; }
+
+void Allocate(int n)
+{
+    J = new double[6, n];
+    B = new double[6, n];
+    Gram = new double[6, 6];
+    Chol = new double[6, 6];
+    Scale = new double[n]; Lo = new double[n]; Hi = new double[n];
+    X = new double[n]; Trial = new double[n]; LastQdot = new double[n]; Bias = new double[n];
+    BoundState = new int[n];
+    Task = new double[6]; Residual = new double[6]; Rhs = new double[6];
+    Temp = new double[6]; Solution = new double[6];
+}
+
+void EnableControl()
+{
+    string toolWhy = "";
+    if (SwapBatchLock || (Tools != null && !Tools.AllowManual(out toolWhy)))
+    { PendingOn = false; Say(SwapBatchLock ? "On refused in tool command batch." : "On refused: " + toolWhy); return; }
+    if (!ConfigValid)
+    {
+        PendingOn = false;
+        Status = "On refused: Custom Data configuration is invalid. Fix it, then Reload.";
+        Say(Status);
+        return;
+    }
+    if (!Topology.Ready)
+    {
+        PendingOn = true;
+        Status = "On pending: two stopped scans required.";
+        Runtime.UpdateFrequency = UpdateFrequency.Update10;
+        Say(Status);
+        return;
+    }
+    string why;
+    if (!CheckArmLayout(out why) || !Topology.Validate(out why, true)) { Fault("On refused: " + why); return; }
+    Vector3D p, f, u;
+    if (!ReadPose(out p, out f, out u)) { Fault("On refused: Base/Head markers unavailable."); return; }
+    CapturePose(p, f, u);
+    PivotProbe = null;
+    LastPilotLinear = LastPilotAngular = LastFeedbackLinear = LastFeedbackAngular = Vector3D.Zero;
+    LastRequestedLinear = LastRequestedAngular = LastAchievedLinear = LastAchievedAngular = Vector3D.Zero;
+    LastLinearAdvance = LastAngularAdvance = 1;
+    LastPositionError = LastOrientationErrorDeg = 0;
+    LastSolverPasses = LastActiveBounds = 0;
+    LastSolverConverged = LastSolverBudgetLimited = false;
+    LastFault = "";
+    Enabled = true;
+    GoingHome = false;
+    ControlElapsed = 0;
+    StatusElapsed = StatusRefreshSeconds;
+    DisplayPinned = false;
+    InputController = null;
+    InputScan = 10;
+    Runtime.UpdateFrequency = UpdateFrequency.Update1;
+    Status = "ON: pilot input plus pose feedback";
+    Say(Banner() + "\n" + Status);
+}
+
+void StartControl()
+{
+    if (SwapBatchLock) { Say("Tool busy; Stop first."); return; }
+    Discover(false);
+    if (!ConfigValid) { Say(Status); return; }
+    if (Tools != null && Tools.Busy) Tools.StartOn();
+    else EnableControl();
+}
+
+void StopMotion(string reason)
+{
+    if (Services != null) Services.Revoke(reason);
+    if (Topology != null) Topology.ZeroOwned();
+    if (Tools != null) Tools.ZeroMount();
+    Enabled = GoingHome = PendingOn = false;
+    LocalPath = null;
+    ControlElapsed = 0;
+    DisplayPinned = false;
+    TargetValid = ObservationValid = false;
+    AimingTarget = false;
+    PositionI = OrientationI = Vector3D.Zero;
+    if (LastQdot != null) Array.Clear(LastQdot, 0, LastQdot.Length);
+    if (BoundState != null) Array.Clear(BoundState, 0, BoundState.Length);
+    Runtime.UpdateFrequency = UpdateFrequency.Update10;
+    if (!string.IsNullOrWhiteSpace(reason))
+    {
+        Status = reason;
+        LastFault = reason;
+    }
+}
+
+void Fault(string reason)
+{
+    if (Tools != null && Tools.Busy) Tools.Cancel(reason);
+    StopMotion(reason);
+    Say("STOPPED: " + reason);
+}
+
+bool ReadPose(out Vector3D p, out Vector3D f, out Vector3D u)
+{
+    p = f = u = Vector3D.Zero;
+    if (Topology == null || Topology.Base == null || Topology.End == null || Topology.Base.Closed || Topology.End.Closed) return false;
+    MatrixD r = Topology.Base.WorldMatrix;
+    p = InFrame(Topology.EndPosition - Topology.Base.GetPosition(), r);
+    var pose = Topology.EndPose;
+    f = InFrame(pose.Forward, r);
+    u = InFrame(pose.Up, r);
+    if (!Finite(p.LengthSquared())) return false;
+    return Orthonormalise(ref f, ref u);
+}
+
+void UpdateControl(double dt, double observationDt)
+{
+    string why;
+    if (!ToolDriving && Tools != null && !Tools.AllowManual(out why)) { Fault(why); return; }
+    if (!Topology.Validate(out why, false, true)) { Fault("Topology changed: " + why); return; }
+    Vector3D p, f, u;
+    if (!ReadPose(out p, out f, out u)) { Fault("Base/Head marker became unavailable."); return; }
+    if (!TargetValid) { Fault("No held pose. Run On."); return; }
+    Vector3D measuredV = Vector3D.Zero, measuredW = Vector3D.Zero;
+    if (ObservationValid)
+    {
+        measuredV = (p - PreviousP) / observationDt;
+        measuredW = RotationError(PreviousF, PreviousU, f, u) / observationDt;
+        double blend = observationDt / (0.15 + observationDt);
+        FilteredV += (measuredV - FilteredV) * blend;
+        FilteredW += (measuredW - FilteredW) * blend;
+    }
+    PreviousP = p; PreviousF = f; PreviousU = u; ObservationValid = true;
+    var safety = Services == null ? null : Services.Safety;
+    if (safety != null && (!safety.Ready || safety.Blocked)) { safety.Hold(); return; }
+
+    Vector3D pe = TargetP - p;
+    Vector3D oe = RotationError(f, u, TargetF, TargetU);
+    LastPositionError = pe.Length();
+    LastOrientationErrorDeg = oe.Length() * 180 / Math.PI;
+    if (!Finite(LastPositionError) || !Finite(LastOrientationErrorDeg)) { Fault("Non-finite pose feedback."); return; }
+
+    if (ToolDriving) LastPilotLinear = LastPilotAngular = Vector3D.Zero;
+    else ReadPilot(f, u, out LastPilotLinear, out LastPilotAngular);
+    bool manualTurn = LastPilotAngular.LengthSquared() > 1e-12;
+    if (manualTurn) AimingTarget = false;
+    if (AimingTarget && LastOrientationErrorDeg <= AimToleranceDeg) AimingTarget = false;
+    bool aiming = ToolDriving || manualTurn || AimingTarget;
+    double orientationBand = ToolDriving ? ToolOrientationBand : (aiming ? 0.5 * AimToleranceDeg : OrientationToleranceDeg) * Math.PI / 180;
+    Vector3D positionDemand = Outside(pe, ToolDriving ? ToolPositionBand : PositionDeadbandM) * PositionKp;
+    Vector3D orientationDemand = Outside(oe, orientationBand) * OrientationKp;
+    if (ToolDriving)
+    {
+        positionDemand = ClampLength(positionDemand, ToolDriveMoveCap);
+        orientationDemand = ClampLength(orientationDemand, ToolDriveTurnCap);
+    }
+    // Measured-motion damping stays inside additive, bounded correction.
+    // Preserve the idle deadbands rather than chase measurement jitter.
+    double pd = ToolDriving || LastPilotLinear.LengthSquared() > 1e-12 || LastPositionError > PositionDeadbandM ? PositionDamping : 0;
+    double od = ToolDriving || manualTurn || oe.Length() > orientationBand ? OrientationDamping : 0;
+    Vector3D rawPositionFeedback = positionDemand + PositionI - FilteredV * pd;
+    Vector3D rawOrientationFeedback = orientationDemand + OrientationI - FilteredW * od;
+    Vector3D boundedPositionFeedback = ClampLength(rawPositionFeedback, ToolDriving ? ToolDriveMoveCap : PositionCorrectionCap);
+    LastFeedbackLinear = BlendManualCorrection(LastPilotLinear, boundedPositionFeedback,
+        ManualCounterCorrectionFraction, out LastCounterCorrectionLimited);
+    bool angularLimited;
+    LastFeedbackAngular = BlendManualCorrection(LastPilotAngular, ClampLength(rawOrientationFeedback,
+        ToolDriving ? ToolDriveTurnCap : Math.Min(TurnDeg, OrientationCorrectionCapDeg) * Math.PI / 180),
+        ManualCounterCorrectionFraction, out angularLimited);
+    LastCounterCorrectionLimited |= angularLimited;
+
+    // Core invariant: tracking correction is added to live pilot demand. Pose error,
+    // recovery state and target advancement never suppress pilot input. Explicit
+    // collision supervision can restrict accepted motion after demand formation.
+    LastRequestedLinear = LastPilotLinear + LastFeedbackLinear;
+    LastRequestedAngular = LastPilotAngular + LastFeedbackAngular;
+    double motionScale = safety == null ? 1 : safety.Scale;
+    LastRequestedLinear *= motionScale; LastRequestedAngular *= motionScale;
+    if (!Solve(p, dt, LastRequestedLinear, LastRequestedAngular, out LastAchievedLinear,
+        out LastAchievedAngular, out why))
+    {
+        Fault("Velocity allocation failed: " + why);
+        return;
+    }
+    if (!Commit()) return;
+
+    Vector3D positionClipResidual = rawPositionFeedback - LastFeedbackLinear * motionScale;
+    Vector3D orientationClipResidual = rawOrientationFeedback - LastFeedbackAngular * motionScale;
+    // Only loss caused by command bounds inhibits bias learning. Damping and
+    // unreachable task components exist even in the unconstrained reference.
+    Vector3D positionAllocationResidual = LastUnconstrainedLinear - LastAchievedLinear;
+    Vector3D orientationAllocationResidual = LastUnconstrainedAngular - LastAchievedAngular;
+    UpdateIntegral(ref PositionI, ToolDriving ? positionDemand - FilteredV : pe, ToolDriving ? 0 : PositionDeadbandM, positionClipResidual, positionAllocationResidual,
+        ToolDriving ? PositionKi / PositionKp : PositionKi, Math.Min(PositionIntegralCap, ToolDriving ? ToolDriveMoveCap : PositionCorrectionCap), ToolDriving ? double.MaxValue : 0.10, dt, LastSolverConverged && !LastSolverBudgetLimited);
+    UpdateIntegral(ref OrientationI, ToolDriving ? orientationDemand - FilteredW : oe, ToolDriving ? 0 : orientationBand, orientationClipResidual, orientationAllocationResidual, ToolDriving ? OrientationKi / OrientationKp : OrientationKi,
+        Math.Min(OrientationIntegralCapDeg * Math.PI / 180, ToolDriving ? ToolDriveTurnCap : Math.Min(TurnDeg, OrientationCorrectionCapDeg) * Math.PI / 180), ToolDriving ? double.MaxValue : 10.0 * Math.PI / 180,
+        dt, LastSolverConverged && !LastSolverBudgetLimited);
+
+    LastLinearAdvance = PilotAdvance(LastPilotLinear, LastAchievedLinear - LastFeedbackLinear * motionScale);
+    LastAngularAdvance = PilotAdvance(LastPilotAngular, LastAchievedAngular - LastFeedbackAngular * motionScale);
+    if (safety != null) { LastLinearAdvance = Math.Min(LastLinearAdvance, motionScale * safety.Fraction); LastAngularAdvance = Math.Min(LastAngularAdvance, motionScale * safety.Fraction); }
+    // Allocation is a kinematic prediction, not measured delivery. Bound newly
+    // requested target lead even when physical contact prevents predicted motion.
+    LastLinearAdvance *= TargetLeadAdvance(pe, LastPilotLinear * (dt * LastLinearAdvance), MaximumPilotTargetLeadM);
+    TargetP += LastPilotLinear * (dt * LastLinearAdvance);
+    if (LastPilotAngular.LengthSquared() > 1e-20 && LastAngularAdvance > 0)
+    {
+        Vector3D step = LastPilotAngular * (dt * LastAngularAdvance);
+        TargetF = Rotate(TargetF, step); TargetU = Rotate(TargetU, step);
+        Orthonormalise(ref TargetF, ref TargetU);
+    }
+    RenderRoutineStatus();
+}
+
+void RenderRoutineStatus()
+{
+    if (DisplayWritten || DisplayPinned || StatusElapsed < StatusRefreshSeconds) return;
+    StatusElapsed = 0;
+    RoutineStatusBuilds++;
+    Status = (ToolDriving ? "PATH motion | remaining " : "ON | input+feedback | error ") + (ToolDriving ? PathRemainingDistance : LastPositionError).ToString(ThreeDecimals) + " m / " +
+        LastOrientationErrorDeg.ToString("0.00") + " deg";
+    if (LastCounterCorrectionLimited) Status += " | manual priority";
+    if (ToolDriving)
+    { Say(Status + "\nSpeed command " + LastRequestedLinear.Length().ToString(ThreeDecimals) + " m/s. Stop cancels the path."); return; }
+    Say(Status + "\nPilot " + LastPilotLinear.Length().ToString(ThreeDecimals) + " + feedback " +
+        LastFeedbackLinear.Length().ToString(ThreeDecimals) + " m/s; advance " +
+        (100 * LastLinearAdvance).ToString("0") + "%\nSolver " + LastSolverPasses +
+        " passes; " + LastActiveBounds + " bounds. Stop zeros drives.");
+}
+
+bool Solve(Vector3D headReferencePosition, double dt, Vector3D linear, Vector3D angular,
+    out Vector3D achievedLinear, out Vector3D achievedAngular, out string why)
+{
+    achievedLinear = achievedAngular = Vector3D.Zero;
+    why = "";
+    LastSolverPasses = LastActiveBounds = 0;
+    LastSolverConverged = LastSolverBudgetLimited = false;
+    int n = Topology.Groups.Count;
+    double moveDemand = linear.Length(), turnDemand = angular.Length();
+    double demand = moveDemand + turnDemand;
+    MatrixD frame = Topology.Base.WorldMatrix;
+    Vector3D headWorld = Topology.EndPosition;
+    for (int i = 0; i < n; i++)
+    {
+        AutoGroup g = Topology.Groups[i];
+        double physicalLo, physicalHi;
+        if (!Topology.Refresh(g, headWorld, frame, out physicalLo, out physicalHi, out why)) return false;
+        double cap = g.Rotary ? JointRpm * Math.PI / 30 : PistonMps;
+        double lo = Math.Max(physicalLo, -cap), hi = Math.Min(physicalHi, cap);
+        double accel = g.Rotary ? JointAccelerationRpmPerSec * Math.PI / 30 : PistonAccelerationMps2;
+        if (accel > 0)
+        {
+            // A changed limit/lock may make the old command infeasible. Centre the
+            // acceleration window on the nearest currently feasible command.
+            double centre = Clamp(LastQdot[i], lo, hi);
+            lo = Math.Max(lo, centre - accel * dt);
+            hi = Math.Min(hi, centre + accel * dt);
+        }
+        if (lo > hi + 1e-10) { why = "No common command interval for " + g.Label; return false; }
+        double preference = demand > 1e-9 ? (moveDemand * g.MoveW + turnDemand * g.TurnW) / demand :
+            0.5 * (g.MoveW + g.TurnW);
+        double s = Scale[i] = preference > 0 ? cap * Math.Sqrt(preference) : 0;
+        Bias[i] = s > 1e-12 && Services != null && Services.Safety != null ? Services.Safety.Preferred(i) / s : 0;
+        Lo[i] = s > 1e-12 ? lo / s : 0;
+        Hi[i] = s > 1e-12 ? hi / s : 0;
+        X[i] = s > 1e-12 ? Clamp(LastQdot[i] / s, Lo[i], Hi[i]) : 0;
+        int old = BoundState[i];
+        BoundState[i] = Hi[i] - Lo[i] <= 1e-12 ? 2 :
+            old == -1 && Math.Abs(X[i] - Lo[i]) <= 1e-9 ? -1 :
+            old == 1 && Math.Abs(X[i] - Hi[i]) <= 1e-9 ? 1 : 0;
+        for (int r = 0; r < 6; r++)
+        {
+            double weight = r < 3 ? PositionTaskWeight : OrientationTaskWeight;
+            J[r, i] = Component(r < 3 ? g.Lin : g.Ang, r % 3);
+            B[r, i] = weight * J[r, i] * s;
+        }
+    }
+    for (int r = 0; r < 6; r++)
+    {
+        double weight = r < 3 ? PositionTaskWeight : OrientationTaskWeight;
+        Task[r] = weight * Component(r < 3 ? linear : angular, r % 3);
+    }
+    double ridge = SolverDamping * SolverDamping;
+    int maxPasses = Math.Min(64, Math.Max(8, 2 * n + 4));
+    for (int pass = 0; pass < maxPasses; pass++)
+    {
+        if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.68)
+        {
+            LastSolverBudgetLimited = true;
+            break;
+        }
+        LastSolverPasses = pass + 1;
+        BuildTaskMatrix(n, ridge, true);
+        if (!Cholesky(Gram, Rhs, Chol, Temp, Solution)) { why = "singular/non-finite damped task matrix"; return false; }
+        double alpha = 1;
+        int hit = -1, side = 0;
+        for (int i = 0; i < n; i++)
+        {
+            Trial[i] = X[i];
+            if (BoundState[i] != 0) continue;
+            double value = Bias[i];
+            for (int r = 0; r < 6; r++) value += B[r, i] * Solution[r];
+            Trial[i] = value;
+            double delta = value - X[i];
+            int bound = delta < -1e-14 && value < Lo[i] - 1e-12 ? -1 :
+                delta > 1e-14 && value > Hi[i] + 1e-12 ? 1 : 0;
+            if (bound != 0)
+            {
+                double a = Math.Max(0, ((bound < 0 ? Lo[i] : Hi[i]) - X[i]) / delta);
+                if (a < alpha) { alpha = a; hit = i; side = bound; }
+            }
+        }
+        for (int i = 0; i < n; i++) if (BoundState[i] == 0)
+            X[i] = Clamp(X[i] + alpha * (Trial[i] - X[i]), Lo[i], Hi[i]);
+        if (hit >= 0)
+        {
+            X[hit] = side < 0 ? Lo[hit] : Hi[hit];
+            BoundState[hit] = side;
+            continue;
+        }
+        for (int r = 0; r < 6; r++)
+        {
+            double value = -Task[r];
+            for (int i = 0; i < n; i++) value += B[r, i] * X[i];
+            Residual[r] = value;
+        }
+        int release = -1;
+        double worst = 1e-9;
+        for (int i = 0; i < n; i++)
+        {
+            if (BoundState[i] == 0 || BoundState[i] == 2) continue;
+            double gradient = ridge * (X[i] - Bias[i]);
+            for (int r = 0; r < 6; r++) gradient += B[r, i] * Residual[r];
+            double violation = BoundState[i] < 0 ? -gradient : gradient;
+            if (violation > worst) { worst = violation; release = i; }
+        }
+        if (release >= 0) { BoundState[release] = 0; continue; }
+        LastSolverConverged = true;
+        break;
+    }
+    if (LastSolverPasses == 0) { why = "no instruction budget for a solver pass"; return false; }
+    for (int i = 0; i < n; i++)
+    {
+        double velocity = X[i] * Scale[i];
+        if (!Finite(velocity)) { why = "non-finite group velocity"; return false; }
+        LastQdot[i] = velocity;
+        if (BoundState[i] != 0) LastActiveBounds++;
+    }
+    var protection = Services == null ? null : Services.Safety;
+    if (protection != null) protection.Limit(LastQdot);
+    for (int i = 0; i < n; i++) { achievedLinear += Topology.Groups[i].Lin * LastQdot[i]; achievedAngular += Topology.Groups[i].Ang * LastQdot[i]; }
+    LastUnconstrainedLinear = achievedLinear; LastUnconstrainedAngular = achievedAngular;
+    if ((LastActiveBounds > 0 || protection != null && protection.Limited) && LastSolverConverged && !LastSolverBudgetLimited)
+    {
+        if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.68) LastSolverBudgetLimited = true;
+        else if (!UnconstrainedTask(n, ridge, out LastUnconstrainedLinear, out LastUnconstrainedAngular))
+        { why = "non-finite unconstrained task reference"; return false; }
+    }
+    return Finite(achievedLinear.LengthSquared()) && Finite(achievedAngular.LengthSquared());
+}
+
+static double Component(Vector3D v, int axis)
+{
+    return axis == 0 ? v.X : axis == 1 ? v.Y : v.Z;
+}
+
+void BuildTaskMatrix(int n, double ridge, bool bounded)
+{
+    for (int r = 0; r < 6; r++)
+    {
+        Rhs[r] = Task[r];
+        if (bounded) for (int i = 0; i < n; i++) if (BoundState[i] != 0) Rhs[r] -= B[r, i] * X[i];
+        for (int i = 0; i < n; i++) if (!bounded || BoundState[i] == 0) Rhs[r] -= B[r, i] * Bias[i];
+        for (int c = 0; c <= r; c++)
+        {
+            double total = r == c ? ridge : 0;
+            for (int i = 0; i < n; i++) if (!bounded || BoundState[i] == 0) total += B[r, i] * B[c, i];
+            Gram[r, c] = total;
+        }
+    }
+}
+
+bool UnconstrainedTask(int n, double ridge, out Vector3D linear, out Vector3D angular)
+{
+    linear = angular = Vector3D.Zero;
+    BuildTaskMatrix(n, ridge, false);
+    if (!Cholesky(Gram, Rhs, Chol, Temp, Solution)) return false;
+    for (int i = 0; i < n; i++)
+    {
+        double rate = Bias[i];
+        for (int r = 0; r < 6; r++) rate += B[r, i] * Solution[r];
+        rate *= Scale[i];
+        linear += Topology.Groups[i].Lin * rate; angular += Topology.Groups[i].Ang * rate;
+    }
+    return Finite(linear.LengthSquared()) && Finite(angular.LengthSquared());
+}
+
+bool Commit()
+{
+    if (GoingHome && Services != null && Services.Safety != null)
+    { if (!Services.Safety.Ready || Services.Safety.Blocked) { Services.Safety.Hold(); return false; } Services.Safety.Limit(LastQdot); }
+    if (Runtime.CurrentInstructionCount > Runtime.MaxInstructionCount * 0.88)
+    {
+        Fault("Instruction budget exhausted before output commit.");
+        return false;
+    }
+    for (int i = 0; i < Topology.Groups.Count; i++) Topology.Set(Topology.Groups[i], LastQdot[i]);
+    // Every member of a proven parallel group receives its signed group command.
+    return true;
+}
+
+void UpdateIntegral(ref Vector3D integral, Vector3D error, double deadband,
+    Vector3D clipResidual, Vector3D allocationResidual, double ki,
+    double cap, double capture, double dt, bool permit)
+{
+    Vector3D outside = Outside(error, deadband);
+    if (ki <= 0 || !permit || error.Length() > capture)
+    {
+        integral = IntegralUnwindSeconds <= 0 ? Vector3D.Zero : integral / (1 + dt / IntegralUnwindSeconds);
+        return;
+    }
+    // A held pose still needs the learned load bias. Reaching the deadband is
+    // success, not a reason to leak gravity compensation away.
+    integral = ClampLength(integral, cap);
+    if (outside.LengthSquared() < 1e-20) return;
+    Vector3D delta = outside * (ki * dt);
+    // Treat output/limiter clipping and actuator allocation as independent
+    // constraints: their residuals may oppose and numerically cancel.
+    double scale = Math.Min(IntegralGrowthScale(delta, integral, clipResidual),
+        IntegralGrowthScale(delta, integral, allocationResidual));
+    integral = ClampLength(integral + delta * scale, cap);
+}
+
+static double IntegralGrowthScale(Vector3D delta, Vector3D integral, Vector3D residual)
+{
+    double growth = Vector3D.Dot(delta, residual);
+    if (growth <= 1e-12) return 1;
+    // Scale the original increment jointly for both constraints. Sequential
+    // vector projections can rotate it back into a previously blocked direction.
+    return Clamp(-Vector3D.Dot(integral, residual) / growth, 0, 1);
+}
+
+static Vector3D BlendManualCorrection(Vector3D pilotVelocity, Vector3D correction,
+    double maximumOppositionFraction, out bool limited)
+{
+    limited = false;
+    double speed = pilotVelocity.Length();
+    if (speed <= 1e-12) return correction;
+    Vector3D direction = pilotVelocity / speed;
+    double component = Vector3D.Dot(correction, direction);
+    double minimum = -speed * maximumOppositionFraction;
+    if (component >= minimum) return correction;
+    limited = true;
+    return correction + direction * (minimum - component);
+}
+
+double PilotAdvance(Vector3D pilot, Vector3D achievedMinusFeedback)
+{
+    double d = pilot.LengthSquared();
+    if (d < 1e-12) return 1;
+    return Clamp(Vector3D.Dot(achievedMinusFeedback, pilot) / d, 0, 1);
+}
+
+static double TargetLeadAdvance(Vector3D error, Vector3D step, double limit)
+{
+    double a = step.LengthSquared();
+    if (a < 1e-20) return 1;
+    double e = error.LengthSquared(), radius = Math.Max(limit * limit, e);
+    if ((error + step).LengthSquared() <= radius) return 1;
+    double b = Vector3D.Dot(error, step);
+    double root = Math.Sqrt(Math.Max(0, b * b + a * (radius - e)));
+    // The alternate root avoids subtracting near-equal positive values.
+    return Clamp(b >= 0 ? (root + b > 0 ? (radius - e) / (root + b) : 0) : (root - b) / a, 0, 1);
+}
+
+static Vector3D Outside(Vector3D error, double deadband)
+{
+    double n = error.Length();
+    return n > deadband && n > 1e-12 ? error * ((n - deadband) / n) : Vector3D.Zero;
+}
+
+bool BareControl => Tools != null && Tools.Focus != null;
+void ManualAxes(ref Vector3D f, ref Vector3D u)
+{ if (BareControl) { var a = f; f = -u; u = a; } }
+void NativeAim(ref Vector3D f, ref Vector3D u)
+{ if (BareControl) { var a = f; f = u; u = -a; } }
+
+void ReadPilot(Vector3D headForward, Vector3D headUp, out Vector3D linear, out Vector3D angular)
+{
+    linear = angular = Vector3D.Zero;
+    Vector3D input; Vector2 mouse; double roll;
+    IMyShipController c = PilotInputs(out input, out mouse, out roll);
+    if (c == null) return;
+    ManualAxes(ref headForward, ref headUp);
+    Vector3D forward, left, up;
+    if (MovementMode == PilotMode.HEAD)
+    {
+        forward = headForward; up = headUp;
+        if (!Orthonormalise(ref forward, ref up)) throw new Exception("Invalid Head control frame.");
+        left = Unit(Vector3D.Cross(up, forward));
+    }
+    else ControllerAxes(c, out forward, out left, out up);
+    Vector3D moveForward = forward, moveUp = up;
+    if (MovementMode == PilotMode.VRT) { moveForward = up; moveUp = -forward; }
+    Vector3D local = new Vector3D(-input.Z, -input.X, input.Y);
+    if (local.LengthSquared() > 1) local = Unit(local);
+    linear = (moveForward * local.X + left * local.Y + moveUp * local.Z) * MoveMps;
+    // Preserve the established Q/E convention: positive raw roll rotates +Head Forward.
+    angular = headForward * roll;
+    if (ReadMouse) angular += (left * mouse.X - up * mouse.Y) * MouseSensitivity;
+    angular = ClampLength(angular, 1) * (TurnDeg * Math.PI / 180);
+}
+
+IMyShipController PilotInputs(out Vector3D move, out Vector2 mouse, out double roll)
+{
+    move = Vector3D.Zero; mouse = Vector2.Zero; roll = 0;
+    if (!PilotSelected) return null;
+    var c = FindInputController(); if (c == null) return null;
+    if (ReadKeyboard) move = c.MoveIndicator;
+    if (ReadMouse) mouse = c.RotationIndicator;
+    if (ReadRoll) roll = c.RollIndicator;
+    if (!Finite(move.LengthSquared()) || !Finite(mouse.X) || !Finite(mouse.Y) || !Finite(roll))
+        throw new Exception("Non-finite pilot input.");
+    roll = Clamp(roll, -1, 1); return c;
+}
+
+bool HasPilotInput()
+{
+    Vector3D move; Vector2 mouse; double roll;
+    if (PilotInputs(out move, out mouse, out roll) == null) return false;
+    // Detect the operator's enabled raw demand, even at Speed=0 or when
+    // simultaneous roll/mouse vectors cancel in the selected view frame.
+    return move.LengthSquared() > 1e-8 || mouse.LengthSquared() > 1e-8 || Math.Abs(roll) > 1e-4;
+}
+
+bool InputScope(IMyShipController c)
+{
+    return c != null && !c.Closed && c.CubeGrid != null && c.IsSameConstructAs(Me) &&
+        (PilotSeatId == 0 || c.EntityId == PilotSeatId) && SeatAvailable(c);
+}
+
+IMyShipController FindInputController(bool force = false)
+{
+    if (!force && InputScope(InputController) && InputController.IsUnderControl)
+        return InputController;
+    if (!force && ++InputScan < 10) return null;
+    InputScan = 0;
+    InputScratch.Clear();
+    GridTerminalSystem.GetBlocksOfType<IMyShipController>(InputScratch, b => InputScope(b) && b.IsUnderControl);
+    InputController = null;
+    if (InputScratch.Count == 1) InputController = InputScratch[0];
+    return InputController;
+}
+
+void ControllerAxes(IMyShipController c, out Vector3D forward, out Vector3D left, out Vector3D up)
+{
+    if (!InputScope(c) || !c.IsUnderControl) throw new Exception("HRZ/VRT requires an active cockpit.");
+    MatrixD frame = Topology.Base.WorldMatrix;
+    forward = InFrame(c.WorldMatrix.Forward, frame); up = InFrame(c.WorldMatrix.Up, frame);
+    if (!Orthonormalise(ref forward, ref up)) throw new Exception("Invalid active cockpit orientation axes.");
+    left = Unit(Vector3D.Cross(up, forward));
+}
+
+void SetMovementMode(string text)
+{
+    PilotMode mode;
+    if (!AutoSettings.ReadMode(text, out mode)) throw new Exception("MovementMode expects HEAD, HRZ or VRT.");
+    MovementMode = mode; InputController = null; InputScan = 10;
+    // A view change changes input axes, never the held position/orientation.
+    Say("Mode " + mode + "; target held. Reload restores default.");
+}
+
+void HoldCurrent()
+{
+    LocalPath = null;
+    if (!Enabled) { EnableControl(); return; }
+    Vector3D p, f, u;
+    if (!ReadPose(out p, out f, out u)) { Fault("Hold failed: markers unavailable."); return; }
+    CapturePose(p, f, u);
+    GoingHome = false;
+    ControlElapsed = 0;
+    StatusElapsed = StatusRefreshSeconds;
+    DisplayPinned = false;
+    Topology.ZeroOwned();
+    if (LastQdot != null) Array.Clear(LastQdot, 0, LastQdot.Length);
+    if (BoundState != null) Array.Clear(BoundState, 0, BoundState.Length);
+    Status = "ON: holding recaptured Head pose";
+    Say("Hold: pose recaptured; ON.");
+}
+
+void CapturePose(Vector3D p, Vector3D f, Vector3D u)
+{
+    SetPoseTarget(p, f, u, 3);
+    PreviousP = p; PreviousF = f; PreviousU = u;
+    ObservationValid = true; AimingTarget = false;
+    FilteredV = FilteredW = PositionI = OrientationI = Vector3D.Zero;
+}
+
+bool SetPoseTarget(Vector3D p, Vector3D f, Vector3D u, int parts)
+{
+    if ((parts & 1) != 0 && !Finite(p.LengthSquared()) || (parts & 2) != 0 && !Orthonormalise(ref f, ref u)) return false;
+    if ((parts & 1) != 0) TargetP = p;
+    if ((parts & 2) != 0) { TargetF = f; TargetU = u; }
+    TargetValid = true;
+    return true;
+}
+
+void PoseCommand(string[] w, int parts)
+{
+    if (!Enabled) throw new Exception("Run On before pose commands.");
+    string why;
+    if (SwapBatchLock || Tools != null && !Tools.AllowManual(out why)) throw new Exception("Pose command refused: tool lock.");
+    int n = parts == 3 ? 9 : parts == 1 ? 3 : 6;
+    if (w.Length != n + 1) throw new Exception("Pose command has wrong arity.");
+    var v = new double[n];
+    for (int i = 0; i < n; i++) v[i] = Parse(w[i + 1]);
+    LocalPath = null;
+    Vector3D p = parts == 2 ? TargetP : new Vector3D(v[0], v[1], v[2]);
+    int j = parts == 3 ? 3 : 0;
+    Vector3D f = parts == 1 ? TargetF : new Vector3D(v[j], v[j + 1], v[j + 2]);
+    Vector3D u = parts == 1 ? TargetU : new Vector3D(v[j + 3], v[j + 4], v[j + 5]);
+    if ((parts & 1) != 0 && !Finite(p.LengthSquared()) || (parts & 2) != 0 && !Orthonormalise(ref f, ref u)) throw new Exception("Invalid pose target.");
+    if (GoingHome) HoldCurrent();
+    if (!Enabled) return;
+    if ((parts & 2) != 0) NativeAim(ref f, ref u);
+    SetPoseTarget(p, f, u, parts);
+    if ((parts & 2) != 0) AimingTarget = true;
+}
+
+void Face(string direction)
+{
+    if (LocalPath != null) HoldCurrent();
+    if (!Enabled) throw new Exception("Run On before Face.");
+    Vector3D forward = new Vector3D(1, 0, 0), left = new Vector3D(0, 1, 0), up = new Vector3D(0, 0, 1);
+    if (MovementMode != PilotMode.HEAD) ControllerAxes(FindInputController(true), out forward, out left, out up);
+    Vector3D targetForward, targetUp = up;
+    switch (direction.ToLowerInvariant())
+    {
+        case "forward": targetForward = forward; break;
+        case "back": targetForward = -forward; break;
+        case "left": targetForward = left; break;
+        case "right": targetForward = -left; break;
+        case "down": targetForward = -up; targetUp = forward; break;
+        case "up": targetForward = up; targetUp = -forward; break;
+        default: throw new Exception("Face expects Forward, Back, Left, Right, Up or Down.");
+    }
+    if (GoingHome) HoldCurrent();
+    if (!Enabled) return;
+    NativeAim(ref targetForward, ref targetUp);
+    SetPoseTarget(TargetP, targetForward, targetUp, 2);
+    AimingTarget = true;
+}
+
+void Step(string axis, double degrees)
+{
+    if (LocalPath != null) HoldCurrent();
+    if (!Enabled) throw new Exception("Run On before a rotation step.");
+    string kind = axis.ToLowerInvariant();
+    if (kind != "yaw" && kind != "pitch" && kind != "roll") throw new Exception("Step expects Yaw, Pitch or Roll.");
+    Vector3D viewForward = Vector3D.Zero, viewLeft = Vector3D.Zero, viewUp = Vector3D.Zero;
+    if (MovementMode != PilotMode.HEAD && kind != "roll")
+        ControllerAxes(FindInputController(true), out viewForward, out viewLeft, out viewUp);
+    if (GoingHome) HoldCurrent();
+    if (!Enabled) return;
+    Vector3D a;
+    switch (kind)
+    {
+        case "yaw": a = MovementMode == PilotMode.HEAD ? new Vector3D(0, 0, 1) : viewUp; break;
+        case "pitch": a = MovementMode == PilotMode.HEAD ? -Unit(Vector3D.Cross(TargetU, TargetF)) : -viewLeft; break;
+        default: a = BareControl ? -TargetU : TargetF; break;
+    }
+    Vector3D step = Unit(a) * (degrees * Math.PI / 180);
+    SetPoseTarget(TargetP, Rotate(TargetF, step), Rotate(TargetU, step), 2);
+    AimingTarget = true;
+}
+
+void RunCommands(string argument)
+{
+    SwapBatchLock = Tools != null && Tools.Automatic;
+    string[] commands = argument.Replace("\r", "").Split(new char[] { ';', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+    try { foreach (string raw in commands) RunCommand(raw.Trim()); }
+    finally { SwapBatchLock = false; }
+}
+
+void RunCommand(string command)
+{
+    string[] w = command.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+    if (w.Length == 0) return;
+    string c = w[0].ToLowerInvariant();
+    if (Tools != null && Tools.Handle(command)) { SwapBatchLock = true; return; }
+    if (Tools != null && Tools.Busy && c != "on" && c != "toggle" && c != "off" && c != "stop" && c != "info" && c != "status" && c != "version")
+        throw new Exception("Tool busy; SwapCancel/Stop first.");
+    switch (c)
+    {
+        case "version": Say(Banner()); break;
+        case "on": StartControl(); break;
+        case "off": case "stop": if (Tools != null) { Tools.InhibitRecovery(); if (Tools.Busy) Tools.Cancel(c); } StopMotion(c == "stop" ? "Stop command." : "Off command."); Say(Status); break;
+        case "toggle": if (Enabled) { if (Tools != null) Tools.InhibitRecovery(); StopMotion("Toggle OFF."); Say(Status); } else StartControl(); break;
+        case "hold": HoldCurrent(); break;
+        case "check": Check(); break;
+        case "rescan": Discover(true); break;
+        case "reload": Reload(); break;
+        case "info": case "help": PrintInfo(); break;
+        case "pivotprobe":
+            DisplayPinned = true;
+            if (PivotProbe == null) PivotProbe = new PivotProbeTool(this, Topology);
+            PivotProbe.Run(w);
+            break;
+        case "status": DisplayPinned = false; StatusElapsed = StatusRefreshSeconds; Say("Live status display resumed."); break;
+        case "settings": PrintInfo(); break;
+        case "joints": PrintJoints(); break;
+        case "bindings": PrintBindings(); break;
+        case "sethome": CaptureHome(); break;
+        case "gohome": BeginHome(); break;
+        case "homeinfo": PrintHome(); break;
+        case "speed": MoveMps = Number(w, 1, 0, 5, "Speed"); break;
+        case "readkeyboard": ReadKeyboard = InputToggle(w, ReadKeyboard); break;
+        case "readroll": ReadRoll = InputToggle(w, ReadRoll); break;
+        case "readmouse": ReadMouse = InputToggle(w, ReadMouse); break;
+        case "mode": case "movementmode": case "controlmode":
+            if (w.Length != 2) throw new Exception("MovementMode expects HEAD, HRZ or VRT.");
+            SetMovementMode(w[1]); break;
+        case "orientationtolerance":
+            double tolerance = Number(w, 1, 0, 30.0, OrientationToleranceKey);
+            StopMotion("Stopped: OrientationTolerance changed; run On to recapture.");
+            OrientationToleranceDeg = tolerance;
+            Say(Status);
+            break;
+        case "turnspeed": TurnDeg = Number(w, 1, 0.01, 30, "TurnSpeed"); break;
+        case "stepsize": case "stepangle": StepDeg = Number(w, 1, 0.01, 180, "StepSize"); break;
+        case "jointspeed": JointRpm = Number(w, 1, 0.01, 5, "JointSpeed"); break;
+        case "pistonspeed": PistonMps = Number(w, 1, 0.01, 2, "PistonSpeed"); break;
+        case "homespeed": HomeJointRpm = Number(w, 1, 0.01, 5, "Home joint RPM"); HomePistonMps = Number(w, 2, 0.01, 2, "Home piston m/s"); break;
+        case "face": if (w.Length < 2) throw new Exception("Face expects a direction."); Face(w[1]); break;
+        case "forward": case "back": case "left": case "right": case "up": case "down": Face(c); break;
+        case "step": if (w.Length < 2) throw new Exception("Step expects an axis."); Step(w[1], w.Length > 2 ? Parse(w[2]) : StepDeg); break;
+        case "yaw": Step("yaw", Number(w, 1, -180, 180, "Yaw")); break;
+        case "pitch": Step("pitch", Number(w, 1, -180, 180, "Pitch")); break;
+        case "roll": Step("roll", Number(w, 1, -180, 180, "Roll")); break;
+        case "yawleft": case "yawright": Step("yaw", c == "yawleft" ? StepDeg : -StepDeg); break;
+        case "pitchup": case "pitchdown": Step("pitch", c == "pitchup" ? StepDeg : -StepDeg); break;
+        case "rollleft": case "rollright": Step("roll", c == "rollright" ? StepDeg : -StepDeg); break;
+        case "moveto": PoseCommand(w, 1); break;
+        case "orientto": PoseCommand(w, 2); break;
+        case "movetoposori": PoseCommand(w, 3); break;
+        case "path": PathCommand(command); break;
+        default: throw new Exception("Unknown command '" + w[0] + "'. Use Info.");
+    }
+}
+
+static bool InputToggle(string[] words, bool current)
+{
+    string value = words.Length == 2 ? words[1].ToLowerInvariant() : "";
+    if (value == "on") return true;
+    if (value == "off") return false;
+    if (value == "toggle") return !current;
+    throw new Exception(words[0] + " expects On, Off or Toggle.");
+}
+
+void PrintBindings()
+{
+    Say("Toolbar Run actions: Forward Back Left Right Up Down PitchUp PitchDown YawLeft YawRight RollLeft RollRight.\n" +
+        "View: Mode HEAD / Mode HRZ / Mode VRT. Mouse: ReadMouse On / Off / Toggle.");
+}
+
+void Reload()
+{
+    StopMotion("Reload command.");
+    PivotProbe = null;
+    SetupElapsed = 0;
+    string updated, why;
+    bool changed;
+    ConfigValid = false;
+    MyIni configIni;
+    if (!AutoConfig.ReadCurrent(this, Me.CustomData, out configIni, out why)) throw new Exception(why);
+    Services.Load(configIni);
+    if (Topology.Groups.Count == 0 || (Tools != null && Tools.Configured) || configIni.Get(ToolsSection, EnabledKey).ToBoolean(false)) { Discover(true); return; }
+    if (Topology.Groups.Count > 0 && !Topology.Validate(out why, true))
+    {
+        ConfigValid = false;
+        Say("Reload refused: " + why + " Run Rescan after repairing topology.");
+        return;
+    }
+    if (!AutoConfig.LoadOrGenerate(this, Topology, Me.CustomData, out updated, out changed, out why))
+    {
+        ConfigValid = false;
+        Status = "Reload refused without changing Custom Data: " + why;
+        Say(Status);
+        return;
+    }
+    ConfigValid = true;
+    Allocate(Topology.Groups.Count);
+    LoadHome();
+    Status = "Configuration reloaded; controller remains OFF.";
+    Say(Status);
+}
+
+void Check()
+{
+    string why;
+    if (!ConfigValid) { Say("CHECK FAILED: configuration is not valid. Run Reload or Rescan."); return; }
+    if (!Topology.Validate(out why, true)) { Say("CHECK FAILED: " + why); return; }
+    Vector3D p, f, u;
+    if (!ReadPose(out p, out f, out u)) { Say("CHECK FAILED: markers unavailable."); return; }
+    foreach (AutoGroup g in Topology.Groups)
+    {
+        double lo, hi;
+        if (!Topology.Refresh(g, Topology.EndPosition, Topology.Base.WorldMatrix, out lo, out hi, out why))
+        { Say("CHECK FAILED: " + why); return; }
+    }
+    Say("CHECK PASS | " + Topology.Groups.Count + " groups | " + Topology.Fingerprint + "\n" + Topology.Report);
+}
+
+void PrintInfo()
+{
+    DisplayPinned = true;
+    string text = Banner() + "\n" + Status + "\nReady=" + Topology.Ready + "; enabled=" + Enabled +
+        "; home=" + (HomeFingerprint == Topology.Fingerprint) + "\nGroups=" + Topology.Groups.Count +
+        "; error=" + LastPositionError.ToString(ThreeDecimals) + " m / " +
+        LastOrientationErrorDeg.ToString("0.00") + " deg\nLinear pilot=" + LastPilotLinear.Length().ToString(ThreeDecimals) +
+        " m/s, feedback=" + LastFeedbackLinear.Length().ToString(ThreeDecimals) + ", requested=" +
+        LastRequestedLinear.Length().ToString(ThreeDecimals) + "\nAngular pilot/correction/request=" +
+        (LastPilotAngular.Length() * 180 / Math.PI).ToString("0.00") + "/" +
+        (LastFeedbackAngular.Length() * 180 / Math.PI).ToString("0.00") + "/" +
+        (LastRequestedAngular.Length() * 180 / Math.PI).ToString("0.00") + " deg/s\nTarget advance=" +
+        LastLinearAdvance.ToString("0.00") + "/" + LastAngularAdvance.ToString("0.00") +
+        "; passes=" + LastSolverPasses + "; converged=" + LastSolverConverged +
+        "; budget=" + LastSolverBudgetLimited + "\nLast stop=" + (LastFault == "" ? "none" : LastFault) +
+        "\nCommands: README. Settings: Custom Data. Tools: ToolInfo." +
+        "\nMovementMode=" + MovementMode + "; ReadMouse=" + ReadMouse + "; MouseSensitivity=" + MouseSensitivity +
+        "\nReadKeyboard=" + ReadKeyboard + "; ReadRoll=" + ReadRoll + "; OrientationTolerance=" + OrientationToleranceDeg +
+        " deg; opposition limit=" + ManualCounterCorrectionFraction;
+    Say(text);
+}
+
+void PrintJoints()
+{
+    DisplayPinned = true;
+    string text = "DETECTED GROUPS (Translation / Orientation preference)";
+    foreach (AutoGroup g in Topology.Groups)
+        text += "\nG" + (g.Index + 1).ToString("00") + " " + g.Label + " | " + g.MoveW.ToString("0.###") +
+            " / " + g.TurnW.ToString("0.###") + " | " + g.M.Count + (g.Rotary ? " rotor/hinge" : " piston") + (g.M.Count == 1 ? "" : "s");
+    Say(text + "\nEdit weights in this PB's Custom Data, then run Reload.");
+}
+
+void CaptureHome()
+{
+    StopMotion("SetHome command.");
+    if (!ConfigValid) { Say("SetHome refused: fix Custom Data, then Reload."); return; }
+    string why = "topology is not ready";
+    if (!Topology.Ready || !Topology.Validate(out why, true)) { Say("SetHome refused: " + why); return; }
+    Home.Clear();
+    foreach (AutoGroup g in Topology.Groups) foreach (AutoMember m in g.M) Home[m.B.EntityId] = MemberPosition(m);
+    HomeFingerprint = Topology.Fingerprint;
+    WriteHome();
+    Say("Home saved for " + Home.Count + " actuators. Controller remains OFF.");
+}
+
+void LoadHome()
+{
+    Home.Clear(); HomeFingerprint = "";
+    if (string.IsNullOrWhiteSpace(Storage)) return;
+    var ini = new MyIni();
+    MyIniParseResult result;
+    if (!ini.TryParse(Storage, out result)) return;
+    string section = HomeSection;
+    if (!ini.ContainsSection(section))
+    {
+        var sections = new List<string>(); ini.GetSections(sections);
+        foreach (string candidate in sections)
+            if (candidate.EndsWith(" Home", StringComparison.Ordinal) && ini.Get(candidate, "Fingerprint").ToString() == Topology.Fingerprint)
+            {
+                if (section != HomeSection) return;
+                section = candidate;
+            }
+    }
+    string fingerprint = ini.Get(section, "Fingerprint").ToString("");
+    if (fingerprint != Topology.Fingerprint) return;
+    foreach (AutoGroup g in Topology.Groups) foreach (AutoMember m in g.M)
+    {
+        string key = "E" + m.B.EntityId;
+        double value = ini.Get(section, key).ToDouble(double.NaN);
+        if (!Finite(value)) { Home.Clear(); return; }
+        Home[m.B.EntityId] = value;
+    }
+    HomeFingerprint = fingerprint;
+    if (section != HomeSection)
+    {
+        ini.DeleteSection(section); Storage = ini.ToString(); WriteHome();
+    }
+}
+
+void WriteHome()
+{
+    var ini = AutoConfig.Saved(Storage);
+    ini.DeleteSection(HomeSection);
+    ini.Set(HomeSection, "Fingerprint", HomeFingerprint);
+    foreach (var pair in Home) ini.Set(HomeSection, "E" + pair.Key, pair.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+    Storage = ini.ToString();
+}
+
+void PrintHome()
+{
+    if (HomeFingerprint != Topology.Fingerprint) { Say("Home is not set for the current topology."); return; }
+    string text = "HOME | " + Home.Count + " member targets | " + HomeFingerprint;
+    foreach (AutoGroup g in Topology.Groups)
+    {
+        text += "\n" + g.Label + ":";
+        foreach (AutoMember m in g.M) text += " " + Home[m.B.EntityId].ToString(ThreeDecimals);
+    }
+    Say(text);
+}
+
+void BeginHome()
+{
+    string permission;
+    if (SwapBatchLock || (Tools != null && !Tools.AllowManual(out permission))) { Say("GoHome refused: tool lock."); return; }
+    StopMotion("");
+    if (!ConfigValid) { Say("GoHome refused: fix Custom Data, then Reload."); return; }
+    if (!Topology.Ready || HomeFingerprint != Topology.Fingerprint)
+    { Say("GoHome refused: use SetHome for the current topology."); return; }
+    string why;
+    if (!Topology.Validate(out why, true)) { Say("GoHome refused: " + why); return; }
+    foreach (AutoGroup g in Topology.Groups) foreach (AutoMember m in g.M)
+    {
+        double resolved;
+        if (!ResolveHome(m, Home[m.B.EntityId], out resolved))
+        { Say("GoHome refused: saved target is outside current limits at " + m.B.CustomName + "."); return; }
+        m.Home = resolved;
+    }
+    Enabled = GoingHome = true;
+    PivotProbe = null;
+    ControlElapsed = 0;
+    Runtime.UpdateFrequency = UpdateFrequency.Update1;
+    Status = "GoHome in progress; live pilot input cancels.";
+    Say(Status);
+}
+
+void UpdateHome(double dt)
+{
+    if (HasPilotInput()) { Fault("GoHome cancelled by pilot input."); return; }
+    string why;
+    if (Tools != null && !Tools.AllowManual(out why)) { Fault(why); return; }
+    if (!Topology.Validate(out why, false, true)) { Fault("GoHome topology fault: " + why); return; }
+    bool complete = true;
+    for (int i = 0; i < Topology.Groups.Count; i++)
+    {
+        AutoGroup g = Topology.Groups[i];
+        double error = 0, branch = 0;
+        bool haveBranch = false;
+        double agreement = g.Rotary ? 0.5 * Math.PI / 180 : 0.005;
+        // A limited member fixes the legal native-angle branch. Unlimited peers
+        // may then select the equivalent circular error nearest that branch.
+        if (g.Rotary) foreach (AutoMember m in g.M)
+        {
+            if (Unlimited((IMyMotorStator)m.B)) continue;
+            double e = m.Sign * MemberHomeError(m, true);
+            if (!haveBranch) { branch = e; haveBranch = true; }
+            else if (Math.Abs(e - branch) > agreement) { Fault("GoHome limited-member routes disagree at " + g.Label); return; }
+        }
+        foreach (AutoMember m in g.M)
+        {
+            double e = m.Sign * MemberHomeError(m, g.Rotary);
+            bool unlimited = g.Rotary && Unlimited((IMyMotorStator)m.B);
+            if (!haveBranch) { branch = e; haveBranch = true; }
+            else if (unlimited) e = branch + Wrap(e - branch);
+            if (Math.Abs(e - branch) > agreement) { Fault("GoHome member errors disagree at " + g.Label); return; }
+            error += e;
+        }
+        error /= g.M.Count;
+        double tolerance = g.Rotary ? 0.25 * Math.PI / 180 : 0.005;
+        if (Math.Abs(error) > tolerance) complete = false;
+        double lo, hi;
+        if (!Topology.Refresh(g, Topology.EndPosition, Topology.Base.WorldMatrix, out lo, out hi, out why))
+        { Fault("GoHome: " + why); return; }
+        double cap = g.Rotary ? HomeJointRpm * Math.PI / 30 : HomePistonMps;
+        double lower = Math.Max(lo, -cap), upper = Math.Min(hi, cap);
+        if (lower > upper) { Fault("GoHome has no common velocity interval at " + g.Label); return; }
+        double velocity = Math.Abs(error) <= tolerance ? 0 : Clamp(error * 0.5, lower, upper);
+        double accel = g.Rotary ? JointAccelerationRpmPerSec * Math.PI / 30 : PistonAccelerationMps2;
+        double centre = Clamp(LastQdot[i], lower, upper);
+        velocity = Clamp(velocity, Math.Max(lower, centre - accel * dt), Math.Min(upper, centre + accel * dt));
+        LastQdot[i] = velocity;
+    }
+    if (complete)
+    {
+        StopMotion("GoHome complete.");
+        Say(Status);
+    }
+    else Commit();
+}
+
+bool ResolveHome(AutoMember m, double requested, out double resolved)
+{
+    resolved = requested;
+    var p = m.B as IMyPistonBase;
+    if (p != null)
+    {
+        if (!Finite(resolved) || resolved < p.MinLimit - 0.005 || resolved > p.MaxLimit + 0.005) return false;
+        resolved = Clamp(resolved, p.MinLimit, p.MaxLimit);
+        return true;
+    }
+    var r = (IMyMotorStator)m.B;
+    if (!Finite(resolved)) return false;
+    double lo = r.LowerLimitRad, hi = r.UpperLimitRad, turn = 2 * Math.PI;
+    double k = Math.Round((r.Angle - requested) / turn);
+    double kMin = lo < -1000000 ? double.NegativeInfinity : Math.Ceiling((lo - requested - 0.25 * Math.PI / 180) / turn);
+    double kMax = hi > 1000000 ? double.PositiveInfinity : Math.Floor((hi - requested + 0.25 * Math.PI / 180) / turn);
+    if (kMin > kMax) return false;
+    resolved = requested + Clamp(k, kMin, kMax) * turn;
+    if (!Finite(resolved) || resolved < lo - 0.25 * Math.PI / 180 || resolved > hi + 0.25 * Math.PI / 180) return false;
+    resolved = Clamp(resolved, lo, hi);
+    return true;
+}
+
+double MemberHomeError(AutoMember m, bool rotary)
+{
+    double error = m.Home - MemberPosition(m);
+    if (!rotary) return error;
+    return Unlimited((IMyMotorStator)m.B) ? Wrap(error) : error;
+}
+
+double MemberPosition(AutoMember m)
+{
+    var rotor = m.B as IMyMotorStator;
+    if (rotor != null) return rotor.Angle;
+    var piston = m.B as IMyPistonBase;
+    if (piston != null) return piston.CurrentPosition;
+    throw new Exception("Unsupported owned actuator type.");
+}
+
+double Number(string[] words, int index, double min, double max, string label)
+{
+    if (words.Length <= index) throw new Exception(label + " needs a value.");
+    double value = Parse(words[index]);
+    if (value < min || value > max) throw new Exception(label + " must be " + min + ".." + max + ".");
+    Say(label + " = " + value.ToString("0.###") + ".");
+    return value;
+}
+
+double Parse(string text)
+{
+    double value;
+    if (!ReadDouble(text, out value))
+        throw new Exception("Expected a finite number with decimal point.");
+    return value;
+}
+
+
+static bool Cholesky(double[,] a, double[] b, double[,] l, double[] temp, double[] answer)
+{
+    for (int i = 0; i < 6; i++) for (int j = 0; j <= i; j++)
+    {
+        double value = a[i, j];
+        for (int k = 0; k < j; k++) value -= l[i, k] * l[j, k];
+        if (i == j)
+        {
+            if (!Finite(value) || value <= 1e-15) return false;
+            l[i, j] = Math.Sqrt(value);
+        }
+        else l[i, j] = value / l[j, j];
+    }
+    for (int i = 0; i < 6; i++)
+    {
+        double value = b[i];
+        for (int j = 0; j < i; j++) value -= l[i, j] * temp[j];
+        temp[i] = value / l[i, i];
+    }
+    for (int i = 5; i >= 0; i--)
+    {
+        double value = temp[i];
+        for (int j = i + 1; j < 6; j++) value -= l[j, i] * answer[j];
+        answer[i] = value / l[i, i];
+        if (!Finite(answer[i])) return false;
+    }
+    return true;
+}
+
+static Vector3D RotationError(Vector3D f, Vector3D u, Vector3D tf, Vector3D tu)
+{
+    if (!Orthonormalise(ref f, ref u) || !Orthonormalise(ref tf, ref tu)) return new Vector3D(double.NaN);
+    Vector3D l = Vector3D.Cross(u, f), tl = Vector3D.Cross(tu, tf);
+    double d00 = tf.X * f.X + tl.X * l.X + tu.X * u.X,
+        d01 = tf.X * f.Y + tl.X * l.Y + tu.X * u.Y,
+        d02 = tf.X * f.Z + tl.X * l.Z + tu.X * u.Z;
+    double d10 = tf.Y * f.X + tl.Y * l.X + tu.Y * u.X,
+        d11 = tf.Y * f.Y + tl.Y * l.Y + tu.Y * u.Y,
+        d12 = tf.Y * f.Z + tl.Y * l.Z + tu.Y * u.Z;
+    double d20 = tf.Z * f.X + tl.Z * l.X + tu.Z * u.X,
+        d21 = tf.Z * f.Y + tl.Z * l.Y + tu.Z * u.Y,
+        d22 = tf.Z * f.Z + tl.Z * l.Z + tu.Z * u.Z;
+    var skew = new Vector3D(d21 - d12, d02 - d20, d10 - d01) * 0.5;
+    double angle = Math.Acos(Clamp((d00 + d11 + d22 - 1) * 0.5, -1, 1));
+    if (angle < 1e-7) return skew;
+    if (Math.PI - angle > 1e-5) return skew * (angle / Math.Sin(angle));
+    // Near pi, the skew is ill-conditioned. Extract an eigenaxis from the full
+    // relative rotation, selecting the largest diagonal for numeric stability.
+    double x, y, z;
+    if (d00 >= d11 && d00 >= d22)
+    {
+        x = Math.Sqrt(Math.Max(0, (d00 + 1) * 0.5));
+        y = (d01 + d10) / (4 * Math.Max(x, 1e-10));
+        z = (d02 + d20) / (4 * Math.Max(x, 1e-10));
+    }
+    else if (d11 >= d22)
+    {
+        y = Math.Sqrt(Math.Max(0, (d11 + 1) * 0.5));
+        x = (d01 + d10) / (4 * Math.Max(y, 1e-10));
+        z = (d12 + d21) / (4 * Math.Max(y, 1e-10));
+    }
+    else
+    {
+        z = Math.Sqrt(Math.Max(0, (d22 + 1) * 0.5));
+        x = (d02 + d20) / (4 * Math.Max(z, 1e-10));
+        y = (d12 + d21) / (4 * Math.Max(z, 1e-10));
+    }
+    Vector3D axis = Unit(new Vector3D(x, y, z));
+    if (skew.LengthSquared() > 1e-16 && Vector3D.Dot(axis, skew) < 0) axis = -axis;
+    return Unit(axis) * angle;
+}

@@ -1,180 +1,99 @@
-# AutoArm
+# AutoArm 1.1
 
-AutoArm is a mechanical-arm control program for the Space Engineers programmable block. It simplifies setup of robotic arms to configuring the start and endpoint of an arm, while allowing later fine tuning of parameters via CustomData within the programmable block.
+Robotic arm control for Space Engineers programmable blocks, with automatic
+actuator discovery, cockpit control, multiple arms, saved poses and optional
+ToolSwap and collision Safety services.
 
-## Installation
+Start with the [illustrated Getting Started guide](docs/GETTING_STARTED.md).
 
-1. Stop your existing arm controller before replacing it.
-2. Paste the entire [Arm script](https://github.com/PommesMitChips/AutoArm/blob/v5.1.0/AutoArm_Compact.txt) into an arm programmable block.
-3. For tool parking/swapping, paste the [ToolSwap script](https://github.com/PommesMitChips/AutoArm/blob/feature/v5.0.1-arm-bench/AutoArm_ToolSwap_Compact.txt) into a second PB on the same construct. Keep both PBs running. Their names do not matter for automatic setup.
-4. Name the parts as shown below. You do not need to edit the code or enter configuration for a quick start.
-5. Run `On` on the Arm PB. For another arm, use `On(Arm 2)`. Then use `Select Arm 2` to give it cockpit control.
+## Install
 
-Keep existing Custom Data when its format matches: Arm PBs use `[global] Format=7`; ToolSwap PBs use `[global] Format=2`. If a format error asks you to delete old data, let this version generate the new layout. Incorrect formats are not converted.
+1. Stop the existing controller before replacing it.
+2. Paste [AutoArm](stable/AutoArm_Compact.txt) into the arm's programmable block.
+3. Name the first joint `Arm 1 - Base` and the moving endpoint `Arm 1 - Head`.
+   Intermediate joints can keep their normal names. Different arms use different
+   prefixes; supported parallel stages must satisfy the topology checks.
+4. Run `On`. Use WASD and C/Space from your cockpit; Q/E rolls the head.
+5. For detachable tools, install [ToolSwap](stable/AutoArm_ToolSwap_Compact.txt)
+   in a second PB. Start with each tool merged to its stand, rotor bases on the
+   tools and one compatible loose rotor head on the arm. Number the tool markers
+   `Arm 1 - Head 1`, `Arm 1 - Head 2`, etc. Run `Tool 1`, `Tool 2` or `Park` on AutoArm.
 
-## Choose a setup
+Keep compatible Custom Data: AutoArm uses Format 7, ToolSwap Format 2. Release
+**1.1**, configuration formats and link protocol 5 are separate identifiers.
+Installed game/script-browser copies are not updated by repository builds.
 
-### Simple arm
+## Stable scripts
 
-Name the first attached joint **`Arm 1 - Base - Rotor`** (or `Arm 1 - Base - Piston` / `Arm 1 - Base - Hinge`). Name exactly one terminal block on the moving end **`Arm 1 - Head - Drill`**, or another description after `Head -`.
+| Script | Compact PB file | Readable source |
+| --- | --- | --- |
+| AutoArm | [Compact](stable/AutoArm_Compact.txt) | [Source](stable/AutoArm_Source.txt) |
+| ToolSwap | [Compact](stable/AutoArm_ToolSwap_Compact.txt) | [Source](stable/AutoArm_ToolSwap_Source.txt) |
+| Collision Safety | [Compact](stable/AutoArm_Collision_Compact.txt) | [Source](stable/AutoArm_Collision_Source.txt) |
+| Motion Bench | [Compact](stable/AutoArm_Bench_Compact.txt) | [Source](stable/AutoArm_Bench_Source.txt) |
+| Read-only Survey | [Compact](stable/AutoArm_Survey_Compact.txt) | [Source](stable/AutoArm_Survey_Source.txt) |
 
-Intermediate pistons, rotors and hinges do not need special names. Use only the Arm PB. Run `On` and pilot from your active cockpit.
+Stable was initialized from the current non-prototype working tree at the user's
+direction. Experimental starts from the same scripts and retains WIP planning,
+passing, rate-reallocation and self-pair experiments. Historical Git tags keep
+their original names; they are not new Workshop release numbers.
 
-For a parallel base, name only one member `Arm 1 - Base`. Parallel hinges/rotors must share the same rotation axis; opposite-facing members are supported. Parallel pistons may be offset from one another. Partners can share a top grid or follow matching branches that join farther up the arm. Branches must have equal stage counts and compatible joints. The arm limit is 48 physical actuators in 24 stages, including the base partners.
+## Guides and tools
 
-### Optional collision avoidance
+- [Getting Started](docs/GETTING_STARTED.md) · [HTML guide](docs/getting-started.html)
+- [Collision Safety](docs/COLLISION.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [External script integration](docs/MODULES.md) · [Configuration examples](docs/examples)
+- [Motion Bench](docs/IN_GAME_BENCH.md) · [Read-only Survey](docs/IN_GAME_SURVEY.md)
+- [Workshop material](docs/steam-workshop)
+- [Panel assembler](tools/panel-assembler/dist/AutoArm-Panel-Assembler.html)
+  · [Instructions](tools/panel-assembler/README.md)
+- [Editable SVG panels](docs/assets/workshop/svg-panels)
+  · [Reusable separator](docs/assets/workshop/svg-panels/common/separator.svg)
 
-Install the [Collision script](https://github.com/PommesMitChips/AutoArm/blob/v5.0.5/AutoArm_Collision_Compact.txt) in another PB on the same construct and name it **`Collision PB`**. Add this key to the Arm PB's existing `[global]` section, retaining any other peer rows:
+Collision Safety models conservative construct geometry and registered arms,
+with bounded contact allowances. Terrain, unrelated ships and general route
+planning are outside the stable service. Begin with low speeds and confirm your
+build in the game; simulation checks do not establish live physics behavior.
 
-```ini
-Peers=
-|Collision PB | Safety
+## Build
+
+Use PowerShell 7, the .NET 10 SDK and installed Space Engineers assemblies:
+
+```powershell
+./Build.ps1 -Track experimental -Scripts All
+./Build.ps1 -Track experimental -Scripts AutoArm,ToolSwap
+./Build.ps1 -Track stable -Collection Release -Test
+./Build.ps1 -Track experimental -Collection JointPlanner
+./Build.ps1 -Track stable -Scripts AutoArm -SourceOnly
+./Build.ps1 -Collection Assets -Python python
+./Build.ps1 -List
 ```
 
-Run `On` on the Arm PB. Collision PB generates its own settings and scans the ship and arm grids automatically. One Collision PB can supervise several arms across several Arm PBs; add the same peer entry to each owner. To supervise only one arm, put `Peers` in that arm's section instead of `[global]`.
+`Core` selects AutoArm, ToolSwap and Collision; `Diagnostics` selects Bench and
+Survey; `Release` selects all five. `Prototypes` and `JointPlanner` are experimental
+only. Existing WIP snapshots are the prototype build inputs;
+`-RefreshPrototypes` explicitly regenerates them against the current core and may
+expose unresolved PB-size or compatibility limits. `-Test` includes the release scripts required by the complete readable and
+compact suite. `-WhatIf` previews the build; `-GameBin` overrides the game's Bin64
+location. Asset dependencies are described in [tools](tools/README.md).
 
-AutoArm uses spare joint movement to improve clearance while tracking the head. When necessary it limits motion toward obstacles or holds. Moving away remains allowed. An enabled Safety service must remain running; lost or stale guidance holds the arm until fresh guidance returns. Basic arms need no Collision PB and no Safety peer entry.
+Builds write only the selected track and never promote automatically. Edit
+`experimental/src/<script>/`; generated readable/compact scripts are not masters.
+Each track's `release.json` owns its release label; builds expand `@@VERSION@@`
+placeholders without changing protocol/configuration numbers. Each source folder's `AGENTS.md` describes its files and responsibilities.
+Shared fragments are under `src/shared`. Explicit promotion must include matching
+sources, dependencies and outputs, with their validation evidence.
 
-Collision PB commands are `Info`, `Rescan`, `On`, `Reload` and `Off`. Run `Rescan` after adding or removing ship blocks. Adjust `Clearance`, `Influence` and `AwaySpeed` in its Custom Data, then `Reload`. If `Info` reports a scan limit, increase `MaxCells` or `MaxShapes` within the accepted range.
-
-For a repeatable two-arm test, first collect a read-only geometry report with [Arm Survey](docs/IN_GAME_SURVEY.md). It records starting head poses without commanding movement; use that report to prepare the head paths before testing through ArmService with Safety enabled.
-
-The [two-arm test runner](docs/IN_GAME_BENCH.md) provides a readiness check, small outward-and-return tests, simultaneous head crossing and sweeps past the opposite arm's base. `Rebase` records a new test start from both idle arms without commanding movement. Preview commands show the requested paths before movement. It requires live Safety permission and operates through ArmService; inability to pass safely stops the test.
-
-An optional [self-collision filter prototype](docs/SELF_PAIR_PROTOTYPE.md) can report which segment pairs can safely be excluded from repeated checking. It starts in Shadow mode, retaining the normal checks; the guide explains how to test enabled exclusions and revert.
-
-This first version uses conservative occupied-block volumes, rather than exact model shapes. Intended joint and docking contacts have limited allowances. It covers construct geometry and registered arms; terrain, unrelated ships and automatic routes around traps are not covered. Clearance checks do not model every SE physics effect, so begin with low movement speeds and confirm clearance on your build.
-
-### Tool parking and swapping
-
-Start with the tools securely merged to their stands. Each tool carries a rotor **base**; the compatible unnamed rotor **top** stays on the arm. Place one or more tool-side merge blocks facing matching stand merges.
-
-If you manually detach a known tool while using the arm, or after a failed swap, AutoArm can rediscover the bare tip and return to cockpit control. It cancels the old swap first. A damaged arm or pending attachment stays stopped; explicit `Stop`, `Off` or `SwapCancel` also prevents automatic recovery.
-
-Name only the arm base and **one reference block per tool**:
-
-| Part | Example name |
-| --- | --- |
-| First arm joint | `Arm 1 - Base - Rotor` |
-| Drill head reference | `Arm 1 - Head 1 - Drill` |
-| Welder head reference | `Arm 1 - Head 2 - Welder` |
-
-Leave the rotor bases, rotor top and merge blocks with their ordinary names. Do not give several blocks the same `Head 1` or `Head 2` marker pattern. A reference block can be a drill, welder, grinder or another terminal block rigidly connected to that tool.
-
-Install both scripts and run `On` on the Arm PB. AutoArm finds the tools, rotor bases and facing merge pairs, then saves the setup in each reference block's Custom Data. That data stays with the tool across PB restarts. You do not need to mount every tool once, teach a pose, name the mounts/merges, or fill their names into PB configuration.
-
-The bare arm needs exactly one loose compatible rotor top at its moving end. It may sit directly on the last hinge's moving head. Tool couplers use rotors; ordinary arm joints may use hinges. For first pickup, leave the tool rotor's angle limits unlimited. Rotor Lock is supported.
-
-- `Tool 2` or `Tool Head 2` picks up Head 2, parking the current tool first.
-- `Tool(2,Arm 2)` performs the same operation for Arm 2.
-- `Park` returns the current tool to its stand and detaches it.
-- Successful pickup/swap automatically returns the arm to ON control. Parking leaves it OFF; run `On` if you want to move the bare arm manually.
-
-Tools approach at the arm's normal speed, align in front of the socket and enter in a straight line. Detachment backs out before travel. Start with all tools parked so their existing return orientations are preserved. Keep routes clear: AutoArm does not avoid ship geometry.
-
-If a tool has more than one possible rotor base in its rigid region, or two reference markers describe the same tool, scanning refuses the ambiguous setup. The reference, coupler and tool merges must belong to the same connected tool body.
-
-## Use and features
-
-AutoArm supports mixed piston/rotor/hinge arms, offset joints, compatible parallel actuators, opposite-facing rotary pairs, position/orientation hold, saved Home positions, ordered motion paths and automatic tool parking/swapping.
-
-Tool changes pause briefly while connections settle, then restore arm control automatically. `Tool ready; waiting for arm ON confirmation` means the handoff is pending. `Tool ready; arm ON` confirms the arm has resumed. A failed handoff reports its reason.
-
-Pickup slows at the point in front of the mount, then continues into it. Parking enables the head merges during approach. Once they connect, the arm stops, verifies the stand connection and detaches the tool mount. Small vibration does not have to die away before the merges can connect.
-
-### Several arms
-
-One Arm PB can host up to eight arms within its instruction budget. Each arm has its own state, targets, joint settings, Home, tool session and faults. Different cockpits can control different arms simultaneously. Larger setups can distribute arms across more Arm PBs.
-
-Name each arm's base and heads using its own name. While exactly one cockpit is occupied, run `Select Arm 1` to pair that seat with Arm 1. Cockpits need no special names or configuration. Pairings survive PB restarts. An arm name must belong to exactly one Arm PB; update every Arm PB to v5.1.0 when using cockpit pairing across several PBs.
-
-For two players:
-
-1. Only Player 1 is seated. Run `Select(HRZ, Arm 1)` to pair their cockpit and choose HRZ.
-2. Player 1 briefly leaves their seat. Player 2 sits in their own cockpit and runs `Select(VRT, Arm 2)`.
-3. Both players can now sit and control their paired arms independently.
-
-During a tool operation, enabled pilot input from the cockpit controlling that arm cancels its swap. Another operator's cockpit input does not cancel it.
-
-If selection is attempted with multiple occupied cockpits, it fails immediately: **More than one cockpit is occupied. Please ensure exactly one cockpit is occupied.** Existing pairings and selection remain unchanged. After making exactly one seat occupied, run the selection command again.
-
-`Release Arm 1` removes its cockpit pairing and leaves it holding. Selecting another arm from the same seat transfers that seat's control, including across Arm PBs. A missing or empty paired cockpit never falls back to another player's seat. Use `MovementMode` in each arm's Custom Data for its startup view; pairing remembers the seat, while runtime `Mode` choices reset on reload.
-
-To move an arm to another Arm PB, run `Claim Arm 1` on the destination PB. It stops that arm, removes its assignment from the previous PB and transfers its effective settings, including joint preferences. Its ToolSwap link follows it. Other arms keep their assignments. If the previous PB was deleted, the destination claims the arm directly. Update both Arm PBs and any linked ToolSwap PB to the current files before transferring. After transfer, run `On`, then `Select Arm 1` from the cockpit you want to pair. `Unclaim Arm 1` removes an assignment without transferring it.
-
-Commands without a target go to that PB's selected arm, which is a shared command target. In multiplayer, use explicit arm arguments for toolbar commands, including `Mode(HRZ, Arm 1)` and `Mode(VRT, Arm 2)` while both players are seated:
+## Repository layout
 
 ```text
-On(Arm 2)
-MoveTo(2,0,1,Arm 2)
-OrientTo(1,0,0,0,0,1,Arm 2)
-Tool(2,Arm 2)
-Stop(Arm 2)
+stable/          Approved sources and generated PB scripts
+experimental/    WIP sources, prototypes and generated PB scripts
+tools/           Build helpers, tests, generators and the panel assembler
+docs/            User-facing guides and configuration examples
+docs/assets/     Block graphics, assembled models, panels and graphic exports
 ```
 
-The existing toolbar style also works: `MoveTo 2 0 1, Arm 2`. `StopAll` stops every arm in that PB.
-
-One ToolSwap PB can serve several arms, including arms hosted by different Arm PBs. Automatic linking works when each arm has one eligible partner PB. For deliberately split or ambiguous setups, list only that PB's arms in its Custom Data and set `ToolSwapPB` / `Link.ArmPB` explicitly. See [MultiArm.ini](examples/MultiArm.ini) and [MultiArmTools.ini](examples/MultiArmTools.ini).
-
-### Movement views
-
-| Mode | W/S | A/D | C/Space |
-| --- | --- | --- | --- |
-| `HEAD` | Head Forward/Back | Head Left/Right | Head Down/Up |
-| `HRZ` | Cockpit Forward/Back | Cockpit Left/Right | Cockpit Down/Up |
-| `VRT` | Cockpit screen Up/Down | Cockpit Left/Right | Into/out of the view |
-
-Translation holds head orientation. Q/E rolls around the head. Optional mouse input controls pitch/yaw. AutoArm uses the arm's paired cockpit; a basic unpaired setup uses the sole active cockpit. Neither needs a special name.
-
-Set `MovementMode=HEAD`, `HRZ` or `VRT` in Custom Data for the default. `Mode VRT` changes the selected arm's current view; `Mode(VRT,Arm 2)` targets Arm 2. Use `ReadMouse On` / `ReadMouse Off` to enable/disable mouse turning.
-
-### Toolbar commands
-
-Use a programmable block **Run** action with one of these arguments. The optional final arm name applies to every arm command.
-
-| Argument | Action |
-| --- | --- |
-| `On` | Load settings, discover/scan and enable control |
-| `Select Arm 1` / `Select(HRZ, Arm 1)` | Pair the sole occupied cockpit; optionally choose its view |
-| `Release Arm 1` | Remove that arm's cockpit pairing |
-| `Claim Arm 1` | Transfer the arm's assignment to this Arm PB |
-| `Unclaim Arm 1` | Stop the arm and remove its assignment from this PB |
-| `Off` / `Stop` | Stop the target arm |
-| `Hold` | Hold its current head pose |
-| `Reload` / `Rescan` | Reload settings / rediscover while OFF |
-| `Check` / `Info` / `Joints` | Inspect the setup |
-| `SetHome` / `GoHome` | Save / return to that arm's Home |
-| `MoveTo x y z` | Move while holding orientation |
-| `OrientTo fx fy fz ux uy uz` | Turn while holding position |
-| `MoveToPosOri x y z fx fy fz ux uy uz` | Set both |
-| `Path <pose> \| <pose> ...` | Follow up to 32 poses |
-| `Mode HEAD` / `Mode HRZ` / `Mode VRT` | Choose a movement view |
-| `ToolScan` / `ToolInfo` | Scan / inspect tools |
-| `Tool 2` / `Tool Head 2` | Select a numbered tool |
-| `Park` / `SwapCancel` | Park / cancel the target arm's tool operation |
-
-Directional actions include `Forward`, `Back`, `Left`, `Right`, `Up`, `Down`, `PitchUp`, `PitchDown`, `YawLeft`, `YawRight`, `RollLeft` and `RollRight`.
-
-Without a tool, these actions aim the exposed rotor socket. HEAD movement follows that socket's facing direction, and Q/E rolls around it. With a tool attached, controls use the named tool reference block.
-
-`MoveTo` positions are metres from that arm's base in its Forward, Left and Up directions. Orientation commands use those same base directions. `Path` rows use world position, forward and up: nine numbers per pose, separated by `|`. AutoArm reaches each waypoint in order and holds the final pose.
-
-Pilot input cancels an automatic path or tool operation only for the arm receiving that input. `Stop` also cancels it; inspect the equipment, then run `On` to resume. `Reload`, `Check` and `ToolScan` remain available but are not prerequisites for `On`.
-
-### Fine tuning
-
-Custom Data is divided into `[global]` and one section per arm, such as `[Arm 1]` and `[Arm 2]`. Missing settings are generated automatically. Values apply in this order: built-in default, global setting, then arm override. Edit settings and run `On(Arm 2)` on the Arm PB to apply them to both scripts for Arm 2, or `Reload(Arm 2)` to remain OFF.
-
-Use `HeadSpeed` / `HeadTurnSpeed` for movement, `JointSpeed` / `PistonSpeed` for actuator caps, and their acceleration settings to control changes in speed. ToolSwap settings use names such as `Tools.ApproachDistance`, `Tools.MoveSpeed` and `Tools.TurnSpeed`. Travel inherits arm speed; final insertion/withdrawal defaults to 0.05 m/s and 2 degrees/s.
-
-Parking alignment defaults to `Tools.PositionTolerance=0.01` metres and `Tools.AngleTolerance=1` degree. Rotor pickup uses tighter alignment automatically. Parking confirms support before detaching; pickup confirms attachment before releasing support. Existing values in Custom Data take priority over these defaults.
-
-`PositionDamping` and `OrientationDamping` are optional and default to `0` (off). Existing explicit values remain unchanged. Pilot input remains additive, and idle deadbands ignore small movement jitter. If the display says cockpit input is inactive, run `Select <arm name>`; `On` does not take input ownership from another selected arm.
-
-The `Actuators` table gives stage Translation/Orientation preferences from 0 to 10. Put it under `[global]` to share it across structurally identical arms. AutoArm checks joint kinds, parallel member counts and split/rejoin layout; a nonconforming arm reports an error and stays OFF. Different lengths and mounting geometry are allowed and checked separately for each arm. Use local `Actuators` and `Structure` overrides for a different arrangement. Detachable tool couplers are excluded from the shared arm-body template.
-
-Optional helper PBs can plan paths, observe state or stop movement. Add their exact names to `Peers` with `Plan`, `Observe` or `Stop` permissions; see [Modules.ini](examples/Modules.ini). They need a compatible script. The integration guide is [PB modules and paths](docs/MODULES.md).
-
-## Acknowledgements
-
-Development began with a mining-arm adaptation inspired by [Philippe117's MArmOS](https://github.com/Philippe117/MArmOS). AutoArm now uses its own automatic discovery and task-space control architecture.
+Developer records are under [tools/development](tools/development).
+See [attribution](docs/ATTRIBUTION.md) and [history](docs/HISTORY.md) for origins
+and earlier development.

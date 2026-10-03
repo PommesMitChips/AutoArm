@@ -1,0 +1,69 @@
+{
+  "mode": "built-in imagegen",
+  "purpose": "Correct ToolSwap tool perspective: mounts face left/foreground; opposite tool bodies and working ends point right/background along the same rigid axis",
+  "title": {
+    "prompt": "Use case: precise-object-edit.\nAsset type: wide ToolSwap technical title illustration.\nInput image 1 is the edit target. Make one precise perspective correction to BOTH parked tools and their support geometry. Preserve everything else: robotic arm identity and pose, pale technical background, construction lines, steel-blue and amber palette, two stand positions, full framing, and exact large ToolSwap wordmark.\nThe current problem: the round tool rotor sockets face LEFT and TOWARD the viewer, but the tool bits extend RIGHT and TOWARD the viewer. These two directions are not opposites in 3D.\nRequired corrected geometry: each socket opening faces LEFT/DOWN toward the foreground viewer. The OPPOSITE end of this exact same 3D axis points RIGHT/UP, AWAY FROM THE VIEWER into the background. Rebuild each entire rigid tool body and its working bits around that axis. In screen coordinates the centerline must visibly RISE as it travels right from socket to housing to cutting/welding tip. Do not make the bits point down-right. Tool body depth, rear-end planes, shaft foreshortening, cylinder ellipses and occlusion must all show that the tool working ends recede UP-RIGHT behind the near socket faces. Think of a straight tube whose circular opening is nearest us at lower-left and whose far end goes up-right away from us.\nExactly TWO tools on exactly TWO stands: left tool is a compact twin-nozzle welder. Right tool is a compact drill. The welder has two parallel straight short nozzles emerging from the opposite end of its housing, pointing UP-RIGHT/AWAY, parallel to the socket-to-housing centerline. The drill housing narrows to a drill shaft and cutting bit pointing UP-RIGHT/AWAY, exactly collinear with its left/foreground-facing rotor socket. The tool housing and shaft must not descend right toward the camera. The nearest left rim/socket must overlap the housing because it is in front; tool tips are farther away. Each underside is firmly supported by one compact stand, adjust stand connection to fit the new coherent axis.\nKeep one rotor HEAD at arm wrist and one socket per parked tool. Maintain a small air gap and one short amber arrow toward the selected socket, with no duplicate rotor pieces. Adjust ONLY the wrist rotor head's orientation if required to agree with the selected socket's mounting axis; keep the rest of arm unchanged.\nNo hoses, cables, bent shafts, floating objects, extra tools, extra stands, extra words or clipped edges. All tool tips stay within safe margins. The final tool bits must unambiguously point RIGHT AND AWAY from the viewing plane, not right and toward it.",
+    "inputs": [
+      "branding/toolswap-title.png (earlier aligned version)"
+    ],
+    "generated": "C:/Users/Leo/.codex/generated_images/01a0fd94-ec58-71e3-9366-17e232ab6e9a/exec-9a11f94e-fb71-436c-9788-91f6e6dc4634.png",
+    "master": "sources/toolswap-title-perspective-master.png",
+    "output": "branding/toolswap-title.png"
+  },
+  "thumbnail": {
+    "prompt": "Use case: precise-object-edit.\nAsset type: square ToolSwap Steam Workshop thumbnail.\nInput image 1 is the square thumbnail edit target. Input image 2 is the corrected wide title, the mechanical perspective authority.\nChange ONLY the two parked tools and their stand-to-tool attachments in image 1 to precisely match the corrected three-dimensional directions in image 2. Preserve the arm and pose, pale technical backdrop, palette, square framing, exact ToolSwap wordmark and every existing object count.\nPERSPECTIVE CORRECTION: both open circular rotor sockets face LEFT and TOWARD the viewer, in the foreground. Their opposite ends, housings and working tips point RIGHT and AWAY from the viewer, into the background. Thus each complete tool centerline must RISE RIGHTWARD in screen coordinates. The housing's rear end is farther away at upper-right; the nearer socket rim at lower-left overlaps its body. Tool tips must extend UP-RIGHT, not DOWN-RIGHT toward the camera. Do not just angle the tips: redraw the entire socket/body/shaft assembly as one straight common axis with correct rigid perspective.\nExactly two tools: the nearer one is the twin-nozzle welder. Its two straight nozzles emerge from the FAR upper-right end of the body and point UP-RIGHT/AWAY in parallel. The second tool is a drill with its rear housing, shaft and cutting bit ALL on a straight UP-RIGHT/AWAY centerline from its near lower-left-facing socket. Exactly two separate stands firmly support the tool undersides. One socket per tool. No hoses, bent pipes, duplicate cylinders or extra pieces.\nFull arm base, full stand bases, all tips and complete wordmark within safe margins. Keep the correction clearly visible at small thumbnail scale. All other artwork unchanged.",
+    "inputs": [
+      "branding/toolswap-thumbnail.png (earlier aligned version)",
+      "sources/toolswap-title-perspective-master.png"
+    ],
+    "generated": "C:/Users/Leo/.codex/generated_images/01a0fd94-ec58-71e3-9366-17e232ab6e9a/exec-36147563-7a22-43a5-9d93-f0708573cc64.png",
+    "master": "sources/toolswap-thumbnail-perspective-master.png",
+    "output": "branding/toolswap-thumbnail.png",
+    "export": "512x512 PNG; Lanczos3 downsample with sharp"
+  },
+  "visualChecks": [
+    "Exactly two parked tools and two complete stand bases",
+    "Socket rims are near/foreground at lower-left and overlap the housings",
+    "Housing and working ends visibly rise to the right and recede into background",
+    "Welder twin nozzles are parallel to its socket-to-body centerline, pointing right/away",
+    "Drill socket, body, shaft and cutting tip share a straight right/away axis",
+    "No right/down/toward-viewer working end remains",
+    "No hoses, floating sockets, or duplicate tool assemblies",
+    "Complete ToolSwap wordmark, arm base, stand bases and tool tips inside canvas"
+  ],
+  "revisions": [
+    {
+      "status": "superseded: straight axes alone still pointed toward viewer",
+      "title": {
+        "prompt": "Use case: precise-object-edit.\nAsset type: ToolSwap wide title illustration, 16:9, high-quality technical artwork.\nInput image 1 is the edit target. Input image 2 is the original AutoArm identity/style authority.\nPrimary request: correct the mechanically impossible tool geometry in image 1. Preserve the same robotic arm, arm pose, base, steel-blue/amber palette, pale technical background, wide framing, and exact large \"ToolSwap\" wordmark. Rebuild ONLY the two parked tools and their two stands.\nMechanical geometry: exactly two tools: one detachable twin-tip welding tool on the left stand, one detachable drill on the right stand. Each is one straight coaxial rigid assembly. From LEFT to RIGHT along its centerline: open circular ROTOR BASE socket facing the arm, short rotor stator body, solid rectangular tool housing, then the working bits on the OPPOSITE end pointing to the RIGHT and slightly down. The socket plane is perpendicular to this exact centerline; socket, tool housing and working bits must share this same axis. The twin welder nozzles are straight parallel rods emerging from the far-right end of the housing; both aim right along the same centerline. The drill is a recognizable chunky mining drill with one conical cutting head at its far-right end, centered on the same axis as its left-facing socket. No tool bits beside the socket or bending sideways. Give each tool a single compact stand directly underneath its center of mass with a square mount block; the stand supports its underside and does not pass through it.\nThe arm retains exactly ONE small loose rotor HEAD at its wrist, facing the nearer welder's open socket across a small air gap. Align the nearer tool's socket centerline with the arm head centerline so these two halves would mate. Keep a single restrained amber arrow indicating that mating motion across the air gap.\nComposition: two parked tools cleanly separated, all geometry within generous margins, well away from the wordmark. Preserve believable perspective and fully legible ToolSwap text. ToolSwap is spelled T-o-o-l-S-w-a-p with capital T and S.\nAvoid: ALL hoses, cables, bent pipes, floating sockets, third tools, third stands, duplicate rotors, extra words, impossible shafts, inconsistent ellipses, cutting bits pointing a different way from their tool body, arrows not crossing the mating gap, clipped edges.",
+        "inputs": [
+          "branding/toolswap-title.png (prior version)",
+          "C:/Users/Leo/AppData/Local/Temp/codex-clipboard-675844b6-c5a4-4b0c-99e6-c4af9310f870.png"
+        ],
+        "generated": "C:/Users/Leo/.codex/generated_images/01a0fd94-ec58-71e3-9366-17e232ab6e9a/exec-1ef7a94e-4564-453a-89f5-434ef92de7d4.png",
+        "master": "sources/toolswap-title-aligned-master.png",
+        "output": "branding/toolswap-title.png"
+      },
+      "thumbnail": {
+        "prompt": "Use case: compositing.\nAsset type: square Steam Workshop thumbnail, 1024 by 1024.\nInput image 1 is the corrected ToolSwap title and is the sole mechanical and visual authority.\nRecompose this exact scene as a square thumbnail. Preserve the robotic arm identity and pose, circular joints, telescopic forearm, rotor HEAD at wrist, two parked tools, pale technical background, steel-blue palette and amber details. The exact wordmark \"ToolSwap\" must be large and complete along the bottom, bold rounded dark-blue letters, capital T and S. No other text.\nMECHANICAL INVARIANTS: exactly TWO tool assemblies, each on one compact stand. On each tool, the open circular rotor BASE socket is on the LEFT end facing the arm. The socket, housing, and rightward working end share ONE straight centerline in coherent perspective. The twin welder nozzles are two parallel straight shafts at the RIGHT end of its rectangular housing; both point right and slightly down in the same direction as the centerline. The drill is on the right stand, with a single drill bit on its RIGHT end extending straight along its socket/housing axis. No hoses or bent pipes. Keep one open socket per parked tool and exactly one rotor head on the arm, aligned with the nearer welder socket across a small gap and a short amber arrow.\nComposition: arm in upper-left, two parked tools upper-right, entire scene in upper 75 percent and wordmark below. Leave generous blank edge margins on ALL sides, including drill tip. Completely show arm base, both stand bases, both sets of tool bits, and every wordmark letter. Perspective and axes must be as clear as the reference. Do not add or change mechanical parts. No floating cylinders, extra sockets, cables, skewed axes, or clipped objects.",
+        "inputs": [
+          "sources/toolswap-title-aligned-master.png"
+        ],
+        "generated": "C:/Users/Leo/.codex/generated_images/01a0fd94-ec58-71e3-9366-17e232ab6e9a/exec-71290388-b798-470d-874c-e5fd443a4580.png",
+        "master": "sources/toolswap-thumbnail-aligned-master.png",
+        "output": "branding/toolswap-thumbnail.png",
+        "export": "512x512 PNG; Lanczos3 downsample with sharp; no creative raster modification after built-in imagegen"
+      },
+      "visualChecks": [
+        "Exactly two parked tools and two complete stand bases",
+        "One left-facing open rotor-base socket per tool",
+        "Welder housing extends right from socket with two parallel nozzles at its opposite end",
+        "Drill housing and cutting bit share socket centerline",
+        "Arm wrist rotor head faces nearer welder socket across one amber mating arrow",
+        "No hoses, cables, floating sockets or duplicate rotor/tool assemblies",
+        "Complete ToolSwap wordmark; all tips and bases inside canvas",
+        "Original arm pose, joints, blue-gray/amber palette and pale technical backdrop preserved"
+      ]
+    }
+  ]
+}

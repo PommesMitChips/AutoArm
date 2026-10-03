@@ -6,8 +6,8 @@ The runner submits paths to one Arm PB. It never writes joint velocities, switch
 
 ## Install
 
-1. Use **v5.0.4** [AutoArm_Compact.txt](../AutoArm_Compact.txt), or the reallocation experiment already installed, with **v5.0.5** [Collision](../AutoArm_Collision_Compact.txt). The joint-interface update only requires replacing Collision code, retaining its Custom Data. Both peers support sixteen constraints; PID tuning and existing ToolSwap scripts remain unchanged.
-2. Name another PB **`Arm Bench`** and replace its entire editor contents with [AutoArm_Bench_Compact.txt](../AutoArm_Bench_Compact.txt). Keep existing Custom Data. The [readable source](../AutoArm_Bench.txt) implements the same commands.
+1. Use **v5.0.4** [AutoArm_Compact.txt](../experimental/AutoArm_Compact.txt), or the reallocation experiment already installed, with **v5.0.5** [Collision](../experimental/AutoArm_Collision_Compact.txt). The joint-interface update only requires replacing Collision code, retaining its Custom Data. Both peers support sixteen constraints; PID tuning and existing ToolSwap scripts remain unchanged.
+2. Name another PB **`Arm Bench`** and replace its entire editor contents with [AutoArm_Bench_Compact.txt](../experimental/AutoArm_Bench_Compact.txt). Keep existing Custom Data. The [readable source](../experimental/AutoArm_Bench_Source.txt) implements the same commands.
 3. In the Arm PB's existing `[global]` section, add the planner, preserving other peers:
 
    ```ini
@@ -48,7 +48,7 @@ Progress shows Safety WAIT/HOLD/LIMITED/READY, the accepted joint-command scale,
 
 ## Larger encounters
 
-Replace only the **Arm Bench** code with the current [AutoArm_Bench.txt](../AutoArm_Bench.txt). Keep its Custom Data, Arm/Collision code, and PID settings. The new optional settings have defaults even when absent from existing data.
+Replace only the **Arm Bench** code with the current [AutoArm_Bench.txt](../experimental/AutoArm_Bench_Source.txt). Keep its Custom Data, Arm/Collision code, and PID settings. The new optional settings have defaults even when absent from existing data.
 
 Run `Check`, then `PreviewCross`. Preview records the requested waypoints in the report and sends no movement. `Cross` asks both heads to move past the opposite head's starting position by **1 metre**, then return. On the supplied survey this is approximately **19.4 metres each way** per head. Each retains its own orientation and depth coordinate. Both paths are submitted in the same Bench invocation, but motion starts when each ArmService context accepts it; they are not synchronized in lockstep. They can finish and start their return at different times.
 

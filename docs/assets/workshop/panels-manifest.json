@@ -1,0 +1,237 @@
+{
+  "copySource": "getting-started.bbcode.txt",
+  "copySha256": "85f61b045cdf5c7e74d2545fbd331015630291ac65694366b255ce8cf2fea928",
+  "logicalWidth": 620,
+  "scale": 2,
+  "panels": [
+    {
+      "filename": "00-getting-started.png",
+      "width": 1240,
+      "height": 584,
+      "transparent": true,
+      "textBlocks": {
+        "heading": "Getting Started with AutoArm",
+        "level": 1,
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Build your arm, name its base and head, then let AutoArm discover the joints between them. Finish the setup within 5 minutes."
+          }
+        ]
+      }
+    },
+    {
+      "filename": "01-place-first-actuator.png",
+      "width": 1240,
+      "height": 505,
+      "transparent": true,
+      "textBlocks": {
+        "heading": "1. Place your first actuator",
+        "level": 2,
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Place a rotor, hinge, or piston on your grid. This first actuator will be the base of your arm."
+          },
+          {
+            "type": "image",
+            "token": "IMAGE_01_ROTOR_ON_GRID"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "02-name-base.png",
+      "width": 1240,
+      "height": 585,
+      "transparent": true,
+      "textBlocks": {
+        "heading": "2. Name the base",
+        "level": 2,
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Open the rotor in the terminal and name it [b]<MyArmName> - Base[/b]. Replace [b]<MyArmName>[/b] with your arm's name; for example, [b]Arm 1 - Base[/b]."
+          },
+          {
+            "type": "image",
+            "token": "IMAGE_02_NAME_BASE"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "03-build-arm.png",
+      "width": 1240,
+      "height": 2849,
+      "transparent": true,
+      "textBlocks": {
+        "heading": "3. Build the rest of the arm on top",
+        "level": 2,
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Build from the base rotor toward the tool. Intermediate rotors, hinges and pistons can keep their ordinary names."
+          },
+          {
+            "type": "p",
+            "text": "The example, from bottom to top, is:"
+          },
+          {
+            "type": "ol",
+            "items": [
+              "Base rotor.",
+              "A crossbar.",
+              "Two hinges, one on each end of the crossbar, with a shared rotation axis.",
+              "Two pistons, one above each hinge.",
+              "A second crossbar, joining the piston heads.",
+              "A single hinge in the middle of the upper crossbar.",
+              "Rotor → hinge → piston → rotor → hinge → hinge → rotor → drill head."
+            ]
+          },
+          {
+            "type": "image",
+            "token": "IMAGE_03_ARM_FRONT"
+          },
+          {
+            "type": "h3",
+            "text": "What not to do"
+          },
+          {
+            "type": "p",
+            "text": "Parallel hinges and pistons are supported when their stages line up."
+          },
+          {
+            "type": "p",
+            "text": "[b]Parallel stages that don't line up:[/b] Parallel placement is supported, but offset hinge and piston stages are not supported."
+          },
+          {
+            "type": "image",
+            "token": "IMAGE_03A_MISALIGNED_STAGES"
+          },
+          {
+            "type": "p",
+            "text": "[b]Hydraulic structures:[/b] A piston used as a brace to drive a hinged linkage is not supported."
+          },
+          {
+            "type": "image",
+            "token": "IMAGE_03B_HYDRAULIC_LINKAGE"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "04-name-head.png",
+      "width": 1240,
+      "height": 585,
+      "transparent": true,
+      "textBlocks": {
+        "heading": "4. Name the head",
+        "level": 2,
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Name the tool or final terminal block at the moving end [b]<MyArmName> - Head[/b]. Use the same prefix as the base: [b]Arm 1 - Head[/b] in this example."
+          },
+          {
+            "type": "image",
+            "token": "IMAGE_04_NAME_HEAD"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "05-place-controller.png",
+      "width": 1240,
+      "height": 678,
+      "transparent": true,
+      "textBlocks": {
+        "heading": "5. Place a cockpit or controller",
+        "level": 2,
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Place a cockpit, control seat or another ship controller on the same construct. Sit in it, or take control of it, when you are ready to send movement inputs."
+          },
+          {
+            "type": "image",
+            "token": "IMAGE_05_CONTROLLER"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "06-place-programmable-block.png",
+      "width": 1240,
+      "height": 736,
+      "transparent": true,
+      "textBlocks": {
+        "heading": "6. Place a programmable block",
+        "level": 2,
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Place a programmable block on the same construct as the arm. This block will run AutoArm. The example keeps it beside the arm on a connected foundation grid."
+          },
+          {
+            "type": "image",
+            "token": "IMAGE_06_ARM_AND_PROGRAMMABLE_BLOCK"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "07-load-and-run.png",
+      "width": 1240,
+      "height": 1022,
+      "transparent": true,
+      "textBlocks": {
+        "heading": "7. Load the script and run [b]On[/b]",
+        "level": 2,
+        "blocks": [
+          {
+            "type": "ol",
+            "items": [
+              "Open the programmable block's [b]Edit[/b] window.",
+              "Click on Browse Scripts.",
+              "Select the script from your list.",
+              "Enter [b]On[/b] in [b]Argument[/b], then press [b]Run[/b]."
+            ]
+          },
+          {
+            "type": "p",
+            "text": "For a fresh programmable block, AutoArm discovers arm names from the base markers and generates its configuration."
+          },
+          {
+            "type": "image",
+            "token": "IMAGE_07_RUN_ON"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "08-control-arm.png",
+      "width": 1240,
+      "height": 646,
+      "transparent": true,
+      "textBlocks": {
+        "heading": "8. Take control of your arm",
+        "level": 2,
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Sit in your cockpit or take control of your ship controller. Use [b]WASD[/b] and [b]C / Space[/b] to move the arm. By default, movement follows the head's orientation."
+          },
+          {
+            "type": "ul",
+            "items": [
+              "[b]W / S[/b] — Forward / backward",
+              "[b]A / D[/b] — Left / right",
+              "[b]Space / C[/b] — Up / down"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

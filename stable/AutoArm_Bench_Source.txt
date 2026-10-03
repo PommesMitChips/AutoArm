@@ -1,0 +1,494 @@
+// Repeatable head-only test through ArmService. Never writes actuators.
+const string ControllerBuildVersion = "1.1";
+const string Tag = "AutoArm/5", S = "Link";
+// ===== IMPLEMENTATION =====
+sealed class ArmSession {
+    public string Name;
+    public long Sequence, Remote, Seen, Ack, PathId;
+    public MyIni State;
+    public double ReplyTime, MaxError, MaxAngle, HeldSeconds;
+    public int LastCompleted, Samples, LimitedSamples, BudgetSamples;
+    public MatrixD Start, Expected;
+    public Vector3D Base;
+    public Vector3D MotionOrigin;
+    public double MotionTime, NetSpeed;
+    public bool MotionObserved;
+    public double ProgressTime, SampleTime = -1, Remaining = double.MaxValue;
+    public bool Submitted, Returned;
+    public string NavKey = "";
+    public int NavStage;
+    public double NavBest = double.MaxValue, PeerBest = double.MaxValue, NavBudgetDistance;
+    public readonly Dictionary<long, double> Sent = new Dictionary<long, double>();
+    public readonly List<MatrixD> Path = new List<MatrixD>();
+}
+readonly List<ArmSession> Arms = new List<ArmSession>();
+readonly StringBuilder Log = new StringBuilder();
+MyIni Config;
+IMyProgrammableBlock Owner;
+IMyTerminalBlock Reference;
+long Epoch;
+int Phase, ArmIndex, Iteration, Repeats;
+double Clock, LastPoll, Deadline, Extent, Side, Speed, StartTime, LastProgress, BestRemaining;
+double EncounterSpeed, CrossBeyond, BaseHeight, BaseSweep, TotalBudget, CaptureTime;
+bool Encounter, Preview;
+bool Truncated;
+string Mode, Status = "Rebase, Check, Smoke, Run, PreviewCross, Cross, PreviewBases, Bases, Info, Cancel.", Settings, AbortReason;
+string SavedReport = "";
+public Program() {
+    int split = Storage.IndexOf('\n'); long n; long.TryParse(split < 0 ? Storage : Storage.Substring(0, split), out n);
+    if (n > 0 && split >= 0) SavedReport = Storage.Substring(split + 1);
+    Epoch = n > 0 && n < long.MaxValue ? n + 1 : 1; Save();
+    if (string.IsNullOrWhiteSpace(Me.CustomData)) Defaults();
+    Echo(Status);
+}
+public void Save() { Storage = Epoch + "\n" + SavedReport; }
+void Defaults() {
+    var ini = new MyIni();
+    ini.Set("Bench", "Format", 1); ini.Set("Bench", "ArmPB", "@101750135329216276");
+    ini.Set("Bench", "Reference", "@111497463377737148"); ini.Set("Bench", "Arms", "Arm 1|Arm 2");
+    ini.Set("Bench", "Extent", .25); ini.Set("Bench", "Side", .1); ini.Set("Bench", "Speed", .05); ini.Set("Bench", "Repeats", 1);
+    ini.Set("Bench", "EncounterSpeed", .2); ini.Set("Bench", "CrossBeyond", 1); ini.Set("Bench", "BaseHeight", 7.5); ini.Set("Bench", "BaseSweep", 3);
+    ini.Set("Baseline Arm 1", "Pose", "6.253374726417071E-05 23.012861685203884 -1.2806465761627805E-05 1.833630138933784E-06 0.9999999999981417 -5.953843905392997E-07 1.417349066057394E-06 -5.95386989460378E-07 -0.9999999999988182");
+    ini.Set("Baseline Arm 2", "Pose", "-17.493521427154047 28.60968273749514 2.048001945509359E-05 0.9999999315206365 -0.0003699665545711106 9.13623277876141E-06 0.00036996655736197537 0.9999999315623249 -3.037838389452485E-07");
+    Me.CustomData = ini.ToString();
+}
+public void Main(string argument, UpdateType source) {
+    double dt = Runtime.TimeSinceLastRun.TotalSeconds;
+    if (Finite(dt) && dt > 0) Clock += dt;
+    try {
+        string command = (argument ?? "").Trim();
+        if (command.StartsWith("Page ", StringComparison.OrdinalIgnoreCase)) {
+            int page; if (!int.TryParse(command.Substring(5), out page) || page < 1) throw new Exception("Page needs a positive number.");
+            var saved = new MyIni(); if (!saved.TryParse(Me.CustomData)) throw new Exception("Invalid report data.");
+            string report = Phase != 0 ? Log.ToString() : SavedReport.Length > 0 ? SavedReport : saved.EndContent;
+            int pages = Math.Max(1, (report.Length + 11999) / 12000);
+            if (page > pages) throw new Exception("Report has " + pages + " pages.");
+            int offset = (page - 1) * 12000; string part = "REPORT PAGE " + page + "/" + pages + "\n" + report.Substring(offset, Math.Min(12000, report.Length - offset));
+            if (Phase == 0) { saved.EndContent = ""; if (saved.ToString().Length > 12000) throw new Exception("Bench settings exceed report export budget."); saved.EndContent = part; Me.CustomData = saved.ToString(); }
+            Echo(part);
+            return;
+        }
+        if (command.Equals("Cancel", StringComparison.OrdinalIgnoreCase)) {
+            if (Phase == 0) Status = "No test path active."; else Abort("Cancelled by player.");
+        } else if (new[] { "Rebase", "Check", "Smoke", "Run", "Cross", "Bases", "PreviewCross", "PreviewBases" }.Any(c => command.Equals(c, StringComparison.OrdinalIgnoreCase))) {
+            if (Phase != 0) throw new Exception("Test running; Cancel first.");
+            Begin(command.ToUpperInvariant());
+        } else if (command.Length > 0 && !command.Equals("Info", StringComparison.OrdinalIgnoreCase) && command != Tag) throw new Exception("Commands: Rebase, Check, Smoke, Run, PreviewCross, Cross, PreviewBases, Bases, Info, Cancel.");
+        Replies();
+        if (Phase != 0 && Phase != 90) {
+            if (Owner.Closed || Reference.Closed || !Reference.IsSameConstructAs(Me)) throw new Exception("Owner/reference lost.");
+            var current = new MyIni();
+            if (!current.TryParse(Me.CustomData)) throw new Exception("Bench configuration edited.");
+            current.EndContent = "";
+            if (current.ToString() != Settings) throw new Exception("Bench configuration edited during test.");
+            if (Phase == 1 && Arms.All(a => a.State != null && Clock - a.ReplyTime <= .25)) Prepare();
+            if (Phase == 1 && Clock > Deadline) throw new Exception("ArmService handshake timeout; check Plan peers and Arm PB.");
+            if (Phase >= 2) {
+                foreach (var arm in Arms) if (Clock - arm.ReplyTime > .35) throw new Exception("ArmService reply lost: " + arm.Name);
+                if (Phase == 2) { if (Encounter) EncounterState(); else MoveState(); }
+                if (Phase == 4) RebaseState();
+                if (Phase == 3 && Clock >= Deadline) {
+                    foreach (var arm in Arms) {
+                        RequireIdle(arm); RequireSafety(arm, false);
+                        if (Vector3D.Distance(LocalPose(arm).Translation, arm.Start.Translation) > .01 || Rotation(LocalPose(arm), arm.Start) > .3) throw new Exception("Return/idle pose drift: " + arm.Name);
+                    }
+                    if (Encounter) { Complete("PASS: both encounter paths completed and returned to their starting head poses. This is path completion, not proof of physical clearance."); }
+                    else {
+                    ArmIndex++; if (ArmIndex == Arms.Count) { ArmIndex = 0; Iteration++; }
+                    if (Iteration == Repeats) Complete("PASS: all paths completed and returned to their starting head poses."); else Submit();
+                    }
+                }
+            }
+            if (Phase != 0 && Phase != 90 && Clock - LastPoll >= .1) { LastPoll = Clock; foreach (var arm in Arms) Send(arm, arm.Remote == 0 ? "HELLO" : "PING"); }
+        }
+        if (Phase == 90) {
+            if (Arms.Where(a => a.Submitted).All(a => a.State != null && a.Ack > a.PathId && a.State.Get(S, "Owner").ToInt64() != Me.EntityId))
+                Complete("ABORT: " + AbortReason + " Stop confirmed; no automatic return.");
+            else if (Clock >= Deadline) Complete("ABORT: " + AbortReason + " Stop acknowledgement missing; no automatic return. Check Arm PB status.");
+        }
+    } catch (Exception e) {
+        if (Phase != 0) Abort(e.Message); else Status = "Bench refused: " + e.Message;
+    }
+    Runtime.UpdateFrequency = Phase == 0 ? UpdateFrequency.None : UpdateFrequency.Update1;
+    Echo(Status);
+}
+void Begin(string mode) {
+    var ini = new MyIni();
+    if (!ini.TryParse(Me.CustomData) || ini.Get("Bench", "Format").ToInt32() != 1) throw new Exception("Bench Format must be 1; malformed data is not overwritten.");
+    double extent = ini.Get("Bench", "Extent").ToDouble(), side = ini.Get("Bench", "Side").ToDouble(), speed = ini.Get("Bench", "Speed").ToDouble();
+    int repeats = ini.Get("Bench", "Repeats").ToInt32();
+    Encounter = mode == "CROSS" || mode == "BASES" || mode == "PREVIEWCROSS" || mode == "PREVIEWBASES";
+    Preview = mode.StartsWith("PREVIEW", StringComparison.Ordinal);
+    EncounterSpeed = Setting(ini, "EncounterSpeed", .2, .001, .5);
+    CrossBeyond = Setting(ini, "CrossBeyond", 1, .1, 5);
+    BaseHeight = Setting(ini, "BaseHeight", 7.5, 2.5, 20);
+    BaseSweep = Setting(ini, "BaseSweep", 3, 1, 10);
+    if (!Finite(extent) || extent <= 0 || extent > .5 || !Finite(side) || side < 0 || side > .2 || !Finite(speed) || speed <= 0 || speed > .1 || repeats < 1 || repeats > 3)
+        throw new Exception("Accepted Extent (0,.5], Side [0,.2], Speed (0,.1], Repeats 1..3.");
+    var blocks = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(blocks);
+    blocks.RemoveAll(b => b.Closed || !b.IsSameConstructAs(Me));
+    var owner = Find(blocks, ini.Get("Bench", "ArmPB").ToString()) as IMyProgrammableBlock;
+    var reference = Find(blocks, ini.Get("Bench", "Reference").ToString());
+    if (owner == null || owner == Me || !owner.IsFunctional || reference == null || reference.CubeGrid.EntityId != owner.CubeGrid.EntityId) throw new Exception("Arm PB/reference unavailable or reference not on Arm PB's hull grid.");
+    var ownerData = new MyIni();
+    if (!ownerData.TryParse(owner.CustomData) || ownerData.Get("global", "Format").ToInt32() != 7) throw new Exception("Arm PB must use Format 7.");
+    var sessions = new List<ArmSession>();
+    foreach (string value in ini.Get("Bench", "Arms").ToString().Split('|')) {
+        string name = value.Trim();
+        if (name.Length == 0 || sessions.Any(a => a.Name == name) || !ownerData.ContainsSection(name)) throw new Exception("List distinct configured arms belonging to the same owner PB.");
+        var expected = mode == "REBASE" ? MatrixD.Identity : Frame(ini.Get("Baseline " + name, "Pose").ToString());
+        string rows = ownerData.ContainsKey(name, "Peers") ? ownerData.Get(name, "Peers").ToString() : ownerData.Get("global", "Peers").ToString();
+        rows = rows.Replace("{arm}", name);
+        bool plan = false, safety = false;
+        foreach (string row in rows.Split('\n')) {
+            var fields = row.Trim().TrimStart('|').Split('|'); if (fields.Length != 2) continue;
+            string peer = fields[0].Trim(), role = fields[1].Trim();
+            if (Matches(Me, peer) && role == "Plan") plan = true;
+            if (role == "Safety") { var pb = Find(blocks, peer) as IMyProgrammableBlock; safety = pb != null && pb.IsFunctional; }
+        }
+        if (!plan || !safety) throw new Exception(name + " requires this PB as Plan and an accessible Safety peer.");
+        sessions.Add(new ArmSession { Name = name, Expected = expected });
+    }
+    if (sessions.Count != 2) throw new Exception("This comparison needs exactly two arms.");
+    if (Epoch == long.MaxValue) throw new Exception("Client epoch exhausted.");
+    Epoch++; Save(); Arms.Clear(); Arms.AddRange(sessions); Owner = owner; Reference = reference;
+    Config = ini; Config.EndContent = ""; Settings = Config.ToString();
+    Extent = mode == "SMOKE" ? Math.Min(.1, extent) : extent; Side = side; Speed = speed;
+    Repeats = mode == "SMOKE" || mode == "CHECK" || Encounter ? 1 : repeats; Mode = mode; TotalBudget = 360;
+    ArmIndex = Iteration = 0; LastPoll = Clock; Deadline = Clock + 5; StartTime = Clock;
+    if (Settings.Length > 12000) throw new Exception("Bench settings exceed report export budget.");
+    Log.Clear(); Truncated = false; Add("AUTOARM BENCH 1.1 | " + mode + " | heads only; ArmService owner " + Owner.EntityId);
+    Add("REFERENCE " + Reference.EntityId + " | " + Row(Reference.WorldMatrix));
+    Add("SETTINGS extent=" + N(Extent) + " side=" + N(Side) + " speed=" + N(Speed) + " repeats=" + Repeats);
+    Add("ARM CONFIG BEGIN\n" + Owner.CustomData + "\nARM CONFIG END");
+    Phase = 1; foreach (var arm in Arms) Send(arm, "HELLO");
+    Status = "Bench: checking both arms and live Safety. Keep cockpit input neutral.";
+}
+bool Matches(IMyTerminalBlock b, string name) { return name == b.CustomName || name == "@" + b.EntityId; }
+double Setting(MyIni ini, string key, double fallback, double minimum, double maximum) {
+    double value = ini.ContainsKey("Bench", key) ? ini.Get("Bench", key).ToDouble(double.NaN) : fallback;
+    if (!Finite(value) || value < minimum || value > maximum) throw new Exception("Invalid Bench." + key + "; accepted " + minimum + ".." + maximum + ".");
+    return value;
+}
+IMyTerminalBlock Find(List<IMyTerminalBlock> blocks, string name) {
+    IMyTerminalBlock match = null; name = name.Trim();
+    foreach (var block in blocks) if (Matches(block, name)) {
+        if (match != null) throw new Exception("Ambiguous block: " + name);
+        match = block;
+    }
+    return match;
+}
+void Send(ArmSession arm, string op, MyIni payload = null) {
+    var ini = payload ?? new MyIni();
+    ini.Set(S, "Version", 5); ini.Set(S, "Service", 1); ini.Set(S, "Arm", arm.Name); ini.Set(S, "Epoch", Epoch);
+    ini.Set(S, "Sequence", ++arm.Sequence); ini.Set(S, "Operation", op); ini.Set(S, "Remote", op == "HELLO" ? 0 : arm.Remote);
+    ini.Set(S, "Seen", op == "HELLO" ? 0 : arm.Seen); ini.Set(S, "Generation", arm.State == null ? 0 : arm.State.Get(S, "Generation").ToInt64());
+    if (arm.Sent.Count >= 16) { var old = arm.Sent.Keys.Min(); arm.Sent.Remove(old); }
+    arm.Sent[arm.Sequence] = Clock;
+    if (op == "PATH") arm.PathId = arm.Sequence;
+    IGC.SendUnicastMessage(Owner.EntityId, Tag, ini.ToString());
+}
+void Replies() {
+    int count = 0;
+    while (IGC.UnicastListener.HasPendingMessage && count++ < 24) {
+        var message = IGC.UnicastListener.AcceptMessage();
+        if (Phase == 0 || message.Source != Owner.EntityId || message.Tag != Tag || !(message.Data is string)) continue;
+        var ini = new MyIni();
+        if (((string)message.Data).Length > 16000 || !ini.TryParse((string)message.Data) || ini.Get(S, "Version").ToInt32() != 5 || ini.Get(S, "Service").ToInt32() != 1 || ini.Get(S, "Operation").ToString() != "STATE" || ini.Get(S, "Remote").ToInt64() != Epoch) continue;
+        var arm = Arms.Find(a => a.Name == ini.Get(S, "Arm").ToString());
+        if (arm == null) continue;
+        long epoch = ini.Get(S, "Epoch").ToInt64(), seq = ini.Get(S, "Sequence").ToInt64(), ack = ini.Get(S, "Ack").ToInt64(); double sent;
+        if (epoch <= 0 || seq <= arm.Seen || ack <= arm.Ack || !arm.Sent.TryGetValue(ack, out sent) || Clock - sent > (Phase == 1 ? 5 : .35)) continue;
+        if (arm.Remote != 0 && arm.Remote != epoch) throw new Exception("Arm PB restarted; test revoked.");
+        if (ini.Get(S, "Role").ToString() != "Plan") throw new Exception("Runner needs Plan authority.");
+        arm.Remote = epoch; arm.Seen = seq; arm.Ack = ack; arm.State = ini; arm.ReplyTime = Clock; arm.Sent.Remove(ack);
+        if (Phase == 2 || Phase == 3) Sample(arm);
+    }
+}
+void RequireSafety(ArmSession arm, bool clear) {
+    var state = arm.State;
+    if (!state.Get(S, "SafetyRequired").ToBoolean()) throw new Exception(arm.Name + ": live Safety telemetry missing. Install the updated Arm script; Safety must stay configured.");
+    if (clear && (!state.Get(S, "SafetyReady").ToBoolean() || state.Get(S, "SafetyHold").ToBoolean())) throw new Exception(arm.Name + ": Safety not granting motion: " + state.Get(S, "SafetyReason"));
+}
+bool SafetyStopped(ArmSession arm) {
+    var s = arm.State;
+    return !s.Get(S, "SafetyReady").ToBoolean() || s.Get(S, "SafetyHold").ToBoolean() ||
+        s.Get(S, "SafetyLimited").ToBoolean() && s.Get(S, "SafetyFraction").ToDouble() <= 1e-6;
+}
+string SafetyStatus(ArmSession arm) {
+    var s = arm.State;
+    string label = "READY";
+    if (!s.Get(S, "SafetyReady").ToBoolean()) label = "WAIT";
+    else if (s.Get(S, "SafetyHold").ToBoolean()) label = "HOLD";
+    else if (s.Get(S, "SafetyLimited").ToBoolean()) label = "LIMITED";
+    if ((label == "LIMITED" || label == "READY") && s.Get(S, "SafetyReallocated").ToBoolean()) label = "REALLOCATED";
+    double fraction = label == "WAIT" || label == "HOLD" ? 0 : s.Get(S, "SafetyFraction").ToDouble(double.NaN);
+    string scale = "unknown"; if (Finite(fraction)) scale = (fraction * 100).ToString("0.0") + "%";
+    string text = "Safety " + label + "; command scale " + scale;
+    if (s.ContainsKey(S, "SafetyConstraints")) text += "; rows " + s.Get(S, "SafetyConstraints") + "/" + s.Get(S, "SafetyConstraintLimit");
+    return text + "\n" + s.Get(S, "SafetyReason");
+}
+void RequireIdle(ArmSession arm) {
+    var s = arm.State;
+    if (!s.Get(S, "Ready").ToBoolean() || !s.Get(S, "Enabled").ToBoolean() || s.Get(S, "Busy").ToBoolean() || s.Get(S, "Owner").ToInt64() != 0)
+        throw new Exception(arm.Name + " must be ON, idle, unowned and ready; test never runs On automatically.");
+    if (s.Get(S, "Error").ToString().Length > 0) throw new Exception(arm.Name + ": " + s.Get(S, "Error"));
+}
+void Prepare() {
+    var inverse = MatrixD.Invert(Reference.WorldMatrix);
+    foreach (var arm in Arms) Add("CHECK STATE " + arm.Name + "\n" + arm.State.ToString());
+    foreach (var arm in Arms) {
+        RequireIdle(arm); RequireSafety(arm, true);
+        arm.Start = Pose(arm) * inverse;
+        double distance = Vector3D.Distance(arm.Start.Translation, arm.Expected.Translation), angle = Rotation(arm.Start, arm.Expected);
+        if (Mode != "REBASE" && (distance > .03 || angle > .5)) throw new Exception(arm.Name + ": start differs from saved baseline by " + N(distance) + " m / " + N(angle) + " deg. Run Rebase to record a new test start, or restore the saved pose.");
+        if (Mode == "REBASE") Add("PREVIOUS BASELINE " + arm.Name + " | " + Config.Get("Baseline " + arm.Name, "Pose"));
+        else Add("START " + arm.Name + " | " + Row(arm.Start) + " | baseline error " + N(distance) + " / " + N(angle));
+    }
+    if (Mode == "REBASE") { Phase = 4; CaptureTime = Clock; Deadline = Clock + 10; Status = "Rebase: observing both idle arms; keep input neutral. No motion is sent."; return; }
+    if (Encounter) BuildEncounter(); else foreach (var arm in Arms) BuildPath(arm);
+    if (Mode == "CHECK") { Complete("CHECK PASS: both arms ready at surveyed poses with fresh Safety permission; no motion sent."); return; }
+    if (Preview) { Complete("PREVIEW: both requested encounter paths recorded; no motion sent. Inspect WAYPOINT rows before Cross/Bases."); return; }
+    if (Encounter) SubmitEncounter(); else Submit();
+}
+void RebaseState() {
+    bool moved = false; var poses = new List<MatrixD>();
+    foreach (var arm in Arms) {
+        RequireIdle(arm); RequireSafety(arm, true);
+        var pose = LocalPose(arm);
+        poses.Add(pose);
+        if (Vector3D.Distance(pose.Translation, arm.Start.Translation) > .005 || Rotation(pose, arm.Start) > .2) moved = true;
+    }
+    if (Clock > Deadline) throw new Exception("Rebase: arms did not settle within 10 s; baselines unchanged.");
+    if (moved) { for (int i = 0; i < Arms.Count; i++) Arms[i].Start = poses[i]; CaptureTime = Clock; }
+    if (Clock - CaptureTime < 1) return;
+    // Commit both baselines only after a full stable observation window.
+    for (int i = 0; i < Arms.Count; i++) { var arm = Arms[i]; arm.Start = poses[i]; Config.Set("Baseline " + arm.Name, "Pose", Row(arm.Start)); Add("CAPTURED BASELINE " + arm.Name + " | " + Row(arm.Start)); }
+    Complete("REBASE PASS: saved both current head poses; no motion sent. Run Check, then Smoke. This is a new comparison baseline.");
+}
+void BuildEncounter() {
+    double longest = 0;
+    foreach (var arm in Arms) {
+        var other = Arms[1 - Arms.IndexOf(arm)];
+        var points = new List<Vector3D>(); var start = arm.Start.Translation;
+        if (Mode.EndsWith("CROSS", StringComparison.Ordinal)) {
+            var delta = other.Start.Translation - start; delta.Z = 0;
+            if (delta.Length() < 2) throw new Exception("Cross needs heads separated by at least 2 m in the test plane.");
+            points.Add(start + delta + delta / delta.Length() * CrossBeyond);
+        } else {
+            var bases = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(bases);
+            bases.RemoveAll(b => b.Closed || !b.IsSameConstructAs(Me) || b.CubeGrid.EntityId != Owner.CubeGrid.EntityId ||
+                !(b.CustomName == other.Name + " - Base" || b.CustomName.StartsWith(other.Name + " - Base - ", StringComparison.Ordinal)));
+            if (bases.Count != 1) throw new Exception("Need exactly one hull base marker for " + other.Name + ".");
+            arm.Base = Vector3D.Transform(bases[0].GetPosition(), MatrixD.Invert(Reference.WorldMatrix));
+            double sign = start.X >= arm.Base.X ? 1 : -1;
+            // Approach beside the opposite base, lower, sweep past, then retrace.
+            var beside = new Vector3D(arm.Base.X + sign * BaseSweep, start.Y, start.Z);
+            var low = new Vector3D(beside.X, arm.Base.Y + BaseHeight, start.Z);
+            var across = low; across.X = arm.Base.X - sign * BaseSweep;
+            points.Add(beside); points.Add(low); points.Add(across); points.Add(low); points.Add(beside);
+            Add("BASE TARGET " + arm.Name + " | opposite=" + other.Name + " | " + V(arm.Base));
+        }
+        points.Add(start); double length = 0; var previous = start;
+        foreach (var point in points) { var pose = arm.Start; pose.Translation = point; arm.Path.Add(pose); length += Vector3D.Distance(previous, point); previous = point; Add("WAYPOINT " + arm.Name + " | " + Row(pose)); }
+        double move = Math.Min(EncounterSpeed, arm.State.Get(S, "DefaultMove").ToDouble());
+        if (!Finite(move) || move <= 0) throw new Exception("Invalid arm default speed.");
+        longest = Math.Max(longest, length / move);
+        Add("ENCOUNTER " + arm.Name + " | length=" + N(length) + " m | cap=" + N(move) + " m/s | head orientation held; no preplanned obstacle detour.");
+    }
+    TotalBudget = Math.Min(3600, 120 + longest * 2);
+    Add("ENCOUNTER SETTINGS | speed=" + N(EncounterSpeed) + " beyond=" + N(CrossBeyond) + " baseHeight=" + N(BaseHeight) + " sweep=" + N(BaseSweep) + " timeout=" + N(TotalBudget));
+}
+void SubmitEncounter() {
+    foreach (var arm in Arms) { RequireIdle(arm); RequireSafety(arm, true); }
+    Phase = 2;
+    foreach (var arm in Arms) {
+        var ini = new MyIni(); ini.Set(S, "Anchor", Reference.EntityId); ini.Set(S, "Waypoints", string.Join("|", arm.Path.Select(Row)));
+        double move = Math.Min(EncounterSpeed, arm.State.Get(S, "DefaultMove").ToDouble());
+        ini.Set(S, "Moves", string.Join("|", arm.Path.Select(p => N(move))));
+        // Free Cartesian goal pursuit permits deviations; neither path gets docking contact exemptions.
+        ini.Set(S, "Lines", string.Join("|", arm.Path.Select(p => "false")));
+        arm.Submitted = true; arm.ProgressTime = Clock; Send(arm, "PATH", ini);
+        Add("SUBMIT " + arm.Name + " simultaneous | path " + arm.PathId + " | speed " + N(move));
+    }
+    Status = "Bench " + Mode + " | both arms moving. Cancel stops both test paths.";
+}
+void EncounterState() {
+    var statuses = new List<string>();
+    foreach (var arm in Arms) {
+        var s = arm.State;
+        NavigationProgress(arm);
+        if (!s.Get(S, "Ready").ToBoolean() || !s.Get(S, "Enabled").ToBoolean()) throw new Exception(arm.Name + " stopped/not ready.");
+        RequireSafety(arm, false);
+        if (arm.Returned) { RequireIdle(arm); continue; }
+        if (arm.Ack < arm.PathId) continue;
+        if (s.Get(S, "Error").ToString().Length > 0) throw new Exception(arm.Name + ": " + s.Get(S, "Error"));
+        if (s.Get(S, "PathId").ToInt64() != arm.PathId) throw new Exception(arm.Name + ": path rejected/replaced.");
+        int completed = s.Get(S, "Completed").ToInt32();
+        if (completed < arm.LastCompleted || completed > arm.Path.Count) throw new Exception("Invalid encounter progress.");
+        if (completed > arm.LastCompleted) { arm.LastCompleted = completed; arm.ProgressTime = Clock; arm.Remaining = double.MaxValue; }
+        double remaining = Vector3D.Distance(LocalPose(arm).Translation, completed == arm.Path.Count ? arm.Start.Translation : arm.Path[completed].Translation);
+        if (remaining < arm.Remaining - .002) { arm.Remaining = remaining; arm.ProgressTime = Clock; }
+        if (Clock - arm.ProgressTime > 8 && SafetyStopped(arm)) throw new Exception(arm.Name + ": Safety stopped delivery without progress: " + s.Get(S, "SafetyReason"));
+        if (Clock - arm.ProgressTime > 35) throw new Exception(arm.Name + ": encounter stalled; local avoidance may not have a route. " + s.Get(S, "SafetyReason"));
+        if (completed == arm.Path.Count && s.Get(S, "State").ToString() == "Complete" && s.Get(S, "Owner").ToInt64() == 0) {
+            double angle = Rotation(LocalPose(arm), arm.Start);
+            if (remaining > .01 || angle > .3) throw new Exception("Encounter return outside tolerance: " + arm.Name);
+            arm.Returned = true; Add("RETURN " + arm.Name + " encounter | " + N(remaining) + " m " + N(angle) + " deg | " + Row(LocalPose(arm)));
+        } else if (s.Get(S, "Owner").ToInt64() != Me.EntityId) throw new Exception(arm.Name + ": path ownership lost.");
+        statuses.Add(arm.Name + " " + completed + "/" + arm.Path.Count + "; " + remaining.ToString("0.000") + " m");
+    }
+    if (Clock - StartTime > TotalBudget) throw new Exception("Encounter total timeout.");
+    if (Arms.All(a => a.Returned)) { Phase = 3; Deadline = Clock + 1; }
+    Status = "Bench " + Mode + " | " + string.Join(" / ", statuses);
+    foreach (var arm in Arms) Status += "\n" + arm.Name + ": " + SafetyStatus(arm);
+    Status += "\nCancel stops both test paths. Safety remains required.";
+}
+void NavigationProgress(ArmSession arm)
+{
+    var state = arm.State;
+    if (!state.Get(S, "NavActive").ToBoolean()) return;
+    string key = state.Get(S, "NavKey").ToString(); int stage = state.Get(S, "NavStage").ToInt32();
+    double remaining, peer, extra;
+    if (key.Length == 0 || stage < 1 || stage > 3 || !state.Get(S, "NavRemaining").TryGetDouble(out remaining) || !state.Get(S, "NavPeerRemaining").TryGetDouble(out peer) || !state.Get(S, "NavExtra").TryGetDouble(out extra) ||
+        !Finite(remaining) || !Finite(peer) || !Finite(extra) || remaining < 0 || peer < 0 || extra < 0 || extra > 100) throw new Exception("Invalid passing-lane progress.");
+    if (key != arm.NavKey) { arm.NavKey = key; arm.NavStage = 0; arm.NavBudgetDistance = 0; }
+    if (stage != arm.NavStage) { arm.NavStage = stage; arm.NavBest = arm.PeerBest = double.MaxValue; arm.ProgressTime = Clock; }
+    double speed = Math.Min(EncounterSpeed, state.Get(S, "DefaultMove").ToDouble());
+    if (extra > arm.NavBudgetDistance) { TotalBudget = Math.Min(3600, TotalBudget + (extra - arm.NavBudgetDistance) / speed); arm.NavBudgetDistance = extra; }
+    if (state.Get(S, "NavWait").ToBoolean()) {
+        if (peer < arm.PeerBest - .001) { arm.PeerBest = peer; arm.ProgressTime = Clock; }
+    } else if (remaining < arm.NavBest - .001) { arm.NavBest = remaining; arm.ProgressTime = Clock; }
+}
+void BuildPath(ArmSession arm) {
+    var offsets = new List<Vector3D> { new Vector3D(0, Extent, 0) };
+    if (Mode != "SMOKE") {
+        offsets.Add(new Vector3D(Side, Extent, 0)); offsets.Add(new Vector3D(-Side, Extent, 0)); offsets.Add(new Vector3D(0, Extent, 0));
+    }
+    offsets.Add(Vector3D.Zero);
+    foreach (var offset in offsets) { var pose = arm.Start; pose.Translation += offset; arm.Path.Add(pose); }
+    foreach (var pose in arm.Path) Add("WAYPOINT " + arm.Name + " | " + Row(pose));
+}
+void Submit() {
+    foreach (var arm in Arms) { RequireIdle(arm); RequireSafety(arm, true); }
+    var active = Arms[ArmIndex];
+    // Repeats replay the same captured path, not a newly shifted start.
+    if (Vector3D.Distance(LocalPose(active).Translation, active.Start.Translation) > .03 || Rotation(LocalPose(active), active.Start) > .5) throw new Exception("Start pose changed before path submission.");
+    var ini = new MyIni(); ini.Set(S, "Anchor", Reference.EntityId); ini.Set(S, "Waypoints", string.Join("|", active.Path.Select(Row)));
+    double move = Math.Min(Speed, active.State.Get(S, "DefaultMove").ToDouble());
+    if (!Finite(move) || move <= 0) throw new Exception("Invalid arm default speed.");
+    ini.Set(S, "Moves", string.Join("|", active.Path.Select(p => N(move))));
+    ini.Set(S, "Lines", string.Join("|", active.Path.Select(p => "true")));
+    active.LastCompleted = 0; BestRemaining = double.MaxValue; LastProgress = Clock;
+    Phase = 2; foreach (var arm in Arms) arm.Submitted = false; active.Submitted = true; Send(active, "PATH", ini);
+    Add("SUBMIT " + active.Name + " iteration " + (Iteration + 1) + " | path " + active.PathId + " | speed " + N(move));
+    Status = "Bench " + Mode + " | " + active.Name + " | iteration " + (Iteration + 1) + "/" + Repeats;
+}
+void MoveState() {
+    foreach (var arm in Arms) {
+        if (!arm.State.Get(S, "Ready").ToBoolean() || !arm.State.Get(S, "Enabled").ToBoolean()) throw new Exception(arm.Name + " stopped/not ready; no automatic restart.");
+        RequireSafety(arm, false);
+        if (arm != Arms[ArmIndex] && (arm.State.Get(S, "Busy").ToBoolean() || arm.State.Get(S, "Owner").ToInt64() != 0)) throw new Exception("The idle arm acquired another operation.");
+    }
+    var active = Arms[ArmIndex]; var s = active.State;
+    if (active.Ack < active.PathId) return;
+    if (s.Get(S, "Error").ToString().Length > 0) throw new Exception(active.Name + ": " + s.Get(S, "Error"));
+    if (s.Get(S, "PathId").ToInt64() != active.PathId) throw new Exception("Path was rejected/replaced.");
+    int completed = s.Get(S, "Completed").ToInt32();
+    if (completed < active.LastCompleted || completed > active.Path.Count) throw new Exception("Invalid path progress.");
+    if (completed > active.LastCompleted) { active.LastCompleted = completed; LastProgress = Clock; BestRemaining = double.MaxValue; }
+    double remaining = completed == active.Path.Count ? Vector3D.Distance(LocalPose(active).Translation, active.Start.Translation) : Vector3D.Distance(LocalPose(active).Translation, active.Path[completed].Translation);
+    if (remaining < BestRemaining - .002) { BestRemaining = remaining; LastProgress = Clock; }
+    if (Clock - LastProgress > 8 && SafetyStopped(active)) throw new Exception("Safety stopped delivery without progress: " + s.Get(S, "SafetyReason"));
+    if (Clock - LastProgress > 35) throw new Exception("No measured path progress for 35 s.");
+    if (Clock - StartTime > 360) throw new Exception("Test total timeout.");
+    if (completed == active.Path.Count && s.Get(S, "State").ToString() == "Complete" && s.Get(S, "Owner").ToInt64() == 0) {
+        double error = Vector3D.Distance(LocalPose(active).Translation, active.Start.Translation), angle = Rotation(LocalPose(active), active.Start);
+        if (error > .01 || angle > .3) throw new Exception("Completion failed measured return check.");
+        Add("RETURN " + active.Name + " iteration " + (Iteration + 1) + " | " + N(error) + " m " + N(angle) + " deg | " + Row(LocalPose(active)));
+        Phase = 3; Deadline = Clock + 1; Status = "Returned " + active.Name + "; holding 1 s before the next path.";
+    } else if (s.Get(S, "Owner").ToInt64() != Me.EntityId) throw new Exception("Path ownership lost/cancelled; no automatic return.");
+    else {
+        string speed = "measuring"; if (active.MotionObserved) speed = active.NetSpeed.ToString("0.000") + " m/s (~1 s)";
+        Status = "Bench " + Mode + " | " + active.Name + " | " + completed + "/" + active.Path.Count + " | remaining " + remaining.ToString("0.000") + " m\n" +
+            SafetyStatus(active) + "\nHead net speed " + speed + "; progress age " + (Clock - LastProgress).ToString("0.0") + " s. Cancel stops this path.";
+    }
+}
+void Sample(ArmSession arm) {
+    var s = arm.State; arm.Samples++;
+    double error = s.Get(S, "PositionError").ToDouble(), angle = s.Get(S, "AngleError").ToDouble();
+    arm.MaxError = Math.Max(arm.MaxError, error); arm.MaxAngle = Math.Max(arm.MaxAngle, angle);
+    if (s.Get(S, "SafetyLimited").ToBoolean()) arm.LimitedSamples++;
+    if (s.Get(S, "SolverBudget").ToBoolean()) arm.BudgetSamples++;
+    if (s.Get(S, "SafetyHold").ToBoolean()) arm.HeldSeconds += .1;
+    var position = LocalPose(arm).Translation;
+    if (arm.MotionTime == 0) { arm.MotionTime = Clock; arm.MotionOrigin = position; }
+    else if (Clock - arm.MotionTime >= 1) { arm.NetSpeed = Vector3D.Distance(position, arm.MotionOrigin) / (Clock - arm.MotionTime); arm.MotionTime = Clock; arm.MotionOrigin = position; arm.MotionObserved = true; }
+    if (Clock - arm.SampleTime < .5) return;
+    arm.SampleTime = Clock;
+    Add("SAMPLE " + N(Clock - StartTime) + " | " + arm.Name + " | path " + s.Get(S, "PathId") + " | completed " + s.Get(S, "Completed") + " | error " + N(error) + " " + N(angle) +
+        " | safety " + s.Get(S, "SafetyReady") + " " + s.Get(S, "SafetyHold") + " " + s.Get(S, "SafetyLimited") + " | solver " + s.Get(S, "SolverPasses") + " " + s.Get(S, "SolverBudget") + " | " + Row(LocalPose(arm)) +
+        " | fraction " + s.Get(S, "SafetyFraction") + " | rows " + s.Get(S, "SafetyConstraints") + "/" + s.Get(S, "SafetyConstraintLimit") +
+        " | nav " + s.Get(S, "NavActive") + "/" + s.Get(S, "NavStage") + " wait " + s.Get(S, "NavWait") + " remaining " + s.Get(S, "NavRemaining") + " | " + s.Get(S, "SafetyReason"));
+}
+void Abort(string reason) {
+    if (Phase == 90) return;
+    AbortReason = reason;
+    if (Phase == 2 && Arms.Any(a => a.Submitted)) {
+        Phase = 90; Deadline = Clock + .75;
+        foreach (var arm in Arms) {
+            if (!arm.Submitted) continue;
+            try { Send(arm, "STOP"); }
+            catch (Exception) { Deadline = Math.Min(Deadline, Clock + .75); }
+        }
+        Status = "Bench abort: " + reason + " Waiting for own-path Stop acknowledgement.";
+    } else Complete("ABORT: " + reason + " No new motion sent; no automatic return.");
+}
+void Complete(string result) {
+    Phase = 0;
+    foreach (var arm in Arms) Add("SUMMARY " + arm.Name + " | samples " + arm.Samples + " | max control error " + N(arm.MaxError) + " m " + N(arm.MaxAngle) + " deg | limited samples " + arm.LimitedSamples + " | hold sample estimate " + N(arm.HeldSeconds) + " s | budget samples " + arm.BudgetSamples);
+    Add("RESULT " + result + " | elapsed " + N(Clock - StartTime));
+    SavedReport = Log.ToString(); Save(); Config.EndContent = "";
+    int room = 58000 - Config.ToString().Length;
+    string report = SavedReport;
+    if (report.Length > room) {
+        string note = "\nREPORT EXCERPT; full report retained in Storage. Run Page N to export each page.\n";
+        int prefix = Math.Min(18000, room / 3);
+        report = report.Substring(0, prefix) + note + report.Substring(report.Length - (room - prefix - note.Length));
+    }
+    Config.EndContent = report; Me.CustomData = Config.ToString();
+    Status = result + "\nCustom Data contains the result. Page N exports the complete report in sections.";
+}
+void Add(string line) {
+    if (line.StartsWith("SAMPLE ", StringComparison.Ordinal) && Log.Length + line.Length > 350000) {
+        if (!Truncated) { Log.Append("SAMPLE LOG LIMIT; later samples omitted, summaries continue.\n"); Truncated = true; }
+        return;
+    }
+    if (Log.Length + line.Length > 400000) throw new Exception("Report limit reached.");
+    Log.Append(line).Append('\n');
+}
+bool Finite(double value) { return !double.IsNaN(value) && !double.IsInfinity(value); }
+string N(double value) { return value.ToString("R", System.Globalization.CultureInfo.InvariantCulture); }
+string V(Vector3D v) { return N(v.X) + " " + N(v.Y) + " " + N(v.Z); }
+string Row(MatrixD m) { return V(m.Translation) + " " + V(m.Forward) + " " + V(m.Up); }
+Vector3D Vec(string text) {
+    string[] cells = text.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+    if (cells.Length != 3) throw new Exception("Missing/invalid service pose.");
+    var n = new double[3]; for (int i = 0; i < 3; i++) if (!double.TryParse(cells[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out n[i]) || !Finite(n[i])) throw new Exception("Non-finite pose.");
+    return new Vector3D(n[0], n[1], n[2]);
+}
+MatrixD Frame(string text) {
+    var cells = text.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+    if (cells.Length != 9) throw new Exception("Baseline Pose needs nine position/forward/up numbers.");
+    return Make(Vec(string.Join(" ", cells.Take(3))), Vec(string.Join(" ", cells.Skip(3).Take(3))), Vec(string.Join(" ", cells.Skip(6))));
+}
+MatrixD Make(Vector3D p, Vector3D f, Vector3D u) {
+    if (Math.Abs(f.Length() - 1) > .001 || Math.Abs(u.Length() - 1) > .001 || Math.Abs(Vector3D.Dot(f, u)) > .001) throw new Exception("Invalid orientation frame.");
+    return MatrixD.CreateWorld(p, f, u);
+}
+MatrixD Pose(ArmSession a) { return Make(Vec(a.State.Get(S, "PoseP").ToString()), Vec(a.State.Get(S, "PoseF").ToString()), Vec(a.State.Get(S, "PoseU").ToString())); }
+MatrixD LocalPose(ArmSession a) { return Pose(a) * MatrixD.Invert(Reference.WorldMatrix); }
+double Rotation(MatrixD a, MatrixD b) {
+    double trace = Vector3D.Dot(a.Right, b.Right) + Vector3D.Dot(a.Up, b.Up) + Vector3D.Dot(a.Backward, b.Backward);
+    return Math.Acos(Math.Max(-1, Math.Min(1, (trace - 1) * .5))) * 180 / Math.PI;
+}

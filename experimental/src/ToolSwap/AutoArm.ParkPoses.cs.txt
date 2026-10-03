@@ -1,0 +1,59 @@
+// Automatically record the actual parked assembly pose, not an arbitrary
+// quarter-turn alignment of visually symmetric merge blocks.
+bool CaptureParkPose(ToolSwapController.Profile h, string axis)
+{
+    if (h.Heads.Count == 0) return false;
+    var pairs = new List<ToolPortPair>();
+    foreach (var head in h.Heads)
+    {
+        IMyShipMergeBlock stand;
+        if (!head.IsConnected || !ToolGeometry.TryLockedPartner(head, axis, out stand)) return false;
+        var pair = new ToolPortPair { Head = head, Stand = stand }; if (!ToolGeometry.PairLocked(pair, axis)) return false;
+        pairs.Add(pair);
+    }
+    var data = new MyIni(); var anchor = pairs[0].Stand;
+    data.Set(LinkSection, "Marker", h.Marker.EntityId); data.Set(LinkSection, "Anchor", anchor.EntityId);
+    WriteFrame(data, "Dock", h.Marker.WorldMatrix * MatrixD.Invert(anchor.WorldMatrix));
+    var rows = new List<string>();
+    for (int i = 0; i < pairs.Count; i++)
+    {
+        var pair = pairs[i]; rows.Add(pair.Head.EntityId + " " + pair.Stand.EntityId);
+        WriteFrame(data, "Head" + i, pair.Head.WorldMatrix * MatrixD.Invert(h.Marker.WorldMatrix));
+        WriteFrame(data, "Stand" + i, pair.Stand.WorldMatrix * MatrixD.Invert(anchor.WorldMatrix));
+    }
+    data.Set(LinkSection, "Pairs", string.Join("\n", rows));
+    var saved = AutoConfig.Saved(Storage); const string section = "AutoArm Park Poses";
+    saved.Set(section, "PB", Me.EntityId); saved.Set(section, "Arm", ArmName);
+    saved.Set(section, h.Coupler.EntityId.ToString(), data.ToString()); Storage = saved.ToString();
+    var markerData = AutoConfig.Saved(h.Marker.CustomData);
+    markerData.Set("AutoArm Tool", "Format", 1); markerData.Set("AutoArm Tool", "Arm", ArmName);
+    markerData.Set("AutoArm Tool", "ParkPose", data.ToString()); h.Marker.CustomData = markerData.ToString(); return true;
+}
+bool ParkPose(ToolSwapController.Profile h, List<IMyShipMergeBlock> rack, long selected, out MatrixD pose, out List<ToolPortPair> pairs)
+{
+    pose = MatrixD.Identity; pairs = new List<ToolPortPair>(); const string section = "AutoArm Park Poses";
+    var saved = AutoConfig.Saved(Storage);
+    var markerData = AutoConfig.Saved(h.Marker.CustomData);
+    string text = markerData.Get("AutoArm Tool", "Format").ToInt32() == 1 && markerData.Get("AutoArm Tool", "Arm").ToString() == ArmName ? markerData.Get("AutoArm Tool", "ParkPose").ToString() : "";
+    if (text.Length == 0 && saved.Get(section, "PB").ToInt64() == Me.EntityId && saved.Get(section, "Arm").ToString() == ArmName) text = saved.Get(section, h.Coupler.EntityId.ToString()).ToString();
+    if (text.Length == 0) return false;
+    var data = new MyIni(); if (!data.TryParse(text)) throw new Exception("Invalid saved park pose; park tool and ToolScan.");
+    if (data.Get(LinkSection, "Marker").ToInt64() != h.Marker.EntityId) return false;
+    var anchor = GridTerminalSystem.GetBlockWithId(data.Get(LinkSection, "Anchor").ToInt64()) as IMyShipMergeBlock;
+    if (anchor == null || anchor.Closed || selected != 0 && selected != anchor.EntityId) return false;
+    string[] rows = data.Get(LinkSection, "Pairs").ToString().Split('\n'); if (rows.Length != h.Heads.Count || rows.Length > 16) return false;
+    for (int i = 0; i < rows.Length; i++)
+    {
+        string[] cells = rows[i].Split(' '); long headId, standId;
+        if (cells.Length != 2 || !long.TryParse(cells[0], out headId) || !long.TryParse(cells[1], out standId)) throw new Exception("Invalid saved park ports; park tool and ToolScan.");
+        var head = GridTerminalSystem.GetBlockWithId(headId) as IMyShipMergeBlock;
+        var stand = GridTerminalSystem.GetBlockWithId(standId) as IMyShipMergeBlock;
+        if (head == null || stand == null || !h.Heads.Contains(head) || !rack.Contains(stand) || head.Closed || stand.Closed) return false;
+        if (!SameParkFrame(head.WorldMatrix * MatrixD.Invert(h.Marker.WorldMatrix), LinkFrame(data, "Head" + i)) ||
+            !SameParkFrame(stand.WorldMatrix * MatrixD.Invert(anchor.WorldMatrix), LinkFrame(data, "Stand" + i))) return false;
+        pairs.Add(new ToolPortPair { Head = head, Stand = stand });
+    }
+    pose = LinkFrame(data, "Dock") * anchor.WorldMatrix; return true;
+}
+static bool SameParkFrame(MatrixD a, MatrixD b)
+{ return Vector3D.DistanceSquared(a.Translation, b.Translation) < .000001 && Vector3D.Dot(a.Forward, b.Forward) > .9999995 && Vector3D.Dot(a.Up, b.Up) > .9999995; }

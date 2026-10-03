@@ -1,0 +1,303 @@
+// AutoArm survey: paste into a separate PB. Never commands movement.
+// Configure this PB as an Observe peer of both arms; retain their Safety peer.
+const string ControllerBuildVersion = "1.1";
+const string Tag = "AutoArm/5";
+const string Section = "Link";
+// ===== IMPLEMENTATION =====
+sealed class Session {
+    public string Name;
+    public long Sequence, Remote, Seen, Ack;
+    public MyIni State;
+    public MatrixD Start;
+}
+sealed class GridRecord {
+    public IMyCubeGrid Grid;
+    public MatrixD Start;
+    public Vector3I Min, Max;
+}
+readonly List<IMyTerminalBlock> Blocks = new List<IMyTerminalBlock>();
+readonly List<Session> Arms = new List<Session>();
+readonly List<GridRecord> Grids = new List<GridRecord>();
+readonly Dictionary<long, string> Connections = new Dictionary<long, string>();
+readonly Dictionary<long, double> Positions = new Dictionary<long, double>();
+readonly StringBuilder Report = new StringBuilder();
+MyIni Config;
+IMyProgrammableBlock Owner;
+long Epoch;
+double Clock, Deadline, InitialTime;
+int Phase, GridIndex, Cells, Occupied, CellLimit, PageNumber, RunStart, BlockIndex;
+int X, Y, Z;
+bool RunOpen;
+string Status = "Run Survey. Report is written after --- in this PB's Custom Data.", InputConfig;
+const int ReportLimit = 600000;
+public Program() {
+    long n;
+    long.TryParse(Storage, out n);
+    Epoch = n > 0 && n < long.MaxValue ? n + 1 : 1;
+    Storage = Epoch.ToString();
+    if (string.IsNullOrWhiteSpace(Me.CustomData)) {
+        var ini = new MyIni();
+        ini.Set("Survey", "Format", 1);
+        ini.Set("Survey", "ArmPB", "");
+        ini.Set("Survey", "Arms", "Arm 1|Arm 2");
+        ini.Set("Survey", "CellLimit", 262144);
+        Me.CustomData = ini.ToString();
+    }
+    Echo(Status);
+}
+public void Save() { Storage = Epoch.ToString(); }
+public void Main(string argument, UpdateType source) {
+    double dt = Runtime.TimeSinceLastRun.TotalSeconds;
+    if (dt > 0 && !double.IsNaN(dt) && !double.IsInfinity(dt)) Clock += dt;
+    try {
+        string command = (argument ?? "").Trim();
+        if (command.Equals("Cancel", StringComparison.OrdinalIgnoreCase)) {
+            Phase = 0; Status = "Survey cancelled; previous report retained.";
+        } else if (command.Equals("Survey", StringComparison.OrdinalIgnoreCase) || command.Equals("Scan", StringComparison.OrdinalIgnoreCase)) {
+            if (Phase != 0) throw new Exception("Survey already running; Cancel first.");
+            Begin();
+        } else if (command.StartsWith("Page ", StringComparison.OrdinalIgnoreCase)) {
+            if (!int.TryParse(command.Substring(5), out PageNumber) || PageNumber < 1) throw new Exception("Use Page 1, Page 2, ...");
+            ShowPage(); return;
+        } else if (command.Length > 0 && !command.Equals("Info", StringComparison.OrdinalIgnoreCase) && command != Tag) {
+            throw new Exception("Commands: Survey, Info, Cancel, Page N.");
+        }
+        ReadReplies();
+        if (Phase != 0 && !UnchangedConfig()) throw new Exception("Survey configuration edited during capture.");
+        if (Phase == 1 && RepliesReady()) Capture();
+        if (Phase == 5) CaptureBlocks();
+        if (Phase == 2) ScanCells();
+        if (Phase == 4 && Clock - InitialTime >= .25) { Phase = 3; Request("STATUS"); Status = "Survey: checking ending poses and connections."; }
+        if (Phase == 3 && RepliesReady()) Finish();
+        if ((Phase == 1 || Phase == 3) && Clock > Deadline) throw new Exception("ArmService reply timeout. Check ArmPB, arm names, Observe peers and that the Arm PB is running.");
+    } catch (Exception e) {
+        Phase = 0; Status = "Survey failed: " + e.Message + " Previous report retained.";
+    }
+    Runtime.UpdateFrequency = Phase == 0 ? UpdateFrequency.None : UpdateFrequency.Update1;
+    Echo(Status + (Phase == 2 ? "\nGrid " + (GridIndex + 1) + "/" + Grids.Count + "; cells " + Cells + "; occupied " + Occupied : ""));
+}
+bool UnchangedConfig() {
+    var ini = new MyIni();
+    return ini.TryParse(Me.CustomData) && ini.Get("Survey", "Format").ToInt32() == 1 &&
+        ini.Get("Survey", "ArmPB").ToString() == Config.Get("Survey", "ArmPB").ToString() &&
+        ini.Get("Survey", "Arms").ToString() == Config.Get("Survey", "Arms").ToString() &&
+        ini.Get("Survey", "CellLimit").ToInt32() == CellLimit;
+}
+void Begin() {
+    Config = new MyIni(); MyIniParseResult why;
+    if (!Config.TryParse(Me.CustomData, out why)) throw new Exception("Invalid survey INI: " + why);
+    if (Config.Get("Survey", "Format").ToInt32() != 1) throw new Exception("Survey Format must be 1.");
+    CellLimit = Config.Get("Survey", "CellLimit").ToInt32();
+    if (CellLimit < 1 || CellLimit > 2000000) throw new Exception("CellLimit must be 1..2000000.");
+    if (Epoch == long.MaxValue) throw new Exception("Survey epoch exhausted.");
+    Epoch++; Save(); Config.EndContent = "";
+    Arms.Clear();
+    foreach (string item in Config.Get("Survey", "Arms").ToString().Split('|')) {
+        string name = item.Trim();
+        if (name.Length == 0 || Arms.Any(a => a.Name == name)) throw new Exception("Arms must contain distinct names separated by |.");
+        Arms.Add(new Session { Name = name });
+    }
+    if (Arms.Count < 2 || Arms.Count > 8) throw new Exception("List 2..8 arms sharing one Arm PB.");
+    Blocks.Clear(); GridTerminalSystem.GetBlocks(Blocks);
+    Blocks.RemoveAll(b => b.Closed || !b.IsSameConstructAs(Me));
+    string ownerName = Config.Get("Survey", "ArmPB").ToString().Trim();
+    Owner = null;
+    foreach (var b in Blocks) {
+        var pb = b as IMyProgrammableBlock;
+        if (pb == null || pb.EntityId == Me.EntityId) continue;
+        if (ownerName.Length > 0 ? Matches(pb, ownerName) : IsOwner(pb)) {
+            if (Owner != null) throw new Exception("More than one Arm PB matches; set Survey.ArmPB to its exact name or @ID.");
+            Owner = pb;
+        }
+    }
+    if (Owner == null) throw new Exception("No Arm PB found. Set Survey.ArmPB to its exact name or @ID.");
+    var ownerConfig = new MyIni();
+    if (!ownerConfig.TryParse(Owner.CustomData) || ownerConfig.Get("global", "Format").ToInt32() != 7) throw new Exception("Arm PB must use public Format 7.");
+    foreach (var arm in Arms) CheckPeers(ownerConfig, arm.Name);
+    InputConfig = Owner.CustomData;
+    Grids.Clear(); Connections.Clear(); Positions.Clear(); Report.Clear();
+    BlockIndex = GridIndex = Cells = Occupied = 0; RunOpen = false;
+    Phase = 1; Request("HELLO"); Status = "Survey: waiting for both ArmService poses. Do not pilot or swap tools during capture.";
+}
+bool Matches(IMyTerminalBlock b, string name) { return name == b.CustomName || name == "@" + b.EntityId; }
+bool IsOwner(IMyProgrammableBlock pb) {
+    var ini = new MyIni();
+    if (!ini.TryParse(pb.CustomData) || ini.Get("global", "Format").ToInt32() != 7) return false;
+    return Arms.All(a => ini.ContainsSection(a.Name));
+}
+void CheckPeers(MyIni ini, string arm) {
+    if (!ini.ContainsSection(arm)) throw new Exception("Arm PB has no [" + arm + "] section. Run On(" + arm + ") there first.");
+    string rows = ini.ContainsKey(arm, "Peers") ? ini.Get(arm, "Peers").ToString() : ini.Get("global", "Peers").ToString();
+    bool observer = false, safety = false;
+    foreach (string line in rows.Split('\n')) {
+        var fields = line.Trim().TrimStart('|').Split('|');
+        if (fields.Length != 2) continue;
+        string name = fields[0].Trim(), role = fields[1].Trim();
+        if (Matches(Me, name) && role == "Observe") observer = true;
+        if (role == "Safety" && Blocks.Any(b => b is IMyProgrammableBlock && Matches(b, name))) safety = true;
+    }
+    if (!observer) throw new Exception("Add " + Me.CustomName + " | Observe to the effective Peers for " + arm + ".");
+    if (!safety) throw new Exception(arm + " needs an accessible configured Safety PB; retain its Safety peer row.");
+}
+void Request(string op) {
+    foreach (var arm in Arms) {
+        var ini = new MyIni();
+        ini.Set(Section, "Version", 5); ini.Set(Section, "Service", 1); ini.Set(Section, "Arm", arm.Name);
+        ini.Set(Section, "Epoch", Epoch); ini.Set(Section, "Sequence", ++arm.Sequence);
+        ini.Set(Section, "Remote", op == "HELLO" ? 0 : arm.Remote);
+        ini.Set(Section, "Seen", op == "HELLO" ? 0 : arm.Seen);
+        ini.Set(Section, "Generation", arm.State == null ? 0 : arm.State.Get(Section, "Generation").ToInt64());
+        ini.Set(Section, "Operation", op);
+        IGC.SendUnicastMessage(Owner.EntityId, Tag, ini.ToString());
+    }
+    Deadline = Clock + 5;
+}
+void ReadReplies() {
+    int remaining = 32;
+    while (remaining-- > 0 && IGC.UnicastListener.HasPendingMessage) {
+        var message = IGC.UnicastListener.AcceptMessage();
+        if (Phase == 0 || Owner == null || message.Source != Owner.EntityId || message.Tag != Tag) continue;
+        var ini = new MyIni();
+        if (!(message.Data is string) || !ini.TryParse((string)message.Data)) continue;
+        if (ini.Get(Section, "Version").ToInt32() != 5 || ini.Get(Section, "Service").ToInt32() != 1 ||
+            ini.Get(Section, "Operation").ToString() != "STATE" || ini.Get(Section, "Remote").ToInt64() != Epoch) continue;
+        var arm = Arms.Find(a => a.Name == ini.Get(Section, "Arm").ToString());
+        if (arm == null || ini.Get(Section, "Ack").ToInt64() != arm.Sequence) continue;
+        long remote = ini.Get(Section, "Epoch").ToInt64(), seq = ini.Get(Section, "Sequence").ToInt64();
+        if (remote <= 0 || seq <= arm.Seen || arm.Remote != 0 && arm.Remote != remote) continue;
+        if (ini.Get(Section, "Role").ToString() != "Observe") throw new Exception("Survey requires Observe authority only.");
+        arm.Remote = remote; arm.Seen = seq; arm.Ack = arm.Sequence; arm.State = ini;
+    }
+}
+bool RepliesReady() { return Arms.All(a => a.State != null && a.Ack == a.Sequence); }
+MatrixD Pose(Session arm) {
+    var state = arm.State;
+    if (!state.Get(Section, "Ready").ToBoolean() || !state.Get(Section, "Enabled").ToBoolean() || state.Get(Section, "Busy").ToBoolean())
+        throw new Exception(arm.Name + " must be ON, ready and idle before survey.");
+    if (state.Get(Section, "Error").ToString().Length != 0) throw new Exception(arm.Name + ": " + state.Get(Section, "Error"));
+    Vector3D p = Vector(state.Get(Section, "PoseP").ToString()), f = Vector(state.Get(Section, "PoseF").ToString()), u = Vector(state.Get(Section, "PoseU").ToString());
+    if (Math.Abs(f.Length() - 1) > .001 || Math.Abs(u.Length() - 1) > .001 || Math.Abs(Vector3D.Dot(f, u)) > .001)
+        throw new Exception("Invalid service head frame for " + arm.Name);
+    return MatrixD.CreateWorld(p, f, u);
+}
+Vector3D Vector(string text) {
+    var parts = text.Split(new[] { ' ', ',', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+    if (parts.Length != 3) throw new Exception("Missing or malformed ArmService head pose.");
+    var v = new double[3];
+    for (int i = 0; i < 3; i++) if (!double.TryParse(parts[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out v[i]) || double.IsNaN(v[i]) || double.IsInfinity(v[i])) throw new Exception("Non-finite head pose.");
+    return new Vector3D(v[0], v[1], v[2]);
+}
+string Number(double n) { return n.ToString("R", System.Globalization.CultureInfo.InvariantCulture); }
+string Vec(Vector3D v) { return Number(v.X) + " " + Number(v.Y) + " " + Number(v.Z); }
+string Cell(Vector3I v) { return v.X + " " + v.Y + " " + v.Z; }
+string Frame(MatrixD m) { return Vec(m.Translation) + " | " + Vec(m.Forward) + " | " + Vec(m.Up); }
+void Line(string s) {
+    if (Report.Length + s.Length + 1 > ReportLimit) throw new Exception("Report size limit reached; previous report retained. Use a smaller test construct.");
+    Report.Append(s).Append('\n');
+}
+void AddGrid(IMyCubeGrid grid) {
+    if (grid == null || Grids.Any(g => g.Grid.EntityId == grid.EntityId)) return;
+    Grids.Add(new GridRecord { Grid = grid, Start = grid.WorldMatrix, Min = grid.Min, Max = grid.Max });
+}
+string Connection(IMyMechanicalConnectionBlock b) { return b.CubeGrid.EntityId + "/" + (b.TopGrid == null ? 0 : b.TopGrid.EntityId) + "/" + (b.Top == null ? 0 : b.Top.EntityId) + "/" + b.IsAttached + "/" + b.PendingAttachment; }
+double Position(IMyMechanicalConnectionBlock b) { var r = b as IMyMotorStator; return r != null ? r.Angle : ((IMyPistonBase)b).CurrentPosition; }
+void Capture() {
+    InitialTime = Clock;
+    Line("AUTOARM SURVEY " + ControllerBuildVersion + " | protocol 5 | read-only | distances m, angles rad");
+    Line("OWNER " + Owner.EntityId + " | " + Owner.CustomName);
+    Line("REFERENCE survey PB grid " + Me.CubeGrid.EntityId + " | " + Frame(Me.CubeGrid.WorldMatrix));
+    Line("SAFETY configured peer present; this report does not certify live clearance or permission to move.");
+    foreach (var arm in Arms) {
+        arm.Start = Pose(arm);
+        Line("ARM " + arm.Name + " | START WORLD " + Frame(arm.Start));
+        Line("STATE " + arm.Name + "\n" + arm.State.ToString());
+    }
+    Phase = 5; Status = "Survey: capturing terminal blocks and joints. Leave both arms and the ship stationary.";
+}
+void CaptureBlocks() {
+    int count = 0;
+    while (BlockIndex < Blocks.Count && count++ < 32 && Runtime.CurrentInstructionCount < Runtime.MaxInstructionCount * .55) {
+        var block = Blocks[BlockIndex++];
+        AddGrid(block.CubeGrid);
+        Line("BLOCK " + block.EntityId + " | " + block.CustomName.Replace('\n', ' ').Replace('\r', ' ') + " | " + block.BlockDefinition +
+            " | grid " + block.CubeGrid.EntityId + " | cell " + Cell(block.Position) + " | extent " + Cell(block.Min) + ":" + Cell(block.Max) + " | world " + Frame(block.WorldMatrix));
+        var joint = block as IMyMechanicalConnectionBlock;
+        if (joint != null) {
+            if (!(joint is IMyMotorStator) && !(joint is IMyPistonBase)) throw new Exception("Unsupported mechanical block " + block.CustomName);
+            AddGrid(joint.TopGrid); Connections[joint.EntityId] = Connection(joint); Positions[joint.EntityId] = Position(joint);
+            Line("JOINT " + joint.EntityId + " | " + Connection(joint) + " | q " + Number(Position(joint)));
+            if (joint.Top != null) Line("TOP " + joint.Top.EntityId + " | grid " + joint.Top.CubeGrid.EntityId + " | cell " + Cell(joint.Top.Position) + " | world " + Frame(joint.Top.WorldMatrix));
+            var rotor = joint as IMyMotorStator;
+            if (rotor != null) Line("ROTARY " + joint.EntityId + " | limits " + Number(rotor.LowerLimitRad) + " " + Number(rotor.UpperLimitRad) + " | lock " + rotor.RotorLock + " | rate " + Number(rotor.TargetVelocityRad));
+            else { var piston = (IMyPistonBase)joint; Line("PISTON " + joint.EntityId + " | limits " + Number(piston.MinLimit) + " " + Number(piston.MaxLimit) + " | rate " + Number(piston.Velocity)); }
+        }
+        var controller = block as IMyShipController;
+        if (controller != null) Line("CONTROLLER " + block.EntityId + " | controlled " + controller.IsUnderControl + " | gravity " + Vec(controller.GetNaturalGravity()) + " | linear " + Vec(controller.GetShipVelocities().LinearVelocity) + " | angular " + Vec(controller.GetShipVelocities().AngularVelocity));
+        if ((block is IMyProgrammableBlock || Arms.Any(a => block.CustomName.StartsWith(a.Name + " - Head", StringComparison.Ordinal))) && block.CustomData.Length > 0)
+            Line("CUSTOM DATA " + block.EntityId + " BEGIN\n" + (block.EntityId == Me.EntityId ? Config.ToString() : block.CustomData) + "\nCUSTOM DATA " + block.EntityId + " END");
+    }
+    if (BlockIndex == Blocks.Count) {
+        foreach (var grid in Grids) Line("GRID " + grid.Grid.EntityId + " | size " + Number(grid.Grid.GridSize) + " | bounds " + Cell(grid.Min) + ":" + Cell(grid.Max) + " | world " + Frame(grid.Start));
+        StartGrid(); Phase = 2; Status = "Survey: capturing occupied cells. Leave both arms and the ship stationary.";
+    }
+}
+void StartGrid() { if (GridIndex < Grids.Count) { X = Grids[GridIndex].Min.X; Y = Grids[GridIndex].Min.Y; Z = Grids[GridIndex].Min.Z; RunOpen = false; } }
+void FlushRun() { if (RunOpen) { Line("CELLS " + Grids[GridIndex].Grid.EntityId + " | " + RunStart + " " + (X - 1) + " " + Y + " " + Z); RunOpen = false; } }
+void ScanCells() {
+    int count = 0;
+    while (GridIndex < Grids.Count && count++ < 512 && Runtime.CurrentInstructionCount < Runtime.MaxInstructionCount * .55) {
+        var g = Grids[GridIndex];
+        if (Cells >= CellLimit) throw new Exception("CellLimit reached (bounds, including empty cells). Increase Survey.CellLimit or use a smaller construct.");
+        Cells++;
+        if (g.Grid.CubeExists(new Vector3I(X, Y, Z))) { Occupied++; if (!RunOpen) { RunOpen = true; RunStart = X; } }
+        else FlushRun();
+        if (X == g.Max.X) {
+            X++; FlushRun(); X = g.Min.X;
+            if (Y == g.Max.Y) { Y = g.Min.Y; if (Z == g.Max.Z) { GridIndex++; StartGrid(); } else Z++; }
+            else Y++;
+        } else X++;
+    }
+    if (GridIndex == Grids.Count) Phase = 4;
+}
+double Angle(Vector3D a, Vector3D b) { return Math.Acos(Math.Max(-1, Math.Min(1, Vector3D.Dot(a, b)))) * 180 / Math.PI; }
+void Finish() {
+    if (Clock - InitialTime < .25) return;
+    bool stable = true;
+    if (Owner.Closed || Owner.CustomData != InputConfig) throw new Exception("Arm PB/configuration changed during capture.");
+    foreach (var arm in Arms) {
+        MatrixD end = Pose(arm);
+        double distance = Vector3D.Distance(end.Translation, arm.Start.Translation), angle = Math.Max(Angle(end.Forward, arm.Start.Forward), Angle(end.Up, arm.Start.Up));
+        if (distance > .005 || angle > .2) stable = false;
+        Line("END " + arm.Name + " | " + Frame(end) + " | drift " + Number(distance) + " m " + Number(angle) + " deg");
+    }
+    foreach (var g in Grids) {
+        MatrixD end = g.Grid.WorldMatrix;
+        double distance = Vector3D.Distance(end.Translation, g.Start.Translation), angle = Math.Max(Angle(end.Forward, g.Start.Forward), Angle(end.Up, g.Start.Up));
+        if (distance > .005 || angle > .2 || g.Grid.Min != g.Min || g.Grid.Max != g.Max) stable = false;
+        Line("GRID END " + g.Grid.EntityId + " | " + Frame(end) + " | drift " + Number(distance) + " m " + Number(angle) + " deg");
+    }
+    foreach (var b in Blocks) {
+        if (b.Closed) throw new Exception("Block removed during capture.");
+        var joint = b as IMyMechanicalConnectionBlock;
+        if (joint == null) continue;
+        if (Connection(joint) != Connections[joint.EntityId]) throw new Exception("Attachment changed during capture.");
+        Line("JOINT END " + joint.EntityId + " | q " + Number(Position(joint)) + " | delta " + Number(Position(joint) - Positions[joint.EntityId]));
+        if (Math.Abs(Position(joint) - Positions[joint.EntityId]) > (joint is IMyMotorStator ? .0035 : .005)) stable = false;
+    }
+    var current = new List<IMyTerminalBlock>(); GridTerminalSystem.GetBlocks(current);
+    current.RemoveAll(b => b.Closed || !b.IsSameConstructAs(Me));
+    var known = new HashSet<long>(Blocks.Select(b => b.EntityId));
+    if (current.Count != Blocks.Count || current.Any(b => !known.Contains(b.EntityId))) throw new Exception("Construct inventory changed during capture.");
+    Line("RESULT " + (stable ? "STABLE ENDPOINTS" : "MOVEMENT DETECTED; repeat while stationary") + " | grids " + Grids.Count + " | inspected " + Cells + " | occupied " + Occupied + " | elapsed " + Number(Clock - InitialTime));
+    Line("Geometry is a sampled occupancy snapshot; endpoint checks do not prove zero motion or detect every interior edit. Do not build/edit during capture.");
+    Config.EndContent = Report.ToString();
+    Me.CustomData = Config.ToString();
+    Phase = 0; Status = "Survey complete: " + (stable ? "stable endpoints." : "movement detected; repeat.") + " Copy this PB's full Custom Data. Page N previews 3000-character pages.";
+}
+void ShowPage() {
+    var ini = new MyIni();
+    if (!ini.TryParse(Me.CustomData) || string.IsNullOrEmpty(ini.EndContent)) throw new Exception("No completed report.");
+    int start = (PageNumber - 1) * 3000;
+    if (start < 0 || start >= ini.EndContent.Length) throw new Exception("Page outside report.");
+    Echo("Survey page " + PageNumber + "/" + ((ini.EndContent.Length + 2999) / 3000) + "\n" + ini.EndContent.Substring(start, Math.Min(3000, ini.EndContent.Length - start)));
+}

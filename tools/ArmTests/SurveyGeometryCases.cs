@@ -216,7 +216,7 @@ internal static partial class Scenarios
         var config=new MyIni();config.TryParse(rig.PB.CustomData);config.Set("global","Peers",config.Get("global","Peers").ToString()+"\nArm Bench | Plan");RecordProxy.Of(rig.PB).Values["CustomData"]=config.ToString();
         ArmReady("Arm 1");ArmReady("Arm 2");
         for(int i=0;i<100;i++){ArmFrame();CollisionFrame(collision);}
-        var bench=Tests.Create(Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_Bench.txt"))),benchRig);
+        var bench=Tests.Create(Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_Bench_Source.txt"))),benchRig);
         if(posture!=null) {
             HostFrame(bench,benchRig,"Rebase");
             for(int i=0;i<900&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();ArmFrame();CollisionFrame(collision);HostFrame(bench,benchRig);}
@@ -235,7 +235,7 @@ internal static partial class Scenarios
             HostFrame(bench,benchRig,command);
             for(int i=0;i<(encounters?216100:22000)&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();ArmFrame();CollisionFrame(collision);HostFrame(bench,benchRig);}
             Console.WriteLine("Imported ideal kinematic "+command+": "+benchRig.Log.Last());
-            if(posture!=null) {var report=new MyIni();report.TryParse(benchRig.PB.CustomData);File.WriteAllText(Path.Combine(Tests.Workspace,"tools/ArmTests/obj/posture-"+command.ToLowerInvariant()+".txt"),report.EndContent);CollisionFrame(collision,"Info");Console.WriteLine(collisionRig.Log.Last());}
+            if(posture!=null) {var report=new MyIni();report.TryParse(benchRig.PB.CustomData);File.WriteAllText(Path.Combine(Tests.Workspace,".build/posture-"+command.ToLowerInvariant()+".txt"),report.EndContent);CollisionFrame(collision,"Info");Console.WriteLine(collisionRig.Log.Last());}
             if(!benchRig.Log.Last().StartsWith("PASS:"))
             {
                 foreach(var message in bus.Sent.Where(s=>s.Source==collisionPB.EntityId).TakeLast(2))Console.WriteLine(message.Data);
@@ -250,7 +250,7 @@ internal static partial class Scenarios
                 }
             }
             if(encounters) {
-                File.WriteAllText(Path.Combine(Tests.Workspace,"tools/ArmTests/obj/encounter-"+command.ToLowerInvariant()+".txt"),(string)Get(bench,"SavedReport")!);
+                File.WriteAllText(Path.Combine(Tests.Workspace,".build/encounter-"+command.ToLowerInvariant()+".txt"),(string)Get(bench,"SavedReport")!);
                 Console.WriteLine("Encounter report recorded for "+command+"; model results do not establish live physics clearance.");
             }
         }

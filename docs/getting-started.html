@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Build, name and control your first Space Engineers arm with AutoArm. An illustrated nine-step guide.">
+  <title>Getting Started with AutoArm</title>
+  <style>
+    @font-face { font-family: Inter; src: url('assets/fonts/Inter.ttf') format('truetype'); font-style: normal; font-weight: 100 900; font-display: swap; }
+    @font-face { font-family: Oxanium; src: url('assets/fonts/Oxanium.ttf') format('truetype'); font-style: normal; font-weight: 200 800; font-display: swap; }
+    :root { color-scheme: light; --ink: #263e4b; --muted: #496370; --paper: #f8faf9; --line: #d4dfe2; --wash: #edf2f3; --accent: #815716; --focus: #9e6d20; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 24px; scrollbar-gutter: stable; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: Inter, "Segoe UI", sans-serif; font-size: 16px; line-height: 1.65; }
+    ::selection { background: var(--ink); color: var(--paper); }
+    a { color: var(--ink); text-underline-offset: 4px; text-decoration-thickness: 1px; }
+    a:hover { color: var(--accent); }
+    a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 5px; }
+    button { font: inherit; cursor: pointer; }
+    .page { width: min(1160px, calc(100% - 96px)); margin: 0 auto; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 27px 0; border-bottom: 1px solid var(--line); }
+    .brand { font-family: Oxanium, sans-serif; font-size: 21px; font-weight: 600; text-decoration: none; }
+    .topbar nav { display: flex; flex-wrap: wrap; gap: 22px; font-size: 13px; }
+    header { padding: 64px 0 50px; }
+    h1 { font-family: Oxanium, sans-serif; font-size: 52px; line-height: 1.12; letter-spacing: -.025em; font-weight: 500; max-width: 780px; margin: 0 0 22px; text-wrap: balance; }
+    .intro { max-width: 67ch; font-size: 18px; margin: 0 0 22px; color: var(--muted); }
+    .setup-note { font-size: 13px; color: var(--muted); margin: 0; }
+    .contents { display: flex; flex-wrap: wrap; gap: 10px 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 19px 0; margin-bottom: 12px; font-size: 13px; }
+    .contents a { text-decoration: none; }
+    .step { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1.12fr); column-gap: 24px; align-items: start; padding: 60px 0; border-bottom: 1px solid var(--line); }
+    .step-number { font-family: Oxanium, sans-serif; color: var(--accent); font-size: 25px; font-weight: 500; line-height: 1.3; padding-top: 3px; font-variant-numeric: tabular-nums; }
+    h2 { font-size: 25px; font-weight: 600; line-height: 1.3; letter-spacing: -.02em; margin: 0 0 17px; text-wrap: balance; }
+    .copy p { max-width: 65ch; margin: 0 0 16px; }
+    .copy p:last-child { margin-bottom: 0; }
+    .secondary { color: var(--muted); font-size: 14px; }
+    code { font-family: "Cascadia Mono", Consolas, monospace; font-size: .88em; background: var(--wash); padding: 3px 7px; border-radius: 3px; overflow-wrap: anywhere; }
+    .name-example { margin: 24px 0; }
+    .name-example .example-label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 7px; }
+    .name-example code { display: block; width: fit-content; font-size: 17px; padding: 10px 14px; }
+    .visual { margin: 0; min-width: 0; }
+    .visual img { width: 100%; height: auto; display: block; }
+    figcaption { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 14px; max-width: 65ch; }
+    .part-visual { max-width: 440px; margin: -22px auto 0; }
+    .controller-visual { max-width: 350px; margin: -28px auto 0; }
+    .mock-visual { max-width: 450px; margin: 0 auto; }
+    .mock-visual img { border-radius: 3px; }
+    .build-step { grid-template-columns: 44px minmax(0, 1fr); }
+    .build-step .copy { max-width: 740px; }
+    .build-layout { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1.14fr) minmax(0, 1fr); gap: 48px; margin-top: 34px; align-items: start; }
+    .build-diagram { width: 100%; max-width: 520px; min-width: 0; margin: 0; }
+    .build-diagram img { display: block; width: 100%; height: auto; }
+    .diagram-scroll { overflow-x: auto; scrollbar-color: #849da9 var(--wash); scrollbar-width: thin; }
+    .diagram-scroll:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+    .build-diagram figcaption { margin-left: 0; }
+    .unsupported-examples h3 { font-size: 22px; line-height: 1.35; margin: 0 0 12px; font-weight: 600; }
+    .unsupported-examples > p { margin: 0 0 28px; color: var(--muted); font-size: 14px; }
+    .unsupported-example { padding: 26px 0; border-top: 1px solid var(--line); }
+    .unsupported-example h4 { color: #91483d; font-size: 17px; line-height: 1.4; margin: 0 0 10px; font-weight: 600; }
+    .unsupported-example p { margin: 0; font-size: 14px; max-width: 55ch; }
+    .unsupported-example img { width: 100%; height: 250px; object-fit: contain; display: block; margin: 18px 0 0; }
+    .unsupported-example img.misaligned { height: 310px; }
+    .chain { font-size: 14px; padding: 14px 0 0; color: var(--muted); }
+    .chain strong { color: var(--ink); font-weight: 600; }
+    .iso-visual { max-width: 510px; margin: 0 auto; }
+    .iso-visual img { max-height: 620px; object-fit: contain; }
+    .run-list { padding-left: 21px; margin: 20px 0 24px; }
+    .run-list li { padding-left: 3px; margin-bottom: 10px; }
+    .script-link { display: inline-block; padding: 10px 0; font-weight: 600; }
+    .controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px 18px; padding-top: 7px; }
+    .control { display: grid; justify-items: center; gap: 10px; text-align: center; }
+    kbd { display: grid; place-items: center; min-width: 65px; height: 54px; padding: 0 13px; border: 1px solid #9db1bb; border-bottom-width: 3px; border-radius: 5px; background: #e5edf0; font-family: Inter, sans-serif; font-size: 18px; font-weight: 600; color: var(--ink); }
+    .control span { font-size: 13px; color: var(--muted); }
+    .next-step { display: block; position: relative; padding-left: 68px; }
+    .next-step .step-number { position: absolute; left: 0; top: 62px; }
+    .doc-links { display: flex; flex-wrap: wrap; gap: 16px 28px; margin-top: 24px; }
+    footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; padding: 28px 0 48px; color: var(--muted); font-size: 12px; }
+    .print-button { border: 0; padding: 0; background: transparent; color: var(--ink); text-decoration: underline; text-underline-offset: 4px; font-size: 13px; }
+    @media (max-width: 800px) {
+      .page { width: calc(100% - 48px); }
+      h1 { font-size: 42px; }
+      .step { grid-template-columns: 36px minmax(0, 1fr); column-gap: 16px; padding: 44px 0; }
+      .visual { grid-column: 2; margin-top: 28px; }
+      .part-visual, .controller-visual { max-width: 360px; }
+      .build-layout { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); gap: 32px; }
+      .unsupported-examples { max-width: 520px; }
+      .build-diagram { width: 100%; }
+      .iso-visual { max-width: 520px; }
+      .controls { grid-column: 2; margin-top: 26px; }
+      .next-step { padding-left: 52px; }
+      .next-step .step-number { top: 47px; }
+    }
+    @media (max-width: 480px) {
+      .page { width: calc(100% - 32px); }
+      .topbar { align-items: flex-start; padding: 20px 0; gap: 14px; }
+      .topbar nav { justify-content: flex-end; gap: 10px 16px; font-size: 12px; }
+      header { padding: 40px 0 32px; }
+      h1 { font-size: 35px; }
+      .intro { font-size: 16px; }
+      .contents { gap: 10px 20px; }
+      .step { grid-template-columns: 28px minmax(0, 1fr); column-gap: 12px; padding: 36px 0; }
+      h2 { font-size: 22px; }
+      .step-number { font-size: 23px; }
+      .copy p { font-size: 15px; }
+      .copy p.secondary { font-size: 13px; }
+      .visual { grid-column: 1 / -1; }
+      .name-example code { font-size: 15px; }
+      .build-layout { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+      .diagram-scroll img { min-width: 520px; }
+      .build-diagram figcaption { margin-left: 0; }
+      .controls { grid-column: 1 / -1; gap: 20px 10px; }
+      .next-step { padding-left: 40px; }
+      .next-step .step-number { top: 39px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media print {
+      @page { size: A4; margin: 16mm; }
+      html { scroll-behavior: auto; }
+      body { background: white; font-size: 10pt; }
+      .page { width: 100%; }
+      .topbar nav, .contents, .print-button, footer { display: none; }
+      .topbar { padding: 0 0 12px; }
+      header { padding: 24px 0; }
+      h1 { font-size: 30pt; }
+      .intro { font-size: 11pt; }
+      .step { padding: 24px 0; break-inside: avoid; }
+      .build-step { break-inside: auto; }
+      .build-layout { grid-template-columns: 1fr 1fr; gap: 12mm; margin-top: 16px; }
+      .build-diagram { width: 100%; margin: 0; break-inside: avoid; }
+      .unsupported-example { break-inside: avoid; padding: 10px 0; }
+      .unsupported-example img { height: 40mm; }
+      .unsupported-example img.misaligned { height: 48mm; }
+      .iso-visual img { max-height: 180mm; }
+      .mock-visual { max-width: 70mm; }
+      h2 { font-size: 15pt; }
+      p, a, li, .secondary { font-size: 10pt; }
+      a { text-decoration: none; }
+      .next-step .step-number { top: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <a class="brand" href="../README.md">AutoArm</a>
+      <nav aria-label="Guide resources"><a href="assets/blocks/preview.html">Parts library</a><a href="autoarm-getting-started.zip" download>Download guide</a><button class="print-button" type="button" onclick="window.print()">Print guide</button></nav>
+    </div>
+    <header>
+      <h1>Getting Started<br>with AutoArm</h1>
+      <p class="intro">Build your arm, name its base and head, then let AutoArm discover the joints between them. Follow these nine steps to get moving.</p>
+      <p class="setup-note">Start with a powered grid in a world with in-game scripts enabled.</p>
+    </header>
+    <nav class="contents" aria-label="Guide sections"><a href="#step-1">1–4 &nbsp; Build &amp; name</a><a href="#step-5">5–7 &nbsp; Connect &amp; run</a><a href="#step-8">8 &nbsp; Take control</a><a href="#step-9">9 &nbsp; Go further</a></nav>
+    <main>
+      <section class="step" id="step-1" aria-labelledby="heading-1">
+        <span class="step-number" aria-hidden="true">1</span>
+        <div class="copy"><h2 id="heading-1">Place your first actuator</h2><p>Place a rotor on your grid. This first actuator will be the base of your arm.</p><p class="secondary">A hinge or piston can also be the first actuator. This guide uses a rotor.</p></div>
+        <figure class="visual part-visual"><img src="assets/models/autoarm/rotor-on-grid.svg" width="640" height="440" alt="Isometric view of a rotor attached to an armor block"><figcaption>The stationary block belongs to your grid; the rotor head carries the arm.</figcaption></figure>
+      </section>
+      <section class="step" id="step-2" aria-labelledby="heading-2">
+        <span class="step-number" aria-hidden="true">2</span>
+        <div class="copy"><h2 id="heading-2">Name the base</h2><p>Open the rotor in the terminal and set its name to <code>&lt;MyArmName&gt; - Base</code>.</p><p>Replace <code>&lt;MyArmName&gt;</code> with a name for your arm. Use the same name for the head in step 4.</p><div class="name-example"><span class="example-label">Example</span><code>Arm 1 - Base</code></div><p class="secondary">Name the rotor base, rather than its moving rotor head.</p></div>
+        <figure class="visual mock-visual"><img src="assets/models/autoarm/name-base-terminal.svg" width="560" height="466" alt="Game terminal mockup with the Name field set to Arm 1 - Base"><figcaption>Enter your chosen arm name in the terminal’s highlighted Name field.</figcaption></figure>
+      </section>
+      <section class="step build-step" id="step-3" aria-labelledby="heading-3">
+        <span class="step-number" aria-hidden="true">3</span>
+        <div class="copy"><h2 id="heading-3">Build the rest of the arm on top</h2><p>Build from the base rotor toward the tool. Intermediate rotors, hinges and pistons can keep their ordinary names.</p><p>This example starts with a crossbar, two hinges, two pistons, and a second crossbar. The two branches rejoin at the upper crossbar.</p><p class="chain"><strong>Above the upper crossbar:</strong> hinge → rotor → hinge → piston → rotor → hinge → hinge → rotor → drill.</p></div>
+        <div class="build-layout">
+          <figure class="build-diagram"><div class="diagram-scroll" tabindex="0" role="region" aria-label="Front arm diagram; scroll horizontally on narrow screens"><img src="assets/models/autoarm/arm-front.svg" width="520" height="1350" alt="Supported arm in front view, with each part labeled from the base rotor at the bottom to the drill at the top"></div><figcaption>Supported layout. Read from bottom to top. On a phone, scroll the diagram sideways to read the labels. <a href="assets/models/autoarm/arm-front.svg">Open the full diagram</a>.</figcaption></figure>
+          <aside class="unsupported-examples" aria-labelledby="unsupported-heading">
+            <h3 id="unsupported-heading">What not to do</h3>
+            <p>Parallel hinges and pistons, as shown on the left, are supported when their stages line up.</p>
+            <article class="unsupported-example"><h4>Parallel stages that don’t line up</h4><p>Parallel placement is supported, but the hinges and pistons must line up. Offset stages like these are not supported.</p><img class="misaligned" src="assets/models/autoarm/unsupported-misaligned.svg" width="440" height="510" alt="Unsupported example: parallel hinges and pistons with one branch mounted higher, so the hinge axes do not line up"></article>
+            <article class="unsupported-example"><h4>Hydraulic structures</h4><p>A piston used as a brace to drive a hinged linkage is not supported.</p><img src="assets/models/autoarm/unsupported-hydraulic.svg" width="500" height="320" alt="Unsupported example: a diagonal piston drives a hinged boom, forming a hydraulic linkage"></article>
+          </aside>
+        </div>
+      </section>
+      <section class="step" id="step-4" aria-labelledby="heading-4">
+        <span class="step-number" aria-hidden="true">4</span>
+        <div class="copy"><h2 id="heading-4">Name the head</h2><p>Name the tool or final terminal block on the moving end <code>&lt;MyArmName&gt; - Head</code>.</p><div class="name-example"><span class="example-label">Using the same arm name</span><code>Arm 1 - Head</code></div><p class="secondary">Use exactly one head marker for this arm. In this example, rename the drill itself.</p></div>
+        <figure class="visual mock-visual"><img src="assets/models/autoarm/name-head-terminal.svg" width="560" height="466" alt="Game terminal mockup with the drill Name field set to Arm 1 - Head"><figcaption>The base and head must share the same arm-name prefix.</figcaption></figure>
+      </section>
+      <section class="step" id="step-5" aria-labelledby="heading-5">
+        <span class="step-number" aria-hidden="true">5</span>
+        <div class="copy"><h2 id="heading-5">Place a cockpit or controller</h2><p>Place a cockpit, control seat or another ship controller on the same construct.</p><p class="secondary">You will sit in it, or take control of it, to send movement inputs to AutoArm.</p></div>
+        <figure class="visual controller-visual"><img src="assets/blocks/controller-isometric.svg" width="320" height="320" alt="Isometric SVG of an open control seat with a console and screen"><figcaption>A control seat is shown here. A cockpit works too.</figcaption></figure>
+      </section>
+      <section class="step" id="step-6" aria-labelledby="heading-6">
+        <span class="step-number" aria-hidden="true">6</span>
+        <div class="copy"><h2 id="heading-6">Place a programmable block</h2><p>Place a programmable block on the same construct as your arm. This block will run AutoArm.</p><p class="secondary">The example keeps the programmable block and control seat beside the arm on the connected foundation grid.</p></div>
+        <figure class="visual iso-visual"><img src="assets/models/autoarm/arm-isometric-pb.svg" width="850" height="940" alt="The same complete arm in a classical bent-elbow pose, with its drill facing downward and a programmable block and control seat next to its base"><figcaption>The same arm in a classical bent-elbow pose. <a href="assets/models/autoarm/arm-isometric-pb.svg">Open the full diagram</a>.</figcaption></figure>
+      </section>
+      <section class="step" id="step-7" aria-labelledby="heading-7">
+        <span class="step-number" aria-hidden="true">7</span>
+        <div class="copy"><h2 id="heading-7">Load the script and run <code>On</code></h2><ol class="run-list"><li>Open the programmable block’s <strong>Edit</strong> window.</li><li>Paste the entire AutoArm Arm script and save it.</li><li>Enter <code>On</code> in <strong>Argument</strong>, then press <strong>Run</strong>.</li></ol><a class="script-link" href="https://github.com/PommesMitChips/AutoArm/blob/v5.0.4/AutoArm_Compact.txt" target="_blank" rel="noopener">Open the AutoArm Arm script</a><p class="secondary">For a fresh programmable block, AutoArm discovers your arm names from the base markers and generates its configuration.</p></div>
+        <figure class="visual mock-visual"><img src="assets/models/autoarm/run-terminal.svg" width="560" height="620" alt="Game terminal mockup showing Edit, Argument set to On, and the Run button highlighted"><figcaption>Load the script through Edit first. Then run it with the argument <code>On</code>.</figcaption></figure>
+      </section>
+      <section class="step" id="step-8" aria-labelledby="heading-8">
+        <span class="step-number" aria-hidden="true">8</span>
+        <div class="copy"><h2 id="heading-8">Take control of your arm</h2><p>Sit in your cockpit or take control of your ship controller. Use <strong>WASD</strong> and <strong>C / Space</strong> to move the arm.</p><p class="secondary">By default, movement follows the head’s orientation.</p></div>
+        <div class="controls" aria-label="Default movement controls"><div class="control"><kbd>W</kbd><span>Forward</span></div><div class="control"><kbd>A</kbd><span>Left</span></div><div class="control"><kbd>Space</kbd><span>Up</span></div><div class="control"><kbd>S</kbd><span>Backward</span></div><div class="control"><kbd>D</kbd><span>Right</span></div><div class="control"><kbd>C</kbd><span>Down</span></div></div>
+      </section>
+      <section class="step next-step" id="step-9" aria-labelledby="heading-9">
+        <span class="step-number" aria-hidden="true">9</span>
+        <h2 id="heading-9">Go further with AutoArm</h2><p>See the documentation for more detailed instructions, configuration, tool swapping and troubleshooting.</p><div class="doc-links"><a href="../README.md">Full documentation</a><a href="TROUBLESHOOTING.md">Troubleshooting</a><a href="MODULES.md">Modules and paths</a></div>
+      </section>
+    </main>
+    <footer><span>AutoArm · Illustrated Getting Started guide</span><span>Schematic diagrams. Terminal mockups based on supplied game screenshots.</span></footer>
+  </div>
+</body>
+</html>

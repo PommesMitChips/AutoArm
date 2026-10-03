@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AutoArm — Steam Workshop preview</title>
+<style>
+*{box-sizing:border-box}html{color-scheme:dark;scrollbar-gutter:stable}body{margin:0;background:#171a21;color:#c6d4df;font:15px/1.6 Arial,sans-serif}
+a{color:#9bc7df;text-underline-offset:4px}a:hover{color:#e8f4fb}a:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-visible{outline:2px solid #ffc66b;outline-offset:4px}
+::selection{background:#50758c;color:#fff}.tools{width:min(900px,calc(100% - 32px));margin:28px auto 22px}.tools p{font-size:13px;max-width:70ch;margin:0 0 14px}
+.actions{display:flex;gap:18px;flex-wrap:wrap;align-items:center}.actions a{font-size:13px}button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid #597a90;border-radius:3px;background:#29465b;color:#eef6fb;cursor:pointer}button:hover{background:#385d76}
+details{margin-top:18px}summary{cursor:pointer;font-size:13px}textarea{display:block;width:100%;min-height:320px;margin-top:12px;padding:14px;background:#101923;border:1px solid #597a90;color:#c6d4df;font:13px/1.6 Consolas,monospace;resize:vertical;caret-color:#ffc66b}
+.workshop-description{width:min(660px,calc(100% - 32px));margin:24px auto 50px;padding:24px 20px 32px;background:#1b2838;overflow-wrap:anywhere}
+h1,h2,h3{color:#fff;line-height:1.35}h1{font-size:26px;margin:0 0 22px}h2{font-size:22px;margin:38px 0 16px}h3{font-size:18px;margin:28px 0 14px}p{margin:0 0 16px}strong{color:#eef6fb}ol,ul{padding-left:26px;margin:0 0 18px}li{margin-bottom:7px}
+.image{margin:22px 0 30px}.image img{display:block;width:100%;height:auto;max-width:100%}.controller img{max-width:360px;margin:auto}
+footer{width:min(660px,calc(100% - 32px));margin:0 auto 32px;color:#9bb2c1;font-size:12px}
+@media(max-width:480px){.workshop-description{width:100%;padding:22px 16px}h1{font-size:24px}h2{font-size:21px}}
+</style></head><body>
+<section class="tools" aria-label="Workshop export tools">
+<p>Steam Workshop layout preview. The images are transparent PNGs. Upload them and replace the nine image URL placeholders before pasting the BBCode into your Workshop description.</p>
+<div class="actions"><button id="copy" type="button">Copy BBCode template</button><a href="AutoArm-Steam-Workshop.zip" download>Download Workshop pack</a><a href="getting-started.bbcode.txt" download>Download BBCode</a></div>
+<p id="status" role="status"></p><details><summary>View BBCode template</summary><textarea id="bbcode" readonly aria-label="Steam Workshop BBCode template">[h1]Getting Started with AutoArm[/h1]
+
+Build your arm, name its base and head, then let AutoArm discover the joints between them. Start with a powered grid in a world with in-game scripts enabled.
+
+[h2]1. Place your first actuator[/h2]
+
+Place a rotor on your grid. This first actuator will be the base of your arm. A hinge or piston can also be the first actuator; this guide uses a rotor.
+
+[img]{{IMAGE_01_ROTOR_ON_GRID}}[/img]
+
+[h2]2. Name the base[/h2]
+
+Open the rotor in the terminal and name it [b]&lt;MyArmName&gt; - Base[/b]. Replace [b]&lt;MyArmName&gt;[/b] with your arm&#x27;s name; for example, [b]Arm 1 - Base[/b]. Name the rotor base rather than its moving rotor head.
+
+[img]{{IMAGE_02_NAME_BASE}}[/img]
+
+[h2]3. Build the rest of the arm on top[/h2]
+
+Build from the base rotor toward the tool. Intermediate rotors, hinges and pistons can keep their ordinary names.
+
+The example, from bottom to top, is:
+
+[olist]
+[*]Base rotor.
+[*]A crossbar.
+[*]Two hinges, one on each end of the crossbar, with a shared rotation axis.
+[*]Two pistons, one above each hinge.
+[*]A second crossbar, joining the piston heads.
+[*]A single hinge in the middle of the upper crossbar.
+[*]Rotor → hinge → piston → rotor → hinge → hinge → rotor → drill head.
+[/olist]
+
+[img]{{IMAGE_03_ARM_FRONT}}[/img]
+
+[h3]What not to do[/h3]
+
+Parallel hinges and pistons are supported when their stages line up.
+
+[b]Parallel stages that don&#x27;t line up:[/b] Parallel placement is supported, but offset hinge and piston stages are not supported.
+
+[img]{{IMAGE_03A_MISALIGNED_STAGES}}[/img]
+
+[b]Hydraulic structures:[/b] A piston used as a brace to drive a hinged linkage is not supported.
+
+[img]{{IMAGE_03B_HYDRAULIC_LINKAGE}}[/img]
+
+[h2]4. Name the head[/h2]
+
+Name the tool or final terminal block at the moving end [b]&lt;MyArmName&gt; - Head[/b]. Use the same prefix as the base: [b]Arm 1 - Head[/b] in this example. Use exactly one head marker; here, rename the drill itself.
+
+[img]{{IMAGE_04_NAME_HEAD}}[/img]
+
+[h2]5. Place a cockpit or controller[/h2]
+
+Place a cockpit, control seat or another ship controller on the same construct. Sit in it, or take control of it, when you are ready to send movement inputs.
+
+[img]{{IMAGE_05_CONTROLLER}}[/img]
+
+[h2]6. Place a programmable block[/h2]
+
+Place a programmable block on the same construct as the arm. This block will run AutoArm. The example keeps it beside the arm on a connected foundation grid.
+
+[img]{{IMAGE_06_ARM_AND_PROGRAMMABLE_BLOCK}}[/img]
+
+[h2]7. Load the script and run [b]On[/b][/h2]
+
+[olist]
+[*]Open the programmable block&#x27;s [b]Edit[/b] window.
+[*]Paste the entire [url=https://github.com/PommesMitChips/AutoArm/blob/v5.0.4/AutoArm_Compact.txt]AutoArm Arm script[/url] and save it.
+[*]Enter [b]On[/b] in [b]Argument[/b], then press [b]Run[/b].
+[/olist]
+
+For a fresh programmable block, AutoArm discovers arm names from the base markers and generates its configuration.
+
+[img]{{IMAGE_07_RUN_ON}}[/img]
+
+[h2]8. Take control of your arm[/h2]
+
+Sit in your cockpit or take control of your ship controller. Use [b]WASD[/b] and [b]C / Space[/b] to move the arm. By default, movement follows the head&#x27;s orientation.
+
+[list]
+[*][b]W / S[/b] — Forward / backward
+[*][b]A / D[/b] — Left / right
+[*][b]Space / C[/b] — Up / down
+[/list]
+
+[h2]9. Go further with AutoArm[/h2]
+
+See the [url=https://github.com/PommesMitChips/AutoArm#readme]full documentation[/url] for configuration, tool swapping and more detailed instructions. Also see [url=https://github.com/PommesMitChips/AutoArm/blob/main/docs/TROUBLESHOOTING.md]troubleshooting[/url] and [url=https://github.com/PommesMitChips/AutoArm/blob/main/docs/MODULES.md]modules and paths[/url].
+
+Diagrams use simplified schematic proportions. The terminal mockups are independently drawn vectors based on the supplied game screenshots.
+</textarea></details>
+</section><article class="workshop-description"><h1>Getting Started with AutoArm</h1>
+<p>Build your arm, name its base and head, then let AutoArm discover the joints between them. Start with a powered grid in a world with in-game scripts enabled.</p>
+<h2>1. Place your first actuator</h2>
+<p>Place a rotor on your grid. This first actuator will be the base of your arm. A hinge or piston can also be the first actuator; this guide uses a rotor.</p>
+<figure class="image"><img src="png/01-rotor-on-grid.png" width="1240" height="852" alt="Rotor mounted on a grid"></figure>
+<h2>2. Name the base</h2>
+<p>Open the rotor in the terminal and name it <strong>&lt;MyArmName&gt; - Base</strong>. Replace <strong>&lt;MyArmName&gt;</strong> with your arm&#x27;s name; for example, <strong>Arm 1 - Base</strong>. Name the rotor base rather than its moving rotor head.</p>
+<figure class="image"><img src="png/02-name-base.png" width="1240" height="1032" alt="Terminal: Arm 1 - Base"></figure>
+<h2>3. Build the rest of the arm on top</h2>
+<p>Build from the base rotor toward the tool. Intermediate rotors, hinges and pistons can keep their ordinary names.</p>
+<p>The example, from bottom to top, is:</p>
+<ol>
+<li>Base rotor.</li>
+<li>A crossbar.</li>
+<li>Two hinges, one on each end of the crossbar, with a shared rotation axis.</li>
+<li>Two pistons, one above each hinge.</li>
+<li>A second crossbar, joining the piston heads.</li>
+<li>A single hinge in the middle of the upper crossbar.</li>
+<li>Rotor → hinge → piston → rotor → hinge → hinge → rotor → drill head.</li>
+</ol>
+<figure class="image"><img src="png/03-arm-front.png" width="1040" height="2699" alt="Complete arm, front view"></figure>
+<h3>What not to do</h3>
+<p>Parallel hinges and pistons are supported when their stages line up.</p>
+<p><strong>Parallel stages that don&#x27;t line up:</strong> Parallel placement is supported, but offset hinge and piston stages are not supported.</p>
+<figure class="image"><img src="png/03a-misaligned-stages.png" width="880" height="1020" alt="Unsupported misaligned parallel stages"></figure>
+<p><strong>Hydraulic structures:</strong> A piston used as a brace to drive a hinged linkage is not supported.</p>
+<figure class="image"><img src="png/03b-hydraulic-linkage.png" width="1000" height="640" alt="Unsupported hydraulic linkage"></figure>
+<h2>4. Name the head</h2>
+<p>Name the tool or final terminal block at the moving end <strong>&lt;MyArmName&gt; - Head</strong>. Use the same prefix as the base: <strong>Arm 1 - Head</strong> in this example. Use exactly one head marker; here, rename the drill itself.</p>
+<figure class="image"><img src="png/04-name-head.png" width="1240" height="1032" alt="Terminal: Arm 1 - Head"></figure>
+<h2>5. Place a cockpit or controller</h2>
+<p>Place a cockpit, control seat or another ship controller on the same construct. Sit in it, or take control of it, when you are ready to send movement inputs.</p>
+<figure class="image controller"><img src="png/05-controller.png" width="640" height="640" alt="Control seat"></figure>
+<h2>6. Place a programmable block</h2>
+<p>Place a programmable block on the same construct as the arm. This block will run AutoArm. The example keeps it beside the arm on a connected foundation grid.</p>
+<figure class="image"><img src="png/06-arm-and-programmable-block.png" width="1240" height="1371" alt="Classical arm pose with programmable block"></figure>
+<h2>7. Load the script and run <strong>On</strong></h2>
+<ol>
+<li>Open the programmable block&#x27;s <strong>Edit</strong> window.</li>
+<li>Paste the entire <a href="https://github.com/PommesMitChips/AutoArm/blob/v5.0.4/AutoArm_Compact.txt" target="_blank" rel="noopener">AutoArm Arm script</a> and save it.</li>
+<li>Enter <strong>On</strong> in <strong>Argument</strong>, then press <strong>Run</strong>.</li>
+</ol>
+<p>For a fresh programmable block, AutoArm discovers arm names from the base markers and generates its configuration.</p>
+<figure class="image"><img src="png/07-run-on.png" width="1240" height="1373" alt="Terminal: Argument On and Run"></figure>
+<h2>8. Take control of your arm</h2>
+<p>Sit in your cockpit or take control of your ship controller. Use <strong>WASD</strong> and <strong>C / Space</strong> to move the arm. By default, movement follows the head&#x27;s orientation.</p>
+<ul>
+<li><strong>W / S</strong> — Forward / backward</li>
+<li><strong>A / D</strong> — Left / right</li>
+<li><strong>Space / C</strong> — Up / down</li>
+</ul>
+<h2>9. Go further with AutoArm</h2>
+<p>See the <a href="https://github.com/PommesMitChips/AutoArm#readme" target="_blank" rel="noopener">full documentation</a> for configuration, tool swapping and more detailed instructions. Also see <a href="https://github.com/PommesMitChips/AutoArm/blob/main/docs/TROUBLESHOOTING.md" target="_blank" rel="noopener">troubleshooting</a> and <a href="https://github.com/PommesMitChips/AutoArm/blob/main/docs/MODULES.md" target="_blank" rel="noopener">modules and paths</a>.</p>
+<p>Diagrams use simplified schematic proportions. The terminal mockups are independently drawn vectors based on the supplied game screenshots.</p></article>
+<footer>Local layout preview. Steam supplies its own text styling; the PNGs shown here are the exported files.</footer>
+<script>document.getElementById('copy').addEventListener('click',async()=>{const source=document.getElementById('bbcode');const status=document.getElementById('status');try{await navigator.clipboard.writeText(source.value);status.textContent='BBCode template copied. Replace the image URL placeholders after uploading the PNGs.';}catch{source.closest('details').open=true;source.focus();source.select();status.textContent='Select and copy the BBCode below, then replace the image URL placeholders.';}});</script>
+</body></html>

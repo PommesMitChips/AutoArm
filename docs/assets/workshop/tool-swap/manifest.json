@@ -1,0 +1,120 @@
+{
+  "panels": [
+    {
+      "filename": "00-toolswap-intro.png",
+      "width": 1240,
+      "height": 514,
+      "transparent": true,
+      "title": "Getting Started with ToolSwap",
+      "paragraphs": [
+        "Park your tools on stands, pair the two programmable blocks, then let AutoArm change tools for you. Start with a working AutoArm arm."
+      ]
+    },
+    {
+      "filename": "01-tool-stands.png",
+      "width": 1240,
+      "height": 1291,
+      "transparent": true,
+      "title": "Build the tool stands",
+      "paragraphs": [
+        "Build a stand for each tool on the arm's grid. Put a merge block on each stand and a facing merge block on the tool body.",
+        "Start with every tool securely merged to its stand. Leave room for the arm to approach each mount and withdraw."
+      ]
+    },
+    {
+      "filename": "02-arm-rotor-head.png",
+      "width": 1240,
+      "height": 1134,
+      "transparent": true,
+      "title": "Keep the rotor head on the arm",
+      "paragraphs": [
+        "Put one loose, compatible rotor head at the moving end of your arm. It can attach directly to the last hinge's moving head.",
+        "The rotor head stays on the arm when tools are swapped. The rotor base goes on the tool."
+      ]
+    },
+    {
+      "filename": "03-tool-rotor-bases.png",
+      "width": 1240,
+      "height": 1400,
+      "transparent": true,
+      "title": "Add a rotor base to each tool",
+      "paragraphs": [
+        "Each tool carries a compatible rotor base with its socket facing the arm's rotor head. Remove the base's own rotor head before use.",
+        "Keep the tool, rotor base and tool-side merge blocks rigidly connected as one tool body. Use one eligible rotor base per tool and leave its angle limits unlimited for the first pickup."
+      ]
+    },
+    {
+      "filename": "04-tool-and-mount-names.png",
+      "width": 1240,
+      "height": 928,
+      "transparent": true,
+      "title": "Name the tools and mounts",
+      "paragraphs": [
+        "Name one reference block on each tool using your arm's name and a unique Head number. Here, the drill is Head 1 and the welder is Head 2.",
+        "For easy identification, name the tool rotor bases as Mount 1 and Mount 2. Mount names are optional; ToolSwap discovers these bases from the numbered tool references."
+      ]
+    },
+    {
+      "filename": "05-toolswap-programmable-block.png",
+      "width": 1240,
+      "height": 882,
+      "transparent": true,
+      "title": "Install the second programmable block",
+      "paragraphs": [
+        "Load the ToolSwap script into a second programmable block on the same construct as AutoArm. Keep both scripts running.",
+        "For this example, name the blocks AutoArm PB and ToolSwap PB. Use those exact names in the pairing settings next."
+      ]
+    },
+    {
+      "filename": "06-peer-custom-data.png",
+      "width": 1240,
+      "height": 950,
+      "transparent": true,
+      "title": "Pair the PBs in Custom Data",
+      "paragraphs": [
+        "Open AutoArm PB's Custom Data. In the existing arm section, set ToolSwapPB to the ToolSwap block's name.",
+        "In ToolSwap PB's Custom Data, use the same arm section and set Link.ArmPB to AutoArm PB. Enable tools with Tools.Enabled=true.",
+        "These are snippets: keep your other generated settings and replace Arm 1 with your own arm name."
+      ]
+    },
+    {
+      "filename": "07-initialise-and-swap.png",
+      "width": 1240,
+      "height": 1064,
+      "transparent": true,
+      "title": "Initialise and change tools",
+      "paragraphs": [
+        "With all tools merged to their stands, run On on AutoArm PB. AutoArm discovers the tool mounts and stand merge pairs.",
+        "Run Tool 1 or Tool 2 on AutoArm PB to pick up that tool. A swap parks the current tool first and then restores arm control.",
+        "Run Park to return the current tool to its stand. Parking leaves the arm OFF; run On to control the bare arm again."
+      ]
+    }
+  ],
+  "branding": [
+    {
+      "filename": "branding/autoarm-thumbnail.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 291451
+    },
+    {
+      "filename": "branding/toolswap-thumbnail.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 320469
+    },
+    {
+      "filename": "branding/toolswap-title.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1522305
+    }
+  ],
+  "checkedAgainst": {
+    "README.md": "d9f4113912a841ea742a6244536da763befe16802e21ada1ee0b7d1f20df7081",
+    "docs\\MODULES.md": "0d763447ea6e95036ca39af60af2bb9929a5884e6fd237a235a917f63e9b1106",
+    "examples\\ArmWithTools.ini": "d0417f2f06488319b6c705c67163b28a8ffbb5c425d0fb4f65e44347e408e14d",
+    "examples\\MultiArmTools.ini": "27e91c31772a2b1b30c843dd4f5590706702ab5318b6f09642b453b9fad2e5a1",
+    "AutoArm_ToolSwap_Source.txt": "12cf5765c30cefe65c3b88773c5dd6f1b11206a30696db27702a6029435926c6"
+  }
+}

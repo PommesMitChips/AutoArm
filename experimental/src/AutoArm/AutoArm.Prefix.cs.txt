@@ -1,0 +1,6 @@
+// AutoArm: auto-discovered mixed mechanical arm controller.
+// The host supplies the arm section name. This initializer supports engine tests.
+readonly string ArmName = "Arm 1";
+
+// ===== IMPLEMENTATION =====
+const string ControllerBuildVersion = "@@VERSION@@";

@@ -239,7 +239,7 @@ internal static class ScriptPack
         var packed = (automaticArm ? "// AutoArm v" : "// MArmOS mixed mining arm v") + version.Trim('"') + " - paste this ENTIRE file into the programmable block.\n" +
             "// Starts OFF. Stop before replacing; Check, then On. No collision avoidance.\n" +
             "// Settings remain editable. Full source: " + Path.GetFileName(tree.FilePath) + ".\n" + settings +
-            "// Generated implementation: edit the readable source and run tools/" + (automaticArm ? "Build-AutoArm.ps1" : "Build.ps1") + ".\n" + compact + "\n";
+            "// Generated implementation: edit the track src files and run Build.ps1.\n" + compact + "\n";
         if (automaticArm) packed = "// AutoArm " + version.Trim('"') + "\n// PB script. Settings: Custom Data.\n" + settings + compact + "\n";
         var packedCompilation = Compile(packed, output);
         Check(packedCompilation);
@@ -269,7 +269,7 @@ internal static class ScriptPack
         Check(Compile(packed, output));
         if (packed.Length > 100000) throw new Exception($"Packed script still exceeds 100,000 characters: {packed.Length}.");
         File.WriteAllText(output, packed, new UTF8Encoding(false));
-        var mapPath = Path.Combine(Path.GetDirectoryName(output)!, "tools", "ScriptPack", "obj", Path.GetFileNameWithoutExtension(output) + ".names.json");
+        var mapPath = Path.Combine(Path.GetDirectoryName(output)!, ".build", Path.GetFileNameWithoutExtension(output) + ".names.json");
         Directory.CreateDirectory(Path.GetDirectoryName(mapPath)!);
         File.WriteAllText(mapPath, JsonSerializer.Serialize(symbols.Select(kv => new { symbol = kv.Key.ToDisplayString(), name = kv.Value }), new JsonSerializerOptions { WriteIndented = true }));
         File.WriteAllText(Path.ChangeExtension(mapPath, ".compression.json"), JsonSerializer.Serialize(repetitions.Report, new JsonSerializerOptions { WriteIndented = true }));

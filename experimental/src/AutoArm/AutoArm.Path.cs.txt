@@ -1,0 +1,122 @@
+// The arm owns complete paths. A waypoint is a rigid position/orientation in
+// world space, or relative to one live terminal-block anchor.
+sealed class ArmPath
+{
+    public readonly List<MatrixD> Waypoints = new List<MatrixD>();
+    public IMyTerminalBlock Anchor;
+    public int Completed;
+    public long Id;
+    public double Move, Turn, PositionTolerance, AngleTolerance;
+    public double Elapsed, Budget;
+    public int Stable;
+    public double[] Moves, Turns;
+    public bool[] Lines;
+    public Vector3D LineStart;
+    public bool LineStarted;
+    public bool Docking, Capture;
+    public double CurrentMove => Moves == null ? Move : Moves[Completed];
+    public double CurrentTurn => Turns == null ? Turn : Turns[Completed];
+    public bool Linear => Lines != null && Lines[Completed];
+    public bool Done => Completed == Waypoints.Count;
+    public MatrixD Current => Anchor == null ? Waypoints[Completed] : Waypoints[Completed] * Anchor.WorldMatrix;
+}
+ArmPath LocalPath;
+double PathRemainingDistance;
+ArmPath ReadPath(string text, long anchor, long id, double move, double turn, double positionTolerance, double angleTolerance)
+{
+    var path = new ArmPath { Id = id, Move = move, Turn = turn, PositionTolerance = positionTolerance, AngleTolerance = angleTolerance };
+    if (text.Length > 12000 || !Finite(move) || move <= 0 || move > 5 || !Finite(turn) || turn <= 0 || turn > 30) throw new Exception("Invalid path caps/size.");
+    if (anchor != 0)
+    { path.Anchor = GridTerminalSystem.GetBlockWithId(anchor); if (path.Anchor == null || path.Anchor.Closed || !path.Anchor.IsSameConstructAs(Me)) throw new Exception("Path anchor unavailable."); }
+    foreach (string row in text.Split('|'))
+    {
+        string[] cells = row.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        if (cells.Length != 9 || path.Waypoints.Count >= 32) throw new Exception("Path needs 1..32 rows of position/forward/up (9 numbers).");
+        var v = new double[9]; for (int i = 0; i < 9; i++) if (!ReadDouble(cells[i], out v[i])) throw new Exception("Non-finite path waypoint.");
+        var forward = new Vector3D(v[3], v[4], v[5]); var up = new Vector3D(v[6], v[7], v[8]);
+        if (!Orthonormalise(ref forward, ref up)) throw new Exception("Invalid path orientation.");
+        path.Waypoints.Add(MatrixD.CreateWorld(new Vector3D(v[0], v[1], v[2]), forward, up));
+    }
+    return path;
+}
+void ConfigurePathStages(ArmPath path, MyIni ini)
+{
+    path.Docking = ini.Get(LinkSection, "Docking").ToBoolean();
+    path.Moves = PathSpeeds(ini, "Moves", path.Waypoints.Count, path.Move, MoveMps, 5);
+    path.Turns = PathSpeeds(ini, "Turns", path.Waypoints.Count, path.Turn, TurnDeg, 30);
+    string text = ini.Get(LinkSection, "Lines").ToString();
+    if (text.Length == 0) return;
+    string[] rows = text.Split('|'); if (rows.Length != path.Waypoints.Count) throw new Exception("Path Lines count mismatch.");
+    path.Lines = new bool[rows.Length];
+    for (int i = 0; i < rows.Length; i++) if (!bool.TryParse(rows[i], out path.Lines[i])) throw new Exception("Invalid path line flag.");
+}
+static double[] PathSpeeds(MyIni ini, string key, int count, double fallback, double inherited, double maximum)
+{
+    string text = ini.Get(LinkSection, key).ToString(); if (text.Length == 0) return null;
+    string[] rows = text.Split('|'); if (rows.Length != count) throw new Exception("Path " + key + " count mismatch.");
+    var values = new double[count];
+    for (int i = 0; i < count; i++)
+    {
+        double value; if (!ReadDouble(rows[i], out value) || value < 0 || value > maximum) throw new Exception("Invalid path " + key);
+        values[i] = value == 0 ? inherited : value;
+        if (!(values[i] > 0)) throw new Exception("Arm default path speed is disabled.");
+    }
+    return values;
+}
+bool StepPath(ArmPath path, double dt, double observed, out string why)
+{
+    why = ""; if (path.Done) return true;
+    if (path.Anchor != null && (path.Anchor.Closed || !path.Anchor.IsSameConstructAs(Me))) { why = "Path anchor lost."; return false; }
+    if (path.Budget == 0)
+    {
+        var target = path.Current; double distance = Vector3D.Distance(target.Translation, Topology.EndPosition);
+        double speed = Math.Min(path.CurrentMove, path.Move);
+        double angle = RotationError(Topology.EndPose.Forward, Topology.EndPose.Up, target.Forward, target.Up).Length() * 180 / Math.PI;
+        double turn = Math.Min(path.CurrentTurn, path.Turn);
+        path.Budget = 30 + (speed > 0 ? distance / speed : 0) + (turn > 0 ? angle / turn : 0);
+    }
+    path.Elapsed += observed;
+    if (path.Elapsed > path.Budget) { why = "Path waypoint timeout: " + (path.Completed + 1); return false; }
+    MatrixD goal = path.Current, demand = goal;
+    bool entry = path.Docking && path.Completed + 1 < path.Waypoints.Count;
+    double pt = entry ? Math.Max(.001, Math.Min(.02, Vector3D.Distance(path.Waypoints[path.Completed].Translation, path.Waypoints[path.Completed + 1].Translation) * .25)) : path.PositionTolerance;
+    double at = entry ? Math.Max(1, path.AngleTolerance) : path.AngleTolerance;
+    PathRemainingDistance = Vector3D.Distance(goal.Translation, Topology.EndPosition);
+    if (path.Linear)
+    {
+        MatrixD basis = path.Anchor == null ? MatrixD.Identity : path.Anchor.WorldMatrix;
+        var position = Vector3D.Transform(Topology.EndPosition, MatrixD.Invert(basis));
+        if (!path.LineStarted) { path.LineStart = position; path.LineStarted = true; }
+        var delta = path.Waypoints[path.Completed].Translation - path.LineStart; double length = delta.Length();
+        var reference = path.LineStart;
+        // Align before insertion/withdrawal, then hold one orientation and steer
+        // to a lookahead point on the captured Cartesian line, never a shortcut.
+        double angle = RotationError(Topology.EndPose.Forward, Topology.EndPose.Up, goal.Forward, goal.Up).Length() * 180 / Math.PI;
+        double gate = path.Docking ? Math.Max(at, Math.Min(1, PathRemainingDistance * 10)) : at;
+        if (length > 1e-10)
+        {
+            var direction = delta / length; double progress = Vector3D.Dot(position - path.LineStart, direction);
+            // Losing alignment pauses at current progress, never back at the
+            // insertion start. Retain perpendicular correction onto the line.
+            reference += direction * Clamp(progress + (path.CurrentMove / PositionKp + pt * .5) * Clamp(2 - angle / gate, 0, 1), 0, length);
+        }
+        demand.Translation = Vector3D.Transform(reference, basis);
+    }
+    bool settled;
+    if (!ToolPoseStep(demand, dt, observed, path.CurrentMove, path.CurrentTurn, pt, at, out settled, out why, path.Docking ? 2 : 0)) return false;
+    if (entry) settled = LastPositionError <= pt && LastOrientationErrorDeg <= at && (path.Capture || FilteredV.Length() <= Math.Max(.005, Math.Min(path.Move, pt * 2.5)) && FilteredW.Length() * 180 / Math.PI <= Math.Max(.2, path.Turn));
+    settled &= PathRemainingDistance <= pt;
+    path.Stable = settled ? path.Stable + 1 : 0;
+    if (path.Stable >= 2) { if (!entry) { Topology.ZeroOwned(); Tools.ZeroMount(); } path.Completed++; path.Elapsed = path.Budget = 0; path.Stable = 0; path.LineStarted = false; Say("Path " + path.Id + ": " + path.Completed + "/" + path.Waypoints.Count); }
+    return true;
+}
+void PathCommand(string command)
+{
+    string why;
+    if (!Enabled || !Topology.Ready || !Tools.AllowManual(out why)) throw new Exception("Run On before Path; equipment must be ready.");
+    var path = ReadPath(command.Substring(command.IndexOf(' ') + 1), 0, 0, MoveMps, TurnDeg, .005, .2);
+    // Validate the entire list before changing any motion state.
+    Vector3D p, f, u; if (!ReadPose(out p, out f, out u)) throw new Exception("Path focus unavailable.");
+    StopMotion(""); LocalPath = path; CapturePose(p, f, u); Enabled = true; Runtime.UpdateFrequency = UpdateFrequency.Update1;
+    Say("Path accepted: " + path.Waypoints.Count + " waypoints.");
+}

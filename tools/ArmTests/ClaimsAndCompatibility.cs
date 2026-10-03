@@ -119,7 +119,7 @@ internal static partial class Scenarios
 
     static void ManualPriorityCompatibility(Type type)
     {
-        var reference=Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"reference","MiningArm_v2_0_HeadOnly.txt")));
+        var reference=Tests.Script(File.ReadAllText(Path.Combine(Tests.RepoRoot,"tools/reference","MiningArm_v2_0_HeadOnly.txt")));
         var oldBlend=reference.GetMethod("BlendManualCorrection",All)!;
         var newBlend=type.GetMethod("BlendManualCorrection",All) ?? throw new Exception("Missing reviewable manual blend helper.");
         var rig=Fixtures.Serial(out _,out _,out _,out _);var script=Start(type,rig);

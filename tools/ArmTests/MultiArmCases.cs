@@ -53,7 +53,7 @@ internal static partial class Scenarios
             Check(Enabled(Core(scoped,"Arm 1"))&&!Enabled(Core(scoped,"Arm 2")),"Nonconforming shared layout silently enabled or stopped a valid neighbor.");
         }
         HostStartupInput(armType); MultiHostInput(armType); HostServices(armType); MultiToolHost(armType,toolType); MultiToolHost(armType,toolType,true); MultiToolHost(armType,toolType,true,true); MultiToolHost(armType,toolType,true,false,true);
-        File.WriteAllText(Path.Combine(Tests.Workspace,"examples/CustomData.ini"),rig.PB.CustomData);
+        File.WriteAllText(Path.Combine(Tests.RepoRoot,"docs/examples/CustomData.ini"),rig.PB.CustomData);
         Console.WriteLine("Multi-arm hosts: selected-only input, scoped/implicit commands, global inheritance and overrides, joint-kind/parallel rejection, independent Home/restart, cross-PB input selection and shared ToolSwap routing.");
     }
     static void HostStartupInput(Type type)

@@ -1,0 +1,355 @@
+AutoArm + ToolSwap — Using commands
+
+Enter an argument in the appropriate programmable block and press Run. Verbs ignore case; arm and tool names use exact case.
+
+On
+An untargeted command applies to that PB's selected arm.
+Example: On(Arm 2)
+
+<command> <arguments>, <arm>
+Target a named arm using a trailing comma, or place the arguments and arm name in parentheses.
+Example: MoveTo(2,0,1,Arm 2)
+
+<command>; <command>
+A semicolon or newline creates an immediate batch. Commands do not wait for motion to finish.
+Note: Use Path for ordered waypoints. Run each Tool or Park operation separately.
+
+The AutoArm tool commands below are forwarded to its paired ToolSwap PB. ToolSwap's own PB does not accept AutoArm motion or tuning commands.
+Reference checked against the current local scripts, build 5.1.0.
+
+
+AutoArm — Control and setup
+
+Use these commands in the AutoArm PB.
+
+On
+Load settings, discover equipment and enable arm control.
+
+Off / Stop
+Stop the target arm and cancel an active tool operation.
+
+Toggle
+Switch arm control between ON and OFF.
+
+Hold
+Recapture and hold the current head pose. Can enable control when OFF.
+
+Reload
+Apply Custom Data configuration while remaining OFF.
+
+Rescan
+Rediscover topology and settings while remaining OFF.
+
+StopAll
+Stop every arm hosted by this AutoArm PB. Takes no arm argument.
+
+
+
+AutoArm — Arm selection and input
+
+Without an explicit target, commands act on this PB's selected arm. Mode and input changes are temporary; use Custom Data for startup defaults.
+
+Select <arm>
+Select an arm and pair the sole occupied cockpit.
+Example: Select Arm 1
+Note: Use Select(HRZ, Arm 1) to pair and set HEAD, HRZ or VRT. Exactly one cockpit must be occupied.
+
+Release <arm>
+Remove that arm's cockpit pairing; the arm holds its pose.
+Example: Release(Arm 1)
+
+Mode <HEAD|HRZ|VRT>
+Change the movement view while preserving the held pose.
+Aliases: MovementMode, ControlMode
+Note: HEAD: head axes. HRZ: cockpit axes. VRT: cockpit up/left/backward. Reload restores the configured view.
+
+ReadKeyboard <On|Off|Toggle>
+Enable or disable translational cockpit input.
+Aliases: -rk
+
+ReadRoll <On|Off|Toggle>
+Enable or disable Q/E roll input.
+
+ReadMouse <On|Off|Toggle>
+Enable or disable mouse turning.
+Aliases: -rm
+
+
+
+AutoArm — Aim the head
+
+These actions change orientation while holding position. They do not translate the arm. Run On first; HRZ/VRT direction actions need an active cockpit.
+
+Face <Forward|Back|Left|Right|Up|Down>
+Aim toward a direction in the selected view.
+Example: Face Up
+
+Forward / Back
+Standalone forms of Face Forward and Face Back.
+
+Left / Right
+Standalone forms of Face Left and Face Right.
+
+Up / Down
+Standalone forms of Face Up and Face Down.
+
+
+
+AutoArm — Rotation steps
+
+Run On first. Named steps use the current StepSize; position stays held.
+
+Step <Yaw|Pitch|Roll> [degrees]
+Rotate the target. Omit the angle to use StepSize; an explicit angle may be any finite value.
+Example: Step Yaw 15
+
+Yaw <degrees>
+Apply signed yaw, from -180 to +180 degrees.
+
+Pitch <degrees>
+Apply signed pitch, from -180 to +180 degrees.
+
+Roll <degrees>
+Apply signed roll, from -180 to +180 degrees.
+
+YawLeft / YawRight
+Apply +StepSize / -StepSize yaw.
+
+PitchUp / PitchDown
+Apply +StepSize / -StepSize pitch.
+
+RollLeft / RollRight
+Apply -StepSize / +StepSize roll.
+
+
+
+AutoArm — Speed and tolerance
+
+All ranges are inclusive. These runtime changes are temporary; edit Custom Data for persistent defaults.
+
+Speed <m/s>
+Head translation speed: 0 to 5 m/s.
+Aliases: -s
+Note: The persistent configuration key is HeadSpeed.
+
+TurnSpeed <degrees/s>
+Head turn rate: 0.01 to 30 degrees/s.
+Note: The persistent configuration key is HeadTurnSpeed.
+
+StepSize <degrees>
+Default rotation increment: 0.01 to 180 degrees.
+Aliases: StepAngle
+
+JointSpeed <RPM>
+Rotor and hinge speed cap: 0.01 to 5 RPM.
+
+PistonSpeed <m/s>
+Piston speed cap: 0.01 to 2 m/s.
+
+HomeSpeed <RPM> <m/s>
+Home rotary and piston caps: 0.01–5 RPM and 0.01–2 m/s.
+Example: HomeSpeed 0.5 0.1
+
+OrientationTolerance <degrees>
+Allowed orientation error: 0 to 30 degrees. Stops control when changed; run On to recapture.
+
+
+
+AutoArm — Save and return Home
+
+Home is a saved set of actuator positions. It must match the current topology and equipment.
+
+SetHome
+Save the current actuator positions. Stops the arm and leaves it OFF.
+Aliases: -sh
+
+GoHome
+Return to saved Home and stop on completion. Does not require a preceding On; pilot input cancels it.
+Aliases: -gh
+Note: Requires valid configuration, a matching saved Home and equipment permission.
+
+HomeInfo
+Show information about the saved Home.
+
+HomeSpeed <RPM> <m/s>
+Set the rotary and piston speed caps used by GoHome.
+Example: HomeSpeed 0.5 0.1
+
+
+
+AutoArm — Explicit poses and paths
+
+Run On first. MoveTo, OrientTo and MoveToPosOri use the base's Forward / Left / Up frame; positions are metres relative to the base.
+
+MoveTo <x> <y> <z>
+Move to a base-relative position while holding orientation.
+Example: MoveTo 2 0 1
+
+OrientTo <fx> <fy> <fz> <ux> <uy> <uz>
+Set forward and up direction vectors while holding position.
+Example: OrientTo 1 0 0 0 0 1
+
+MoveToPosOri <x> <y> <z> <fx> <fy> <fz> <ux> <uy> <uz>
+Set both the base-relative position and orientation.
+Note: Vectors must be finite and form a valid orientation frame.
+
+Path x y z fx fy fz ux uy uz | ...
+Execute 1–32 world-space poses, with nine numbers per pose and | between rows. The controller validates the whole path before motion and holds the final pose.
+Example: Path <pose row> | <pose row>, Arm 2
+Note: Unlike the three pose commands, Path uses world coordinates. Requires ready equipment and Speed > 0. Maximum text length: 12,000 characters.
+
+
+
+AutoArm — Reports and diagnostics
+
+Reports appear in the PB's status output. Status returns to the live display after a pinned report.
+
+Info
+Print the detailed controller report.
+Aliases: HeadInfo, Help, Settings
+
+Status
+Resume the live status display.
+
+Check
+Validate configuration, topology and markers.
+
+Joints
+List detected joint groups and their movement/orientation weights.
+
+Bindings
+Show toolbar actions, movement views and mouse switches.
+
+Version
+Print the controller version banner.
+
+
+
+AutoArm — PivotProbe diagnostics
+
+An evidence tool for manual pivot trials. It does not calibrate pivots. Keep the controller OFF, topology ready and owned target velocities zero.
+
+PivotProbe
+Print the probe syntax help.
+
+PivotProbe Start <group>
+Capture the starting snapshot of a rotor/hinge group. Group numbers start at 1; identify them with Joints.
+Example: PivotProbe Start 1, Arm 2
+
+PivotProbe End
+Measure the manual trial and print residuals.
+Note: After Start, manually jog only that group by 1–15 degrees, zero its targets and let it settle before End.
+
+PivotProbe Report
+Print accepted trials; up to 12 are kept in RAM.
+
+PivotProbe Reset
+Clear snapshots and trials without changing blocks.
+
+Use the space form shown above. PivotProbe(Start,1) exceeds the host's default arity check; an explicit final arm target is required for that parenthesized form.
+
+
+AutoArm — Toolbar shortcuts and compatibility
+
+Arguments 1–9 are fixed aiming shortcuts. They are not tool numbers: use Tool 1 or Tool 2 to change tools.
+
+1 → PitchUp
+2 → Back
+3 → PitchDown
+4 → Left
+5 → Down
+6 → Right
+7 → YawLeft
+8 → Forward
+9 → YawRight
+DumpTrace
+Print Info plus a compatibility note. It does not export a trace.
+
+TraceClear
+Recognized no-op: reports that there is no trace buffer.
+
+MiningArm <command>
+Optional legacy prefix accepted before an AutoArm command; not a standalone action.
+
+Move, RelMove and RunFromPanel are recognized legacy names that this controller explicitly rejects.
+
+
+AutoArm — Commands forwarded to ToolSwap
+
+These commands run on AutoArm and are sent to its configured ToolSwap partner. Tool numbers and exact names must identify a discovered or configured profile.
+
+Tool <number|exact name>
+Park the current tool if needed, then pick up the requested tool. Successful pickup returns to control.
+Aliases: ToolSwap
+Example: Tool(2,Arm 1)
+Note: Accepts an exact profile name or exact marker name. Use a number if a name is ambiguous.
+
+Park [positive park number]
+Return the mounted tool to its stand and detach it. Omitting the number uses automatic matching; a number selects a configured ParkMerge port.
+Example: Park 2
+Note: Parking leaves the arm OFF. Run On to control the bare arm again.
+
+ToolScan
+Explicit equipment scan and reconciliation. Remains OFF.
+
+ToolInfo
+Print the tool equipment and operation report.
+
+SwapCancel
+Cancel and stop the tool operation without rolling it back. Inspect the equipment, then run On.
+
+
+
+ToolSwap — Swap, park and scan
+
+Use these arguments directly in the ToolSwap PB after successful On / initialization. AutoArm can also forward them. Run each equipment operation separately.
+
+Tool <number|exact name>
+Swap to a discovered or configured tool; park the current tool first.
+Aliases: ToolSwap
+Example: Tool 2
+Note: Names may be an exact profile or marker name. Ambiguous names need a tool number.
+
+Park [positive park number]
+Park and detach the current tool. A positive number selects the configured <ArmName> - ParkMerge N port.
+Note: Without a number, use automatic matching. Parking remains OFF.
+
+ToolScan
+Explicitly scan and reconcile the equipment. Remains OFF.
+
+SwapCancel
+Cancel and stop the active operation without rollback. Inspect equipment, then run On.
+Note: Stop an automatic swap before requesting another equipment operation.
+
+
+
+ToolSwap — Control, selection and reports
+
+These are ToolSwap PB commands. AutoArm motion, Home, input and tuning commands belong in the AutoArm PB.
+
+On
+Configure and scan ToolSwap, reconcile equipment and request arm control after successful readiness.
+
+Reload
+Reload ToolSwap configuration while OFF.
+
+Off / Stop
+Cancel and stop the equipment operation.
+Note: SwapCancel also cancels an operation.
+
+ToolInfo
+Print the equipment and operation report.
+Aliases: Info, Status
+
+Version
+Print the ToolSwap build version.
+
+Select <arm>
+Choose this ToolSwap PB's selected command target. Does not pair a cockpit or change the movement view.
+Example: Select Arm 2
+
+StopAll
+Cancel every arm hosted by this ToolSwap PB. Takes no target argument.
+
+Release and Rescan are not ToolSwap commands. Set movement views and cockpit pairings through AutoArm instead.
+

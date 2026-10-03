@@ -156,7 +156,7 @@ internal static partial class Scenarios
         Check(!text.Contains(fingerprint)&&!text.Contains("Signature=")&&!text.Contains("MArmOS"),"New layout exposed legacy branding or physical identities.");
         Check(FCRows(FCIni(text)).Length==11,"Reported ten-actuator table lost rows.");
         Check(FCIni(text).Get("AutoArm","Format").ToInt32()==6,"Generated preview does not use Format 6.");
-        var exampleDirectory=Path.Combine(Tests.Workspace,"examples");
+        var exampleDirectory=Path.Combine(Tests.RepoRoot,"docs/examples");
         Directory.CreateDirectory(exampleDirectory);
         File.WriteAllText(Path.Combine(exampleDirectory,"CustomData.ini"),text);
         Run(script,"SetHome");var saved=FCStorageIni(((TestHost)script).Storage);

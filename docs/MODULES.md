@@ -87,7 +87,7 @@ Other PB automation can also invoke the arm's public `Path` Run argument with wo
 
 ## Additional direct peers
 
-`Peers` authorizes up to 16 additional same-construct PBs by exact name, independently of `ToolSwapPB`. Each row is `PB name | Role`. The optional setting is shown in [Modules.ini](../examples/Modules.ini). Peers is optional in the current Format 7 schema. Invalid roles, duplicate/self/missing/nonfunctional PBs and reuse of the ToolSwap PB as a service peer refuse setup. Apply changes with `On` or `Reload`.
+`Peers` authorizes up to 16 additional same-construct PBs by exact name, independently of `ToolSwapPB`. Each row is `PB name | Role`. The optional setting is shown in [Modules.ini](examples/Modules.ini). Peers is optional in the current Format 7 schema. Invalid roles, duplicate/self/missing/nonfunctional PBs and reuse of the ToolSwap PB as a service peer refuse setup. Apply changes with `On` or `Reload`.
 
 | Role | Authority |
 | --- | --- |
