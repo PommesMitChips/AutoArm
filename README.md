@@ -50,13 +50,11 @@ location. Run these commands from the repository root:
 Builds write source and compact files into the selected track. Edit the files in
 `src/` to make changes. See [tools](tools/README.md) for build options and tests.
 
-## Guides and artwork
+## Guides
 
 - [Getting Started](docs/GETTING_STARTED.md) · [HTML version](docs/getting-started.html)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Configuration examples](docs/examples)
-- [SVG panels](docs/assets/workshop/svg-panels/README.md)
-- [Panel assembler](tools/panel-assembler/dist/AutoArm-Panel-Assembler.html) · [Instructions](tools/panel-assembler/README.md)
 
 ## Repository layout
 
