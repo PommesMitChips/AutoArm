@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "name": "All panels",
+  "theme": {
+    "lineScope": "rules"
+  },
+  "scale": 1,
+  "groups": [
+    {
+      "id": "autoarm-guide",
+      "name": "AutoArm guide",
+      "filename": "autoarm-guide",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "autoarm-guide/00-getting-started.svg"
+        },
+        {
+          "asset": "autoarm-guide/01-place-first-actuator.svg"
+        },
+        {
+          "asset": "autoarm-guide/02-name-base.svg"
+        },
+        {
+          "asset": "autoarm-guide/03-build-arm.svg"
+        },
+        {
+          "asset": "autoarm-guide/04-name-head.svg"
+        },
+        {
+          "asset": "autoarm-guide/05-place-controller.svg"
+        },
+        {
+          "asset": "autoarm-guide/06-place-programmable-block.svg"
+        },
+        {
+          "asset": "autoarm-guide/07-load-and-run.svg"
+        },
+        {
+          "asset": "autoarm-guide/08-control-arm.svg"
+        }
+      ]
+    },
+    {
+      "id": "toolswap-guide",
+      "name": "ToolSwap guide",
+      "filename": "toolswap-guide",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "toolswap-guide/00-toolswap-intro.svg"
+        },
+        {
+          "asset": "toolswap-guide/01-tool-stands.svg"
+        },
+        {
+          "asset": "toolswap-guide/02-arm-rotor-head.svg"
+        },
+        {
+          "asset": "toolswap-guide/03-tool-rotor-bases.svg"
+        },
+        {
+          "asset": "toolswap-guide/04-tool-and-mount-names.svg"
+        },
+        {
+          "asset": "toolswap-guide/05-toolswap-programmable-block.svg"
+        },
+        {
+          "asset": "toolswap-guide/06-peer-custom-data.svg"
+        },
+        {
+          "asset": "toolswap-guide/07-initialise-and-swap.svg"
+        }
+      ]
+    },
+    {
+      "id": "commands",
+      "name": "Command reference",
+      "filename": "commands",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/00-using-commands.svg"
+        },
+        {
+          "asset": "commands/autoarm-01-control.svg"
+        },
+        {
+          "asset": "commands/autoarm-02-selection-input.svg"
+        },
+        {
+          "asset": "commands/autoarm-03-facing.svg"
+        },
+        {
+          "asset": "commands/autoarm-04-rotation.svg"
+        },
+        {
+          "asset": "commands/autoarm-05-speed-limits.svg"
+        },
+        {
+          "asset": "commands/autoarm-06-home.svg"
+        },
+        {
+          "asset": "commands/autoarm-07-poses-paths.svg"
+        },
+        {
+          "asset": "commands/autoarm-08-reports.svg"
+        },
+        {
+          "asset": "commands/autoarm-09-pivot-probe.svg"
+        },
+        {
+          "asset": "commands/autoarm-10-shortcuts-compatibility.svg"
+        },
+        {
+          "asset": "commands/autoarm-11-tool-commands.svg"
+        },
+        {
+          "asset": "commands/toolswap-01-tool-operations.svg"
+        },
+        {
+          "asset": "commands/toolswap-02-control-reports.svg"
+        }
+      ]
+    },
+    {
+      "id": "layout-elements",
+      "name": "Layout elements",
+      "filename": "layout-elements",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "common/separator.svg"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,974 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">Drill — isometric view</title>
+  <desc id="desc">Ship drill with a conveyor housing, protective shoulders and three toothed cutting drums. Transparent, schematic guide artwork.</desc>
+  <metadata>{&quot;view&quot;:&quot;isometric&quot;,&quot;units&quot;:&quot;schematic&quot;,&quot;projection&quot;:&quot;true-isometric-30deg&quot;,&quot;canvas&quot;:[320,320],&quot;scale&quot;:1.17463,&quot;anchors&quot;:{&quot;mount&quot;:[160.0,250.52],&quot;tip&quot;:[160.0,66.11],&quot;axis&quot;:[160.0,121.31]}}</metadata>
+  <g id="artwork" stroke-linejoin="round" stroke-linecap="round">
+    <polyline data-part="detail" points="118.95,240.16 135.23,249.55" fill="none" stroke="#849da9" stroke-width="1.4"/>
+    <polyline data-part="detail" points="201.05,240.16 184.77,249.55" fill="none" stroke="#849da9" stroke-width="1.4"/>
+    <polygon data-part="base" points="167.12,148.92 217.98,178.28 217.98,186.51 167.12,215.87 152.88,215.87 102.02,186.51 102.02,178.28 152.88,148.92" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="detail" points="118.95,233.11 135.23,242.51" fill="none" stroke="#849da9" stroke-width="1.4"/>
+    <polyline data-part="detail" points="201.05,233.11 184.77,242.51" fill="none" stroke="#849da9" stroke-width="1.4"/>
+    <polygon data-part="base" points="217.98,254.63 167.12,284 167.12,215.87 217.98,186.51" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="152.88,284 102.02,254.63 102.02,186.51 152.88,215.87" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="detail" points="118.95,226.06 135.23,235.46" fill="none" stroke="#849da9" stroke-width="1.4"/>
+    <polyline data-part="detail" points="201.05,226.06 184.77,235.46" fill="none" stroke="#849da9" stroke-width="1.4"/>
+    <polygon data-part="detail" points="113.05,245.91 141.54,262.36 141.54,229.47 113.05,213.02" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="detail" points="206.95,245.91 178.46,262.36 178.46,229.47 206.95,213.02" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="detail" points="117.53,243.33 136.86,254.49 136.86,232.17 117.53,221.01" fill="#314b59" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="detail" points="202.47,243.33 183.14,254.49 183.14,232.17 202.47,221.01" fill="#314b59" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="167.12,136 217.98,165.36 217.98,173.58 167.12,202.95 152.88,202.95 102.02,173.58 102.02,165.36 152.88,136" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="drive" points="194.53,169.47 194.23,172.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="125.77,172.08 125.47,169.47" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="176.74,103.11 176.52,105.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="125.17,105.06 124.95,103.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="194.23,172.08 193.35,174.63" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="126.65,174.63 125.77,172.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="176.74,103.11 176.74,93.71" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="124.95,103.11 124.95,93.71" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="176.52,105.06 175.86,106.98" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="125.83,106.98 125.17,105.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="194.53,169.47 194.53,144.81" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="drive" points="125.47,169.47 125.47,144.81" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="151.34,56.21 151.38,55.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="162.22,55.79 162.27,56.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="128.1,177.1 126.65,174.63" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="193.35,174.63 191.9,177.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="151.38,56.62 151.34,56.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="162.27,56.21 162.22,56.62" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="169.16,104.28 166.61,105.57 163.79,106.66 160.75,107.52 157.55,108.15 154.22,108.53 150.84,108.66 147.46,108.53 144.14,108.15 140.93,107.52 137.9,106.66 135.08,105.57 132.53,104.28 130.3,102.81 128.42,101.19 126.92,99.43 125.83,97.58 125.17,95.66 124.95,93.71 125.17,91.76 125.83,89.84 126.92,87.99 128.42,86.23 130.3,84.61 132.53,83.14 135.08,81.85 137.9,80.76 140.93,79.9 144.14,79.27 147.46,78.89 150.84,78.76 154.22,78.89 157.55,79.27 160.75,79.9 163.79,80.76 166.61,81.85 169.16,83.14 171.39,84.61 173.27,86.23 174.77,87.99 175.86,89.84 176.52,91.76 176.74,93.71 176.52,95.66 175.86,97.58 174.77,99.43 173.27,101.19 171.39,102.81" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="175.86,106.98 174.77,108.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="126.92,108.83 125.83,106.98" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="151.52,57.02 151.38,56.62" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="162.22,56.62 162.08,57.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="151.75,57.41 151.52,57.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="162.08,57.02 161.85,57.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="152.07,57.78 151.75,57.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="161.85,57.41 161.54,57.78" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="176.74,93.71 176.52,95.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="125.17,95.66 124.95,93.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="152.47,58.13 152.07,57.78" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="161.54,57.78 161.14,58.13" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="152.94,58.44 152.47,58.13" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="161.14,58.13 160.67,58.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="191.9,177.1 189.9,179.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="130.1,179.44 128.1,177.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="160.67,58.44 160.13,58.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="153.47,58.71 152.94,58.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="174.77,108.83 173.27,110.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="128.42,110.58 126.92,108.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="160.13,58.71 159.54,58.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="154.07,58.94 153.47,58.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="159.54,58.94 158.89,59.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="154.71,59.12 154.07,58.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="158.89,59.12 158.22,59.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="155.39,59.25 154.71,59.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="158.22,59.25 157.52,59.34" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="156.09,59.34 155.39,59.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="157.52,59.34 156.8,59.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="156.8,59.36 156.09,59.34" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="129.1,59.65 129.15,59.23" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="139.99,59.23 140.04,59.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="176.52,95.66 175.86,97.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="125.83,97.58 125.17,95.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="base" points="167.12,284 152.88,284 152.88,215.87 167.12,215.87" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="129.15,60.06 129.1,59.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="140.04,59.65 139.99,60.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="139.99,60.06 139.85,60.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="129.29,60.46 129.15,60.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="173.27,110.58 171.39,112.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="130.3,112.21 128.42,110.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="129.52,60.85 129.29,60.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="139.85,60.46 139.62,60.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="132.61,181.61 130.1,179.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="189.9,179.44 187.39,181.61" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="162.27,56.21 159.25,37.41" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="151.34,56.21 154.36,37.41" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="129.83,61.22 129.52,60.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="139.62,60.85 139.3,61.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="130.23,61.57 129.83,61.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="139.3,61.22 138.91,61.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="175.86,97.58 174.77,99.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="126.92,99.43 125.83,97.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="130.7,61.88 130.23,61.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="138.91,61.57 138.43,61.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="132.53,113.68 130.3,112.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="171.39,112.21 169.16,113.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="drive" points="184.41,158.9 181.02,160.62 177.26,162.07 173.21,163.22 168.94,164.06 164.51,164.57 160,164.74 155.49,164.57 151.06,164.06 146.79,163.22 142.74,162.07 138.98,160.62 135.59,158.9 132.61,156.94 130.1,154.77 128.1,152.43 126.65,149.97 125.77,147.41 125.47,144.81 125.77,142.2 126.65,139.65 128.1,137.18 130.1,134.84 132.61,132.67 135.59,130.71 138.98,128.99 142.74,127.54 146.79,126.39 151.06,125.55 155.49,125.04 160,124.87 164.51,125.04 168.94,125.55 173.21,126.39 177.26,127.54 181.02,128.99 184.41,130.71 187.39,132.67 189.9,134.84 191.9,137.18 193.35,139.65 194.23,142.2 194.53,144.81 194.23,147.41 193.35,149.97 191.9,152.43 189.9,154.77 187.39,156.94" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="138.43,61.88 137.9,62.15" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="131.24,62.15 130.7,61.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="162.22,55.79 162.27,56.21 162.22,56.62 162.08,57.02 161.85,57.41 161.54,57.78 161.14,58.13 160.67,58.44 160.13,58.71 159.54,58.94 158.89,59.12 158.22,59.25 157.52,59.34 156.8,59.36 156.8,38.82 157.12,38.81 157.44,38.78 157.74,38.72 158.02,38.63 158.29,38.53 158.53,38.41 158.74,38.27 158.92,38.12 159.06,37.95 159.16,37.78 159.23,37.6 159.25,37.41 159.23,37.23" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="156.8,59.36 156.09,59.34 155.39,59.25 154.71,59.12 154.07,58.94 153.47,58.71 152.94,58.44 152.47,58.13 152.07,57.78 151.75,57.41 151.52,57.02 151.38,56.62 151.34,56.21 151.38,55.79 154.38,37.23 154.36,37.41 154.38,37.6 154.44,37.78 154.54,37.95 154.68,38.12 154.86,38.27 155.07,38.41 155.31,38.53 155.58,38.63 155.87,38.72 156.17,38.78 156.48,38.81 156.8,38.82" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="137.9,62.15 137.3,62.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="131.84,62.38 131.24,62.15" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="137.3,62.38 136.66,62.56" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="132.48,62.56 131.84,62.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="136.66,62.56 135.98,62.69" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="133.15,62.69 132.48,62.56" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="135.98,62.69 135.28,62.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="133.85,62.77 133.15,62.69" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="135.59,183.57 132.61,181.61" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="187.39,181.61 184.41,183.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="135.28,62.77 134.57,62.8" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="134.57,62.8 133.85,62.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="169.16,113.68 166.61,114.97" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="135.08,114.97 132.53,113.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="174.77,99.43 173.27,101.19" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="128.42,101.19 126.92,99.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="176.74,103.11 176.52,105.06 175.86,106.98 174.77,108.83 173.27,110.58 171.39,112.21 169.16,113.68 166.61,114.97 163.79,116.05 160.75,116.92 157.55,117.55 154.22,117.93 150.84,118.06 147.46,117.93 144.14,117.55 140.93,116.92 137.9,116.05 135.08,114.97 132.53,113.68 130.3,112.21 128.42,110.58 126.92,108.83 125.83,106.98 125.17,105.06 124.95,103.11 124.95,93.71 125.17,95.66 125.83,97.58 126.92,99.43 128.42,101.19 130.3,102.81 132.53,104.28 135.08,105.57 137.9,106.66 140.93,107.52 144.14,108.15 147.46,108.53 150.84,108.66 154.22,108.53 157.55,108.15 160.75,107.52 163.79,106.66 166.61,105.57 169.16,104.28 171.39,102.81 173.27,101.19 174.77,99.43 175.86,97.58 176.52,95.66 176.74,93.71" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polygon data-part="base" points="217.98,191.2 167.12,220.57 167.12,202.95 217.98,173.58" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="152.88,220.57 102.02,191.2 102.02,173.58 152.88,202.95" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="176.74,93.71 176.74,63.17" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="124.95,93.71 124.95,63.17" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="140.04,59.65 137.01,40.85" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="129.1,59.65 132.12,40.85" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="166.61,114.97 163.79,116.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="137.9,116.05 135.08,114.97" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="184.41,183.57 181.02,185.29" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="138.98,185.29 135.59,183.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="173.27,101.19 171.39,102.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="130.3,102.81 128.42,101.19" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="163.79,116.05 160.75,116.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="140.93,116.92 137.9,116.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="167.61,65.6 167.66,65.19" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.5,65.19 178.55,65.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="158.53,38.41 158.29,38.53 158.02,38.63 157.74,38.72 157.44,38.78 157.12,38.81 156.8,38.82 156.48,38.81 156.17,38.78 155.87,38.72 155.58,38.63 155.31,38.53 155.07,38.41 154.86,38.27 154.68,38.12 154.54,37.95 154.44,37.78 154.38,37.6 154.36,37.41 154.38,37.23 154.44,37.05 154.54,36.87 154.68,36.71 154.86,36.55 155.07,36.41 155.31,36.29 155.58,36.19 155.87,36.11 156.17,36.05 156.48,36.01 156.8,36 157.12,36.01 157.44,36.05 157.74,36.11 158.02,36.19 158.29,36.29 158.53,36.41 158.74,36.55 158.92,36.71 159.06,36.87 159.16,37.05 159.23,37.23 159.25,37.41 159.23,37.6 159.16,37.78 159.06,37.95 158.92,38.12 158.74,38.27" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="teeth" points="139.99,59.23 140.04,59.65 139.99,60.06 139.85,60.46 139.62,60.85 139.3,61.22 138.91,61.57 138.43,61.88 137.9,62.15 137.3,62.38 136.66,62.56 135.98,62.69 135.28,62.77 134.57,62.8 134.57,42.26 134.89,42.25 135.2,42.22 135.5,42.16 135.79,42.07 136.06,41.97 136.3,41.85 136.51,41.71 136.69,41.56 136.83,41.39 136.93,41.22 136.99,41.04 137.01,40.85 136.99,40.67" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="134.57,62.8 133.85,62.77 133.15,62.69 132.48,62.56 131.84,62.38 131.24,62.15 130.7,61.88 130.23,61.57 129.83,61.22 129.52,60.85 129.29,60.46 129.15,60.06 129.1,59.65 129.15,59.23 132.14,40.67 132.12,40.85 132.14,41.04 132.21,41.22 132.31,41.39 132.45,41.56 132.63,41.71 132.84,41.85 133.08,41.97 133.35,42.07 133.63,42.16 133.94,42.22 134.25,42.25 134.57,42.26" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="167.66,66.02 167.61,65.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.55,65.6 178.5,66.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="160.75,116.92 157.55,117.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="144.14,117.55 140.93,116.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="181.02,185.29 177.26,186.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="142.74,186.74 138.98,185.29" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.5,66.02 178.36,66.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="167.8,66.42 167.66,66.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="132.53,104.28 130.3,102.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="171.39,102.81 169.16,104.28" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.36,66.42 178.13,66.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="168.03,66.81 167.8,66.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="157.55,117.55 154.22,117.93" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="147.46,117.93 144.14,117.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="154.22,117.93 150.84,118.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="150.84,118.06 147.46,117.93" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="168.34,67.18 168.03,66.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.13,66.81 177.81,67.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="177.81,67.18 177.42,67.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="168.74,67.52 168.34,67.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="177.26,186.74 173.21,187.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="146.79,187.89 142.74,186.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="169.21,67.83 168.74,67.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="177.42,67.52 176.94,67.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="169.16,104.28 166.61,105.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="135.08,105.57 132.53,104.28" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="176.94,67.83 176.41,68.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="169.75,68.11 169.21,67.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="drive" points="194.53,169.47 194.23,172.08 193.35,174.63 191.9,177.1 189.9,179.44 187.39,181.61 184.41,183.57 181.02,185.29 177.26,186.74 173.21,187.89 168.94,188.73 164.51,189.24 160,189.41 155.49,189.24 151.06,188.73 146.79,187.89 142.74,186.74 138.98,185.29 135.59,183.57 132.61,181.61 130.1,179.44 128.1,177.1 126.65,174.63 125.77,172.08 125.47,169.47 125.47,144.81 125.77,147.41 126.65,149.97 128.1,152.43 130.1,154.77 132.61,156.94 135.59,158.9 138.98,160.62 142.74,162.07 146.79,163.22 151.06,164.06 155.49,164.57 160,164.74 164.51,164.57 168.94,164.06 173.21,163.22 177.26,162.07 181.02,160.62 184.41,158.9 187.39,156.94 189.9,154.77 191.9,152.43 193.35,149.97 194.23,147.41 194.53,144.81" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="176.41,68.11 175.81,68.34" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="170.34,68.34 169.75,68.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="175.81,68.34 175.17,68.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="170.99,68.52 170.34,68.34" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="173.21,187.89 168.94,188.73" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="151.06,188.73 146.79,187.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="175.17,68.52 174.49,68.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="171.66,68.65 170.99,68.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="174.49,68.65 173.79,68.73" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="172.36,68.73 171.66,68.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="173.79,68.73 173.08,68.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="173.08,68.76 172.36,68.73" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="136.3,41.85 136.06,41.97 135.79,42.07 135.5,42.16 135.2,42.22 134.89,42.25 134.57,42.26 134.25,42.25 133.94,42.22 133.63,42.16 133.35,42.07 133.08,41.97 132.84,41.85 132.63,41.71 132.45,41.56 132.31,41.39 132.21,41.22 132.14,41.04 132.12,40.85 132.14,40.67 132.21,40.49 132.31,40.31 132.45,40.15 132.63,39.99 132.84,39.85 133.08,39.73 133.35,39.63 133.63,39.55 133.94,39.49 134.25,39.45 134.57,39.44 134.89,39.45 135.2,39.49 135.5,39.55 135.79,39.63 136.06,39.73 136.3,39.85 136.51,39.99 136.69,40.15 136.83,40.31 136.93,40.49 136.99,40.67 137.01,40.85 136.99,41.04 136.93,41.22 136.83,41.39 136.69,41.56 136.51,41.71" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="166.61,105.57 163.79,106.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="137.9,106.66 135.08,105.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="168.94,188.73 164.51,189.24" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="155.49,189.24 151.06,188.73" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="164.51,189.24 160,189.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="drive" points="160,189.41 155.49,189.24" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="163.79,106.66 160.75,107.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="140.93,107.52 137.9,106.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.55,65.6 175.52,46.81" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="167.61,65.6 170.63,46.81" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="160.75,107.52 157.55,108.15" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="144.14,108.15 140.93,107.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="157.55,108.15 154.22,108.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="147.46,108.53 144.14,108.15" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="154.22,108.53 150.84,108.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="150.84,108.66 147.46,108.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="178.5,65.19 178.55,65.6 178.5,66.02 178.36,66.42 178.13,66.81 177.81,67.18 177.42,67.52 176.94,67.83 176.41,68.11 175.81,68.34 175.17,68.52 174.49,68.65 173.79,68.73 173.08,68.76 173.08,48.22 173.4,48.21 173.71,48.17 174.01,48.11 174.3,48.03 174.57,47.93 174.81,47.81 175.02,47.67 175.2,47.52 175.34,47.35 175.44,47.17 175.5,46.99 175.52,46.81 175.5,46.62" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="173.08,68.76 172.36,68.73 171.66,68.65 170.99,68.52 170.34,68.34 169.75,68.11 169.21,67.83 168.74,67.52 168.34,67.18 168.03,66.81 167.8,66.42 167.66,66.02 167.61,65.6 167.66,65.19 170.65,46.62 170.63,46.81 170.65,46.99 170.72,47.17 170.82,47.35 170.96,47.52 171.14,47.67 171.35,47.81 171.59,47.93 171.86,48.03 172.14,48.11 172.45,48.17 172.76,48.21 173.08,48.22" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polygon data-part="cutter" points="169.16,73.74 166.61,75.03 163.79,76.12 160.75,76.98 157.55,77.61 154.22,77.99 150.84,78.12 147.46,77.99 144.14,77.61 140.93,76.98 137.9,76.12 135.08,75.03 132.53,73.74 130.3,72.27 128.42,70.64 126.92,68.89 125.83,67.04 125.17,65.12 124.95,63.17 125.17,61.22 125.83,59.3 126.92,57.45 128.42,55.69 130.3,54.07 132.53,52.6 135.08,51.31 137.9,50.22 140.93,49.36 144.14,48.73 147.46,48.35 150.84,48.22 154.22,48.35 157.55,48.73 160.75,49.36 163.79,50.22 166.61,51.31 169.16,52.6 171.39,54.07 173.27,55.69 174.77,57.45 175.86,59.3 176.52,61.22 176.74,63.17 176.52,65.12 175.86,67.04 174.77,68.89 173.27,70.64 171.39,72.27" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="134.03,72.07 134.08,72.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="123.14,72.48 123.19,72.07" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="guard" points="167.12,83.14 230.19,119.55 230.19,134.82 179.33,164.19 152.88,164.19 89.81,127.77 89.81,112.5 140.67,83.14" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="123.19,72.89 123.14,72.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="134.08,72.48 134.03,72.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="166.79,51.13 167.52,52.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="134.17,52.37 134.9,51.13" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="123.74,65.23 123.51,63.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="178.18,63.17 177.94,65.23" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="134.03,72.89 133.89,73.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="123.33,73.3 123.19,72.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="176.74,93.71 176.52,95.66 175.86,97.58 174.77,99.43 173.27,101.19 171.39,102.81 169.16,104.28 166.61,105.57 163.79,106.66 160.75,107.52 157.55,108.15 154.22,108.53 150.84,108.66 147.46,108.53 144.14,108.15 140.93,107.52 137.9,106.66 135.08,105.57 132.53,104.28 130.3,102.81 128.42,101.19 126.92,99.43 125.83,97.58 125.17,95.66 124.95,93.71 124.95,63.17 125.17,65.12 125.83,67.04 126.92,68.89 128.42,70.64 130.3,72.27 132.53,73.74 135.08,75.03 137.9,76.12 140.93,76.98 144.14,77.61 147.46,77.99 150.84,78.12 154.22,77.99 157.55,77.61 160.75,76.98 163.79,76.12 166.61,75.03 169.16,73.74 171.39,72.27 173.27,70.64 174.77,68.89 175.86,67.04 176.52,65.12 176.74,63.17" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="123.56,73.69 123.33,73.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="133.89,73.3 133.66,73.69" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="123.88,74.06 123.56,73.69" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="133.66,73.69 133.35,74.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="178.18,63.17 178.18,54.95" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="123.51,63.17 123.51,54.95" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="133.73,53.65 134.17,52.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="167.52,52.37 167.96,53.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="124.27,74.4 123.88,74.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="133.35,74.06 132.95,74.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="132.95,74.4 132.48,74.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="124.75,74.71 124.27,74.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="132.48,74.71 131.94,74.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.28,74.99 124.75,74.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="174.81,47.81 174.57,47.93 174.3,48.03 174.01,48.11 173.71,48.17 173.4,48.21 173.08,48.22 172.76,48.21 172.45,48.17 172.14,48.11 171.86,48.03 171.59,47.93 171.35,47.81 171.14,47.67 170.96,47.52 170.82,47.35 170.72,47.17 170.65,46.99 170.63,46.81 170.65,46.62 170.72,46.44 170.82,46.27 170.96,46.1 171.14,45.95 171.35,45.81 171.59,45.69 171.86,45.59 172.14,45.5 172.45,45.45 172.76,45.41 173.08,45.4 173.4,45.41 173.71,45.45 174.01,45.5 174.3,45.59 174.57,45.69 174.81,45.81 175.02,45.95 175.2,46.1 175.34,46.27 175.44,46.44 175.5,46.62 175.52,46.81 175.5,46.99 175.44,47.17 175.34,47.35 175.2,47.52 175.02,47.67" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="177.94,65.23 177.25,67.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="124.44,67.25 123.74,65.23" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="131.94,74.99 131.34,75.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.88,75.22 125.28,74.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="131.34,75.22 130.7,75.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="126.52,75.4 125.88,75.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="133.58,54.95 133.73,53.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="167.96,53.65 168.11,54.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="130.7,75.4 130.03,75.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="127.2,75.53 126.52,75.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="130.03,75.53 129.32,75.61" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="127.9,75.61 127.2,75.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="129.32,75.61 128.61,75.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="128.61,75.64 127.9,75.61" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="170.17,66.11 167.48,67.47 164.51,68.61 161.3,69.53 157.92,70.19 154.41,70.59 150.84,70.73 147.28,70.59 143.77,70.19 140.38,69.53 137.18,68.61 134.2,67.47 131.52,66.11 129.16,64.55 127.17,62.84 125.59,60.99 124.44,59.03 123.74,57.01 123.51,54.95 123.74,52.89 124.44,50.86 125.59,48.91 127.17,47.06 129.16,45.34 131.52,43.79 134.2,42.43 137.18,41.28 140.38,40.37 143.77,39.7 147.28,39.3 150.84,39.17 154.41,39.3 157.92,39.7 161.3,40.37 164.51,41.28 167.48,42.43 170.17,43.79 172.53,45.34 174.52,47.06 176.1,48.91 177.25,50.86 177.94,52.89 178.18,54.95 177.94,57.01 177.25,59.03 176.1,60.99 174.52,62.84 172.53,64.55" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="133.73,56.25 133.58,54.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="168.11,54.95 167.96,56.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="177.25,67.25 176.1,69.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="125.59,69.21 124.44,67.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="134.08,72.48 131.06,53.69" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="123.14,72.48 126.17,53.69" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="134.17,57.53 133.73,56.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="167.96,56.25 167.52,57.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="168.11,54.95 162.35,46.72" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="133.58,54.95 139.34,46.72" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="172.54,78.03 172.59,78.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="161.65,78.44 161.7,78.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="134.03,72.07 134.08,72.48 134.03,72.89 133.89,73.3 133.66,73.69 133.35,74.06 132.95,74.4 132.48,74.71 131.94,74.99 131.34,75.22 130.7,75.4 130.03,75.53 129.32,75.61 128.61,75.64 128.61,55.1 128.93,55.09 129.24,55.05 129.55,54.99 129.83,54.91 130.1,54.81 130.34,54.69 130.55,54.55 130.73,54.39 130.87,54.23 130.97,54.05 131.04,53.87 131.06,53.69 131.04,53.5" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="128.61,75.64 127.9,75.61 127.2,75.53 126.52,75.4 125.88,75.22 125.28,74.99 124.75,74.71 124.27,74.4 123.88,74.06 123.56,73.69 123.33,73.3 123.19,72.89 123.14,72.48 123.19,72.07 126.19,53.5 126.17,53.69 126.19,53.87 126.25,54.05 126.35,54.23 126.49,54.39 126.67,54.55 126.88,54.69 127.12,54.81 127.39,54.91 127.68,54.99 127.98,55.05 128.29,55.09 128.61,55.1" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="172.59,78.44 172.54,78.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="161.7,78.85 161.65,78.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="base" points="167.12,220.57 152.88,220.57 152.88,202.95 167.12,202.95" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="221.5,128.95 221.28,130.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="169.93,130.9 169.71,128.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="176.1,69.21 174.52,71.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="127.17,71.06 125.59,69.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="172.54,78.85 172.4,79.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="161.84,79.26 161.7,78.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="167.52,57.53 166.79,58.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="134.9,58.76 134.17,57.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="172.4,79.26 172.17,79.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="162.07,79.65 161.84,79.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="172.17,79.65 171.86,80.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="162.39,80.02 162.07,79.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="171.86,80.02 171.46,80.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="162.78,80.36 162.39,80.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="221.5,128.95 221.5,119.55" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="cutter" points="158.98,51.42 157.85,52 156.6,52.48 155.25,52.86 153.82,53.14 152.35,53.31 150.84,53.37 149.34,53.31 147.87,53.14 146.44,52.86 145.09,52.48 143.84,52 142.71,51.42 141.71,50.77 140.88,50.05 140.21,49.27 139.73,48.44 139.43,47.59 139.34,46.72 139.43,45.86 139.73,45 140.21,44.18 140.88,43.4 141.71,42.68 142.71,42.03 143.84,41.45 145.09,40.97 146.44,40.59 147.87,40.31 149.34,40.14 150.84,40.08 152.35,40.14 153.82,40.31 155.25,40.59 156.6,40.97 157.85,41.45 158.98,42.03 159.98,42.68 160.81,43.4 161.48,44.18 161.96,45 162.26,45.86 162.35,46.72 162.26,47.59 161.96,48.44 161.48,49.27 160.81,50.05 159.98,50.77" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="169.71,128.95 169.71,119.55" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="166.79,58.76 165.8,59.93" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="135.89,59.93 134.9,58.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="163.26,80.67 162.78,80.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="171.46,80.36 170.99,80.67" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="129.16,72.78 127.17,71.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="174.52,71.06 172.53,72.78" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="221.28,130.9 220.62,132.82" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="170.59,132.82 169.93,130.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="170.99,80.67 170.45,80.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="163.79,80.94 163.26,80.67" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="164.39,81.17 163.79,80.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="170.45,80.94 169.85,81.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="169.85,81.17 169.21,81.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="165.03,81.36 164.39,81.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="169.21,81.36 168.54,81.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="165.71,81.49 165.03,81.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="168.54,81.49 167.83,81.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="166.41,81.57 165.71,81.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="167.83,81.57 167.12,81.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="167.12,81.6 166.41,81.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="137.15,61.01 135.89,59.93" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="165.8,59.93 164.54,61.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="150.31,81.47 150.35,81.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="139.42,81.88 139.47,81.47" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="196.09,82.05 196.14,81.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="206.98,81.64 207.03,82.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="130.34,54.69 130.1,54.81 129.83,54.91 129.55,54.99 129.24,55.05 128.93,55.09 128.61,55.1 128.29,55.09 127.98,55.05 127.68,54.99 127.39,54.91 127.12,54.81 126.88,54.69 126.67,54.55 126.49,54.39 126.35,54.23 126.25,54.05 126.19,53.87 126.17,53.69 126.19,53.5 126.25,53.32 126.35,53.15 126.49,52.98 126.67,52.83 126.88,52.69 127.12,52.57 127.39,52.47 127.68,52.38 127.98,52.32 128.29,52.29 128.61,52.28 128.93,52.29 129.24,52.32 129.55,52.38 129.83,52.47 130.1,52.57 130.34,52.69 130.55,52.83 130.73,52.98 130.87,53.15 130.97,53.32 131.04,53.5 131.06,53.69 131.04,53.87 130.97,54.05 130.87,54.23 130.73,54.39 130.55,54.55" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="cutter" points="166.79,51.13 167.52,52.37 167.96,53.65 168.11,54.95 167.96,56.25 167.52,57.53 166.79,58.76 165.8,59.93 164.54,61.01 163.05,61.99 161.35,62.85 159.48,63.58 157.45,64.16 155.31,64.57 153.1,64.83 150.84,64.91 150.84,53.37 152.35,53.31 153.82,53.14 155.25,52.86 156.6,52.48 157.85,52 158.98,51.42 159.98,50.77 160.81,50.05 161.48,49.27 161.96,48.44 162.26,47.59 162.35,46.72 162.26,45.86 161.96,45 161.48,44.18" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="cutter" points="150.84,64.91 148.59,64.83 146.38,64.57 144.24,64.16 142.21,63.58 140.34,62.85 138.64,61.99 137.15,61.01 135.89,59.93 134.9,58.76 134.17,57.53 133.73,56.25 133.58,54.95 133.73,53.65 134.17,52.37 134.9,51.13 140.21,44.18 139.73,45 139.43,45.86 139.34,46.72 139.43,47.59 139.73,48.44 140.21,49.27 140.88,50.05 141.71,50.77 142.71,51.42 143.84,52 145.09,52.48 146.44,52.86 147.87,53.14 149.34,53.31 150.84,53.37" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="139.47,82.29 139.42,81.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="150.35,81.88 150.31,82.29" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="196.14,82.46 196.09,82.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="207.03,82.05 206.98,82.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="131.52,74.33 129.16,72.78" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="172.53,72.78 170.17,74.33" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="139.61,82.7 139.47,82.29" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="150.31,82.29 150.17,82.7" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="213.91,130.12 211.37,131.41 208.55,132.5 205.51,133.36 202.31,133.99 198.98,134.37 195.6,134.5 192.22,134.37 188.9,133.99 185.69,133.36 182.66,132.5 179.84,131.41 177.29,130.12 175.06,128.65 173.18,127.03 171.68,125.27 170.59,123.42 169.93,121.5 169.71,119.55 169.93,117.6 170.59,115.68 171.68,113.83 173.18,112.08 175.06,110.45 177.29,108.98 179.84,107.69 182.66,106.6 185.69,105.74 188.9,105.11 192.22,104.73 195.6,104.6 198.98,104.73 202.31,105.11 205.51,105.74 208.55,106.6 211.37,107.69 213.91,108.98 216.15,110.45 218.03,112.08 219.53,113.83 220.62,115.68 221.28,117.6 221.5,119.55 221.28,121.5 220.62,123.42 219.53,125.27 218.03,127.03 216.15,128.65" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="171.68,134.67 170.59,132.82" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="220.62,132.82 219.53,134.67" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="164.54,61.01 163.05,61.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="138.64,61.99 137.15,61.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="196.28,82.86 196.14,82.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="206.98,82.46 206.84,82.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="139.84,83.09 139.61,82.7" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="150.17,82.7 149.94,83.09" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="196.51,83.26 196.28,82.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="206.84,82.86 206.61,83.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="172.59,78.44 169.57,59.65" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="161.65,78.44 164.68,59.65" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="140.15,83.46 139.84,83.09" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="149.94,83.09 149.62,83.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="196.83,83.63 196.51,83.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="206.61,83.26 206.3,83.63" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="221.5,119.55 221.28,121.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="169.93,121.5 169.71,119.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="140.34,62.85 138.64,61.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="163.05,61.99 161.35,62.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="140.55,83.8 140.15,83.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="149.62,83.46 149.22,83.8" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="178.18,63.17 177.94,65.23 177.25,67.25 176.1,69.21 174.52,71.06 172.53,72.78 170.17,74.33 167.48,75.69 164.51,76.84 161.3,77.75 157.92,78.41 154.41,78.82 150.84,78.95 147.28,78.82 143.77,78.41 140.38,77.75 137.18,76.84 134.2,75.69 131.52,74.33 129.16,72.78 127.17,71.06 125.59,69.21 124.44,67.25 123.74,65.23 123.51,63.17 123.51,54.95 123.74,57.01 124.44,59.03 125.59,60.99 127.17,62.84 129.16,64.55 131.52,66.11 134.2,67.47 137.18,68.61 140.38,69.53 143.77,70.19 147.28,70.59 150.84,70.73 154.41,70.59 157.92,70.19 161.3,69.53 164.51,68.61 167.48,67.47 170.17,66.11 172.53,64.55 174.52,62.84 176.1,60.99 177.25,59.03 177.94,57.01 178.18,54.95" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="197.22,83.97 196.83,83.63" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="206.3,83.63 205.9,83.97" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="170.17,74.33 167.48,75.69" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="134.2,75.69 131.52,74.33" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="141.02,84.11 140.55,83.8" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="149.22,83.8 148.75,84.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="197.7,84.28 197.22,83.97" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="205.9,83.97 205.43,84.28" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="148.75,84.11 148.22,84.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="141.56,84.38 141.02,84.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="161.35,62.85 159.48,63.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="142.21,63.58 140.34,62.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="205.43,84.28 204.89,84.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="198.23,84.55 197.7,84.28" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="172.54,78.03 172.59,78.44 172.54,78.85 172.4,79.26 172.17,79.65 171.86,80.02 171.46,80.36 170.99,80.67 170.45,80.94 169.85,81.17 169.21,81.36 168.54,81.49 167.83,81.57 167.12,81.6 167.12,61.06 167.44,61.05 167.75,61.01 168.06,60.95 168.34,60.87 168.61,60.77 168.85,60.64 169.06,60.51 169.24,60.35 169.38,60.19 169.48,60.01 169.55,59.83 169.57,59.65 169.55,59.46" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="167.12,81.6 166.41,81.57 165.71,81.49 165.03,81.36 164.39,81.17 163.79,80.94 163.26,80.67 162.78,80.36 162.39,80.02 162.07,79.65 161.84,79.26 161.7,78.85 161.65,78.44 161.7,78.03 164.7,59.46 164.68,59.65 164.7,59.83 164.76,60.01 164.86,60.19 165,60.35 165.18,60.51 165.39,60.64 165.63,60.77 165.9,60.87 166.18,60.95 166.49,61.01 166.8,61.05 167.12,61.06" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="cutter" points="173.18,136.42 171.68,134.67" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="219.53,134.67 218.03,136.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="148.22,84.38 147.62,84.61" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="142.15,84.61 141.56,84.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="198.83,84.78 198.23,84.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="204.89,84.55 204.29,84.78" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="147.62,84.61 146.98,84.8" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="142.8,84.8 142.15,84.61" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="146.98,84.8 146.3,84.93" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="143.47,84.93 142.8,84.8" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="204.29,84.78 203.65,84.96" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="199.47,84.96 198.83,84.78" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="146.3,84.93 145.6,85.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="144.17,85.01 143.47,84.93" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="159.48,63.58 157.45,64.16" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="144.24,64.16 142.21,63.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="145.6,85.01 144.89,85.04" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="144.89,85.04 144.17,85.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="203.65,84.96 202.98,85.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="200.15,85.1 199.47,84.96" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="167.48,75.69 164.51,76.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="137.18,76.84 134.2,75.69" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="202.98,85.1 202.28,85.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="200.85,85.18 200.15,85.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="202.28,85.18 201.56,85.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="201.56,85.2 200.85,85.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="173.86,85.49 173.91,85.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="184.75,85.08 184.79,85.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="170.59,123.42 169.93,121.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="221.28,121.5 220.62,123.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="157.45,64.16 155.31,64.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="146.38,64.57 144.24,64.16" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="173.91,85.9 173.86,85.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="184.79,85.49 184.75,85.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="155.31,64.57 153.1,64.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="148.59,64.83 146.38,64.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="153.1,64.83 150.84,64.91" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="150.84,64.91 148.59,64.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="174.05,86.3 173.91,85.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="184.75,85.9 184.61,86.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="164.51,76.84 161.3,77.75" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="140.38,77.75 137.18,76.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="175.06,138.05 173.18,136.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="218.03,136.42 216.15,138.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="174.28,86.7 174.05,86.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="184.61,86.3 184.38,86.7" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="150.35,81.88 147.33,63.09" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="139.42,81.88 142.44,63.09" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="207.03,82.05 204.01,63.25" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="196.09,82.05 199.12,63.25" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="184.38,86.7 184.06,87.07" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="174.59,87.07 174.28,86.7" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="161.3,77.75 157.92,78.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="143.77,78.41 140.38,77.75" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="110.93,139.12 110.71,137.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="162.5,137.17 162.28,139.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="174.99,87.41 174.59,87.07" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="184.06,87.07 183.67,87.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="171.68,125.27 170.59,123.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="220.62,123.42 219.53,125.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="157.92,78.41 154.41,78.82" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="147.28,78.82 143.77,78.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="175.46,87.72 174.99,87.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="183.67,87.41 183.19,87.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="177.29,139.52 175.06,138.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="216.15,138.05 213.91,139.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="154.41,78.82 150.84,78.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="150.84,78.95 147.28,78.82" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="168.85,60.64 168.61,60.77 168.34,60.87 168.06,60.95 167.75,61.01 167.44,61.05 167.12,61.06 166.8,61.05 166.49,61.01 166.18,60.95 165.9,60.87 165.63,60.77 165.39,60.64 165.18,60.51 165,60.35 164.86,60.19 164.76,60.01 164.7,59.83 164.68,59.65 164.7,59.46 164.76,59.28 164.86,59.11 165,58.94 165.18,58.79 165.39,58.65 165.63,58.53 165.9,58.42 166.18,58.34 166.49,58.28 166.8,58.25 167.12,58.23 167.44,58.25 167.75,58.28 168.06,58.34 168.34,58.42 168.61,58.53 168.85,58.65 169.06,58.79 169.24,58.94 169.38,59.11 169.48,59.28 169.55,59.46 169.57,59.65 169.55,59.83 169.48,60.01 169.38,60.19 169.24,60.35 169.06,60.51" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="183.19,87.72 182.66,87.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="176,87.99 175.46,87.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="150.31,81.47 150.35,81.88 150.31,82.29 150.17,82.7 149.94,83.09 149.62,83.46 149.22,83.8 148.75,84.11 148.22,84.38 147.62,84.61 146.98,84.8 146.3,84.93 145.6,85.01 144.89,85.04 144.89,64.5 145.21,64.49 145.52,64.45 145.82,64.39 146.11,64.31 146.38,64.21 146.62,64.08 146.83,63.94 147.01,63.79 147.15,63.63 147.25,63.45 147.31,63.27 147.33,63.09 147.31,62.9" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="144.89,85.04 144.17,85.01 143.47,84.93 142.8,84.8 142.15,84.61 141.56,84.38 141.02,84.11 140.55,83.8 140.15,83.46 139.84,83.09 139.61,82.7 139.47,82.29 139.42,81.88 139.47,81.47 142.46,62.9 142.44,63.09 142.46,63.27 142.52,63.45 142.63,63.63 142.77,63.79 142.95,63.94 143.16,64.08 143.4,64.21 143.66,64.31 143.95,64.39 144.25,64.45 144.57,64.49 144.89,64.5" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="206.98,81.64 207.03,82.05 206.98,82.46 206.84,82.86 206.61,83.26 206.3,83.63 205.9,83.97 205.43,84.28 204.89,84.55 204.29,84.78 203.65,84.96 202.98,85.1 202.28,85.18 201.56,85.2 201.56,64.67 201.88,64.65 202.19,64.62 202.5,64.56 202.78,64.48 203.05,64.37 203.29,64.25 203.5,64.11 203.68,63.96 203.82,63.79 203.92,63.62 203.99,63.44 204.01,63.25 203.99,63.07" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="201.56,85.2 200.85,85.18 200.15,85.1 199.47,84.96 198.83,84.78 198.23,84.55 197.7,84.28 197.22,83.97 196.83,83.63 196.51,83.26 196.28,82.86 196.14,82.46 196.09,82.05 196.14,81.64 199.14,63.07 199.12,63.25 199.14,63.44 199.2,63.62 199.3,63.79 199.44,63.96 199.62,64.11 199.83,64.25 200.07,64.37 200.34,64.48 200.63,64.56 200.93,64.62 201.24,64.65 201.56,64.67" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="182.66,87.99 182.06,88.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="176.59,88.22 176,87.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="182.06,88.22 181.42,88.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="177.24,88.4 176.59,88.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="162.5,137.17 162.5,127.77" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="110.71,137.17 110.71,127.77" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="181.42,88.4 180.74,88.54" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="177.91,88.54 177.24,88.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="180.74,88.54 180.04,88.62" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.61,88.62 177.91,88.54" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="180.04,88.62 179.33,88.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="179.33,88.64 178.61,88.62" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="111.59,141.04 110.93,139.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="162.28,139.12 161.62,141.04" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="213.91,139.52 211.37,140.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="179.84,140.81 177.29,139.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="173.18,127.03 171.68,125.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="219.53,125.27 218.03,127.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="221.5,128.95 221.28,130.9 220.62,132.82 219.53,134.67 218.03,136.42 216.15,138.05 213.91,139.52 211.37,140.81 208.55,141.9 205.51,142.76 202.31,143.39 198.98,143.77 195.6,143.9 192.22,143.77 188.9,143.39 185.69,142.76 182.66,141.9 179.84,140.81 177.29,139.52 175.06,138.05 173.18,136.42 171.68,134.67 170.59,132.82 169.93,130.9 169.71,128.95 169.71,119.55 169.93,121.5 170.59,123.42 171.68,125.27 173.18,127.03 175.06,128.65 177.29,130.12 179.84,131.41 182.66,132.5 185.69,133.36 188.9,133.99 192.22,134.37 195.6,134.5 198.98,134.37 202.31,133.99 205.51,133.36 208.55,132.5 211.37,131.41 213.91,130.12 216.15,128.65 218.03,127.03 219.53,125.27 220.62,123.42 221.28,121.5 221.5,119.55" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polygon data-part="guard" points="152.88,185.33 89.81,148.92 89.81,127.77 152.88,164.19" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="137.09,90.27 137.14,89.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="147.98,89.86 148.03,90.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="221.5,119.55 221.5,89.01" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="169.71,119.55 169.71,89.01" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="184.79,85.49 181.77,66.69" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="173.86,85.49 176.88,66.69" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="182.66,141.9 179.84,140.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="211.37,140.81 208.55,141.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="137.14,90.68 137.09,90.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="148.03,90.27 147.98,90.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="154.91,138.35 152.37,139.64 149.55,140.72 146.51,141.59 143.31,142.22 139.98,142.6 136.6,142.72 133.22,142.6 129.9,142.22 126.69,141.59 123.66,140.72 120.84,139.64 118.29,138.35 116.06,136.88 114.18,135.25 112.68,133.5 111.59,131.64 110.93,129.73 110.71,127.77 110.93,125.82 111.59,123.9 112.68,122.05 114.18,120.3 116.06,118.67 118.29,117.2 120.84,115.91 123.66,114.83 126.69,113.96 129.9,113.33 133.22,112.95 136.6,112.82 139.98,112.95 143.31,113.33 146.51,113.96 149.55,114.83 152.37,115.91 154.91,117.2 157.15,118.67 159.03,120.3 160.53,122.05 161.62,123.9 162.28,125.82 162.5,127.77 162.28,129.73 161.62,131.64 160.53,133.5 159.03,135.25 157.15,136.88" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="175.06,128.65 173.18,127.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="218.03,127.03 216.15,128.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="112.68,142.89 111.59,141.04" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="161.62,141.04 160.53,142.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="137.28,91.09 137.14,90.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="147.98,90.68 147.84,91.09" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="185.69,142.76 182.66,141.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="208.55,141.9 205.51,142.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="223.26,91.03 223.3,91.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="212.37,91.44 212.42,91.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="146.62,64.08 146.38,64.21 146.11,64.31 145.82,64.39 145.52,64.45 145.21,64.49 144.89,64.5 144.57,64.49 144.25,64.45 143.95,64.39 143.66,64.31 143.4,64.21 143.16,64.08 142.95,63.94 142.77,63.79 142.63,63.63 142.52,63.45 142.46,63.27 142.44,63.09 142.46,62.9 142.52,62.72 142.63,62.54 142.77,62.38 142.95,62.23 143.16,62.09 143.4,61.96 143.66,61.86 143.95,61.78 144.25,61.72 144.57,61.69 144.89,61.67 145.21,61.69 145.52,61.72 145.82,61.78 146.11,61.86 146.38,61.96 146.62,62.09 146.83,62.23 147.01,62.38 147.15,62.54 147.25,62.72 147.31,62.9 147.33,63.09 147.31,63.27 147.25,63.45 147.15,63.63 147.01,63.79 146.83,63.94" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="137.51,91.48 137.28,91.09" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="147.84,91.09 147.61,91.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="203.29,64.25 203.05,64.37 202.78,64.48 202.5,64.56 202.19,64.62 201.88,64.65 201.56,64.67 201.24,64.65 200.93,64.62 200.63,64.56 200.34,64.48 200.07,64.37 199.83,64.25 199.62,64.11 199.44,63.96 199.3,63.79 199.2,63.62 199.14,63.44 199.12,63.25 199.14,63.07 199.2,62.89 199.3,62.71 199.44,62.55 199.62,62.39 199.83,62.26 200.07,62.13 200.34,62.03 200.63,61.95 200.93,61.89 201.24,61.85 201.56,61.84 201.88,61.85 202.19,61.89 202.5,61.95 202.78,62.03 203.05,62.13 203.29,62.26 203.5,62.39 203.68,62.55 203.82,62.71 203.92,62.89 203.99,63.07 204.01,63.25 203.99,63.44 203.92,63.62 203.82,63.79 203.68,63.96 203.5,64.11" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="teeth" points="184.75,85.08 184.79,85.49 184.75,85.9 184.61,86.3 184.38,86.7 184.06,87.07 183.67,87.41 183.19,87.72 182.66,87.99 182.06,88.22 181.42,88.4 180.74,88.54 180.04,88.62 179.33,88.64 179.33,68.11 179.65,68.09 179.96,68.06 180.26,68 180.55,67.92 180.82,67.81 181.06,67.69 181.27,67.55 181.45,67.4 181.59,67.23 181.69,67.06 181.75,66.88 181.77,66.69 181.75,66.51" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="179.33,88.64 178.61,88.62 177.91,88.54 177.24,88.4 176.59,88.22 176,87.99 175.46,87.72 174.99,87.41 174.59,87.07 174.28,86.7 174.05,86.3 173.91,85.9 173.86,85.49 173.91,85.08 176.9,66.51 176.88,66.69 176.9,66.88 176.97,67.06 177.07,67.23 177.21,67.4 177.39,67.55 177.6,67.69 177.84,67.81 178.11,67.92 178.39,68 178.69,68.06 179.01,68.09 179.33,68.11" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="223.3,91.44 223.26,91.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="212.42,91.86 212.37,91.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="137.83,91.85 137.51,91.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="147.61,91.48 147.29,91.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="110.93,129.73 110.71,127.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="162.5,127.77 162.28,129.73" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="205.51,142.76 202.31,143.39" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="188.9,143.39 185.69,142.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="138.22,92.19 137.83,91.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="147.29,91.85 146.9,92.19" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="223.26,91.86 223.12,92.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="212.56,92.26 212.42,91.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="146.9,92.19 146.43,92.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="138.69,92.5 138.22,92.19" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="177.29,130.12 175.06,128.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="216.15,128.65 213.91,130.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="212.79,92.65 212.56,92.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="223.12,92.26 222.89,92.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="202.31,143.39 198.98,143.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="192.22,143.77 188.9,143.39" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="146.43,92.5 145.89,92.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="139.23,92.77 138.69,92.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="114.18,144.65 112.68,142.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="160.53,142.89 159.03,144.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="198.98,143.77 195.6,143.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="195.6,143.9 192.22,143.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="213.1,93.02 212.79,92.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="222.89,92.65 222.57,93.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="139.83,93 139.23,92.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="145.89,92.77 145.29,93" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="145.29,93 144.65,93.19" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="140.47,93.19 139.83,93" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="guard" points="230.19,155.97 179.33,185.33 179.33,164.19 230.19,134.82" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="213.5,93.37 213.1,93.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="222.57,93.02 222.17,93.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="144.65,93.19 143.98,93.32" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="141.15,93.32 140.47,93.19" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="143.98,93.32 143.27,93.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="141.85,93.4 141.15,93.32" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="143.27,93.4 142.56,93.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="142.56,93.43 141.85,93.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="114.86,93.71 114.91,93.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.75,93.3 125.79,93.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="222.17,93.37 221.7,93.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="213.97,93.68 213.5,93.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="111.59,131.64 110.93,129.73" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="162.28,129.73 161.62,131.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="213.91,130.12 211.37,131.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="179.84,131.41 177.29,130.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="221.7,93.68 221.17,93.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="214.51,93.95 213.97,93.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="114.91,94.12 114.86,93.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.79,93.71 125.75,94.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="215.1,94.18 214.51,93.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="221.17,93.95 220.57,94.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="220.57,94.18 219.93,94.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="215.75,94.36 215.1,94.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="115.05,94.53 114.91,94.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.75,94.12 125.61,94.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="116.06,146.27 114.18,144.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="159.03,144.65 157.15,146.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="detail" points="99.78,148.45 142.5,173.11 142.5,164.89 99.78,140.23" fill="#e9b34c" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="219.93,94.36 219.25,94.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="216.42,94.49 215.75,94.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="219.25,94.49 218.55,94.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="217.12,94.57 216.42,94.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="218.55,94.57 217.84,94.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="217.84,94.6 217.12,94.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="115.28,94.92 115.05,94.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.61,94.53 125.38,94.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="181.06,67.69 180.82,67.81 180.55,67.92 180.26,68 179.96,68.06 179.65,68.09 179.33,68.11 179.01,68.09 178.69,68.06 178.39,68 178.11,67.92 177.84,67.81 177.6,67.69 177.39,67.55 177.21,67.4 177.07,67.23 176.97,67.06 176.9,66.88 176.88,66.69 176.9,66.51 176.97,66.33 177.07,66.15 177.21,65.99 177.39,65.83 177.6,65.69 177.84,65.57 178.11,65.47 178.39,65.39 178.69,65.33 179.01,65.29 179.33,65.28 179.65,65.29 179.96,65.33 180.26,65.39 180.55,65.47 180.82,65.57 181.06,65.69 181.27,65.83 181.45,65.99 181.59,66.15 181.69,66.33 181.75,66.51 181.77,66.69 181.75,66.88 181.69,67.06 181.59,67.23 181.45,67.4 181.27,67.55" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="182.66,132.5 179.84,131.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="211.37,131.41 208.55,132.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="148.03,90.27 145.01,71.48" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="137.09,90.27 140.11,71.48" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="115.59,95.29 115.28,94.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.38,94.92 125.06,95.29" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="115.99,95.63 115.59,95.29" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.06,95.29 124.66,95.63" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="112.68,133.5 111.59,131.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="161.62,131.64 160.53,133.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="116.46,95.94 115.99,95.63" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="124.66,95.63 124.19,95.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="118.29,147.74 116.06,146.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="157.15,146.27 154.91,147.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="185.69,133.36 182.66,132.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="208.55,132.5 205.51,133.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="124.19,95.94 123.65,96.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="117,96.21 116.46,95.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="223.3,91.44 220.28,72.65" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="212.37,91.44 215.39,72.65" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="teeth" points="147.98,89.86 148.03,90.27 147.98,90.68 147.84,91.09 147.61,91.48 147.29,91.85 146.9,92.19 146.43,92.5 145.89,92.77 145.29,93 144.65,93.19 143.98,93.32 143.27,93.4 142.56,93.43 142.56,72.89 142.88,72.88 143.19,72.84 143.5,72.78 143.78,72.7 144.05,72.6 144.29,72.47 144.5,72.34 144.68,72.18 144.82,72.02 144.92,71.84 144.99,71.66 145.01,71.48 144.99,71.29" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="142.56,93.43 141.85,93.4 141.15,93.32 140.47,93.19 139.83,93 139.23,92.77 138.69,92.5 138.22,92.19 137.83,91.85 137.51,91.48 137.28,91.09 137.14,90.68 137.09,90.27 137.14,89.86 140.14,71.29 140.11,71.48 140.14,71.66 140.2,71.84 140.3,72.02 140.44,72.18 140.62,72.34 140.83,72.47 141.07,72.6 141.34,72.7 141.62,72.78 141.93,72.84 142.24,72.88 142.56,72.89" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="123.65,96.21 123.06,96.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="117.59,96.44 117,96.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="123.06,96.44 122.42,96.63" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="118.23,96.63 117.59,96.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="205.51,133.36 202.31,133.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="188.9,133.99 185.69,133.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="122.42,96.63 121.74,96.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="118.91,96.76 118.23,96.63" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="121.74,96.76 121.04,96.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="119.61,96.84 118.91,96.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="121.04,96.84 120.33,96.87" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="120.33,96.87 119.61,96.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="202.31,133.99 198.98,134.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="192.22,134.37 188.9,133.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="154.91,147.74 152.37,149.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="120.84,149.03 118.29,147.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="114.18,135.25 112.68,133.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="160.53,133.5 159.03,135.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="198.98,134.37 195.6,134.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="195.6,134.5 192.22,134.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="223.26,91.03 223.3,91.44 223.26,91.86 223.12,92.26 222.89,92.65 222.57,93.02 222.17,93.37 221.7,93.68 221.17,93.95 220.57,94.18 219.93,94.36 219.25,94.49 218.55,94.57 217.84,94.6 217.84,74.06 218.16,74.05 218.47,74.01 218.77,73.96 219.06,73.87 219.33,73.77 219.57,73.65 219.78,73.51 219.96,73.36 220.1,73.19 220.2,73.02 220.26,72.84 220.28,72.65 220.26,72.47" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="217.84,94.6 217.12,94.57 216.42,94.49 215.75,94.36 215.1,94.18 214.51,93.95 213.97,93.68 213.5,93.37 213.1,93.02 212.79,92.65 212.56,92.26 212.42,91.86 212.37,91.44 212.42,91.03 215.41,72.47 215.39,72.65 215.41,72.84 215.48,73.02 215.58,73.19 215.72,73.36 215.9,73.51 216.11,73.65 216.35,73.77 216.61,73.87 216.9,73.96 217.2,74.01 217.52,74.05 217.84,74.06" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polygon data-part="cutter" points="162.5,137.17 162.28,139.12 161.62,141.04 160.53,142.89 159.03,144.65 157.15,146.27 154.91,147.74 152.37,149.03 149.55,150.12 146.51,150.98 143.31,151.61 139.98,151.99 136.6,152.12 133.22,151.99 129.9,151.61 126.69,150.98 123.66,150.12 120.84,149.03 118.29,147.74 116.06,146.27 114.18,144.65 112.68,142.89 111.59,141.04 110.93,139.12 110.71,137.17 110.71,127.77 110.93,129.73 111.59,131.64 112.68,133.5 114.18,135.25 116.06,136.88 118.29,138.35 120.84,139.64 123.66,140.72 126.69,141.59 129.9,142.22 133.22,142.6 136.6,142.72 139.98,142.6 143.31,142.22 146.51,141.59 149.55,140.72 152.37,139.64 154.91,138.35 157.15,136.88 159.03,135.25 160.53,133.5 161.62,131.64 162.28,129.73 162.5,127.77" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polygon data-part="cutter" points="213.91,99.58 211.37,100.87 208.55,101.96 205.51,102.82 202.31,103.45 198.98,103.83 195.6,103.96 192.22,103.83 188.9,103.45 185.69,102.82 182.66,101.96 179.84,100.87 177.29,99.58 175.06,98.11 173.18,96.49 171.68,94.73 170.59,92.88 169.93,90.96 169.71,89.01 169.93,87.06 170.59,85.14 171.68,83.29 173.18,81.54 175.06,79.91 177.29,78.44 179.84,77.15 182.66,76.06 185.69,75.2 188.9,74.57 192.22,74.19 195.6,74.06 198.98,74.19 202.31,74.57 205.51,75.2 208.55,76.06 211.37,77.15 213.91,78.44 216.15,79.91 218.03,81.54 219.53,83.29 220.62,85.14 221.28,87.06 221.5,89.01 221.28,90.96 220.62,92.88 219.53,94.73 218.03,96.49 216.15,98.11" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="detail" points="221.75,154.61 188.18,174 188.18,165.77 221.75,146.39" fill="#c98c30" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="178.79,97.91 178.84,98.32" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="167.9,98.32 167.95,97.91" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="162.5,127.77 162.5,97.23" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="110.71,127.77 110.71,97.23" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="125.79,93.71 122.77,74.92" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="114.86,93.71 117.88,74.92" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="152.37,149.03 149.55,150.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="123.66,150.12 120.84,149.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.84,98.32 178.79,98.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="167.95,98.74 167.9,98.32" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="178.93,78.21 179.65,76.97" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="211.55,76.97 212.28,78.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="168.5,91.07 168.27,89.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="222.94,89.01 222.7,91.07" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="168.09,99.14 167.95,98.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.79,98.74 178.65,99.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="159.03,135.25 157.15,136.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="116.06,136.88 114.18,135.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="221.5,119.55 221.28,121.5 220.62,123.42 219.53,125.27 218.03,127.03 216.15,128.65 213.91,130.12 211.37,131.41 208.55,132.5 205.51,133.36 202.31,133.99 198.98,134.37 195.6,134.5 192.22,134.37 188.9,133.99 185.69,133.36 182.66,132.5 179.84,131.41 177.29,130.12 175.06,128.65 173.18,127.03 171.68,125.27 170.59,123.42 169.93,121.5 169.71,119.55 169.71,89.01 169.93,90.96 170.59,92.88 171.68,94.73 173.18,96.49 175.06,98.11 177.29,99.58 179.84,100.87 182.66,101.96 185.69,102.82 188.9,103.45 192.22,103.83 195.6,103.96 198.98,103.83 202.31,103.45 205.51,102.82 208.55,101.96 211.37,100.87 213.91,99.58 216.15,98.11 218.03,96.49 219.53,94.73 220.62,92.88 221.28,90.96 221.5,89.01" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="168.32,99.53 168.09,99.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.65,99.14 178.42,99.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="149.55,150.12 146.51,150.98" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="126.69,150.98 123.66,150.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="164.26,99.26 164.3,99.67" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="153.37,99.67 153.42,99.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="144.29,72.47 144.05,72.6 143.78,72.7 143.5,72.78 143.19,72.84 142.88,72.88 142.56,72.89 142.24,72.88 141.93,72.84 141.62,72.78 141.34,72.7 141.07,72.6 140.83,72.47 140.62,72.34 140.44,72.18 140.3,72.02 140.2,71.84 140.14,71.66 140.11,71.48 140.14,71.29 140.2,71.11 140.3,70.94 140.44,70.77 140.62,70.62 140.83,70.48 141.07,70.36 141.34,70.25 141.62,70.17 141.93,70.11 142.24,70.08 142.56,70.06 142.88,70.08 143.19,70.11 143.5,70.17 143.78,70.25 144.05,70.36 144.29,70.48 144.5,70.62 144.68,70.77 144.82,70.94 144.92,71.11 144.99,71.29 145.01,71.48 144.99,71.66 144.92,71.84 144.82,72.02 144.68,72.18 144.5,72.34" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="teeth" points="125.75,93.3 125.79,93.71 125.75,94.12 125.61,94.53 125.38,94.92 125.06,95.29 124.66,95.63 124.19,95.94 123.65,96.21 123.06,96.44 122.42,96.63 121.74,96.76 121.04,96.84 120.33,96.87 120.33,76.33 120.65,76.32 120.96,76.28 121.26,76.22 121.55,76.14 121.82,76.04 122.06,75.91 122.27,75.78 122.44,75.62 122.59,75.46 122.69,75.28 122.75,75.1 122.77,74.92 122.75,74.73" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="120.33,96.87 119.61,96.84 118.91,96.76 118.23,96.63 117.59,96.44 117,96.21 116.46,95.94 115.99,95.63 115.59,95.29 115.28,94.92 115.05,94.53 114.91,94.12 114.86,93.71 114.91,93.3 117.9,74.73 117.88,74.92 117.9,75.1 117.96,75.28 118.07,75.46 118.21,75.62 118.39,75.78 118.6,75.91 118.84,76.04 119.1,76.14 119.39,76.22 119.69,76.28 120.01,76.32 120.33,76.33" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="168.64,99.9 168.32,99.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.42,99.53 178.1,99.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="164.3,99.67 164.26,100.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="153.42,100.08 153.37,99.67" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="222.94,89.01 222.94,80.79" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="168.27,89.01 168.27,80.79" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="178.49,79.49 178.93,78.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="212.28,78.21 212.72,79.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.1,99.9 177.71,100.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="169.03,100.25 168.64,99.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="146.51,150.98 143.31,151.61" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="129.9,151.61 126.69,150.98" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="164.26,100.08 164.12,100.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="153.56,100.48 153.42,100.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="169.5,100.56 169.03,100.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="177.71,100.25 177.24,100.56" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="118.29,138.35 116.06,136.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="157.15,136.88 154.91,138.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="153.79,100.88 153.56,100.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="164.12,100.48 163.89,100.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="177.24,100.56 176.7,100.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="170.04,100.83 169.5,100.56" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="143.31,151.61 139.98,151.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="133.22,151.99 129.9,151.61" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="219.57,73.65 219.33,73.77 219.06,73.87 218.77,73.96 218.47,74.01 218.16,74.05 217.84,74.06 217.52,74.05 217.2,74.01 216.9,73.96 216.61,73.87 216.35,73.77 216.11,73.65 215.9,73.51 215.72,73.36 215.58,73.19 215.48,73.02 215.41,72.84 215.39,72.65 215.41,72.47 215.48,72.29 215.58,72.11 215.72,71.94 215.9,71.79 216.11,71.65 216.35,71.53 216.61,71.43 216.9,71.35 217.2,71.29 217.52,71.25 217.84,71.24 218.16,71.25 218.47,71.29 218.77,71.35 219.06,71.43 219.33,71.53 219.57,71.65 219.78,71.79 219.96,71.94 220.1,72.11 220.2,72.29 220.26,72.47 220.28,72.65 220.26,72.84 220.2,73.02 220.1,73.19 219.96,73.36 219.78,73.51" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="222.7,91.07 222.01,93.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="169.2,93.1 168.5,91.07" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="176.7,100.83 176.1,101.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="170.64,101.06 170.04,100.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="139.98,151.99 136.6,152.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="136.6,152.12 133.22,151.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="154.1,101.25 153.79,100.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="163.89,100.88 163.57,101.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="176.1,101.06 175.46,101.24" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="171.28,101.24 170.64,101.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="178.34,80.79 178.49,79.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="212.72,79.49 212.87,80.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="175.46,101.24 174.79,101.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="171.96,101.37 171.28,101.24" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="174.79,101.37 174.08,101.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="172.66,101.45 171.96,101.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="154.5,101.59 154.1,101.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="163.57,101.25 163.17,101.59" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="174.08,101.45 173.37,101.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="173.37,101.48 172.66,101.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="163.17,101.59 162.7,101.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="154.97,101.9 154.5,101.59" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="214.93,91.95 212.24,93.31 209.27,94.46 206.06,95.37 202.68,96.03 199.17,96.44 195.6,96.57 192.04,96.44 188.53,96.03 185.14,95.37 181.94,94.46 178.96,93.31 176.28,91.95 173.92,90.4 171.93,88.68 170.35,86.83 169.2,84.87 168.5,82.85 168.27,80.79 168.5,78.73 169.2,76.7 170.35,74.75 171.93,72.9 173.92,71.18 176.28,69.63 178.96,68.27 181.94,67.12 185.14,66.21 188.53,65.55 192.04,65.14 195.6,65.01 199.17,65.14 202.68,65.55 206.06,66.21 209.27,67.12 212.24,68.27 214.93,69.63 217.29,71.18 219.28,72.9 220.86,74.75 222.01,76.7 222.7,78.73 222.94,80.79 222.7,82.85 222.01,84.87 220.86,86.83 219.28,88.68 217.29,90.4" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="154.91,138.35 152.37,139.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="120.84,139.64 118.29,138.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="162.7,101.9 162.16,102.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="155.51,102.17 154.97,101.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="162.16,102.17 161.57,102.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="156.1,102.4 155.51,102.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="161.57,102.4 160.93,102.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="156.74,102.58 156.1,102.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="178.49,82.09 178.34,80.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="212.87,80.79 212.72,82.09" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="160.93,102.58 160.25,102.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="157.42,102.72 156.74,102.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="160.25,102.72 159.55,102.8" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="158.12,102.8 157.42,102.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="159.55,102.8 158.84,102.82" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="158.84,102.82 158.12,102.8" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="170.35,95.05 169.2,93.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="222.01,93.1 220.86,95.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="178.84,98.32 175.82,79.53" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="167.9,98.32 170.92,79.53" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="teeth" points="122.06,75.91 121.82,76.04 121.55,76.14 121.26,76.22 120.96,76.28 120.65,76.32 120.33,76.33 120.01,76.32 119.69,76.28 119.39,76.22 119.1,76.14 118.84,76.04 118.6,75.91 118.39,75.78 118.21,75.62 118.07,75.46 117.96,75.28 117.9,75.1 117.88,74.92 117.9,74.73 117.96,74.55 118.07,74.38 118.21,74.21 118.39,74.06 118.6,73.92 118.84,73.8 119.1,73.69 119.39,73.61 119.69,73.55 120.01,73.52 120.33,73.5 120.65,73.52 120.96,73.55 121.26,73.61 121.55,73.69 121.82,73.8 122.06,73.92 122.27,74.06 122.44,74.21 122.59,74.38 122.69,74.55 122.75,74.73 122.77,74.92 122.75,75.1 122.69,75.28 122.59,75.46 122.44,75.62 122.27,75.78" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="123.66,140.72 120.84,139.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="152.37,139.64 149.55,140.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="178.93,83.37 178.49,82.09" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="212.72,82.09 212.28,83.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="212.87,80.79 207.11,72.57" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="178.34,80.79 184.1,72.57" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="206.41,104.28 206.46,103.87" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="217.3,103.87 217.35,104.28" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="126.69,141.59 123.66,140.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="149.55,140.72 146.51,141.59" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="178.79,97.91 178.84,98.32 178.79,98.74 178.65,99.14 178.42,99.53 178.1,99.9 177.71,100.25 177.24,100.56 176.7,100.83 176.1,101.06 175.46,101.24 174.79,101.37 174.08,101.45 173.37,101.48 173.37,80.94 173.69,80.93 174,80.89 174.31,80.83 174.59,80.75 174.86,80.65 175.1,80.53 175.31,80.39 175.49,80.24 175.63,80.07 175.73,79.9 175.8,79.71 175.82,79.53 175.8,79.35" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="173.37,101.48 172.66,101.45 171.96,101.37 171.28,101.24 170.64,101.06 170.04,100.83 169.5,100.56 169.03,100.25 168.64,99.9 168.32,99.53 168.09,99.14 167.95,98.74 167.9,98.32 167.95,97.91 170.95,79.35 170.92,79.53 170.95,79.71 171.01,79.9 171.11,80.07 171.25,80.24 171.43,80.39 171.64,80.53 171.88,80.65 172.15,80.75 172.43,80.83 172.74,80.89 173.05,80.93 173.37,80.94" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="164.3,99.67 161.28,80.87" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="153.37,99.67 156.39,80.87" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="206.46,104.69 206.41,104.28" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="217.35,104.28 217.3,104.69" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="220.86,95.05 219.28,96.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="171.93,96.9 170.35,95.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="206.6,105.1 206.46,104.69" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="217.3,104.69 217.16,105.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="146.51,141.59 143.31,142.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="129.9,142.22 126.69,141.59" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="179.65,84.6 178.93,83.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="212.28,83.37 211.55,84.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="206.83,105.49 206.6,105.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="217.16,105.1 216.93,105.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="143.31,142.22 139.98,142.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="133.22,142.6 129.9,142.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="139.98,142.6 136.6,142.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="136.6,142.72 133.22,142.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="164.26,99.26 164.3,99.67 164.26,100.08 164.12,100.48 163.89,100.88 163.57,101.25 163.17,101.59 162.7,101.9 162.16,102.17 161.57,102.4 160.93,102.58 160.25,102.72 159.55,102.8 158.84,102.82 158.84,82.29 159.16,82.27 159.47,82.24 159.77,82.18 160.06,82.1 160.33,81.99 160.57,81.87 160.78,81.73 160.95,81.58 161.1,81.41 161.2,81.24 161.26,81.06 161.28,80.87 161.26,80.69" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="158.84,102.82 158.12,102.8 157.42,102.72 156.74,102.58 156.1,102.4 155.51,102.17 154.97,101.9 154.5,101.59 154.1,101.25 153.79,100.88 153.56,100.48 153.42,100.08 153.37,99.67 153.42,99.26 156.41,80.69 156.39,80.87 156.41,81.06 156.47,81.24 156.58,81.41 156.72,81.58 156.9,81.73 157.11,81.87 157.35,81.99 157.61,82.1 157.9,82.18 158.2,82.24 158.52,82.27 158.84,82.29" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="216.93,105.49 216.61,105.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="207.15,105.86 206.83,105.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="207.54,106.2 207.15,105.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="216.61,105.86 216.22,106.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="203.74,77.27 202.61,77.84 201.36,78.32 200.01,78.71 198.58,78.98 197.11,79.15 195.6,79.21 194.1,79.15 192.63,78.98 191.2,78.71 189.85,78.32 188.6,77.84 187.47,77.27 186.47,76.61 185.64,75.89 184.97,75.11 184.49,74.29 184.19,73.43 184.1,72.57 184.19,71.7 184.49,70.85 184.97,70.02 185.64,69.24 186.47,68.52 187.47,67.87 188.6,67.29 189.85,66.81 191.2,66.43 192.63,66.15 194.1,65.98 195.6,65.92 197.11,65.98 198.58,66.15 200.01,66.43 201.36,66.81 202.61,67.29 203.74,67.87 204.73,68.52 205.57,69.24 206.24,70.02 206.72,70.85 207.01,71.7 207.11,72.57 207.01,73.43 206.72,74.29 206.24,75.11 205.57,75.89 204.73,76.61" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="cutter" points="154.91,107.81 152.37,109.09 149.55,110.18 146.51,111.05 143.31,111.67 139.98,112.06 136.6,112.18 133.22,112.06 129.9,111.67 126.69,111.05 123.66,110.18 120.84,109.09 118.29,107.81 116.06,106.34 114.18,104.71 112.68,102.96 111.59,101.1 110.93,99.19 110.71,97.23 110.93,95.28 111.59,93.36 112.68,91.51 114.18,89.76 116.06,88.13 118.29,86.66 120.84,85.37 123.66,84.29 126.69,83.42 129.9,82.79 133.22,82.41 136.6,82.28 139.98,82.41 143.31,82.79 146.51,83.42 149.55,84.29 152.37,85.37 154.91,86.66 157.15,88.13 159.03,89.76 160.53,91.51 161.62,93.36 162.28,95.28 162.5,97.23 162.28,99.19 161.62,101.1 160.53,102.96 159.03,104.71 157.15,106.34" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="180.65,85.77 179.65,84.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="211.55,84.6 210.55,85.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="119.79,106.13 119.84,106.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="108.9,106.55 108.95,106.13" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="208.01,106.51 207.54,106.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="216.22,106.2 215.75,106.51" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="173.92,98.62 171.93,96.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="219.28,96.9 217.29,98.62" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="215.75,106.51 215.21,106.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="208.55,106.79 208.01,106.51" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="119.84,106.55 119.79,106.96" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="108.95,106.96 108.9,106.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="215.21,106.79 214.61,107.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="209.15,107.01 208.55,106.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="119.93,86.43 120.65,85.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="152.55,85.2 153.28,86.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="109.5,99.29 109.27,97.23" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="163.94,97.23 163.7,99.29" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="214.61,107.01 213.97,107.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="209.79,107.2 209.15,107.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="109.09,107.36 108.95,106.96" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="119.79,106.96 119.65,107.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="213.97,107.2 213.3,107.33" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="210.47,107.33 209.79,107.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="213.3,107.33 212.59,107.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="211.17,107.41 210.47,107.33" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="212.59,107.41 211.88,107.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="211.88,107.44 211.17,107.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="181.91,86.86 180.65,85.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="210.55,85.77 209.3,86.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="195.07,107.31 195.11,107.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="184.18,107.72 184.23,107.31" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="162.5,127.77 162.28,129.73 161.62,131.64 160.53,133.5 159.03,135.25 157.15,136.88 154.91,138.35 152.37,139.64 149.55,140.72 146.51,141.59 143.31,142.22 139.98,142.6 136.6,142.72 133.22,142.6 129.9,142.22 126.69,141.59 123.66,140.72 120.84,139.64 118.29,138.35 116.06,136.88 114.18,135.25 112.68,133.5 111.59,131.64 110.93,129.73 110.71,127.77 110.71,97.23 110.93,99.19 111.59,101.1 112.68,102.96 114.18,104.71 116.06,106.34 118.29,107.81 120.84,109.09 123.66,110.18 126.69,111.05 129.9,111.67 133.22,112.06 136.6,112.18 139.98,112.06 143.31,111.67 146.51,111.05 149.55,110.18 152.37,109.09 154.91,107.81 157.15,106.34 159.03,104.71 160.53,102.96 161.62,101.1 162.28,99.19 162.5,97.23" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="109.32,107.75 109.09,107.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="119.65,107.36 119.42,107.75" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="175.1,80.53 174.86,80.65 174.59,80.75 174.31,80.83 174,80.89 173.69,80.93 173.37,80.94 173.05,80.93 172.74,80.89 172.43,80.83 172.15,80.75 171.88,80.65 171.64,80.53 171.43,80.39 171.25,80.24 171.11,80.07 171.01,79.9 170.95,79.71 170.92,79.53 170.95,79.35 171.01,79.16 171.11,78.99 171.25,78.82 171.43,78.67 171.64,78.53 171.88,78.41 172.15,78.31 172.43,78.23 172.74,78.17 173.05,78.13 173.37,78.12 173.69,78.13 174,78.17 174.31,78.23 174.59,78.31 174.86,78.41 175.1,78.53 175.31,78.67 175.49,78.82 175.63,78.99 175.73,79.16 175.8,79.35 175.82,79.53 175.8,79.71 175.73,79.9 175.63,80.07 175.49,80.24 175.31,80.39" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="guard" points="179.33,185.33 152.88,185.33 152.88,164.19 179.33,164.19" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="cutter" points="211.55,76.97 212.28,78.21 212.72,79.49 212.87,80.79 212.72,82.09 212.28,83.37 211.55,84.6 210.55,85.77 209.3,86.86 207.81,87.84 206.11,88.7 204.24,89.42 202.21,90 200.07,90.42 197.86,90.67 195.6,90.76 195.6,79.21 197.11,79.15 198.58,78.98 200.01,78.71 201.36,78.32 202.61,77.84 203.74,77.27 204.73,76.61 205.57,75.89 206.24,75.11 206.72,74.29 207.01,73.43 207.11,72.57 207.01,71.7 206.72,70.85 206.24,70.02" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="cutter" points="195.6,90.76 193.35,90.67 191.14,90.42 189,90 186.97,89.42 185.09,88.7 183.4,87.84 181.91,86.86 180.65,85.77 179.65,84.6 178.93,83.37 178.49,82.09 178.34,80.79 178.49,79.49 178.93,78.21 179.65,76.97 184.97,70.02 184.49,70.85 184.19,71.7 184.1,72.57 184.19,73.43 184.49,74.29 184.97,75.11 185.64,75.89 186.47,76.61 187.47,77.27 188.6,77.84 189.85,78.32 191.2,78.71 192.63,78.98 194.1,79.15 195.6,79.21" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="195.11,107.72 195.07,108.13" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="184.23,108.13 184.18,107.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="119.42,107.75 119.1,108.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="109.64,108.12 109.32,107.75" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="163.94,97.23 163.94,89.01" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="109.27,97.23 109.27,89.01" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="176.28,100.17 173.92,98.62" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="217.29,98.62 214.93,100.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="119.49,87.71 119.93,86.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="153.28,86.43 153.72,87.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="119.1,108.12 118.71,108.47" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="110.03,108.47 109.64,108.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="184.37,108.54 184.23,108.13" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="195.07,108.13 194.93,108.54" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="209.3,86.86 207.81,87.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="183.4,87.84 181.91,86.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="110.5,108.78 110.03,108.47" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="118.71,108.47 118.23,108.78" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="184.6,108.93 184.37,108.54" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="194.93,108.54 194.7,108.93" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="118.23,108.78 117.7,109.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="111.04,109.05 110.5,108.78" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="217.35,104.28 214.33,85.49" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="206.41,104.28 209.43,85.49" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="teeth" points="160.57,81.87 160.33,81.99 160.06,82.1 159.77,82.18 159.47,82.24 159.16,82.27 158.84,82.29 158.52,82.27 158.2,82.24 157.9,82.18 157.61,82.1 157.35,81.99 157.11,81.87 156.9,81.73 156.72,81.58 156.58,81.41 156.47,81.24 156.41,81.06 156.39,80.87 156.41,80.69 156.47,80.51 156.58,80.33 156.72,80.17 156.9,80.01 157.11,79.87 157.35,79.75 157.61,79.65 157.9,79.57 158.2,79.51 158.52,79.47 158.84,79.46 159.16,79.47 159.47,79.51 159.77,79.57 160.06,79.65 160.33,79.75 160.57,79.87 160.78,80.01 160.95,80.17 161.1,80.33 161.2,80.51 161.26,80.69 161.28,80.87 161.26,81.06 161.2,81.24 161.1,81.41 160.95,81.58 160.78,81.73" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="184.91,109.3 184.6,108.93" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="194.7,108.93 194.38,109.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="163.7,99.29 163.01,101.32" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="110.2,101.32 109.5,99.29" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="117.7,109.05 117.1,109.28" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="111.64,109.28 111.04,109.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="117.1,109.28 116.46,109.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="112.28,109.46 111.64,109.28" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="207.81,87.84 206.11,88.7" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="185.09,88.7 183.4,87.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="194.38,109.3 193.98,109.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="185.31,109.64 184.91,109.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="119.34,89.01 119.49,87.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="153.72,87.71 153.87,89.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="222.94,89.01 222.7,91.07 222.01,93.1 220.86,95.05 219.28,96.9 217.29,98.62 214.93,100.17 212.24,101.53 209.27,102.68 206.06,103.59 202.68,104.25 199.17,104.66 195.6,104.79 192.04,104.66 188.53,104.25 185.14,103.59 181.94,102.68 178.96,101.53 176.28,100.17 173.92,98.62 171.93,96.9 170.35,95.05 169.2,93.1 168.5,91.07 168.27,89.01 168.27,80.79 168.5,82.85 169.2,84.87 170.35,86.83 171.93,88.68 173.92,90.4 176.28,91.95 178.96,93.31 181.94,94.46 185.14,95.37 188.53,96.03 192.04,96.44 195.6,96.57 199.17,96.44 202.68,96.03 206.06,95.37 209.27,94.46 212.24,93.31 214.93,91.95 217.29,90.4 219.28,88.68 220.86,86.83 222.01,84.87 222.7,82.85 222.94,80.79" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="116.46,109.46 115.78,109.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="112.95,109.6 112.28,109.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="113.66,109.68 112.95,109.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="115.78,109.6 115.08,109.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="214.93,100.17 212.24,101.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="178.96,101.53 176.28,100.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="114.37,109.7 113.66,109.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="115.08,109.68 114.37,109.7" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="185.78,109.95 185.31,109.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="193.98,109.64 193.51,109.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="193.51,109.95 192.97,110.23" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="186.32,110.23 185.78,109.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="155.93,100.17 153.24,101.53 150.27,102.68 147.06,103.59 143.68,104.25 140.17,104.66 136.6,104.79 133.04,104.66 129.53,104.25 126.14,103.59 122.94,102.68 119.96,101.53 117.28,100.17 114.92,98.62 112.93,96.9 111.35,95.05 110.2,93.1 109.5,91.07 109.27,89.01 109.5,86.95 110.2,84.93 111.35,82.97 112.93,81.12 114.92,79.4 117.28,77.85 119.96,76.49 122.94,75.34 126.14,74.43 129.53,73.77 133.04,73.37 136.6,73.23 140.17,73.37 143.68,73.77 147.06,74.43 150.27,75.34 153.24,76.49 155.93,77.85 158.29,79.4 160.27,81.12 161.86,82.97 163.01,84.93 163.7,86.95 163.94,89.01 163.7,91.07 163.01,93.1 161.86,95.05 160.27,96.9 158.29,98.62" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="206.11,88.7 204.24,89.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="186.97,89.42 185.09,88.7" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="217.3,103.87 217.35,104.28 217.3,104.69 217.16,105.1 216.93,105.49 216.61,105.86 216.22,106.2 215.75,106.51 215.21,106.79 214.61,107.01 213.97,107.2 213.3,107.33 212.59,107.41 211.88,107.44 211.88,86.9 212.2,86.89 212.51,86.85 212.82,86.79 213.1,86.71 213.37,86.61 213.61,86.49 213.82,86.35 214,86.19 214.14,86.03 214.24,85.85 214.3,85.67 214.33,85.49 214.3,85.3" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="211.88,107.44 211.17,107.41 210.47,107.33 209.79,107.2 209.15,107.01 208.55,106.79 208.01,106.51 207.54,106.2 207.15,105.86 206.83,105.49 206.6,105.1 206.46,104.69 206.41,104.28 206.46,103.87 209.46,85.3 209.43,85.49 209.46,85.67 209.52,85.85 209.62,86.03 209.76,86.19 209.94,86.35 210.15,86.49 210.39,86.61 210.66,86.71 210.94,86.79 211.25,86.85 211.56,86.89 211.88,86.9" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="192.97,110.23 192.38,110.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="186.91,110.45 186.32,110.23" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="192.38,110.45 191.74,110.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="187.55,110.64 186.91,110.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="191.74,110.64 191.06,110.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="188.23,110.77 187.55,110.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="119.49,90.31 119.34,89.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="153.87,89.01 153.72,90.31" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="191.06,110.77 190.36,110.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="188.93,110.85 188.23,110.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="204.24,89.42 202.21,90" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="189,90 186.97,89.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="190.36,110.85 189.65,110.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="189.65,110.88 188.93,110.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="212.24,101.53 209.27,102.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="181.94,102.68 178.96,101.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="111.35,103.27 110.2,101.32" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="163.01,101.32 161.86,103.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="119.84,106.55 116.82,87.75" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="108.9,106.55 111.92,87.75" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="202.21,90 200.07,90.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="191.14,90.42 189,90" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="200.07,90.42 197.86,90.67" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="193.35,90.67 191.14,90.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="197.86,90.67 195.6,90.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="195.6,90.76 193.35,90.67" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="209.27,102.68 206.06,103.59" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="185.14,103.59 181.94,102.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="119.93,91.59 119.49,90.31" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="153.72,90.31 153.28,91.59" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="153.87,89.01 148.11,80.79" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="119.34,89.01 125.09,80.79" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="147.41,112.5 147.46,112.09" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="158.3,112.09 158.35,112.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="195.11,107.72 192.09,88.93" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="184.18,107.72 187.2,88.93" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="teeth" points="119.79,106.13 119.84,106.55 119.79,106.96 119.65,107.36 119.42,107.75 119.1,108.12 118.71,108.47 118.23,108.78 117.7,109.05 117.1,109.28 116.46,109.46 115.78,109.6 115.08,109.68 114.37,109.7 114.37,89.16 114.69,89.15 115,89.12 115.31,89.06 115.59,88.98 115.86,88.87 116.1,88.75 116.31,88.61 116.49,88.46 116.63,88.29 116.73,88.12 116.79,87.94 116.82,87.75 116.79,87.57" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="114.37,109.7 113.66,109.68 112.95,109.6 112.28,109.46 111.64,109.28 111.04,109.05 110.5,108.78 110.03,108.47 109.64,108.12 109.32,107.75 109.09,107.36 108.95,106.96 108.9,106.55 108.95,106.13 111.94,87.57 111.92,87.75 111.94,87.94 112.01,88.12 112.11,88.29 112.25,88.46 112.43,88.61 112.64,88.75 112.88,88.87 113.15,88.98 113.43,89.06 113.74,89.12 114.05,89.15 114.37,89.16" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="147.46,112.92 147.41,112.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="158.35,112.5 158.3,112.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="206.06,103.59 202.68,104.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="188.53,104.25 185.14,103.59" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="161.86,103.27 160.27,105.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="112.93,105.12 111.35,103.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="147.6,113.32 147.46,112.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="158.3,112.92 158.16,113.32" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="202.68,104.25 199.17,104.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="192.04,104.66 188.53,104.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="120.65,92.83 119.93,91.59" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="153.28,91.59 152.55,92.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="147.83,113.71 147.6,113.32" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="158.16,113.32 157.93,113.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="199.17,104.66 195.6,104.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="195.6,104.79 192.04,104.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="213.61,86.49 213.37,86.61 213.1,86.71 212.82,86.79 212.51,86.85 212.2,86.89 211.88,86.9 211.56,86.89 211.25,86.85 210.94,86.79 210.66,86.71 210.39,86.61 210.15,86.49 209.94,86.35 209.76,86.19 209.62,86.03 209.52,85.85 209.46,85.67 209.43,85.49 209.46,85.3 209.52,85.12 209.62,84.95 209.76,84.78 209.94,84.63 210.15,84.49 210.39,84.37 210.66,84.26 210.94,84.18 211.25,84.12 211.56,84.09 211.88,84.08 212.2,84.09 212.51,84.12 212.82,84.18 213.1,84.26 213.37,84.37 213.61,84.49 213.82,84.63 214,84.78 214.14,84.95 214.24,85.12 214.3,85.3 214.33,85.49 214.3,85.67 214.24,85.85 214.14,86.03 214,86.19 213.82,86.35" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="teeth" points="195.07,107.31 195.11,107.72 195.07,108.13 194.93,108.54 194.7,108.93 194.38,109.3 193.98,109.64 193.51,109.95 192.97,110.23 192.38,110.45 191.74,110.64 191.06,110.77 190.36,110.85 189.65,110.88 189.65,90.34 189.97,90.33 190.28,90.29 190.58,90.23 190.87,90.15 191.14,90.05 191.38,89.93 191.59,89.79 191.76,89.63 191.91,89.47 192.01,89.29 192.07,89.11 192.09,88.93 192.07,88.74" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="189.65,110.88 188.93,110.85 188.23,110.77 187.55,110.64 186.91,110.45 186.32,110.23 185.78,109.95 185.31,109.64 184.91,109.3 184.6,108.93 184.37,108.54 184.23,108.13 184.18,107.72 184.23,107.31 187.22,88.74 187.2,88.93 187.22,89.11 187.28,89.29 187.39,89.47 187.53,89.63 187.71,89.79 187.92,89.93 188.16,90.05 188.42,90.15 188.71,90.23 189.01,90.29 189.33,90.33 189.65,90.34" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="157.93,113.71 157.61,114.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="148.14,114.08 147.83,113.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="148.54,114.43 148.14,114.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="157.61,114.08 157.22,114.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="144.74,85.49 143.61,86.06 142.36,86.54 141.01,86.93 139.58,87.21 138.11,87.38 136.6,87.43 135.1,87.38 133.62,87.21 132.2,86.93 130.85,86.54 129.6,86.06 128.46,85.49 127.47,84.83 126.64,84.11 125.97,83.33 125.49,82.51 125.19,81.66 125.09,80.79 125.19,79.92 125.49,79.07 125.97,78.25 126.64,77.47 127.47,76.74 128.46,76.09 129.6,75.52 130.85,75.03 132.2,74.65 133.62,74.37 135.1,74.2 136.6,74.14 138.11,74.2 139.58,74.37 141.01,74.65 142.36,75.03 143.61,75.52 144.74,76.09 145.73,76.74 146.57,77.47 147.24,78.25 147.72,79.07 148.01,79.92 148.11,80.79 148.01,81.66 147.72,82.51 147.24,83.33 146.57,84.11 145.73,84.83" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="121.65,93.99 120.65,92.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="152.55,92.83 151.55,93.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="149.01,114.74 148.54,114.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="157.22,114.43 156.74,114.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="160.27,105.12 158.29,106.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="114.92,106.84 112.93,105.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="156.74,114.74 156.21,115.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="149.55,115.01 149.01,114.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="156.21,115.01 155.61,115.24" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="150.15,115.24 149.55,115.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="155.61,115.24 154.97,115.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="150.79,115.42 150.15,115.24" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="154.97,115.42 154.29,115.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="151.46,115.55 150.79,115.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="154.29,115.55 153.59,115.63" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="152.17,115.63 151.46,115.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="153.59,115.63 152.88,115.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="152.88,115.66 152.17,115.63" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="122.91,95.08 121.65,93.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="151.55,93.99 150.3,95.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="136.07,115.53 136.11,115.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.18,115.94 125.23,115.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="116.1,88.75 115.86,88.87 115.59,88.98 115.31,89.06 115,89.12 114.69,89.15 114.37,89.16 114.05,89.15 113.74,89.12 113.43,89.06 113.15,88.98 112.88,88.87 112.64,88.75 112.43,88.61 112.25,88.46 112.11,88.29 112.01,88.12 111.94,87.94 111.92,87.75 111.94,87.57 112.01,87.39 112.11,87.21 112.25,87.05 112.43,86.89 112.64,86.75 112.88,86.63 113.15,86.53 113.43,86.45 113.74,86.39 114.05,86.35 114.37,86.34 114.69,86.35 115,86.39 115.31,86.45 115.59,86.53 115.86,86.63 116.1,86.75 116.31,86.89 116.49,87.05 116.63,87.21 116.73,87.39 116.79,87.57 116.82,87.75 116.79,87.94 116.73,88.12 116.63,88.29 116.49,88.46 116.31,88.61" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="cutter" points="152.55,85.2 153.28,86.43 153.72,87.71 153.87,89.01 153.72,90.31 153.28,91.59 152.55,92.83 151.55,93.99 150.3,95.08 148.81,96.06 147.11,96.92 145.23,97.64 143.21,98.22 141.07,98.64 138.86,98.89 136.6,98.98 136.6,87.43 138.11,87.38 139.58,87.21 141.01,86.93 142.36,86.54 143.61,86.06 144.74,85.49 145.73,84.83 146.57,84.11 147.24,83.33 147.72,82.51 148.01,81.66 148.11,80.79 148.01,79.92 147.72,79.07 147.24,78.25" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="cutter" points="136.6,98.98 134.35,98.89 132.13,98.64 130,98.22 127.97,97.64 126.09,96.92 124.4,96.06 122.91,95.08 121.65,93.99 120.65,92.83 119.93,91.59 119.49,90.31 119.34,89.01 119.49,87.71 119.93,86.43 120.65,85.2 125.97,78.25 125.49,79.07 125.19,79.92 125.09,80.79 125.19,81.66 125.49,82.51 125.97,83.33 126.64,84.11 127.47,84.83 128.46,85.49 129.6,86.06 130.85,86.54 132.2,86.93 133.62,87.21 135.1,87.38 136.6,87.43" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="136.11,115.94 136.07,116.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.23,116.36 125.18,115.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="117.28,108.39 114.92,106.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="158.29,106.84 155.93,108.39" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.37,116.76 125.23,116.36" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="136.07,116.36 135.93,116.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="150.3,95.08 148.81,96.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="124.4,96.06 122.91,95.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="125.59,117.15 125.37,116.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="135.93,116.76 135.7,117.15" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="191.38,89.93 191.14,90.05 190.87,90.15 190.58,90.23 190.28,90.29 189.97,90.33 189.65,90.34 189.33,90.33 189.01,90.29 188.71,90.23 188.42,90.15 188.16,90.05 187.92,89.93 187.71,89.79 187.53,89.63 187.39,89.47 187.28,89.29 187.22,89.11 187.2,88.93 187.22,88.74 187.28,88.56 187.39,88.39 187.53,88.22 187.71,88.07 187.92,87.93 188.16,87.81 188.42,87.7 188.71,87.62 189.01,87.56 189.33,87.53 189.65,87.52 189.97,87.53 190.28,87.56 190.58,87.62 190.87,87.7 191.14,87.81 191.38,87.93 191.59,88.07 191.76,88.22 191.91,88.39 192.01,88.56 192.07,88.74 192.09,88.93 192.07,89.11 192.01,89.29 191.91,89.47 191.76,89.63 191.59,89.79" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="158.35,112.5 155.32,93.71" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="147.41,112.5 150.43,93.71" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="125.91,117.52 125.59,117.15" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="135.7,117.15 135.38,117.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="148.81,96.06 147.11,96.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="126.09,96.92 124.4,96.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="135.38,117.52 134.98,117.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="126.31,117.86 125.91,117.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="cutter" points="163.94,97.23 163.7,99.29 163.01,101.32 161.86,103.27 160.27,105.12 158.29,106.84 155.93,108.39 153.24,109.75 150.27,110.9 147.06,111.81 143.68,112.48 140.17,112.88 136.6,113.01 133.04,112.88 129.53,112.48 126.14,111.81 122.94,110.9 119.96,109.75 117.28,108.39 114.92,106.84 112.93,105.12 111.35,103.27 110.2,101.32 109.5,99.29 109.27,97.23 109.27,89.01 109.5,91.07 110.2,93.1 111.35,95.05 112.93,96.9 114.92,98.62 117.28,100.17 119.96,101.53 122.94,102.68 126.14,103.59 129.53,104.25 133.04,104.66 136.6,104.79 140.17,104.66 143.68,104.25 147.06,103.59 150.27,102.68 153.24,101.53 155.93,100.17 158.29,98.62 160.27,96.9 161.86,95.05 163.01,93.1 163.7,91.07 163.94,89.01" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polyline data-part="cutter" points="155.93,108.39 153.24,109.75" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="119.96,109.75 117.28,108.39" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="126.78,118.18 126.31,117.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="134.98,117.86 134.51,118.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="134.51,118.18 133.97,118.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="127.32,118.45 126.78,118.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="147.11,96.92 145.23,97.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="127.97,97.64 126.09,96.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="158.3,112.09 158.35,112.5 158.3,112.92 158.16,113.32 157.93,113.71 157.61,114.08 157.22,114.43 156.74,114.74 156.21,115.01 155.61,115.24 154.97,115.42 154.29,115.55 153.59,115.63 152.88,115.66 152.88,95.12 153.2,95.11 153.51,95.07 153.82,95.01 154.1,94.93 154.37,94.83 154.61,94.71 154.82,94.57 155,94.42 155.14,94.25 155.24,94.08 155.3,93.89 155.32,93.71 155.3,93.53" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="152.88,115.66 152.17,115.63 151.46,115.55 150.79,115.42 150.15,115.24 149.55,115.01 149.01,114.74 148.54,114.43 148.14,114.08 147.83,113.71 147.6,113.32 147.46,112.92 147.41,112.5 147.46,112.09 150.45,93.53 150.43,93.71 150.45,93.89 150.52,94.08 150.62,94.25 150.76,94.42 150.94,94.57 151.15,94.71 151.39,94.83 151.66,94.93 151.94,95.01 152.25,95.07 152.56,95.11 152.88,95.12" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="teeth" points="133.97,118.45 133.38,118.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="127.91,118.68 127.32,118.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="133.38,118.68 132.74,118.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="128.55,118.86 127.91,118.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="132.74,118.86 132.06,118.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="129.23,118.99 128.55,118.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="132.06,118.99 131.36,119.07" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="129.93,119.07 129.23,118.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="145.23,97.64 143.21,98.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="130,98.22 127.97,97.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="131.36,119.07 130.65,119.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="130.65,119.1 129.93,119.07" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="153.24,109.75 150.27,110.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="122.94,110.9 119.96,109.75" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="143.21,98.22 141.07,98.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="132.13,98.64 130,98.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="141.07,98.64 138.86,98.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="134.35,98.89 132.13,98.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="138.86,98.89 136.6,98.98" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="136.6,98.98 134.35,98.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="150.27,110.9 147.06,111.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="126.14,111.81 122.94,110.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="teeth" points="136.11,115.94 133.09,97.15" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="teeth" points="125.18,115.94 128.2,97.15" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="cutter" points="129.53,112.48 126.14,111.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="147.06,111.81 143.68,112.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="133.04,112.88 129.53,112.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="143.68,112.48 140.17,112.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="136.6,113.01 133.04,112.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="cutter" points="140.17,112.88 136.6,113.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="teeth" points="154.61,94.71 154.37,94.83 154.1,94.93 153.82,95.01 153.51,95.07 153.2,95.11 152.88,95.12 152.56,95.11 152.25,95.07 151.94,95.01 151.66,94.93 151.39,94.83 151.15,94.71 150.94,94.57 150.76,94.42 150.62,94.25 150.52,94.08 150.45,93.89 150.43,93.71 150.45,93.53 150.52,93.34 150.62,93.17 150.76,93 150.94,92.85 151.15,92.71 151.39,92.59 151.66,92.49 151.94,92.41 152.25,92.35 152.56,92.31 152.88,92.3 153.2,92.31 153.51,92.35 153.82,92.41 154.1,92.49 154.37,92.59 154.61,92.71 154.82,92.85 155,93 155.14,93.17 155.24,93.34 155.3,93.53 155.32,93.71 155.3,93.89 155.24,94.08 155.14,94.25 155,94.42 154.82,94.57" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="teeth" points="136.07,115.53 136.11,115.94 136.07,116.36 135.93,116.76 135.7,117.15 135.38,117.52 134.98,117.86 134.51,118.18 133.97,118.45 133.38,118.68 132.74,118.86 132.06,118.99 131.36,119.07 130.65,119.1 130.65,98.56 130.96,98.55 131.28,98.51 131.58,98.45 131.87,98.37 132.13,98.27 132.37,98.15 132.59,98.01 132.76,97.86 132.91,97.69 133.01,97.51 133.07,97.33 133.09,97.15 133.07,96.97" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="130.65,119.1 129.93,119.07 129.23,118.99 128.55,118.86 127.91,118.68 127.32,118.45 126.78,118.18 126.31,117.86 125.91,117.52 125.59,117.15 125.37,116.76 125.23,116.36 125.18,115.94 125.23,115.53 128.22,96.97 128.2,97.15 128.22,97.33 128.28,97.51 128.39,97.69 128.53,97.86 128.71,98.01 128.92,98.15 129.16,98.27 129.42,98.37 129.71,98.45 130.01,98.51 130.33,98.55 130.65,98.56" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polygon data-part="teeth" points="132.37,98.15 132.13,98.27 131.87,98.37 131.58,98.45 131.28,98.51 130.96,98.55 130.65,98.56 130.33,98.55 130.01,98.51 129.71,98.45 129.42,98.37 129.16,98.27 128.92,98.15 128.71,98.01 128.53,97.86 128.39,97.69 128.28,97.51 128.22,97.33 128.2,97.15 128.22,96.97 128.28,96.78 128.39,96.61 128.53,96.44 128.71,96.29 128.92,96.15 129.16,96.03 129.42,95.93 129.71,95.84 130.01,95.79 130.33,95.75 130.65,95.74 130.96,95.75 131.28,95.79 131.58,95.84 131.87,95.93 132.13,96.03 132.37,96.15 132.59,96.29 132.76,96.44 132.91,96.61 133.01,96.78 133.07,96.97 133.09,97.15 133.07,97.33 133.01,97.51 132.91,97.69 132.76,97.86 132.59,98.01" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+  </g>
+</svg>

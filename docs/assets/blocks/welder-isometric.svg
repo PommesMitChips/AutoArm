@@ -1,0 +1,478 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">Welder — isometric view</title>
+  <desc id="desc">Ship welder with a conveyor housing, paired reservoir cylinders and two tapered welding electrodes. Transparent, schematic guide artwork.</desc>
+  <metadata>{&quot;view&quot;:&quot;isometric&quot;,&quot;units&quot;:&quot;schematic&quot;,&quot;projection&quot;:&quot;true-isometric-30deg&quot;,&quot;canvas&quot;:[320,320],&quot;scale&quot;:1.40458,&quot;anchors&quot;:{&quot;mount&quot;:[165.56,243.97],&quot;tip&quot;:[165.56,40.31],&quot;axis&quot;:[165.56,131.6]}}</metadata>
+  <g id="artwork" stroke-linejoin="round" stroke-linecap="round">
+    <polyline data-part="reservoir" points="85.25,243.86 85.11,242.56" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="119.51,242.56 119.36,243.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="119.36,243.86 118.92,245.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="85.69,245.14 85.25,243.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="119.51,242.56 119.51,232.73" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="85.11,242.56 85.11,232.73" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="116.93,238.35 116.8,239.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="87.81,239.45 87.69,238.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="86.41,246.37 85.69,245.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="118.92,245.14 118.2,246.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="116.8,239.45 116.43,240.54" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="88.18,240.54 87.81,239.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="118.2,246.37 117.21,247.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="87.41,247.53 86.41,246.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="116.43,240.54 115.82,241.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="88.8,241.58 88.18,240.54" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="reservoir" points="114.47,239.76 112.78,240.61 110.91,241.33 108.89,241.91 106.76,242.33 104.55,242.58 102.31,242.66 100.06,242.58 97.86,242.33 95.72,241.91 93.71,241.33 91.84,240.61 90.14,239.76 88.66,238.78 87.41,237.7 86.41,236.53 85.69,235.3 85.25,234.03 85.11,232.73 85.25,231.44 85.69,230.16 86.41,228.93 87.41,227.77 88.66,226.69 90.14,225.71 91.84,224.85 93.71,224.13 95.72,223.56 97.86,223.14 100.06,222.89 102.31,222.8 104.55,222.89 106.76,223.14 108.89,223.56 110.91,224.13 112.78,224.85 114.47,225.71 115.96,226.69 117.21,227.77 118.2,228.93 118.92,230.16 119.36,231.44 119.51,232.73 119.36,234.03 118.92,235.3 118.2,236.53 117.21,237.7 115.96,238.78" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="117.21,247.53 115.96,248.61" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="88.66,248.61 87.41,247.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="115.82,241.58 114.97,242.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="89.64,242.57 88.8,241.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="90.14,249.59 88.66,248.61" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="115.96,248.61 114.47,249.59" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="114.97,242.57 113.91,243.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="90.71,243.49 89.64,242.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="114.47,249.59 112.78,250.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="91.84,250.44 90.14,249.59" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="91.97,244.32 90.71,243.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="113.91,243.49 112.65,244.32" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="112.78,250.44 110.91,251.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="93.71,251.17 91.84,250.44" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="112.65,244.32 111.21,245.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="93.41,245.05 91.97,244.32" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="reservoir" points="119.51,242.56 119.36,243.86 118.92,245.14 118.2,246.37 117.21,247.53 115.96,248.61 114.47,249.59 112.78,250.44 110.91,251.17 108.89,251.74 106.76,252.16 104.55,252.41 102.31,252.5 100.06,252.41 97.86,252.16 95.72,251.74 93.71,251.17 91.84,250.44 90.14,249.59 88.66,248.61 87.41,247.53 86.41,246.37 85.69,245.14 85.25,243.86 85.11,242.56 85.11,232.73 85.25,234.03 85.69,235.3 86.41,236.53 87.41,237.7 88.66,238.78 90.14,239.76 91.84,240.61 93.71,241.33 95.72,241.91 97.86,242.33 100.06,242.58 102.31,242.66 104.55,242.58 106.76,242.33 108.89,241.91 110.91,241.33 112.78,240.61 114.47,239.76 115.96,238.78 117.21,237.7 118.2,236.53 118.92,235.3 119.36,234.03 119.51,232.73" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polyline data-part="reservoir" points="110.91,251.17 108.89,251.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="95.72,251.74 93.71,251.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="111.21,245.05 109.62,245.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="95,245.66 93.41,245.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="97.86,252.16 95.72,251.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="108.89,251.74 106.76,252.16" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="96.71,246.15 95,245.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="109.62,245.66 107.9,246.15" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="106.76,252.16 104.55,252.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="100.06,252.41 97.86,252.16" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="104.55,252.41 102.31,252.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="102.31,252.5 100.06,252.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="98.52,246.51 96.71,246.15" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="107.9,246.15 106.09,246.51" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="106.09,246.51 104.22,246.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="100.4,246.72 98.52,246.51" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="104.22,246.72 102.31,246.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="102.31,246.79 100.4,246.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="116.93,238.35 116.93,183.57" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="87.69,238.35 87.69,183.57" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="reservoir" points="116.93,238.35 116.8,239.45 116.43,240.54 115.82,241.58 114.97,242.57 113.91,243.49 112.65,244.32 111.21,245.05 109.62,245.66 107.9,246.15 106.09,246.51 104.22,246.72 102.31,246.79 100.4,246.72 98.52,246.51 96.71,246.15 95,245.66 93.41,245.05 91.97,244.32 90.71,243.49 89.64,242.57 88.8,241.58 88.18,240.54 87.81,239.45 87.69,238.35 87.69,183.57 87.81,184.67 88.18,185.76 88.8,186.8 89.64,187.79 90.71,188.71 91.97,189.54 93.41,190.27 95,190.88 96.71,191.37 98.52,191.73 100.4,191.94 102.31,192.01 104.22,191.94 106.09,191.73 107.9,191.37 109.62,190.88 111.21,190.27 112.65,189.54 113.91,188.71 114.97,187.79 115.82,186.8 116.43,185.76 116.8,184.67 116.93,183.57" fill="#e5edf0" stroke="#e5edf0" stroke-width="0.55"/>
+    <polygon data-part="brace" points="160.69,104.92 226.38,142.84 206.92,154.08 141.23,116.15" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="146.06,150.57 145.89,152.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="104.95,152.12 104.78,150.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="165.73,269.25 165.59,270.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="131.48,270.55 131.33,269.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="145.89,152.12 145.36,153.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="105.48,153.65 104.95,152.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="131.91,271.82 131.48,270.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="165.59,270.55 165.15,271.82" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="119.51,186.38 119.36,187.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="85.25,187.68 85.11,186.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="brace" points="206.92,165.31 141.23,127.39 141.23,116.15 206.92,154.08" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="165.73,269.25 165.73,259.42" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="131.33,269.25 131.33,259.42" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="134.03,266.14 133.91,265.04" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="163.15,265.04 163.03,266.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="base" points="174.08,114.05 234.89,149.16 234.89,158.99 174.08,194.11 157.05,194.11 96.23,158.99 96.23,149.16 157.05,114.05" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="234.89,248.89 174.08,284 174.08,194.11 234.89,158.99" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="157.05,284 96.23,248.89 96.23,158.99 157.05,194.11" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="reservoir" points="112.65,189.54 111.21,190.27 109.62,190.88 107.9,191.37 106.09,191.73 104.22,191.94 102.31,192.01 100.4,191.94 98.52,191.73 96.71,191.37 95,190.88 93.41,190.27 91.97,189.54 90.71,188.71 89.64,187.79 88.8,186.8 88.18,185.76 87.81,184.67 87.69,183.57 87.81,182.47 88.18,181.39 88.8,180.34 89.64,179.35 90.71,178.43 91.97,177.6 93.41,176.88 95,176.26 96.71,175.77 98.52,175.42 100.4,175.2 102.31,175.13 104.22,175.2 106.09,175.42 107.9,175.77 109.62,176.26 111.21,176.88 112.65,177.6 113.91,178.43 114.97,179.35 115.82,180.34 116.43,181.39 116.8,182.47 116.93,183.57 116.8,184.67 116.43,185.76 115.82,186.8 114.97,187.79 113.91,188.71" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="106.35,155.13 105.48,153.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="145.36,153.65 144.49,155.13" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="146.06,150.57 146.06,135.11" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="104.78,150.57 104.78,135.11" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="165.15,271.82 164.42,273.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="132.64,273.05 131.91,271.82" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="119.36,187.68 118.92,188.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="85.69,188.95 85.25,187.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="163.03,266.14 162.65,267.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="134.41,267.22 134.03,266.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="119.51,186.38 119.51,175.15" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="85.11,186.38 85.11,175.15" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="133.63,274.22 132.64,273.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="164.42,273.05 163.43,274.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="107.54,156.52 106.35,155.13" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="144.49,155.13 143.3,156.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="118.92,188.95 118.2,190.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="86.41,190.18 85.69,188.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="162.65,267.22 162.04,268.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="135.02,268.27 134.41,267.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="reservoir" points="160.69,266.44 159,267.3 157.13,268.02 155.11,268.6 152.98,269.01 150.78,269.27 148.53,269.35 146.29,269.27 144.08,269.01 141.95,268.6 139.93,268.02 138.06,267.3 136.37,266.44 134.88,265.47 133.63,264.39 132.64,263.22 131.91,261.99 131.48,260.72 131.33,259.42 131.48,258.12 131.91,256.85 132.64,255.62 133.63,254.45 134.88,253.37 136.37,252.4 138.06,251.54 139.93,250.82 141.95,250.24 144.08,249.83 146.29,249.57 148.53,249.49 150.78,249.57 152.98,249.83 155.11,250.24 157.13,250.82 159,251.54 160.69,252.4 162.18,253.37 163.43,254.45 164.42,255.62 165.15,256.85 165.59,258.12 165.73,259.42 165.59,260.72 165.15,261.99 164.42,263.22 163.43,264.39 162.18,265.47" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="163.43,274.22 162.18,275.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="134.88,275.3 133.63,274.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="87.41,191.35 86.41,190.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="118.2,190.18 117.21,191.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="162.04,268.27 161.19,269.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="135.87,269.26 135.02,268.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="109.04,157.82 107.54,156.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="143.3,156.52 141.8,157.82" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="136.37,276.27 134.88,275.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="162.18,275.3 160.69,276.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="161.19,269.26 160.13,270.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="136.93,270.18 135.87,269.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="117.21,191.35 115.96,192.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="88.66,192.43 87.41,191.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="reservoir" points="114.47,182.17 112.78,183.02 110.91,183.75 108.89,184.32 106.76,184.74 104.55,184.99 102.31,185.08 100.06,184.99 97.86,184.74 95.72,184.32 93.71,183.75 91.84,183.02 90.14,182.17 88.66,181.19 87.41,180.11 86.41,178.95 85.69,177.72 85.25,176.44 85.11,175.15 85.25,173.85 85.69,172.57 86.41,171.34 87.41,170.18 88.66,169.1 90.14,168.12 91.84,167.27 93.71,166.54 95.72,165.97 97.86,165.55 100.06,165.3 102.31,165.21 104.55,165.3 106.76,165.55 108.89,165.97 110.91,166.54 112.78,167.27 114.47,168.12 115.96,169.1 117.21,170.18 118.2,171.34 118.92,172.57 119.36,173.85 119.51,175.15 119.36,176.44 118.92,177.72 118.2,178.95 117.21,180.11 115.96,181.19" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="electrode" points="140.02,143.54 137.99,144.57 135.74,145.44 133.32,146.13 130.76,146.63 128.11,146.93 125.42,147.03 122.72,146.93 120.08,146.63 117.52,146.13 115.1,145.44 112.85,144.57 110.82,143.54 109.04,142.37 107.54,141.07 106.35,139.68 105.48,138.2 104.95,136.67 104.78,135.11 104.95,133.56 105.48,132.03 106.35,130.55 107.54,129.16 109.04,127.86 110.82,126.69 112.85,125.66 115.1,124.79 117.52,124.1 120.08,123.6 122.72,123.3 125.42,123.2 128.11,123.3 130.76,123.6 133.32,124.1 135.74,124.79 137.99,125.66 140.02,126.69 141.8,127.86 143.3,129.16 144.49,130.55 145.36,132.03 145.89,133.56 146.06,135.11 145.89,136.67 145.36,138.2 144.49,139.68 143.3,141.07 141.8,142.37" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="110.82,158.99 109.04,157.82" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="141.8,157.82 140.02,158.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="detail" points="119.7,244.46 133.08,252.19 133.08,204.43 119.7,196.71" fill="#314b59" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="160.69,276.27 159,277.13" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="138.06,277.13 136.37,276.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="110.92,136.22 110.8,135.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="140.04,135.11 139.92,136.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="138.19,271.01 136.93,270.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="160.13,270.18 158.87,271.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="detail" points="226.02,239.55 183.44,264.13 183.44,206.54 226.02,181.96" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="90.14,193.4 88.66,192.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="115.96,192.43 114.47,193.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="detail" points="217.07,235.09 192.75,249.13 192.75,211.21 217.07,197.16" fill="#314b59" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="140.02,158.99 137.99,160.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="112.85,160.02 110.82,158.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="159,277.13 157.13,277.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="139.93,277.85 138.06,277.13" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="158.87,271.01 157.43,271.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="139.63,271.74 138.19,271.01" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="reservoir" points="165.73,269.25 165.59,270.55 165.15,271.82 164.42,273.05 163.43,274.22 162.18,275.3 160.69,276.27 159,277.13 157.13,277.85 155.11,278.43 152.98,278.85 150.78,279.1 148.53,279.18 146.29,279.1 144.08,278.85 141.95,278.43 139.93,277.85 138.06,277.13 136.37,276.27 134.88,275.3 133.63,274.22 132.64,273.05 131.91,271.82 131.48,270.55 131.33,269.25 131.33,259.42 131.48,260.72 131.91,261.99 132.64,263.22 133.63,264.39 134.88,265.47 136.37,266.44 138.06,267.3 139.93,268.02 141.95,268.6 144.08,269.01 146.29,269.27 148.53,269.35 150.78,269.27 152.98,269.01 155.11,268.6 157.13,268.02 159,267.3 160.69,266.44 162.18,265.47 163.43,264.39 164.42,263.22 165.15,261.99 165.59,260.72 165.73,259.42" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polyline data-part="electrode" points="139.92,136.22 139.54,137.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="111.3,137.3 110.92,136.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="114.47,193.4 112.78,194.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="91.84,194.26 90.14,193.4" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="157.13,277.85 155.11,278.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="141.95,278.43 139.93,277.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="157.43,271.74 155.84,272.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="141.22,272.35 139.63,271.74" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="137.99,160.02 135.74,160.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="115.1,160.89 112.85,160.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="144.08,278.85 141.95,278.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="155.11,278.43 152.98,278.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="112.78,194.26 110.91,194.98" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="93.71,194.98 91.84,194.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="155.84,272.35 154.13,272.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="142.94,272.84 141.22,272.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="152.98,278.85 150.78,279.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="146.29,279.1 144.08,278.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="139.54,137.3 138.93,138.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="111.91,138.35 111.3,137.3" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="150.78,279.1 148.53,279.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="148.53,279.18 146.29,279.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="135.74,160.89 133.32,161.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="117.52,161.58 115.1,160.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="154.13,272.84 152.32,273.19" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="144.75,273.19 142.94,272.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="reservoir" points="119.51,186.38 119.36,187.68 118.92,188.95 118.2,190.18 117.21,191.35 115.96,192.43 114.47,193.4 112.78,194.26 110.91,194.98 108.89,195.56 106.76,195.98 104.55,196.23 102.31,196.31 100.06,196.23 97.86,195.98 95.72,195.56 93.71,194.98 91.84,194.26 90.14,193.4 88.66,192.43 87.41,191.35 86.41,190.18 85.69,188.95 85.25,187.68 85.11,186.38 85.11,175.15 85.25,176.44 85.69,177.72 86.41,178.95 87.41,180.11 88.66,181.19 90.14,182.17 91.84,183.02 93.71,183.75 95.72,184.32 97.86,184.74 100.06,184.99 102.31,185.08 104.55,184.99 106.76,184.74 108.89,184.32 110.91,183.75 112.78,183.02 114.47,182.17 115.96,181.19 117.21,180.11 118.2,178.95 118.92,177.72 119.36,176.44 119.51,175.15" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polyline data-part="reservoir" points="110.91,194.98 108.89,195.56" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="95.72,195.56 93.71,194.98" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="152.32,273.19 150.44,273.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="146.62,273.41 144.75,273.19" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="146.06,150.57 145.89,152.12 145.36,153.65 144.49,155.13 143.3,156.52 141.8,157.82 140.02,158.99 137.99,160.02 135.74,160.89 133.32,161.58 130.76,162.08 128.11,162.38 125.42,162.48 122.72,162.38 120.08,162.08 117.52,161.58 115.1,160.89 112.85,160.02 110.82,158.99 109.04,157.82 107.54,156.52 106.35,155.13 105.48,153.65 104.95,152.12 104.78,150.57 104.78,135.11 104.95,136.67 105.48,138.2 106.35,139.68 107.54,141.07 109.04,142.37 110.82,143.54 112.85,144.57 115.1,145.44 117.52,146.13 120.08,146.63 122.72,146.93 125.42,147.03 128.11,146.93 130.76,146.63 133.32,146.13 135.74,145.44 137.99,144.57 140.02,143.54 141.8,142.37 143.3,141.07 144.49,139.68 145.36,138.2 145.89,136.67 146.06,135.11" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polyline data-part="reservoir" points="150.44,273.41 148.53,273.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="148.53,273.48 146.62,273.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="133.32,161.58 130.76,162.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="120.08,162.08 117.52,161.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="112.76,139.34 111.91,138.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="138.93,138.35 138.08,139.34" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="97.86,195.98 95.72,195.56" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="108.89,195.56 106.76,195.98" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="130.76,162.08 128.11,162.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="122.72,162.38 120.08,162.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="106.76,195.98 104.55,196.23" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="100.06,196.23 97.86,195.98" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="128.11,162.38 125.42,162.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="125.42,162.48 122.72,162.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="104.55,196.23 102.31,196.31" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="102.31,196.31 100.06,196.23" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="113.82,140.25 112.76,139.34" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="138.08,139.34 137.02,140.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="115.08,141.08 113.82,140.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="137.02,140.25 135.76,141.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="135.76,141.08 134.32,141.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="116.52,141.81 115.08,141.08" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="134.32,141.81 132.73,142.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="118.11,142.43 116.52,141.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="132.73,142.43 131.01,142.91" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="119.82,142.91 118.11,142.43" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="131.01,142.91 129.2,143.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="121.63,143.27 119.82,142.91" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="129.2,143.27 127.33,143.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="123.51,143.48 121.63,143.27" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="127.33,143.48 125.42,143.56" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="125.42,143.56 123.51,143.48" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="brace" points="226.38,154.08 206.92,165.31 206.92,154.08 226.38,142.84" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="detail" points="123.11,211.59 129.19,215.11 129.19,203.87 123.11,200.36" fill="#58a28d" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="163.15,265.04 163.15,210.26" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="133.91,265.04 133.91,210.26" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="140.04,135.11 140.04,91.57" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="110.8,135.11 110.8,91.57" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="174.08,284 157.05,284 157.05,194.11 174.08,194.11" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="reservoir" points="163.15,265.04 163.03,266.14 162.65,267.22 162.04,268.27 161.19,269.26 160.13,270.18 158.87,271.01 157.43,271.74 155.84,272.35 154.13,272.84 152.32,273.19 150.44,273.41 148.53,273.48 146.62,273.41 144.75,273.19 142.94,272.84 141.22,272.35 139.63,271.74 138.19,271.01 136.93,270.18 135.87,269.26 135.02,268.27 134.41,267.22 134.03,266.14 133.91,265.04 133.91,210.26 134.03,211.36 134.41,212.44 135.02,213.49 135.87,214.48 136.93,215.4 138.19,216.23 139.63,216.96 141.22,217.57 142.94,218.06 144.75,218.41 146.62,218.63 148.53,218.7 150.44,218.63 152.32,218.41 154.13,218.06 155.84,217.57 157.43,216.96 158.87,216.23 160.13,215.4 161.19,214.48 162.04,213.49 162.65,212.44 163.03,211.36 163.15,210.26" fill="#e5edf0" stroke="#e5edf0" stroke-width="0.55"/>
+    <polygon data-part="electrode" points="140.04,135.11 139.92,136.22 139.54,137.3 138.93,138.35 138.08,139.34 137.02,140.25 135.76,141.08 134.32,141.81 132.73,142.43 131.01,142.91 129.2,143.27 127.33,143.48 125.42,143.56 125.42,100.02 127.33,99.94 129.2,99.73 131.01,99.37 132.73,98.88 134.32,98.27 135.76,97.54 137.02,96.71 138.08,95.79 138.93,94.8 139.54,93.76 139.92,92.67 140.04,91.57" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="electrode" points="125.42,143.56 123.51,143.48 121.63,143.27 119.82,142.91 118.11,142.43 116.52,141.81 115.08,141.08 113.82,140.25 112.76,139.34 111.91,138.35 111.3,137.3 110.92,136.22 110.8,135.11 110.8,91.57 110.92,92.67 111.3,93.76 111.91,94.8 112.76,95.79 113.82,96.71 115.08,97.54 116.52,98.27 118.11,98.88 119.82,99.37 121.63,99.73 123.51,99.94 125.42,100.02" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="electrode" points="151.18,178.81 151,177.25" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="192.29,177.25 192.11,178.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="110.07,96.95 109.94,95.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="140.9,95.79 140.77,96.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="151.7,180.34 151.18,178.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="192.11,178.81 191.58,180.34" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="110.46,98.1 110.07,96.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="140.77,96.95 140.37,98.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="165.73,213.07 165.59,214.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="131.48,214.37 131.33,213.07" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="135.76,97.54 134.32,98.27 132.73,98.88 131.01,99.37 129.2,99.73 127.33,99.94 125.42,100.02 123.51,99.94 121.63,99.73 119.82,99.37 118.11,98.88 116.52,98.27 115.08,97.54 113.82,96.71 112.76,95.79 111.91,94.8 111.3,93.76 110.92,92.67 110.8,91.57 110.92,90.47 111.3,89.39 111.91,88.34 112.76,87.35 113.82,86.43 115.08,85.6 116.52,84.88 118.11,84.26 119.82,83.77 121.63,83.42 123.51,83.2 125.42,83.13 127.33,83.2 129.2,83.42 131.01,83.77 132.73,84.26 134.32,84.88 135.76,85.6 137.02,86.43 138.08,87.35 138.93,88.34 139.54,89.39 139.92,90.47 140.04,91.57 139.92,92.67 139.54,93.76 138.93,94.8 138.08,95.79 137.02,96.71" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="140.9,95.79 140.9,84.55" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="109.94,95.79 109.94,84.55" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="reservoir" points="158.87,216.23 157.43,216.96 155.84,217.57 154.13,218.06 152.32,218.41 150.44,218.63 148.53,218.7 146.62,218.63 144.75,218.41 142.94,218.06 141.22,217.57 139.63,216.96 138.19,216.23 136.93,215.4 135.87,214.48 135.02,213.49 134.41,212.44 134.03,211.36 133.91,210.26 134.03,209.16 134.41,208.07 135.02,207.03 135.87,206.04 136.93,205.12 138.19,204.29 139.63,203.56 141.22,202.95 142.94,202.46 144.75,202.11 146.62,201.89 148.53,201.82 150.44,201.89 152.32,202.11 154.13,202.46 155.84,202.95 157.43,203.56 158.87,204.29 160.13,205.12 161.19,206.04 162.04,207.03 162.65,208.07 163.03,209.16 163.15,210.26 163.03,211.36 162.65,212.44 162.04,213.49 161.19,214.48 160.13,215.4" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="111.12,99.21 110.46,98.1" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="140.37,98.1 139.72,99.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="152.57,181.81 151.7,180.34" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="191.58,180.34 190.71,181.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="192.29,177.25 192.29,161.8" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="151,177.25 151,161.8" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="165.59,214.37 165.15,215.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="131.91,215.64 131.48,214.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="139.72,99.21 138.83,100.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="112.01,100.26 111.12,99.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="165.73,213.07 165.73,201.83" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="131.33,213.07 131.33,201.83" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="153.76,183.21 152.57,181.81" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="190.71,181.81 189.52,183.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="165.15,215.64 164.42,216.87" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="132.64,216.87 131.91,215.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="138.83,100.26 137.7,101.23" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="113.14,101.23 112.01,100.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="136.37,90.87 134.84,91.64 133.16,92.29 131.34,92.81 129.43,93.18 127.44,93.41 125.42,93.49 123.4,93.41 121.41,93.18 119.49,92.81 117.68,92.29 115.99,91.64 114.47,90.87 113.14,89.99 112.01,89.02 111.12,87.97 110.46,86.86 110.07,85.72 109.94,84.55 110.07,83.38 110.46,82.24 111.12,81.13 112.01,80.08 113.14,79.11 114.47,78.23 115.99,77.46 117.68,76.81 119.49,76.29 121.41,75.92 123.4,75.69 125.42,75.61 127.44,75.69 129.43,75.92 131.34,76.29 133.16,76.81 134.84,77.46 136.37,78.23 137.7,79.11 138.83,80.08 139.72,81.13 140.37,82.24 140.77,83.38 140.9,84.55 140.77,85.72 140.37,86.86 139.72,87.97 138.83,89.02 137.7,89.99" fill="#e9b34c" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="reservoir" points="133.63,218.03 132.64,216.87" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="164.42,216.87 163.43,218.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="114.47,102.11 113.14,101.23" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="137.7,101.23 136.37,102.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="155.27,184.51 153.76,183.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="189.52,183.21 188.02,184.51" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="116.89,85.2 116.82,84.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="134.02,84.55 133.95,85.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="133.95,85.2 133.73,85.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="117.11,85.84 116.89,85.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="136.37,102.11 134.84,102.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="115.99,102.88 114.47,102.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="134.88,219.12 133.63,218.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="163.43,218.03 162.18,219.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="reservoir" points="160.69,208.86 159,209.71 157.13,210.43 155.11,211.01 152.98,211.43 150.78,211.68 148.53,211.76 146.29,211.68 144.08,211.43 141.95,211.01 139.93,210.43 138.06,209.71 136.37,208.86 134.88,207.88 133.63,206.8 132.64,205.63 131.91,204.4 131.48,203.13 131.33,201.83 131.48,200.54 131.91,199.26 132.64,198.03 133.63,196.87 134.88,195.79 136.37,194.81 138.06,193.95 139.93,193.23 141.95,192.66 144.08,192.24 146.29,191.99 148.53,191.9 150.78,191.99 152.98,192.24 155.11,192.66 157.13,193.23 159,193.95 160.69,194.81 162.18,195.79 163.43,196.87 164.42,198.03 165.15,199.26 165.59,200.54 165.73,201.83 165.59,203.13 165.15,204.4 164.42,205.63 163.43,206.8 162.18,207.88" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="electrode" points="186.24,170.23 184.21,171.26 181.96,172.12 179.54,172.81 176.99,173.31 174.34,173.62 171.64,173.72 168.95,173.62 166.3,173.31 163.74,172.81 161.32,172.12 159.08,171.26 157.05,170.23 155.27,169.06 153.76,167.76 152.57,166.36 151.7,164.89 151.18,163.36 151,161.8 151.18,160.25 151.7,158.72 152.57,157.24 153.76,155.84 155.27,154.55 157.05,153.37 159.08,152.35 161.32,151.48 163.74,150.79 166.3,150.29 168.95,149.99 171.64,149.88 174.34,149.99 176.99,150.29 179.54,150.79 181.96,151.48 184.21,152.35 186.24,153.37 188.02,154.55 189.52,155.84 190.71,157.24 191.58,158.72 192.11,160.25 192.29,161.8 192.11,163.36 191.58,164.89 190.71,166.36 189.52,167.76 188.02,169.06" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="188.02,184.51 186.24,185.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="157.05,185.68 155.27,184.51" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="117.47,86.45 117.11,85.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="133.73,85.84 133.37,86.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="117.68,103.53 115.99,102.88" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="134.84,102.88 133.16,103.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="186.26,161.8 186.14,162.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="157.15,162.9 157.02,161.8" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="117.97,87.03 117.47,86.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="133.37,86.45 132.87,87.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="136.37,220.09 134.88,219.12" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="162.18,219.12 160.69,220.09" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="119.49,104.05 117.68,103.53" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="133.16,103.53 131.34,104.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="186.24,185.68 184.21,186.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="159.08,186.71 157.05,185.68" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="118.6,87.57 117.97,87.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="132.87,87.03 132.24,87.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="140.9,95.79 140.77,96.95 140.37,98.1 139.72,99.21 138.83,100.26 137.7,101.23 136.37,102.11 134.84,102.88 133.16,103.53 131.34,104.05 129.43,104.42 127.44,104.65 125.42,104.73 125.42,93.49 127.44,93.41 129.43,93.18 131.34,92.81 133.16,92.29 134.84,91.64 136.37,90.87 137.7,89.99 138.83,89.02 139.72,87.97 140.37,86.86 140.77,85.72 140.9,84.55" fill="#c98c30" stroke="#c98c30" stroke-width="0.55"/>
+    <polygon data-part="electrode" points="125.42,104.73 123.4,104.65 121.41,104.42 119.49,104.05 117.68,103.53 115.99,102.88 114.47,102.11 113.14,101.23 112.01,100.26 111.12,99.21 110.46,98.1 110.07,96.95 109.94,95.79 109.94,84.55 110.07,85.72 110.46,86.86 111.12,87.97 112.01,89.02 113.14,89.99 114.47,90.87 115.99,91.64 117.68,92.29 119.49,92.81 121.41,93.18 123.4,93.41 125.42,93.49" fill="#e9b34c" stroke="#e9b34c" stroke-width="0.55"/>
+    <polyline data-part="electrode" points="131.34,104.05 129.43,104.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="121.41,104.42 119.49,104.05" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="186.14,162.9 185.77,163.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="157.52,163.99 157.15,162.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="129.43,104.42 127.44,104.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="123.4,104.65 121.41,104.42" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="160.69,220.09 159,220.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="138.06,220.95 136.37,220.09" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="119.34,88.06 118.6,87.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="132.24,87.57 131.5,88.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="127.44,104.65 125.42,104.73" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="125.42,104.73 123.4,104.65" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="184.21,186.71 181.96,187.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="161.32,187.57 159.08,186.71" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="131.5,88.06 130.66,88.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="120.18,88.49 119.34,88.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="159,220.95 157.13,221.67" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="139.93,221.67 138.06,220.95" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="185.77,163.99 185.15,165.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="158.13,165.03 157.52,163.99" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="130.66,88.49 129.72,88.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="121.12,88.85 120.18,88.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="181.96,187.57 179.54,188.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="163.74,188.26 161.32,187.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="129.72,88.85 128.71,89.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="122.13,89.14 121.12,88.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="reservoir" points="165.73,213.07 165.59,214.37 165.15,215.64 164.42,216.87 163.43,218.03 162.18,219.12 160.69,220.09 159,220.95 157.13,221.67 155.11,222.24 152.98,222.66 150.78,222.92 148.53,223 146.29,222.92 144.08,222.66 141.95,222.24 139.93,221.67 138.06,220.95 136.37,220.09 134.88,219.12 133.63,218.03 132.64,216.87 131.91,215.64 131.48,214.37 131.33,213.07 131.33,201.83 131.48,203.13 131.91,204.4 132.64,205.63 133.63,206.8 134.88,207.88 136.37,208.86 138.06,209.71 139.93,210.43 141.95,211.01 144.08,211.43 146.29,211.68 148.53,211.76 150.78,211.68 152.98,211.43 155.11,211.01 157.13,210.43 159,209.71 160.69,208.86 162.18,207.88 163.43,206.8 164.42,205.63 165.15,204.4 165.59,203.13 165.73,201.83" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polyline data-part="reservoir" points="157.13,221.67 155.11,222.24" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="141.95,222.24 139.93,221.67" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="123.19,89.35 122.13,89.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="128.71,89.14 127.65,89.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="192.29,177.25 192.11,178.81 191.58,180.34 190.71,181.81 189.52,183.21 188.02,184.51 186.24,185.68 184.21,186.71 181.96,187.57 179.54,188.26 176.99,188.76 174.34,189.07 171.64,189.17 168.95,189.07 166.3,188.76 163.74,188.26 161.32,187.57 159.08,186.71 157.05,185.68 155.27,184.51 153.76,183.21 152.57,181.81 151.7,180.34 151.18,178.81 151,177.25 151,161.8 151.18,163.36 151.7,164.89 152.57,166.36 153.76,167.76 155.27,169.06 157.05,170.23 159.08,171.26 161.32,172.12 163.74,172.81 166.3,173.31 168.95,173.62 171.64,173.72 174.34,173.62 176.99,173.31 179.54,172.81 181.96,172.12 184.21,171.26 186.24,170.23 188.02,169.06 189.52,167.76 190.71,166.36 191.58,164.89 192.11,163.36 192.29,161.8" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polyline data-part="electrode" points="127.65,89.35 126.54,89.47" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="124.3,89.47 123.19,89.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="179.54,188.26 176.99,188.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="166.3,188.76 163.74,188.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="126.54,89.47 125.42,89.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="125.42,89.52 124.3,89.47" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="158.98,166.02 158.13,165.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="185.15,165.03 184.31,166.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="144.08,222.66 141.95,222.24" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="155.11,222.24 152.98,222.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="176.99,188.76 174.34,189.07" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="168.95,189.07 166.3,188.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="152.98,222.66 150.78,222.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="146.29,222.92 144.08,222.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="174.34,189.07 171.64,189.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="171.64,189.17 168.95,189.07" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="150.78,222.92 148.53,223" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="reservoir" points="148.53,223 146.29,222.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="160.04,166.94 158.98,166.02" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="184.31,166.02 183.24,166.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="134.02,84.55 134.02,57.86" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="116.82,84.55 116.82,57.86" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="161.3,167.77 160.04,166.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="183.24,166.94 181.98,167.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="181.98,167.77 180.54,168.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="162.74,168.5 161.3,167.77" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="180.54,168.5 178.95,169.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="164.33,169.11 162.74,168.5" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="178.95,169.11 177.24,169.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="166.05,169.6 164.33,169.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="167.86,169.96 166.05,169.6" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="177.24,169.6 175.43,169.96" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="175.43,169.96 173.55,170.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="169.73,170.17 167.86,169.96" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="134.02,84.55 133.95,85.2 133.73,85.84 133.37,86.45 132.87,87.03 132.24,87.57 131.5,88.06 130.66,88.49 129.72,88.85 128.71,89.14 127.65,89.35 126.54,89.47 125.42,89.52 124.3,89.47 123.19,89.35 122.13,89.14 121.12,88.85 120.18,88.49 119.34,88.06 118.6,87.57 117.97,87.03 117.47,86.45 117.11,85.84 116.89,85.2 116.82,84.55 116.82,57.86 116.89,58.51 117.11,59.15 117.47,59.76 117.97,60.35 118.6,60.89 119.34,61.37 120.18,61.8 121.12,62.16 122.13,62.45 123.19,62.66 124.3,62.79 125.42,62.83 126.54,62.79 127.65,62.66 128.71,62.45 129.72,62.16 130.66,61.8 131.5,61.37 132.24,60.89 132.87,60.35 133.37,59.76 133.73,59.15 133.95,58.51 134.02,57.86" fill="#e5edf0" stroke="#e5edf0" stroke-width="0.55"/>
+    <polyline data-part="electrode" points="173.55,170.17 171.64,170.24" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="171.64,170.24 169.73,170.17" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="186.26,161.8 186.26,118.26" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="157.02,161.8 157.02,118.26" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="116.89,57.22 117.11,56.58" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="133.73,56.58 133.95,57.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="116.82,57.86 116.89,57.22" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="133.95,57.22 134.02,57.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="131.5,61.37 130.66,61.8 129.72,62.16 128.71,62.45 127.65,62.66 126.54,62.79 125.42,62.83 124.3,62.79 123.19,62.66 122.13,62.45 121.12,62.16 120.18,61.8 119.34,61.37 118.6,60.89 117.97,60.35 117.47,59.76 117.11,59.15 116.89,58.51 116.82,57.86 116.89,57.22 117.11,56.58 117.47,55.96 117.97,55.38 118.6,54.84 119.34,54.35 120.18,53.92 121.12,53.56 122.13,53.28 123.19,53.07 124.3,52.94 125.42,52.9 126.54,52.94 127.65,53.07 128.71,53.28 129.72,53.56 130.66,53.92 131.5,54.35 132.24,54.84 132.87,55.38 133.37,55.96 133.73,56.58 133.95,57.22 134.02,57.86 133.95,58.51 133.73,59.15 133.37,59.76 132.87,60.35 132.24,60.89" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="116.89,58.51 116.82,57.86" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="134.02,57.86 133.95,58.51" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="133.95,58.51 133.73,59.15" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="117.11,59.15 116.89,58.51" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="117.47,59.76 117.11,59.15" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="133.73,59.15 133.37,59.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="117.97,60.35 117.47,59.76" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="133.37,59.76 132.87,60.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="132.87,60.35 132.24,60.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="118.6,60.89 117.97,60.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="119.34,61.37 118.6,60.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="132.24,60.89 131.5,61.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="131.5,61.37 130.66,61.8" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="120.18,61.8 119.34,61.37" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="130.66,61.8 129.72,62.16" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="121.12,62.16 120.18,61.8" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="186.26,161.8 186.14,162.9 185.77,163.99 185.15,165.03 184.31,166.02 183.24,166.94 181.98,167.77 180.54,168.5 178.95,169.11 177.24,169.6 175.43,169.96 173.55,170.17 171.64,170.24 171.64,126.7 173.55,126.63 175.43,126.41 177.24,126.06 178.95,125.57 180.54,124.96 181.98,124.23 183.24,123.4 184.31,122.48 185.15,121.49 185.77,120.44 186.14,119.36 186.26,118.26" fill="#849da9" stroke="#849da9" stroke-width="0.55"/>
+    <polygon data-part="electrode" points="171.64,170.24 169.73,170.17 167.86,169.96 166.05,169.6 164.33,169.11 162.74,168.5 161.3,167.77 160.04,166.94 158.98,166.02 158.13,165.03 157.52,163.99 157.15,162.9 157.02,161.8 157.02,118.26 157.15,119.36 157.52,120.44 158.13,121.49 158.98,122.48 160.04,123.4 161.3,124.23 162.74,124.96 164.33,125.57 166.05,126.06 167.86,126.41 169.73,126.63 171.64,126.7" fill="#b4c5cd" stroke="#b4c5cd" stroke-width="0.55"/>
+    <polyline data-part="electrode" points="129.72,62.16 128.71,62.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="122.13,62.45 121.12,62.16" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="123.19,62.66 122.13,62.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="128.71,62.45 127.65,62.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="124.3,62.79 123.19,62.66" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="127.65,62.66 126.54,62.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="126.54,62.79 125.42,62.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="125.42,62.83 124.3,62.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="134.02,57.86 126.8,36.79" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="116.82,57.86 124.04,36.79" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="electrode" points="133.73,56.58 133.95,57.22 134.02,57.86 133.95,58.51 133.73,59.15 133.37,59.76 132.87,60.35 132.24,60.89 131.5,61.37 130.66,61.8 129.72,62.16 128.71,62.45 127.65,62.66 126.54,62.79 125.42,62.83 124.3,62.79 123.19,62.66 122.13,62.45 121.12,62.16 120.18,61.8 119.34,61.37 118.6,60.89 117.97,60.35 117.47,59.76 117.11,59.15 116.89,58.51 116.82,57.86 116.89,57.22 117.11,56.58 124.09,36.59 124.05,36.69 124.04,36.79 124.05,36.9 124.09,37 124.15,37.1 124.23,37.19 124.33,37.28 124.45,37.36 124.58,37.42 124.73,37.48 124.89,37.53 125.06,37.56 125.24,37.58 125.42,37.59 125.6,37.58 125.78,37.56 125.95,37.53 126.11,37.48 126.26,37.42 126.39,37.36 126.51,37.28 126.61,37.19 126.69,37.1 126.75,37 126.78,36.9 126.8,36.79 126.78,36.69 126.75,36.59" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polyline data-part="electrode" points="156.29,123.64 156.16,122.47" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="187.12,122.47 186.99,123.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="156.69,124.79 156.29,123.64" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="186.99,123.64 186.6,124.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="181.98,124.23 180.54,124.96 178.95,125.57 177.24,126.06 175.43,126.41 173.55,126.63 171.64,126.7 169.73,126.63 167.86,126.41 166.05,126.06 164.33,125.57 162.74,124.96 161.3,124.23 160.04,123.4 158.98,122.48 158.13,121.49 157.52,120.44 157.15,119.36 157.02,118.26 157.15,117.16 157.52,116.08 158.13,115.03 158.98,114.04 160.04,113.12 161.3,112.29 162.74,111.56 164.33,110.95 166.05,110.46 167.86,110.11 169.73,109.89 171.64,109.82 173.55,109.89 175.43,110.11 177.24,110.46 178.95,110.95 180.54,111.56 181.98,112.29 183.24,113.12 184.31,114.04 185.15,115.03 185.77,116.08 186.14,117.16 186.26,118.26 186.14,119.36 185.77,120.44 185.15,121.49 184.31,122.48 183.24,123.4" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="electrode" points="126.39,37.36 126.26,37.42 126.11,37.48 125.95,37.53 125.78,37.56 125.6,37.58 125.42,37.59 125.24,37.58 125.06,37.56 124.89,37.53 124.73,37.48 124.58,37.42 124.45,37.36 124.33,37.28 124.23,37.19 124.15,37.1 124.09,37 124.05,36.9 124.04,36.79 124.05,36.69 124.09,36.59 124.15,36.49 124.23,36.4 124.33,36.31 124.45,36.23 124.58,36.16 124.73,36.11 124.89,36.06 125.06,36.03 125.24,36.01 125.42,36 125.6,36.01 125.78,36.03 125.95,36.06 126.11,36.11 126.26,36.16 126.39,36.23 126.51,36.31 126.61,36.4 126.69,36.49 126.75,36.59 126.78,36.69 126.8,36.79 126.78,36.9 126.75,37 126.69,37.1 126.61,37.19 126.51,37.28" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="187.12,122.47 187.12,111.24" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="156.16,122.47 156.16,111.24" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="157.34,125.89 156.69,124.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="186.6,124.79 185.95,125.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="158.23,126.94 157.34,125.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="185.95,125.89 185.05,126.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="159.36,127.92 158.23,126.94" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="185.05,126.94 183.93,127.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="182.59,117.56 181.07,118.33 179.38,118.98 177.57,119.5 175.65,119.87 173.66,120.1 171.64,120.18 169.62,120.1 167.64,119.87 165.72,119.5 163.9,118.98 162.22,118.33 160.69,117.56 159.36,116.68 158.23,115.71 157.34,114.66 156.69,113.55 156.29,112.4 156.16,111.24 156.29,110.07 156.69,108.92 157.34,107.82 158.23,106.77 159.36,105.8 160.69,104.92 162.22,104.15 163.9,103.5 165.72,102.98 167.64,102.6 169.62,102.37 171.64,102.3 173.66,102.37 175.65,102.6 177.57,102.98 179.38,103.5 181.07,104.15 182.59,104.92 183.93,105.8 185.05,106.77 185.95,107.82 186.6,108.92 186.99,110.07 187.12,111.24 186.99,112.4 186.6,113.55 185.95,114.66 185.05,115.71 183.93,116.68" fill="#e9b34c" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="160.69,128.79 159.36,127.92" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="183.93,127.92 182.59,128.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="163.11,111.89 163.04,111.24" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="180.24,111.24 180.17,111.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="163.33,112.52 163.11,111.89" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="180.17,111.89 179.95,112.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="182.59,128.79 181.07,129.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="162.22,129.57 160.69,128.79" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="163.7,113.14 163.33,112.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="179.95,112.52 179.59,113.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="163.9,130.21 162.22,129.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="181.07,129.57 179.38,130.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="179.59,113.14 179.09,113.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="164.19,113.72 163.7,113.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="179.38,130.21 177.57,130.73" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="165.72,130.73 163.9,130.21" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="179.09,113.72 178.47,114.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="164.82,114.26 164.19,113.72" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="187.12,122.47 186.99,123.64 186.6,124.79 185.95,125.89 185.05,126.94 183.93,127.92 182.59,128.79 181.07,129.57 179.38,130.21 177.57,130.73 175.65,131.11 173.66,131.34 171.64,131.41 171.64,120.18 173.66,120.1 175.65,119.87 177.57,119.5 179.38,118.98 181.07,118.33 182.59,117.56 183.93,116.68 185.05,115.71 185.95,114.66 186.6,113.55 186.99,112.4 187.12,111.24" fill="#c98c30" stroke="#c98c30" stroke-width="0.55"/>
+    <polygon data-part="electrode" points="171.64,131.41 169.62,131.34 167.64,131.11 165.72,130.73 163.9,130.21 162.22,129.57 160.69,128.79 159.36,127.92 158.23,126.94 157.34,125.89 156.69,124.79 156.29,123.64 156.16,122.47 156.16,111.24 156.29,112.4 156.69,113.55 157.34,114.66 158.23,115.71 159.36,116.68 160.69,117.56 162.22,118.33 163.9,118.98 165.72,119.5 167.64,119.87 169.62,120.1 171.64,120.18" fill="#e9b34c" stroke="#e9b34c" stroke-width="0.55"/>
+    <polyline data-part="electrode" points="177.57,130.73 175.65,131.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="167.64,131.11 165.72,130.73" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="175.65,131.11 173.66,131.34" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="169.62,131.34 167.64,131.11" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="165.56,114.75 164.82,114.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="178.47,114.26 177.72,114.75" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="173.66,131.34 171.64,131.41" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="171.64,131.41 169.62,131.34" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="177.72,114.75 176.88,115.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="166.41,115.18 165.56,114.75" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="176.88,115.18 175.94,115.54" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="167.34,115.54 166.41,115.18" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="175.94,115.54 174.93,115.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="168.35,115.83 167.34,115.54" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="174.93,115.83 173.87,116.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="169.42,116.03 168.35,115.83" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="173.87,116.03 172.76,116.16" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="170.52,116.16 169.42,116.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="172.76,116.16 171.64,116.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="171.64,116.2 170.52,116.16" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="180.24,111.24 180.24,84.55" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="163.04,111.24 163.04,84.55" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="electrode" points="180.24,111.24 180.17,111.89 179.95,112.52 179.59,113.14 179.09,113.72 178.47,114.26 177.72,114.75 176.88,115.18 175.94,115.54 174.93,115.83 173.87,116.03 172.76,116.16 171.64,116.2 170.52,116.16 169.42,116.03 168.35,115.83 167.34,115.54 166.41,115.18 165.56,114.75 164.82,114.26 164.19,113.72 163.7,113.14 163.33,112.52 163.11,111.89 163.04,111.24 163.04,84.55 163.11,85.2 163.33,85.84 163.7,86.45 164.19,87.03 164.82,87.57 165.56,88.06 166.41,88.49 167.34,88.85 168.35,89.14 169.42,89.35 170.52,89.47 171.64,89.52 172.76,89.47 173.87,89.35 174.93,89.14 175.94,88.85 176.88,88.49 177.72,88.06 178.47,87.57 179.09,87.03 179.59,86.45 179.95,85.84 180.17,85.2 180.24,84.55" fill="#e5edf0" stroke="#e5edf0" stroke-width="0.55"/>
+    <polyline data-part="electrode" points="163.11,83.9 163.33,83.26" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="179.95,83.26 180.17,83.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="163.04,84.55 163.11,83.9" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="180.17,83.9 180.24,84.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="electrode" points="177.72,88.06 176.88,88.49 175.94,88.85 174.93,89.14 173.87,89.35 172.76,89.47 171.64,89.52 170.52,89.47 169.42,89.35 168.35,89.14 167.34,88.85 166.41,88.49 165.56,88.06 164.82,87.57 164.19,87.03 163.7,86.45 163.33,85.84 163.11,85.2 163.04,84.55 163.11,83.9 163.33,83.26 163.7,82.65 164.19,82.07 164.82,81.53 165.56,81.04 166.41,80.61 167.34,80.25 168.35,79.96 169.42,79.75 170.52,79.63 171.64,79.58 172.76,79.63 173.87,79.75 174.93,79.96 175.94,80.25 176.88,80.61 177.72,81.04 178.47,81.53 179.09,82.07 179.59,82.65 179.95,83.26 180.17,83.9 180.24,84.55 180.17,85.2 179.95,85.84 179.59,86.45 179.09,87.03 178.47,87.57" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="163.11,85.2 163.04,84.55" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="180.24,84.55 180.17,85.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="163.33,85.84 163.11,85.2" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="180.17,85.2 179.95,85.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="163.7,86.45 163.33,85.84" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="179.95,85.84 179.59,86.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="179.59,86.45 179.09,87.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="164.19,87.03 163.7,86.45" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="179.09,87.03 178.47,87.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="164.82,87.57 164.19,87.03" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="165.56,88.06 164.82,87.57" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="178.47,87.57 177.72,88.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="177.72,88.06 176.88,88.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="166.41,88.49 165.56,88.06" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="176.88,88.49 175.94,88.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="167.34,88.85 166.41,88.49" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="175.94,88.85 174.93,89.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="168.35,89.14 167.34,88.85" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="174.93,89.14 173.87,89.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="169.42,89.35 168.35,89.14" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="173.87,89.35 172.76,89.47" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="170.52,89.47 169.42,89.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="172.76,89.47 171.64,89.52" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="171.64,89.52 170.52,89.47" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="electrode" points="180.24,84.55 173.02,63.48" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="electrode" points="163.04,84.55 170.27,63.48" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="electrode" points="179.95,83.26 180.17,83.9 180.24,84.55 180.17,85.2 179.95,85.84 179.59,86.45 179.09,87.03 178.47,87.57 177.72,88.06 176.88,88.49 175.94,88.85 174.93,89.14 173.87,89.35 172.76,89.47 171.64,89.52 170.52,89.47 169.42,89.35 168.35,89.14 167.34,88.85 166.41,88.49 165.56,88.06 164.82,87.57 164.19,87.03 163.7,86.45 163.33,85.84 163.11,85.2 163.04,84.55 163.11,83.9 163.33,83.26 170.31,63.28 170.28,63.38 170.27,63.48 170.28,63.59 170.31,63.69 170.37,63.79 170.45,63.88 170.55,63.97 170.67,64.04 170.8,64.11 170.95,64.17 171.12,64.22 171.29,64.25 171.46,64.27 171.64,64.28 171.82,64.27 172,64.25 172.17,64.22 172.33,64.17 172.48,64.11 172.62,64.04 172.73,63.97 172.83,63.88 172.91,63.79 172.97,63.69 173.01,63.59 173.02,63.48 173.01,63.38 172.97,63.28" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polygon data-part="electrode" points="172.62,64.04 172.48,64.11 172.33,64.17 172.17,64.22 172,64.25 171.82,64.27 171.64,64.28 171.46,64.27 171.29,64.25 171.12,64.22 170.95,64.17 170.8,64.11 170.67,64.04 170.55,63.97 170.45,63.88 170.37,63.79 170.31,63.69 170.28,63.59 170.27,63.48 170.28,63.38 170.31,63.28 170.37,63.18 170.45,63.08 170.55,63 170.67,62.92 170.8,62.85 170.95,62.79 171.12,62.75 171.29,62.71 171.46,62.69 171.64,62.69 171.82,62.69 172,62.71 172.17,62.75 172.33,62.79 172.48,62.85 172.62,62.92 172.73,63 172.83,63.08 172.91,63.18 172.97,63.28 173.01,63.38 173.02,63.48 173.01,63.59 172.97,63.69 172.91,63.79 172.83,63.88 172.73,63.97" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+  </g>
+</svg>

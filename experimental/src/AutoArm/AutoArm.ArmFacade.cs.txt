@@ -1,0 +1,48 @@
+public string Summary => Enabled ? GoingHome ? "HOME" : LocalPath != null ? "PATH" : "ON" : Tools.Busy ? "TOOLS" : LastFault.Length > 0 ? LastFault : ConfigValid ? "OFF" : Status;
+public bool HasLayout => ConfigValid && Topology.Fingerprint.Length > 0;
+public void Stop(string why) { if (Tools != null) Tools.InhibitRecovery(); Fault(why); }
+public bool SharedSetting(string field) { return field != "ToolSwapPB" && field != "Peers"; }
+public void Select(bool selected)
+{
+    if (selected == PilotSelected) return;
+    if (Enabled && LocalPath == null && !GoingHome && !Tools.Busy)
+    { var position = PositionI; var orientation = OrientationI; HoldCurrent(); PositionI = position; OrientationI = orientation; }
+    PilotSelected = selected;
+}
+List<AutoGroup> BodyGroups()
+{
+    var groups = new List<AutoGroup>();
+    foreach (var group in Topology.Groups)
+    {
+        bool tool = false; foreach (var member in group.M) if (Tools.IsToolJoint(member.B)) tool = true;
+        if (tool) break;
+        groups.Add(group);
+    }
+    return groups;
+}
+public string Shape
+{
+    get
+    {
+        var rows = new List<string>();
+        foreach (var group in BodyGroups())
+        {
+            var before = new HashSet<long>(); var after = new HashSet<long>();
+            foreach (var member in group.M) { before.Add(member.U); after.Add(member.V); }
+            rows.Add(AutoConfig.GroupKind(group) + ":" + before.Count + ">" + after.Count);
+        }
+        return string.Join("|", rows);
+    }
+}
+public string WeightTable => AutoConfig.Weights(BodyGroups());
+public bool ApplyWeights(string table, out string why)
+{
+    var groups = BodyGroups(); List<double[]> values;
+    if (!AutoConfig.ReadWeights(table, groups, out values, out why)) { why = Name + ": " + why; return false; }
+    RememberToolWeights(false);
+    for (int i = 0; i < groups.Count; i++)
+    { groups[i].MoveW = values[i][0]; groups[i].TurnW = values[i][1]; ToolWeights[ToolGroupKey(groups[i])] = values[i]; }
+    WriteToolWeights(); return true;
+}
+public List<IMyMechanicalConnectionBlock> Joints()
+{ var blocks = new List<IMyMechanicalConnectionBlock>(); foreach (var group in Topology.Groups) foreach (var member in group.M) blocks.Add(member.B); return blocks; }

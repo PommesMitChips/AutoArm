@@ -1,0 +1,630 @@
+// C# 6 programmable-block fragment. Paste inside Program.
+class AutoMember
+{
+    public IMyMechanicalConnectionBlock B;
+    public AutoEdge Edge;
+    public int Sign;
+    public double Q0, Last, Home;
+    public long U, V;
+}
+
+class AutoGroup
+{
+    public int Index;
+    public bool Rotary;
+    public string Sig, Label;
+    public double MoveW = 1, TurnW = 1;
+    public readonly List<AutoMember> M = new List<AutoMember>();
+    public Vector3D Lin, Ang;
+}
+
+class AutoEdge
+{
+    public IMyMechanicalConnectionBlock B;
+    public long A, Z;
+    public int K;
+    public bool BaseMark, HeadMark;
+}
+
+class AutoLink
+{
+    public AutoEdge E;
+    public long U, V;
+    public AutoLink(AutoEdge e, long u, long v) { E = e; U = u; V = v; }
+}
+
+class AutoTopology
+{
+    const int MaxMembers = 48, MaxGroups = 24, MaxWorkEdges = 128, MaxInventory = 4096;
+    const double AxisCos = .999961923, RotaryLineM = .03;
+    readonly Program P;
+    public readonly string Arm;
+    public readonly List<AutoGroup> Groups = new List<AutoGroup>();
+    public readonly List<long> Rigid = new List<long>();
+    readonly List<IMyMechanicalConnectionBlock> All = new List<IMyMechanicalConnectionBlock>();
+    readonly List<IMyTerminalBlock> Inventory = new List<IMyTerminalBlock>();
+    readonly List<string> SnapshotRows = new List<string>();
+    readonly System.Text.StringBuilder SnapshotText = new System.Text.StringBuilder();
+    readonly List<AutoEdge> Edges = new List<AutoEdge>();
+    readonly List<AutoEdge> Unowned = new List<AutoEdge>();
+    readonly HashSet<long> Used = new HashSet<long>();
+    readonly HashSet<long> Corridor = new HashSet<long>();
+    readonly HashSet<long> Watch = new HashSet<long>();
+    public IMyMechanicalConnectionBlock Base;
+    public IMyTerminalBlock Head;
+    public IMyCubeBlock End;
+    IMyCubeBlock EndOverride;
+    ArmTipInfo Focus;
+    public MatrixD EndPose
+    {
+        get { var pose = Focus == null ? End.WorldMatrix : Focus.WorldMatrix; pose.Translation = EndPosition; return pose; }
+    }
+    public Vector3D EndPosition => Focus == null ? End.GetPosition() : Focus.CubeGrid.GridIntegerToWorld(Focus.Position);
+    IMyTerminalBlock EndpointOverride;
+    string EndpointName = "";
+    long ExcludedMechanical;
+
+    public void SetEndpointOverride(IMyTerminalBlock endpoint, long ignoredMechanical, IMyCubeBlock frame = null, ArmTipInfo focus = null)
+    {
+        EndpointOverride = endpoint; EndpointName = endpoint == null ? "" : endpoint.CustomName;
+        EndOverride = frame;
+        Focus = focus;
+        ExcludedMechanical = ignoredMechanical; Ready = false;
+    }
+
+    bool HeadMark(IMyTerminalBlock b)
+    {
+        return EndpointOverride == null ? Mark(b.CustomName, "Head") :
+            b.EntityId == EndpointOverride.EntityId && b.CustomName.Equals(EndpointName, StringComparison.OrdinalIgnoreCase);
+    }
+    public string Fingerprint = "", Report = "";
+    public bool Ready;
+    long Hull, Start;
+    long BaseId, HeadId, HeadGrid, EndId, EndGrid;
+    string Snapshot = "";
+    int StableCount;
+    int ScanBases, ScanHeads;
+    int FullScanIn = 30;
+    bool Building;
+
+    public AutoTopology(Program owner, string arm)
+    {
+        P = owner; Arm = arm == null ? "" : arm.Trim();
+    }
+
+    int Kind(IMyMechanicalConnectionBlock b)
+    {
+        if (b is IMyPistonBase) return 2;
+        if (b is IMyMotorStator && !(b is IMyMotorSuspension)) return 1;
+        return 0;
+    }
+
+    bool Attached(IMyMechanicalConnectionBlock b)
+    {
+        return b != null && !b.Closed && b.IsAttached && b.Top != null && b.TopGrid != null;
+    }
+
+    bool Mark(string name, string role)
+    {
+        return name != null && name.StartsWith(Arm + " - " + role, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public bool Discover(out string why)
+    {
+        ZeroOwned(); Building = true;
+        why = ""; Ready = false; StableCount = 0; Groups.Clear(); Rigid.Clear();
+        Edges.Clear(); Unowned.Clear(); Used.Clear(); Corridor.Clear(); Watch.Clear(); Report = Fingerprint = "";
+        if (Arm.Length == 0) return Bad("ArmName is empty.", out why);
+        if (!Guard("pre-inventory reserve", out why)) return false;
+        All.Clear(); Inventory.Clear(); P.GridTerminalSystem.GetBlocks(Inventory);
+        if (Inventory.Count > MaxInventory) return Bad("Terminal inventory exceeds the " + MaxInventory + "-block discovery bound.", out why);
+        if (!Guard("terminal inventory", out why)) return false;
+        Base = null; Head = null; int bases = 0, heads = 0;
+        for (int i = 0; i < Inventory.Count; i++)
+        {
+            if ((i & 63) == 0 && !Guard("terminal inventory filter", out why)) return false;
+            var b = Inventory[i]; if (!b.IsSameConstructAs(P.Me)) continue;
+            if (HeadMark(b)) { Head = b; heads++; }
+            var m = b as IMyMechanicalConnectionBlock; if (m == null) continue;
+            if (m.EntityId == ExcludedMechanical) continue;
+            All.Add(m); if (Mark(m.CustomName, "Base")) { Base = m; bases++; }
+        }
+        if (bases != 1) return Bad("Need exactly one mechanical block named '" + Arm + " - Base*'; found " + bases + ".", out why);
+        if (!Attached(Base) || Kind(Base) == 0) return Bad("The Base marker must be an attached piston, rotor, or hinge.", out why);
+        if (heads != 1) return Bad("Need exactly one terminal block named '" + Arm + " - Head*'; found " + heads + ".", out why);
+        BaseId = Base.EntityId; HeadId = Head.EntityId; HeadGrid = Head.CubeGrid.EntityId;
+        End = EndOverride ?? Head;
+        if (End.Closed || End.CubeGrid == null) return Bad("Endpoint unavailable.", out why);
+        EndId = End.EntityId; EndGrid = End.CubeGrid.EntityId;
+        Hull = Base.CubeGrid.EntityId; Start = Base.TopGrid.EntityId;
+        if (Hull == Start || EndGrid == Hull) return Bad("Base top/Head must be beyond the hull.", out why);
+        for (int i = 0; i < All.Count; i++)
+        {
+            if ((i & 63) == 0 && !Guard("mechanical edge inventory", out why)) return false;
+            if (!Attached(All[i])) continue;
+            var e = new AutoEdge { B = All[i], A = All[i].CubeGrid.EntityId, Z = All[i].TopGrid.EntityId,
+                K = Kind(All[i]), BaseMark = Mark(All[i].CustomName, "Base"), HeadMark = HeadMark(All[i]) };
+            if (e.A == e.Z) return Bad("Self-loop mechanical connection: " + e.B.CustomName, out why);
+            Edges.Add(e);
+        }
+        if (!ScopeEdges(out why)) return false;
+        var root = Between(Hull, Start);
+        if (!Has(root, Base.EntityId)) return Bad("Base marker attachment changed while scanning.", out why);
+        Corridor.Add(Hull);
+        var dist = Distances(EndGrid, out why); if (dist == null) return false;
+        int d;
+        if (!dist.TryGetValue(Start, out d)) return Bad("Head route returns through hull or is unreachable.", out why);
+        // All mechanical roots in this moving component participate in the
+        // same split/rejoin recognition as later stages. The named root only
+        // defines the hull and reference frame; other members need no marker.
+        foreach (var edge in Edges) {
+            long child = edge.A == Hull ? edge.Z : edge.Z == Hull ? edge.A : 0; int depth;
+            if (child != 0 && (!dist.TryGetValue(child, out depth) || depth != d))
+                return Bad("Parallel base arms have unequal stage counts; variable-ratio closure is unsupported.", out why);
+        }
+        dist[Hull] = d + 1;
+        long at = Hull;
+        while (at != EndGrid)
+        {
+            if (!Guard("corridor recognition", out why)) return false;
+            if (Groups.Count >= MaxGroups) return Bad("Active arm exceeds " + MaxGroups + " generalized groups.", out why);
+            int here = dist[at];
+            var nextEdges = new List<AutoLink>();
+            var destinations = new List<long>();
+            for (int i = 0; i < Edges.Count; i++)
+            {
+                var e = Edges[i]; if (Used.Contains(e.B.EntityId)) continue;
+                long n = e.A == at ? e.Z : e.Z == at ? e.A : 0; int nd;
+                if (n == 0 || !dist.TryGetValue(n, out nd) || nd != here - 1) continue;
+                nextEdges.Add(new AutoLink(e, at, n)); if (!destinations.Contains(n)) destinations.Add(n);
+            }
+            if (destinations.Count == 0) return Bad("No unambiguous next stage from rigid grid " + at + ".", out why);
+            if (destinations.Count == 1)
+            {
+                if (!AddGroup(nextEdges, out why)) return false;
+                at = destinations[0]; Corridor.Add(at);
+                continue;
+            }
+            var paths = new List<List<AutoLink>>();
+            var candidate = new HashSet<long>();
+            for (int i = 0; i < destinations.Count; i++)
+            {
+                long n = destinations[i]; var path = new List<AutoLink>(); int count = 0;
+                for (int j = 0; j < nextEdges.Count; j++) if (nextEdges[j].V == n) { path.Add(nextEdges[j]); count++; }
+                if (count != 1) return Bad("Unsupported nested/parallel bundle at split grid " + at + ".", out why);
+                candidate.Add(path[0].E.B.EntityId);
+                paths.Add(path);
+            }
+            if (OwnedCount() + candidate.Count > MaxMembers) return Bad("Split/rejoin candidate exceeds " + MaxMembers + " owned actuators.", out why);
+            int guard = 0;
+            while (true)
+            {
+                if (!Guard("split/rejoin recognition", out why)) return false;
+                long meet = paths[0][paths[0].Count - 1].V; bool same = true;
+                for (int i = 1; i < paths.Count; i++) if (paths[i][paths[i].Count - 1].V != meet) same = false;
+                if (same) { at = meet; break; }
+                if (++guard > MaxMembers) return Bad("Parallel paths do not reconverge within the supported bound.", out why);
+                var occupied = new HashSet<long>();
+                for (int i = 0; i < paths.Count; i++)
+                {
+                    if (!Guard("split/rejoin path expansion", out why)) return false;
+                    var path = paths[i]; long u = path[path.Count - 1].V;
+                    if (!occupied.Add(u)) return Bad("Parallel paths merge or cross before a common stage boundary.", out why);
+                    AutoLink chosen = null; int count = 0; int ud = dist[u];
+                    for (int j = 0; j < Edges.Count; j++)
+                    {
+                        if ((j & 31) == 0 && !Guard("split/rejoin edge search", out why)) return false;
+                        var e = Edges[j]; if (Used.Contains(e.B.EntityId) || candidate.Contains(e.B.EntityId)) continue;
+                        long v = e.A == u ? e.Z : e.Z == u ? e.A : 0; int vd;
+                        if (v != 0 && dist.TryGetValue(v, out vd) && vd == ud - 1) { chosen = new AutoLink(e, u, v); count++; }
+                    }
+                    if (count != 1) return Bad("Unsupported branch/cross-link inside split path at grid " + u + ".", out why);
+                    candidate.Add(chosen.E.B.EntityId);
+                    if (OwnedCount() + candidate.Count > MaxMembers) return Bad("Split/rejoin candidate exceeds " + MaxMembers + " owned actuators.", out why);
+                    path.Add(chosen);
+                }
+            }
+            int stages = paths[0].Count;
+            for (int i = 1; i < paths.Count; i++) if (paths[i].Count != stages)
+                return Bad("Parallel arms have unequal stage counts; variable-ratio closure is unsupported.", out why);
+            for (int s = 0; s < stages; s++)
+            {
+                var stage = new List<AutoLink>();
+                for (int i = 0; i < paths.Count; i++) { stage.Add(paths[i][s]); Corridor.Add(paths[i][s].U); Corridor.Add(paths[i][s].V); }
+                if (!AddGroup(stage, out why)) return false;
+            }
+        }
+        if (!ClassifyUnused(out why)) return false;
+        foreach (var edge in Edges) if (!Used.Contains(edge.B.EntityId)) Unowned.Add(edge);
+        if (!BuildWatch(out why)) return false;
+        if (!SnapshotFromInventory(out Snapshot, out why)) return Bad(why, out why);
+        var fp = new System.Text.StringBuilder();
+        for (int i = 0; i < Groups.Count; i++) { Groups[i].Index = i; if (i > 0) fp.Append('|'); fp.Append(Groups[i].Sig); }
+        Fingerprint = fp.ToString();
+        Rigid.AddRange(Corridor); Rigid.Sort();
+        Report += Groups.Count + " groups / " + OwnedCount() + " actuators / " + Rigid.Count + " rigid segments detected.";
+        for (int i = 0; i < Rigid.Count; i++) Report += "\nR" + (i + 1).ToString("00") + " = grid " + Rigid[i];
+        for (int i = 0; i < Groups.Count; i++) if (Groups[i].M.Count > 1)
+        { Report += " Parallel 1:1 copies: rechecked live."; break; }
+        Report += "\nCached checks each pass; full scan every 30.";
+        FullScanIn = 30;
+        Building = false; ZeroOwned();
+        return true;
+    }
+
+    bool ScopeEdges(out string why)
+    {
+        why = "";
+        var byGrid = new Dictionary<long, List<AutoEdge>>();
+        for (int i = 0; i < Edges.Count; i++)
+        {
+            if ((i & 63) == 0 && !Guard("moving-component adjacency", out why)) return false;
+            var e = Edges[i]; List<AutoEdge> a, z;
+            if (!byGrid.TryGetValue(e.A, out a)) byGrid[e.A] = a = new List<AutoEdge>();
+            if (!byGrid.TryGetValue(e.Z, out z)) byGrid[e.Z] = z = new List<AutoEdge>();
+            a.Add(e); z.Add(e);
+        }
+        var keep = new HashSet<long>(); var nodes = new HashSet<long>(); var q = new Queue<long>();
+        nodes.Add(Start); q.Enqueue(Start);
+        while (q.Count > 0)
+        {
+            if (!Guard("moving-component scope", out why)) return false;
+            long u = q.Dequeue(); List<AutoEdge> list;
+            if (!byGrid.TryGetValue(u, out list)) continue;
+            for (int i = 0; i < list.Count; i++)
+            {
+                if ((i & 31) == 0 && !Guard("moving-component expansion", out why)) return false;
+                var e = list[i]; keep.Add(e.B.EntityId);
+                if (keep.Count > MaxWorkEdges) return Bad("Moving mechanical component exceeds the " + MaxWorkEdges + "-edge discovery bound.", out why);
+                long v = e.A == u ? e.Z : e.A;
+                if (v != Hull && nodes.Add(v)) q.Enqueue(v);
+            }
+        }
+        var scoped = new List<AutoEdge>();
+        for (int i = 0; i < Edges.Count; i++)
+        {
+            if ((i & 63) == 0 && !Guard("moving-component filter", out why)) return false;
+            if (keep.Contains(Edges[i].B.EntityId)) scoped.Add(Edges[i]);
+        }
+        Edges.Clear(); Edges.AddRange(scoped);
+        return true;
+    }
+
+    bool Has(List<AutoLink> links, long id)
+    {
+        for (int i = 0; i < links.Count; i++) if (links[i].E.B.EntityId == id) return true;
+        return false;
+    }
+
+    List<AutoLink> Between(long u, long v)
+    {
+        var r = new List<AutoLink>();
+        for (int i = 0; i < Edges.Count; i++)
+        {
+            var e = Edges[i];
+            if ((e.A == u && e.Z == v) || (e.A == v && e.Z == u)) r.Add(new AutoLink(e, u, v));
+        }
+        return r;
+    }
+
+    Dictionary<long, int> Distances(long target, out string why)
+    {
+        why = ""; var d = new Dictionary<long, int>(); var q = new Queue<long>(); d[target] = 0; q.Enqueue(target);
+        while (q.Count > 0)
+        {
+            if (!Guard("Head-distance graph", out why)) return null;
+            long u = q.Dequeue(); int nd = d[u] + 1;
+            for (int i = 0; i < Edges.Count; i++)
+            {
+                var e = Edges[i]; long v = e.A == u ? e.Z : e.Z == u ? e.A : 0;
+                if (v == 0 || v == Hull || d.ContainsKey(v)) continue;
+                d[v] = nd; q.Enqueue(v);
+            }
+        }
+        return d;
+    }
+
+    bool AddGroup(List<AutoLink> links, out string why)
+    {
+        why = ""; if (links.Count == 0) return Bad("Empty mechanical stage.", out why);
+        if (Groups.Count >= MaxGroups) return Bad("Active Base-to-Head corridor exceeds " + MaxGroups + " generalized groups.", out why);
+        if (OwnedCount() + links.Count > MaxMembers) return Bad("Active Base-to-Head corridor exceeds " + MaxMembers + " owned actuators.", out why);
+        links.Sort((x, y) => x.E.B.EntityId.CompareTo(y.E.B.EntityId));
+        int kind = Kind(links[0].E.B);
+        if (kind == 0) return Bad("Unsupported connection on active route: " + links[0].E.B.CustomName, out why);
+        var g = new AutoGroup { Rotary = kind == 1 };
+        Vector3D baseL = Vector3D.Zero, baseA = Vector3D.Zero;
+        for (int i = 0; i < links.Count; i++)
+        {
+            var l = links[i];
+            if (Kind(l.E.B) != kind) return Bad("Parallel stage mixes piston and rotary actuators.", out why);
+            var m = new AutoMember { B = l.E.B, Edge = l.E, U = l.U, V = l.V, Sign = 1 };
+            Vector3D lin, ang;
+            if (!Raw(m, EndPosition, out lin, out ang, out why)) return Bad(why, out why);
+            if (i == 0) { baseL = lin; baseA = ang; }
+            else
+            {
+                double dot = kind == 1 ? Vector3D.Dot(baseA, ang) : Vector3D.Dot(baseL, lin);
+                m.Sign = dot < 0 ? -1 : 1; lin *= m.Sign; ang *= m.Sign;
+                bool compatible = kind == 1
+                    ? Vector3D.Dot(baseA, ang) >= AxisCos && (baseL - lin).Length() <= RotaryLineM
+                    : Vector3D.Dot(baseL, lin) >= AxisCos;
+                if (!compatible) return Bad("Parallel " + (kind == 1 ? "rotors/hinges lack one coaxial full twist" : "piston axes are not parallel") +
+                    " at stage containing '" + l.E.B.CustomName + "'. General linkage ratios are unsupported.", out why);
+            }
+            m.Q0 = m.Last = Position(m);
+            if (!Finite(m.Q0)) return Bad("Non-finite actuator position: " + m.B.CustomName, out why);
+            g.M.Add(m); Used.Add(m.B.EntityId);
+        }
+        var sig = new System.Text.StringBuilder(kind == 1 ? "R" : "P");
+        var label = new System.Text.StringBuilder(kind == 1 ? "Rotary: " : "Piston: ");
+        for (int i = 0; i < g.M.Count; i++)
+        {
+            var m = g.M[i]; sig.Append(':').Append(m.B.EntityId).Append(m.Sign > 0 ? '+' : '-').Append('@').Append(m.U).Append('>').Append(m.V);
+            if (i > 0) label.Append(" | "); label.Append(m.B.CustomName);
+        }
+        g.Sig = sig.ToString(); g.Label = label.ToString(); Groups.Add(g);
+        Report += "G" + Groups.Count + " " + g.Label + "\n";
+        return true;
+    }
+
+    bool Raw(AutoMember m, Vector3D head, out Vector3D lin, out Vector3D ang, out string why, bool liveChecked = false)
+    {
+        lin = ang = Vector3D.Zero; why = ""; var b = m.B;
+        if (!liveChecked && !Attached(b)) { why = "Detached actuator: " + b.CustomName; return false; }
+        long a = b.CubeGrid.EntityId, z = b.TopGrid.EntityId; int dir;
+        if (m.Edge != null && (a != m.Edge.A || z != m.Edge.Z))
+        { why = "Actuator endpoints changed: " + b.CustomName; return false; }
+        if (a == m.U && z == m.V) dir = 1; else if (a == m.V && z == m.U) dir = -1;
+        else { why = "Actuator endpoints changed: " + b.CustomName; return false; }
+        Vector3D axis = b.WorldMatrix.Up; double n = axis.Length();
+        if (!Finite(axis.X) || !Finite(axis.Y) || !Finite(axis.Z) || !Finite(head.X) || !Finite(head.Y) || !Finite(head.Z) ||
+            !Finite(n) || n < .9) { why = "Invalid actuator axis or Head position: " + b.CustomName; return false; }
+        axis /= n;
+        if (b is IMyPistonBase) lin = axis * dir;
+        else { ang = axis * -dir; lin = Vector3D.Cross(ang, head - b.GetPosition()); }
+        return true;
+    }
+
+    public double Position(AutoMember m)
+    {
+        var p = m.B as IMyPistonBase; return p != null ? p.CurrentPosition : ((IMyMotorStator)m.B).Angle;
+    }
+
+
+
+    public bool CheckSync(AutoGroup g, out string why)
+    {
+        why = "";
+        double lo = double.PositiveInfinity, hi = double.NegativeInfinity, spread = 0;
+        for (int i = 0; i < g.M.Count; i++)
+        {
+            var m = g.M[i]; double q = Position(m);
+            if (!Finite(q) || !Finite(m.Q0)) { why = "Non-finite actuator position in G" + (g.Index + 1) + ": " + m.B.CustomName; return false; }
+            double d = q - m.Q0; if (g.Rotary) d = Wrap(d); d *= m.Sign;
+            if (g.Rotary) for (int j = 0; j < i; j++)
+            {
+                var n = g.M[j]; double nd = Wrap(Position(n) - n.Q0) * n.Sign;
+                spread = Math.Max(spread, Math.Abs(Wrap(d - nd)));
+            }
+            lo = Math.Min(lo, d); hi = Math.Max(hi, d);
+        }
+        if (g.M.Count < 2) return true;
+        double tol = g.Rotary ? .25 * Math.PI / 180 : .02;
+        if (!g.Rotary) spread = hi - lo;
+        if (spread <= tol) return true;
+        why = "Parallel actuator desynchronization in G" + (g.Index + 1) + ": " + spread.ToString("0.0000") + (g.Rotary ? " rad." : " m.");
+        return false;
+    }
+
+    public bool Refresh(AutoGroup g, Vector3D headWorld, MatrixD reference, out double lo, out double hi, out string why)
+    {
+        lo = -1e6; hi = 1e6; why = ""; Vector3D sl = Vector3D.Zero, sa = Vector3D.Zero, firstL = Vector3D.Zero, firstA = Vector3D.Zero;
+        if (g.M.Count > 1 && !CheckSync(g, out why)) return Fail(why);
+        for (int i = 0; i < g.M.Count; i++)
+        {
+            var m = g.M[i]; var b = m.B;
+            if (!Attached(b) || !b.Enabled || !b.IsWorking) { why = "Unavailable owned actuator: " + b.CustomName; return Fail(why); }
+            if (!Finite(m.Q0) || Mark(b.CustomName, "Base") != m.Edge.BaseMark || HeadMark(b) != m.Edge.HeadMark)
+            { why = "Owned actuator identity/marker changed: " + b.CustomName; return Fail(why); }
+            Vector3D l, a; if (!Raw(m, headWorld, out l, out a, out why, true)) return Fail(why);
+            l *= m.Sign; a *= m.Sign;
+            if (i == 0) { firstL = l; firstA = a; }
+            else if (g.Rotary ? Vector3D.Dot(firstA, a) < AxisCos || (firstL - l).Length() > RotaryLineM : Vector3D.Dot(firstL, l) < AxisCos)
+            { why = "Parallel screw mismatch G" + (g.Index + 1) + "; not 1:1."; return Fail(why); }
+            sl += l; sa += a;
+            double ml, mh; if (!Bounds(m, out ml, out mh, out why)) return Fail(why); lo = Math.Max(lo, ml); hi = Math.Min(hi, mh);
+        }
+        if (lo > hi) { why = "No common signed velocity remains in G" + (g.Index + 1) + "."; return Fail(why); }
+        sl /= g.M.Count; sa /= g.M.Count;
+        g.Lin = InFrame(sl, reference); g.Ang = InFrame(sa, reference);
+        return true;
+    }
+
+    bool Bounds(AutoMember m, out double lo, out double hi, out string why)
+    {
+        lo = -1e6; hi = 1e6; why = ""; double q = Position(m), mn, mx;
+        var p = m.B as IMyPistonBase;
+        if (p != null) { lo = -p.MaxVelocity; hi = p.MaxVelocity; mn = p.MinLimit; mx = p.MaxLimit; }
+        else
+        {
+            var r = (IMyMotorStator)m.B; mn = r.LowerLimitRad; mx = r.UpperLimitRad;
+            if (r.RotorLock) lo = hi = 0;
+        }
+        if (!Finite(q) || !Finite(mn) || !Finite(mx) || !Finite(lo) || !Finite(hi) || mn > mx || lo > hi)
+        { why = "Invalid position, limits, or maximum velocity: " + m.B.CustomName; return false; }
+        if (p != null && p.MaxVelocity <= 0) { why = "Piston reports no positive maximum velocity: " + m.B.CustomName; return false; }
+        double accel = p != null ? P.PistonAccelerationMps2 : P.JointAccelerationRpmPerSec * Math.PI / 30;
+        double margin = p != null ? .001 : .1 * Math.PI / 180;
+        if (!Finite(accel) || accel <= 0) { why = "Acceleration must be finite and positive for travel braking."; return false; }
+        if (mn > -1e6) lo = Math.Max(lo, -Math.Sqrt(2 * accel * Math.Max(0, q - mn - margin)));
+        if (mx < 1e6) hi = Math.Min(hi, Math.Sqrt(2 * accel * Math.Max(0, mx - q - margin)));
+        if (m.Sign < 0) { double x = lo; lo = -hi; hi = -x; }
+        return true;
+    }
+
+
+
+    public void Set(AutoGroup g, double velocity)
+    {
+        for (int i = 0; i < g.M.Count; i++)
+        {
+            var m = g.M[i]; float v = (float)(m.Sign * velocity);
+            var p = m.B as IMyPistonBase; if (p != null) p.Velocity = v; else ((IMyMotorStator)m.B).TargetVelocityRad = v;
+        }
+    }
+
+    public void ZeroOwned()
+    {
+        for (int i = 0; i < Groups.Count; i++) for (int j = 0; j < Groups[i].M.Count; j++)
+        {
+            var b = Groups[i].M[j].B; if (b == null || b.Closed) continue;
+            try { var p = b as IMyPistonBase; if (p != null) p.Velocity = 0; else { var r = b as IMyMotorStator; if (r != null) r.TargetVelocityRad = 0; } }
+            catch (Exception) { }
+        }
+    }
+
+    public bool StableSetup(out string why)
+    {
+        why = ""; if (!Validate(out why, true)) return false;
+        bool moved = false;
+        for (int i = 0; i < Groups.Count; i++) for (int j = 0; j < Groups[i].M.Count; j++)
+        {
+            var m = Groups[i].M[j]; double target, q = Position(m);
+            if (!Finite(q)) { why = "Non-finite actuator position while settling: " + m.B.CustomName; StableCount = 0; return false; }
+            var p = m.B as IMyPistonBase; target = p != null ? p.Velocity : ((IMyMotorStator)m.B).TargetVelocityRad;
+            if (Math.Abs(target) > 1e-4) { why = "Waiting for owned actuator targets to reach zero."; StableCount = 0; return false; }
+            double delta = q - m.Last; if (Groups[i].Rotary) delta = Wrap(delta);
+            if (Math.Abs(delta) > 1e-4) moved = true; m.Last = q;
+        }
+        StableCount = moved ? 0 : StableCount + 1;
+        if (StableCount < 2) { why = "Waiting for two stable stopped topology scans."; return false; }
+        for (int i = 0; i < Groups.Count; i++) for (int j = 0; j < Groups[i].M.Count; j++) Groups[i].M[j].Q0 = Position(Groups[i].M[j]);
+        Ready = true; return true;
+    }
+
+    public bool Validate(out string why, bool full = false, bool refreshBeforeCommit = false)
+    {
+        why = "";
+        if (!BudgetAvailable()) { why = "Budget low; motion refused."; return Fail(why); }
+        if (Base == null || Head == null || Base.Closed || Head.Closed || Base.EntityId != BaseId || Head.EntityId != HeadId ||
+            !Base.IsSameConstructAs(P.Me) || !Head.IsSameConstructAs(P.Me) || !Mark(Base.CustomName, "Base") || !HeadMark(Head))
+        { why = "Base/Head marker disappeared or was renamed."; return Fail(why); }
+        if (Head.CubeGrid == null || Head.CubeGrid.EntityId != HeadGrid) { why = "Head marker moved to another rigid grid; Rescan is required."; return Fail(why); }
+        var marker = Head as IMyMechanicalConnectionBlock;
+        if (End == null || End.Closed || End.EntityId != EndId || End.CubeGrid == null || End.CubeGrid.EntityId != EndGrid ||
+            Focus != null && (Focus.Closed || Focus.CubeGrid.EntityId != EndGrid || Focus.Marker.CubeGrid.EntityId != EndGrid) ||
+            Focus == null && End != Head && marker != null && (!Attached(marker) || marker.Top.EntityId != EndId))
+        { why = "Endpoint changed; Rescan is required."; return Fail(why); }
+        var checkedEdges = !full && refreshBeforeCommit ? Unowned : Edges;
+        for (int i = 0; i < checkedEdges.Count; i++)
+        {
+            var e = checkedEdges[i]; var b = e.B;
+            // Active control refreshes every owned group before any output. Its
+            // Raw/Bounds/sync checks cover these edges once, rather than twice.
+            if (!Attached(b) || b.CubeGrid.EntityId != e.A || b.TopGrid.EntityId != e.Z || Kind(b) != e.K ||
+                Mark(b.CustomName, "Base") != e.BaseMark || HeadMark(b) != e.HeadMark)
+            { why = "Known mechanical connection changed: " + (b == null ? "missing block" : b.CustomName) + ". Rescan is required."; return Fail(why); }
+        }
+        if (full || !refreshBeforeCommit)
+            for (int i = 0; i < Groups.Count; i++) if (!CheckSync(Groups[i], out why)) return Fail(why);
+        if (!full && --FullScanIn > 0) return true;
+        string current;
+        if (!CurrentSnapshot(out current, out why)) return Fail(why);
+        if (ScanBases != 1 || ScanHeads != 1) { why = "Base/Head marker is no longer unique; Rescan is required."; return Fail(why); }
+        if (current != Snapshot) { why = "Mechanical topology changed; Rescan is required."; return Fail(why); }
+        FullScanIn = 30;
+        return true;
+    }
+
+    bool ClassifyUnused(out string why)
+    {
+        why = ""; var seen = new HashSet<long>(); int ignored = 0;
+        for (int i = 0; i < Edges.Count; i++)
+        {
+            var seed = Edges[i]; if (Used.Contains(seed.B.EntityId) || seen.Contains(seed.B.EntityId)) continue;
+            var q = new Queue<AutoEdge>(); var boundary = new HashSet<long>(); q.Enqueue(seed); seen.Add(seed.B.EntityId); int count = 0;
+            while (q.Count > 0)
+            {
+                if (!Guard("off-corridor classification", out why)) return false;
+                var e = q.Dequeue(); count++;
+                if ((e.A == Hull && Corridor.Contains(e.Z)) || (e.Z == Hull && Corridor.Contains(e.A)))
+                    return Bad("A second mechanical anchor connects the base grid to the active corridor: " + e.B.CustomName, out why);
+                if (Corridor.Contains(e.A)) boundary.Add(e.A); if (Corridor.Contains(e.Z)) boundary.Add(e.Z);
+                for (int j = 0; j < Edges.Count; j++)
+                {
+                    var n = Edges[j]; if (Used.Contains(n.B.EntityId) || seen.Contains(n.B.EntityId)) continue;
+                    if (n.A == e.A || n.A == e.Z || n.Z == e.A || n.Z == e.Z) { seen.Add(n.B.EntityId); q.Enqueue(n); }
+                }
+            }
+            if (boundary.Count > 1) return Bad("Unsupported closure: cross-linked segments.", out why);
+            ignored += count;
+        }
+        if (ignored > 0) Report += "Ignored " + ignored + " off-corridor actuators; they are never commanded.\n";
+        return true;
+    }
+
+    bool BuildWatch(out string why)
+    {
+        why = "";
+        var q = new Queue<long>(); Watch.Add(Start); q.Enqueue(Start);
+        while (q.Count > 0)
+        {
+            if (!Guard("topology watch-set", out why)) return false;
+            long u = q.Dequeue();
+            for (int i = 0; i < Edges.Count; i++)
+            {
+                var e = Edges[i]; long v = e.A == u ? e.Z : e.Z == u ? e.A : 0;
+                if (v == 0 || v == Hull || !Watch.Add(v)) continue; q.Enqueue(v);
+            }
+        }
+        return true;
+    }
+
+    bool CurrentSnapshot(out string snapshot, out string why)
+    {
+        snapshot = ""; why = "";
+        if (!BudgetAvailable()) { why = "Budget low; scan refused."; return false; }
+        Inventory.Clear(); P.GridTerminalSystem.GetBlocks(Inventory);
+        return SnapshotFromInventory(out snapshot, out why);
+    }
+
+    bool SnapshotFromInventory(out string snapshot, out string why)
+    {
+        snapshot = ""; why = "";
+        if (Inventory.Count > MaxInventory) { why = "Terminal inventory exceeds the " + MaxInventory + "-block validation bound."; return false; }
+        SnapshotRows.Clear(); ScanBases = ScanHeads = 0;
+        for (int i = 0; i < Inventory.Count; i++)
+        {
+            if ((i & 31) == 0 && !BudgetAvailable()) { why = "Scan budget exhausted."; return false; }
+            var terminal = Inventory[i]; if (!terminal.IsSameConstructAs(P.Me)) continue;
+            if (HeadMark(terminal)) ScanHeads++;
+            var b = terminal as IMyMechanicalConnectionBlock; if (b == null) continue;
+            if (b.EntityId == ExcludedMechanical) continue;
+            long a = b.CubeGrid.EntityId, z = Attached(b) ? b.TopGrid.EntityId : 0;
+            if (Mark(b.CustomName, "Base")) ScanBases++;
+            if (Watch.Contains(a) || Watch.Contains(z)) SnapshotRows.Add(b.EntityId + ":" + a + ":" + z + ":" + Kind(b));
+        }
+        if (!BudgetAvailable()) { why = "Post-scan budget exhausted."; return false; }
+        SnapshotRows.Sort(StringComparer.Ordinal); SnapshotText.Clear();
+        for (int i = 0; i < SnapshotRows.Count; i++) { if (i > 0) SnapshotText.Append('|'); SnapshotText.Append(SnapshotRows[i]); }
+        snapshot = SnapshotText.ToString(); return true;
+    }
+
+    int OwnedCount() { int n = 0; for (int i = 0; i < Groups.Count; i++) n += Groups[i].M.Count; return n; }
+
+
+    bool BudgetAvailable()
+    {
+        return P.Runtime.MaxInstructionCount <= 0 || P.Runtime.CurrentInstructionCount < P.Runtime.MaxInstructionCount * .55;
+    }
+
+    bool Guard(string phase, out string why)
+    {
+        why = ""; if (BudgetAvailable()) return true;
+        return Bad("Budget: " + phase + "; Off. Reduce topology/Rescan.", out why);
+    }
+
+    bool Fail(string why) { Ready = false; if (Building) { Groups.Clear(); Used.Clear(); } else ZeroOwned(); return false; }
+    bool Bad(string text, out string why) { why = text; Fail(text); return false; }
+}

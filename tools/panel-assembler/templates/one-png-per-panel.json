@@ -1,0 +1,490 @@
+{
+  "version": 1,
+  "name": "One PNG per panel",
+  "theme": {
+    "lineScope": "rules"
+  },
+  "scale": 1,
+  "groups": [
+    {
+      "id": "00-getting-started",
+      "name": "00 Getting Started",
+      "filename": "00-getting-started",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "autoarm-guide/00-getting-started.svg"
+        }
+      ]
+    },
+    {
+      "id": "01-place-first-actuator",
+      "name": "01 Place First Actuator",
+      "filename": "01-place-first-actuator",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "autoarm-guide/01-place-first-actuator.svg"
+        }
+      ]
+    },
+    {
+      "id": "02-name-base",
+      "name": "02 Name Base",
+      "filename": "02-name-base",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "autoarm-guide/02-name-base.svg"
+        }
+      ]
+    },
+    {
+      "id": "03-build-arm",
+      "name": "03 Build Arm",
+      "filename": "03-build-arm",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "autoarm-guide/03-build-arm.svg"
+        }
+      ]
+    },
+    {
+      "id": "04-name-head",
+      "name": "04 Name Head",
+      "filename": "04-name-head",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "autoarm-guide/04-name-head.svg"
+        }
+      ]
+    },
+    {
+      "id": "05-place-controller",
+      "name": "05 Place Controller",
+      "filename": "05-place-controller",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "autoarm-guide/05-place-controller.svg"
+        }
+      ]
+    },
+    {
+      "id": "06-place-programmable-block",
+      "name": "06 Place Programmable Block",
+      "filename": "06-place-programmable-block",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "autoarm-guide/06-place-programmable-block.svg"
+        }
+      ]
+    },
+    {
+      "id": "07-load-and-run",
+      "name": "07 Load And Run",
+      "filename": "07-load-and-run",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "autoarm-guide/07-load-and-run.svg"
+        }
+      ]
+    },
+    {
+      "id": "08-control-arm",
+      "name": "08 Control Arm",
+      "filename": "08-control-arm",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "autoarm-guide/08-control-arm.svg"
+        }
+      ]
+    },
+    {
+      "id": "00-toolswap-intro",
+      "name": "00 Toolswap Intro",
+      "filename": "00-toolswap-intro",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "toolswap-guide/00-toolswap-intro.svg"
+        }
+      ]
+    },
+    {
+      "id": "01-tool-stands",
+      "name": "01 Tool Stands",
+      "filename": "01-tool-stands",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "toolswap-guide/01-tool-stands.svg"
+        }
+      ]
+    },
+    {
+      "id": "02-arm-rotor-head",
+      "name": "02 Arm Rotor Head",
+      "filename": "02-arm-rotor-head",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "toolswap-guide/02-arm-rotor-head.svg"
+        }
+      ]
+    },
+    {
+      "id": "03-tool-rotor-bases",
+      "name": "03 Tool Rotor Bases",
+      "filename": "03-tool-rotor-bases",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "toolswap-guide/03-tool-rotor-bases.svg"
+        }
+      ]
+    },
+    {
+      "id": "04-tool-and-mount-names",
+      "name": "04 Tool And Mount Names",
+      "filename": "04-tool-and-mount-names",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "toolswap-guide/04-tool-and-mount-names.svg"
+        }
+      ]
+    },
+    {
+      "id": "05-toolswap-programmable-block",
+      "name": "05 Toolswap Programmable Block",
+      "filename": "05-toolswap-programmable-block",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "toolswap-guide/05-toolswap-programmable-block.svg"
+        }
+      ]
+    },
+    {
+      "id": "06-peer-custom-data",
+      "name": "06 Peer Custom Data",
+      "filename": "06-peer-custom-data",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "toolswap-guide/06-peer-custom-data.svg"
+        }
+      ]
+    },
+    {
+      "id": "07-initialise-and-swap",
+      "name": "07 Initialise And Swap",
+      "filename": "07-initialise-and-swap",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "toolswap-guide/07-initialise-and-swap.svg"
+        }
+      ]
+    },
+    {
+      "id": "00-using-commands",
+      "name": "00 Using Commands",
+      "filename": "00-using-commands",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/00-using-commands.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-01-control",
+      "name": "01 Control",
+      "filename": "autoarm-01-control",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-01-control.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-02-selection-input",
+      "name": "02 Selection Input",
+      "filename": "autoarm-02-selection-input",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-02-selection-input.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-03-facing",
+      "name": "03 Facing",
+      "filename": "autoarm-03-facing",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-03-facing.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-04-rotation",
+      "name": "04 Rotation",
+      "filename": "autoarm-04-rotation",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-04-rotation.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-05-speed-limits",
+      "name": "05 Speed Limits",
+      "filename": "autoarm-05-speed-limits",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-05-speed-limits.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-06-home",
+      "name": "06 Home",
+      "filename": "autoarm-06-home",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-06-home.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-07-poses-paths",
+      "name": "07 Poses Paths",
+      "filename": "autoarm-07-poses-paths",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-07-poses-paths.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-08-reports",
+      "name": "08 Reports",
+      "filename": "autoarm-08-reports",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-08-reports.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-09-pivot-probe",
+      "name": "09 Pivot Probe",
+      "filename": "autoarm-09-pivot-probe",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-09-pivot-probe.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-10-shortcuts-compatibility",
+      "name": "10 Shortcuts Compatibility",
+      "filename": "autoarm-10-shortcuts-compatibility",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-10-shortcuts-compatibility.svg"
+        }
+      ]
+    },
+    {
+      "id": "autoarm-11-tool-commands",
+      "name": "11 Tool Commands",
+      "filename": "autoarm-11-tool-commands",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/autoarm-11-tool-commands.svg"
+        }
+      ]
+    },
+    {
+      "id": "toolswap-01-tool-operations",
+      "name": "01 Tool Operations",
+      "filename": "toolswap-01-tool-operations",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/toolswap-01-tool-operations.svg"
+        }
+      ]
+    },
+    {
+      "id": "toolswap-02-control-reports",
+      "name": "02 Control Reports",
+      "filename": "toolswap-02-control-reports",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/toolswap-02-control-reports.svg"
+        }
+      ]
+    },
+    {
+      "id": "separator",
+      "name": "Separator",
+      "filename": "separator",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "common/separator.svg"
+        }
+      ]
+    }
+  ]
+}

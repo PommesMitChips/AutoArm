@@ -1,0 +1,1255 @@
+{
+  "panels": [
+    {
+      "filename": "00-getting-started.svg",
+      "width": 1240,
+      "height": 584,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 3,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "folder": "autoarm-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 269.0,
+          "x2": 596.0,
+          "y2": 269.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "01-place-first-actuator.svg",
+      "width": 1240,
+      "height": 505,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 3,
+      "artworkGroups": 1,
+      "restoredTerminalLabels": 0,
+      "folder": "autoarm-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 229.63871,
+          "x2": 596.0,
+          "y2": 229.63871,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "02-name-base.svg",
+      "width": 1240,
+      "height": 585,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 11,
+      "artworkGroups": 1,
+      "restoredTerminalLabels": 8,
+      "folder": "autoarm-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 269.70323,
+          "x2": 596.0,
+          "y2": 269.70323,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "03-build-arm.svg",
+      "width": 1240,
+      "height": 2849,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 39,
+      "artworkGroups": 3,
+      "restoredTerminalLabels": 0,
+      "folder": "autoarm-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 1401.6,
+          "x2": 596.0,
+          "y2": 1401.6,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "04-name-head.svg",
+      "width": 1240,
+      "height": 585,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 11,
+      "artworkGroups": 1,
+      "restoredTerminalLabels": 8,
+      "folder": "autoarm-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 269.70323,
+          "x2": 596.0,
+          "y2": 269.70323,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "05-place-controller.svg",
+      "width": 1240,
+      "height": 678,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 3,
+      "artworkGroups": 1,
+      "restoredTerminalLabels": 0,
+      "folder": "autoarm-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 316.0,
+          "x2": 596.0,
+          "y2": 316.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "06-place-programmable-block.svg",
+      "width": 1240,
+      "height": 736,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 5,
+      "artworkGroups": 1,
+      "restoredTerminalLabels": 0,
+      "folder": "autoarm-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 345.15806,
+          "x2": 596.0,
+          "y2": 345.15806,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "07-load-and-run.svg",
+      "width": 1240,
+      "height": 1022,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 20,
+      "artworkGroups": 1,
+      "restoredTerminalLabels": 9,
+      "folder": "autoarm-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 488.0,
+          "x2": 596.0,
+          "y2": 488.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "08-control-arm.svg",
+      "width": 1240,
+      "height": 646,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 9,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "folder": "autoarm-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 300.0,
+          "x2": 596.0,
+          "y2": 300.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "00-toolswap-intro.svg",
+      "width": 1240,
+      "height": 514,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 3,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "title": "Getting Started with ToolSwap",
+      "paragraphs": [
+        "Park your tools on stands, pair the two programmable blocks, then let AutoArm change tools for you. Start with a working AutoArm arm."
+      ],
+      "folder": "toolswap-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 234.0,
+          "x2": 596.0,
+          "y2": 234.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "01-tool-stands.svg",
+      "width": 1240,
+      "height": 1291,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 6,
+      "artworkGroups": 1,
+      "restoredTerminalLabels": 0,
+      "title": "Build the tool stands",
+      "paragraphs": [
+        "Build a stand for each tool on the arm's grid. Put a merge block on each stand and a facing merge block on the tool body.",
+        "Start with every tool securely merged to its stand. Leave room for the arm to approach each mount and withdraw."
+      ],
+      "folder": "toolswap-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 622.5,
+          "x2": 596.0,
+          "y2": 622.5,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "02-arm-rotor-head.svg",
+      "width": 1240,
+      "height": 1134,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 6,
+      "artworkGroups": 1,
+      "restoredTerminalLabels": 0,
+      "title": "Keep the rotor head on the arm",
+      "paragraphs": [
+        "Put one loose, compatible rotor head at the moving end of your arm. It can attach directly to the last hinge's moving head.",
+        "The rotor head stays on the arm when tools are swapped. The rotor base goes on the tool."
+      ],
+      "folder": "toolswap-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 543.99032,
+          "x2": 596.0,
+          "y2": 543.99032,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "03-tool-rotor-bases.svg",
+      "width": 1240,
+      "height": 1400,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 7,
+      "artworkGroups": 1,
+      "restoredTerminalLabels": 0,
+      "title": "Add a rotor base to each tool",
+      "paragraphs": [
+        "Each tool carries a compatible rotor base with its socket facing the arm's rotor head. Remove the base's own rotor head before use.",
+        "Keep the tool, rotor base and tool-side merge blocks rigidly connected as one tool body. Use one eligible rotor base per tool and leave its angle limits unlimited for the first pickup."
+      ],
+      "folder": "toolswap-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 677.00968,
+          "x2": 596.0,
+          "y2": 677.00968,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "04-tool-and-mount-names.svg",
+      "width": 1240,
+      "height": 928,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 12,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "title": "Name the tools and mounts",
+      "paragraphs": [
+        "Name one reference block on each tool using your arm's name and a unique Head number. Here, the drill is Head 1 and the welder is Head 2.",
+        "For easy identification, name the tool rotor bases as Mount 1 and Mount 2. Mount names are optional; ToolSwap discovers these bases from the numbered tool references."
+      ],
+      "folder": "toolswap-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 441.0,
+          "x2": 596.0,
+          "y2": 441.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "05-toolswap-programmable-block.svg",
+      "width": 1240,
+      "height": 882,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 6,
+      "artworkGroups": 2,
+      "restoredTerminalLabels": 0,
+      "title": "Install the second programmable block",
+      "paragraphs": [
+        "Load the ToolSwap script into a second programmable block on the same construct as AutoArm. Keep both scripts running.",
+        "For this example, name the blocks AutoArm PB and ToolSwap PB. Use those exact names in the pairing settings next."
+      ],
+      "folder": "toolswap-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 348.0,
+          "y1": 210.0,
+          "x2": 568.0,
+          "y2": 210.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 418.0,
+          "x2": 596.0,
+          "y2": 418.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "06-peer-custom-data.svg",
+      "width": 1240,
+      "height": 950,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 12,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "title": "Pair the PBs in Custom Data",
+      "paragraphs": [
+        "Open AutoArm PB's Custom Data. In the existing arm section, set ToolSwapPB to the ToolSwap block's name.",
+        "In ToolSwap PB's Custom Data, use the same arm section and set Link.ArmPB to AutoArm PB. Enable tools with Tools.Enabled=true.",
+        "These are snippets: keep your other generated settings and replace Arm 1 with your own arm name."
+      ],
+      "folder": "toolswap-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 452.0,
+          "x2": 596.0,
+          "y2": 452.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "07-initialise-and-swap.svg",
+      "width": 1240,
+      "height": 1064,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 17,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "title": "Initialise and change tools",
+      "paragraphs": [
+        "With all tools merged to their stands, run On on AutoArm PB. AutoArm discovers the tool mounts and stand merge pairs.",
+        "Run Tool 1 or Tool 2 on AutoArm PB to pick up that tool. A swap parks the current tool first and then restores arm control.",
+        "Run Park to return the current tool to its stand. Parking leaves the arm OFF; run On to control the bare arm again."
+      ],
+      "folder": "toolswap-guide",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 509.0,
+          "x2": 596.0,
+          "y2": 509.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "00-using-commands.svg",
+      "width": 1240,
+      "height": 1468,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 14,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm + ToolSwap",
+      "title": "Using commands",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 195.0,
+          "x2": 596.0,
+          "y2": 195.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 313.0,
+          "x2": 596.0,
+          "y2": 313.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 455.0,
+          "x2": 596.0,
+          "y2": 455.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 711.0,
+          "x2": 596.0,
+          "y2": 711.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-01-control.svg",
+      "width": 1240,
+      "height": 1650,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 17,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "Control and setup",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 171.0,
+          "x2": 596.0,
+          "y2": 171.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 259.0,
+          "x2": 596.0,
+          "y2": 259.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 347.0,
+          "x2": 596.0,
+          "y2": 347.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 435.0,
+          "x2": 596.0,
+          "y2": 435.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 523.0,
+          "x2": 596.0,
+          "y2": 523.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 611.0,
+          "x2": 596.0,
+          "y2": 611.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 699.0,
+          "x2": 596.0,
+          "y2": 699.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 802.0,
+          "x2": 596.0,
+          "y2": 802.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-02-selection-input.svg",
+      "width": 1240,
+      "height": 2010,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 22,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "Arm selection and input",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 195.0,
+          "x2": 596.0,
+          "y2": 195.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 366.0,
+          "x2": 596.0,
+          "y2": 366.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 484.0,
+          "x2": 596.0,
+          "y2": 484.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 651.0,
+          "x2": 596.0,
+          "y2": 651.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 765.0,
+          "x2": 596.0,
+          "y2": 765.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 853.0,
+          "x2": 596.0,
+          "y2": 853.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 982.0,
+          "x2": 596.0,
+          "y2": 982.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-03-facing.svg",
+      "width": 1240,
+      "height": 1278,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 12,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "Aim the head",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 219.0,
+          "x2": 596.0,
+          "y2": 219.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 337.0,
+          "x2": 596.0,
+          "y2": 337.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 425.0,
+          "x2": 596.0,
+          "y2": 425.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 513.0,
+          "x2": 596.0,
+          "y2": 513.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 616.0,
+          "x2": 596.0,
+          "y2": 616.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-04-rotation.svg",
+      "width": 1240,
+      "height": 1758,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 18,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "Rotation steps",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 171.0,
+          "x2": 596.0,
+          "y2": 171.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 313.0,
+          "x2": 596.0,
+          "y2": 313.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 401.0,
+          "x2": 596.0,
+          "y2": 401.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 489.0,
+          "x2": 596.0,
+          "y2": 489.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 577.0,
+          "x2": 596.0,
+          "y2": 577.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 665.0,
+          "x2": 596.0,
+          "y2": 665.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 753.0,
+          "x2": 596.0,
+          "y2": 753.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 856.0,
+          "x2": 596.0,
+          "y2": 856.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-05-speed-limits.svg",
+      "width": 1240,
+      "height": 2034,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 22,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "Speed and tolerance",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 195.0,
+          "x2": 596.0,
+          "y2": 195.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 340.0,
+          "x2": 596.0,
+          "y2": 340.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 459.0,
+          "x2": 596.0,
+          "y2": 459.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 573.0,
+          "x2": 596.0,
+          "y2": 573.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 661.0,
+          "x2": 596.0,
+          "y2": 661.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 749.0,
+          "x2": 596.0,
+          "y2": 749.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 867.0,
+          "x2": 596.0,
+          "y2": 867.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 994.0,
+          "x2": 596.0,
+          "y2": 994.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-06-home.svg",
+      "width": 1240,
+      "height": 1444,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 15,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "Save and return Home",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 195.0,
+          "x2": 596.0,
+          "y2": 195.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 309.0,
+          "x2": 596.0,
+          "y2": 309.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 478.0,
+          "x2": 596.0,
+          "y2": 478.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 566.0,
+          "x2": 596.0,
+          "y2": 566.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 699.0,
+          "x2": 596.0,
+          "y2": 699.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-07-poses-paths.svg",
+      "width": 1240,
+      "height": 1614,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 16,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "Explicit poses and paths",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 195.0,
+          "x2": 596.0,
+          "y2": 195.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 313.0,
+          "x2": 596.0,
+          "y2": 313.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 431.0,
+          "x2": 596.0,
+          "y2": 431.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 550.0,
+          "x2": 596.0,
+          "y2": 550.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 784.0,
+          "x2": 596.0,
+          "y2": 784.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-08-reports.svg",
+      "width": 1240,
+      "height": 1574,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 16,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "Reports and diagnostics",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 195.0,
+          "x2": 596.0,
+          "y2": 195.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 309.0,
+          "x2": 596.0,
+          "y2": 309.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 397.0,
+          "x2": 596.0,
+          "y2": 397.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 485.0,
+          "x2": 596.0,
+          "y2": 485.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 573.0,
+          "x2": 596.0,
+          "y2": 573.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 661.0,
+          "x2": 596.0,
+          "y2": 661.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 764.0,
+          "x2": 596.0,
+          "y2": 764.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-09-pivot-probe.svg",
+      "width": 1240,
+      "height": 1680,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 16,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "PivotProbe diagnostics",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 195.0,
+          "x2": 596.0,
+          "y2": 195.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 283.0,
+          "x2": 596.0,
+          "y2": 283.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 425.0,
+          "x2": 596.0,
+          "y2": 425.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 566.0,
+          "x2": 596.0,
+          "y2": 566.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 654.0,
+          "x2": 596.0,
+          "y2": 654.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 817.0,
+          "x2": 596.0,
+          "y2": 817.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-10-shortcuts-compatibility.svg",
+      "width": 1240,
+      "height": 1714,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 28,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "Toolbar shortcuts and compatibility",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 471.0,
+          "x2": 596.0,
+          "y2": 471.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 559.0,
+          "x2": 596.0,
+          "y2": 559.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 647.0,
+          "x2": 596.0,
+          "y2": 647.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 834.0,
+          "x2": 596.0,
+          "y2": 834.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "autoarm-11-tool-commands.svg",
+      "width": 1240,
+      "height": 1878,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 18,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "AutoArm",
+      "title": "Commands forwarded to ToolSwap",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 219.0,
+          "x2": 596.0,
+          "y2": 219.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 440.0,
+          "x2": 596.0,
+          "y2": 440.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 613.0,
+          "x2": 596.0,
+          "y2": 613.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 701.0,
+          "x2": 596.0,
+          "y2": 701.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 789.0,
+          "x2": 596.0,
+          "y2": 789.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 916.0,
+          "x2": 596.0,
+          "y2": 916.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "toolswap-01-tool-operations.svg",
+      "width": 1240,
+      "height": 1656,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 16,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "ToolSwap",
+      "title": "Swap, park and scan",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 219.0,
+          "x2": 596.0,
+          "y2": 219.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 416.0,
+          "x2": 596.0,
+          "y2": 416.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 559.0,
+          "x2": 596.0,
+          "y2": 559.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 647.0,
+          "x2": 596.0,
+          "y2": 647.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 805.0,
+          "x2": 596.0,
+          "y2": 805.0,
+          "stroke-width": 1.0
+        }
+      ]
+    },
+    {
+      "filename": "toolswap-02-control-reports.svg",
+      "width": 1240,
+      "height": 2088,
+      "transparent": true,
+      "editableText": true,
+      "vectorArtwork": true,
+      "textObjects": 21,
+      "artworkGroups": 0,
+      "restoredTerminalLabels": 0,
+      "family": "ToolSwap",
+      "title": "Control, selection and reports",
+      "folder": "commands",
+      "removedSeparatorLines": [
+        {
+          "x1": 24.0,
+          "y1": 195.0,
+          "x2": 596.0,
+          "y2": 195.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 307.0,
+          "x2": 596.0,
+          "y2": 307.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 395.0,
+          "x2": 596.0,
+          "y2": 395.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 514.0,
+          "x2": 596.0,
+          "y2": 514.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 628.0,
+          "x2": 596.0,
+          "y2": 628.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 716.0,
+          "x2": 596.0,
+          "y2": 716.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 858.0,
+          "x2": 596.0,
+          "y2": 858.0,
+          "stroke-width": 1.0
+        },
+        {
+          "x1": 24.0,
+          "y1": 1021.0,
+          "x2": 596.0,
+          "y2": 1021.0,
+          "stroke-width": 1.0
+        }
+      ]
+    }
+  ],
+  "sourceHashes": {
+    "docs/steam-workshop/getting-started.bbcode.txt": "85f61b045cdf5c7e74d2545fbd331015630291ac65694366b255ce8cf2fea928",
+    "docs/assets/workshop/commands/catalog.json": "b55edc846475fa6a15a3e0f0794bdf475b980aabe9c46ed5dad45386810c356d"
+  },
+  "nativeText": true,
+  "rasterImages": 0,
+  "totalRestoredTerminalLabels": 25,
+  "components": [
+    {
+      "folder": "common",
+      "filename": "separator.svg",
+      "width": 1240,
+      "height": 48,
+      "transparent": true,
+      "editableText": false,
+      "vectorArtwork": true,
+      "textObjects": 0,
+      "artworkGroups": 0
+    }
+  ]
+}

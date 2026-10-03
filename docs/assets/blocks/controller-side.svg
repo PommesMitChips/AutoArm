@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">Control seat — side view</title>
+  <desc id="desc">Open ship controller with a console screen, seat, backrest, armrests and mounting pedestal. Transparent, schematic guide artwork.</desc>
+  <metadata>{&quot;view&quot;:&quot;side&quot;,&quot;units&quot;:&quot;schematic&quot;,&quot;projection&quot;:&quot;orthographic&quot;,&quot;canvas&quot;:[320,320],&quot;scale&quot;:2.08403,&quot;anchors&quot;:{&quot;mount&quot;:[160.0,284.0],&quot;top&quot;:[160.0,75.6]}}</metadata>
+  <g id="artwork" stroke-linejoin="round" stroke-linecap="round">
+    <polygon data-part="backrest" points="207.93,208.97 112.07,208.97 112.07,100.61 207.93,100.61" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="backrest" points="123.53,193.34 196.47,193.34 196.47,112.07 123.53,112.07" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="seat" points="198.55,206.89 121.45,206.89 121.45,196.47 198.55,196.47" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="armrest" points="108.94,231.9 90.18,231.9 90.18,188.13 108.94,188.13" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="armrest" points="229.82,231.9 211.06,231.9 211.06,188.13 229.82,188.13" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="seat" points="208.97,231.9 111.03,231.9 111.03,206.89 208.97,206.89" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="armrest" points="112.07,188.13 87.06,188.13 87.06,173.55 112.07,173.55" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="armrest" points="232.94,188.13 207.93,188.13 207.93,173.55 232.94,173.55" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="pedestal" points="199.6,265.24 120.4,265.24 120.4,231.9 199.6,231.9" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="232.94,284 214.18,284 214.18,265.24 232.94,265.24" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="105.82,284 87.06,284 87.06,265.24 105.82,265.24" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="console" points="172.5,263.16 147.5,263.16 147.5,167.29 172.5,167.29" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="screen" points="168.34,158.96 151.66,158.96 151.66,121.45 168.34,121.45" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="screen" points="224.61,123.53 95.39,123.53 95.39,36 224.61,36" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="screen" points="105.82,113.11 214.18,113.11 214.18,46.42 105.82,46.42" fill="#314b59" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="screen" points="112.07,106.86 207.93,106.86 207.93,52.67 112.07,52.67" fill="#bddfe1" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="214.18,284 105.82,284 105.82,265.24 214.18,265.24" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="console" points="219.39,183.97 100.61,183.97 100.61,163.13 219.39,163.13" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+  </g>
+</svg>

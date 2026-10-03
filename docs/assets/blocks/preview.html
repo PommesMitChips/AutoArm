@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AutoArm parts — SVG library</title>
+  <style>
+    :root { color-scheme: light; --ink: #263e4b; --muted: #496370; --line: #d4dfe2; --paper: #f8faf9; --accent: #8c611f; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Segoe UI", Arial, sans-serif; line-height: 1.5; }
+    main { width: min(1100px, calc(100% - 64px)); margin: 48px auto 40px; }
+    h1 { margin: 0 0 10px; font-size: clamp(32px, 5vw, 44px); line-height: 1.12; font-weight: 600; letter-spacing: -.025em; }
+    p { max-width: 68ch; margin: 0 0 24px; color: var(--muted); }
+    a { color: var(--ink); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+    a:hover { color: var(--accent); }
+    a:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 5px; }
+    ::selection { color: var(--paper); background: var(--ink); }
+    .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 32px; padding: 18px 0 22px; }
+    fieldset { display: flex; flex-wrap: wrap; gap: 16px; border: 0; padding: 0; margin: 0; }
+    legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    label { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; cursor: pointer; }
+    input { accent-color: var(--ink); width: 16px; height: 16px; margin: 0; }
+    .downloads { display: flex; flex-wrap: wrap; gap: 22px; font-size: 14px; margin-left: auto; }
+    .part { display: grid; grid-template-columns: minmax(160px, 1fr) 1.5fr 1.5fr; align-items: center; border-top: 1px solid var(--line); padding: 16px 0; column-gap: 24px; }
+    .part h2 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+    .part p { font-size: 14px; margin: 0; max-width: 28ch; }
+    figure { margin: 0; min-width: 0; }
+    .asset-view { display: grid; place-items: center; min-height: 224px; border-radius: 4px; }
+    img { display: block; width: 224px; max-width: 100%; height: auto; }
+    figcaption { text-align: center; font-size: 13px; margin: 8px 0 0; }
+    figcaption span { margin-right: 12px; color: var(--muted); }
+    .preview[data-background="dark"] .asset-view { background: #172c36; }
+    .preview[data-view="side"] .isometric, .preview[data-view="isometric"] .side { display: none; }
+    .preview[data-view="side"] .part, .preview[data-view="isometric"] .part { grid-template-columns: minmax(160px, 1fr) 3fr; }
+    footer { border-top: 1px solid var(--line); padding-top: 20px; font-size: 13px; margin-top: 12px; }
+    footer p { max-width: 75ch; margin-bottom: 10px; }
+    @media (max-width: 640px) {
+      main { width: calc(100% - 32px); margin-top: 30px; }
+      .toolbar { gap: 18px; }
+      .downloads { margin-left: 0; width: 100%; }
+      .part { grid-template-columns: 1fr 1fr; column-gap: 12px; padding: 22px 0; }
+      .part > div { grid-column: 1 / -1; margin-bottom: 12px; }
+      .part p { max-width: none; }
+      .asset-view { min-height: 0; }
+      .preview[data-view="side"] .part, .preview[data-view="isometric"] .part { grid-template-columns: 1fr; }
+      img { width: min(224px, 100%); }
+    }
+    @media print { .toolbar, figcaption a { display: none; } .part { break-inside: avoid; } main { margin: 0 auto; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>AutoArm parts</h1>
+    <p>Side and isometric views for the Getting Started guide. Eight parts, ready to arrange into arm diagrams.</p>
+    <div class="toolbar">
+      <fieldset>
+        <legend>Choose views</legend>
+        <label><input type="radio" name="view" value="both" checked>Both views</label>
+        <label><input type="radio" name="view" value="side">Side</label>
+        <label><input type="radio" name="view" value="isometric">Isometric</label>
+      </fieldset>
+      <label><input type="checkbox" id="dark">Dark background</label>
+      <nav class="downloads" aria-label="Asset downloads">
+        <a href="autoarm-parts-svg.zip" download>Download all SVGs</a>
+        <a href="contact-sheet.svg">Contact sheet</a>
+      </nav>
+    </div>
+    <section class="preview" data-view="both" data-background="paper" aria-label="Parts library">
+      <article class="part">
+        <div><h2>Rotor</h2><p>Round head and rotary joint</p></div>
+        <figure class="side"><div class="asset-view"><img src="rotor-side.svg" alt="Standard rotor in side view" width="320" height="320"></div><figcaption><span>Side</span><a href="rotor-side.svg" download>Download SVG</a></figcaption></figure>
+        <figure class="isometric"><div class="asset-view"><img src="rotor-isometric.svg" alt="Standard rotor in isometric view" width="320" height="320"></div><figcaption><span>Isometric</span><a href="rotor-isometric.svg" download>Download SVG</a></figcaption></figure>
+      </article>
+      <article class="part">
+        <div><h2>Hinge</h2><p>Fork and transverse pivot</p></div>
+        <figure class="side"><div class="asset-view"><img src="hinge-side.svg" alt="Hinge in side view, at its straight pose" width="320" height="320"></div><figcaption><span>Side</span><a href="hinge-side.svg" download>Download SVG</a></figcaption></figure>
+        <figure class="isometric"><div class="asset-view"><img src="hinge-isometric.svg" alt="Hinge in isometric view, at its straight pose" width="320" height="320"></div><figcaption><span>Isometric</span><a href="hinge-isometric.svg" download>Download SVG</a></figcaption></figure>
+      </article>
+      <article class="part">
+        <div><h2>Piston</h2><p>Partly extended</p></div>
+        <figure class="side"><div class="asset-view"><img src="piston-side.svg" alt="Partly extended piston in side view" width="320" height="320"></div><figcaption><span>Side</span><a href="piston-side.svg" download>Download SVG</a></figcaption></figure>
+        <figure class="isometric"><div class="asset-view"><img src="piston-isometric.svg" alt="Partly extended piston in isometric view" width="320" height="320"></div><figcaption><span>Isometric</span><a href="piston-isometric.svg" download>Download SVG</a></figcaption></figure>
+      </article>
+      <article class="part">
+        <div><h2>Drill</h2><p>Three cutting drums</p></div>
+        <figure class="side"><div class="asset-view"><img src="drill-side.svg" alt="Ship drill in side view" width="320" height="320"></div><figcaption><span>Side</span><a href="drill-side.svg" download>Download SVG</a></figcaption></figure>
+        <figure class="isometric"><div class="asset-view"><img src="drill-isometric.svg" alt="Ship drill in isometric view showing three cutting drums" width="320" height="320"></div><figcaption><span>Isometric</span><a href="drill-isometric.svg" download>Download SVG</a></figcaption></figure>
+      </article>
+      <article class="part">
+        <div><h2>Welder</h2><p>Twin welding electrodes</p></div>
+        <figure class="side"><div class="asset-view"><img src="welder-side.svg" alt="Ship welder in side view with two welding tips" width="320" height="320"></div><figcaption><span>Side</span><a href="welder-side.svg" download>Download SVG</a></figcaption></figure>
+        <figure class="isometric"><div class="asset-view"><img src="welder-isometric.svg" alt="Ship welder in isometric view with two welding tips" width="320" height="320"></div><figcaption><span>Isometric</span><a href="welder-isometric.svg" download>Download SVG</a></figcaption></figure>
+      </article>
+      <article class="part">
+        <div><h2>Block</h2><p>Light armor cube</p></div>
+        <figure class="side"><div class="asset-view"><img src="block-side.svg" alt="Light armor block in side view" width="320" height="320"></div><figcaption><span>Side</span><a href="block-side.svg" download>Download SVG</a></figcaption></figure>
+        <figure class="isometric"><div class="asset-view"><img src="block-isometric.svg" alt="Light armor block in isometric view" width="320" height="320"></div><figcaption><span>Isometric</span><a href="block-isometric.svg" download>Download SVG</a></figcaption></figure>
+      </article>
+      <article class="part">
+        <div><h2>Programmable block</h2><p>Display and control panel</p></div>
+        <figure class="side"><div class="asset-view"><img src="programmable-block-side.svg" alt="Programmable block in side view showing its display face" width="320" height="320"></div><figcaption><span>Side</span><a href="programmable-block-side.svg" download>Download SVG</a></figcaption></figure>
+        <figure class="isometric"><div class="asset-view"><img src="programmable-block-isometric.svg" alt="Programmable block in isometric view showing the display and side vents" width="320" height="320"></div><figcaption><span>Isometric</span><a href="programmable-block-isometric.svg" download>Download SVG</a></figcaption></figure>
+      </article>
+      <article class="part">
+        <div><h2>Control seat</h2><p>Open ship controller</p></div>
+        <figure class="side"><div class="asset-view"><img src="controller-side.svg" alt="Open control seat in side view" width="320" height="320"></div><figcaption><span>Side</span><a href="controller-side.svg" download>Download SVG</a></figcaption></figure>
+        <figure class="isometric"><div class="asset-view"><img src="controller-isometric.svg" alt="Open control seat in isometric view" width="320" height="320"></div><figcaption><span>Isometric</span><a href="controller-isometric.svg" download>Download SVG</a></figcaption></figure>
+      </article>
+    </section>
+    <footer>
+      <p>Transparent artwork with matching colors and line weights. Parts are shown upright and individually sized for this sheet. These are simplified guide illustrations of vanilla large-grid parts.</p>
+      <a href="README.md">Asset conventions and reuse notes</a>
+    </footer>
+  </main>
+  <script>
+    const preview = document.querySelector('.preview');
+    document.querySelectorAll('input[name="view"]').forEach(input => {
+      input.addEventListener('change', () => { preview.dataset.view = input.value; });
+    });
+    document.getElementById('dark').addEventListener('change', event => {
+      preview.dataset.background = event.target.checked ? 'dark' : 'paper';
+    });
+  </script>
+</body>
+</html>

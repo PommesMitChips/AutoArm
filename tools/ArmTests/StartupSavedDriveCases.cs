@@ -6,7 +6,7 @@ internal static partial class Scenarios
     // Invoke from the host suite after Workspace has been assigned.
     internal static void StartupSavedDriveCases(Type armType)
     {
-        string helper = File.ReadAllText(Path.Combine(Tests.Workspace, "src/AutoArm.SavedDrives.cs.txt"));
+        string helper = File.ReadAllText(Path.Combine(Tests.Workspace, "src/shared/AutoArm.SavedDrives.cs.txt"));
         var probe = Tests.Script(helper + "\npublic void Recover(string text,string arm){var state=new MyIni();if(state.TryParse(text))SavedDrives.Stop(state,arm,Me,GridTerminalSystem);}");
         var rig = new Rig();
         var current = rig.Block<IMyPistonBase>("current", rig.Root);

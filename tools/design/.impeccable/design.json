@@ -1,0 +1,538 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-02T14:02:01.689636Z",
+  "title": "Design System: AutoArm documentation",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "primary",
+        "displayName": "Deep Steel Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.03748 233.01)",
+          "oklch(26.43% 0.03748 233.01)",
+          "oklch(37.86% 0.03748 233.01)",
+          "oklch(49.29% 0.03748 233.01)",
+          "oklch(60.71% 0.03748 233.01)",
+          "oklch(72.14% 0.03748 233.01)",
+          "oklch(83.57% 0.03748 233.01)",
+          "oklch(95.00% 0.03748 233.01)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Steel",
+        "tonalRamp": [
+          "oklch(15.00% 0.03729 230.10)",
+          "oklch(26.43% 0.03729 230.10)",
+          "oklch(37.86% 0.03729 230.10)",
+          "oklch(49.29% 0.03729 230.10)",
+          "oklch(60.71% 0.03729 230.10)",
+          "oklch(72.14% 0.03729 230.10)",
+          "oklch(83.57% 0.03729 230.10)",
+          "oklch(95.00% 0.03729 230.10)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.00249 165.08)",
+          "oklch(26.43% 0.00249 165.08)",
+          "oklch(37.86% 0.00249 165.08)",
+          "oklch(49.29% 0.00249 165.08)",
+          "oklch(60.71% 0.00249 165.08)",
+          "oklch(72.14% 0.00249 165.08)",
+          "oklch(83.57% 0.00249 165.08)",
+          "oklch(95.00% 0.00249 165.08)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Divider Steel",
+        "tonalRamp": [
+          "oklch(15.00% 0.01257 215.83)",
+          "oklch(26.43% 0.01257 215.83)",
+          "oklch(37.86% 0.01257 215.83)",
+          "oklch(49.29% 0.01257 215.83)",
+          "oklch(60.71% 0.01257 215.83)",
+          "oklch(72.14% 0.01257 215.83)",
+          "oklch(83.57% 0.01257 215.83)",
+          "oklch(95.00% 0.01257 215.83)"
+        ]
+      },
+      "wash": {
+        "role": "neutral",
+        "displayName": "Code Wash",
+        "tonalRamp": [
+          "oklch(15.00% 0.00551 211.04)",
+          "oklch(26.43% 0.00551 211.04)",
+          "oklch(37.86% 0.00551 211.04)",
+          "oklch(49.29% 0.00551 211.04)",
+          "oklch(60.71% 0.00551 211.04)",
+          "oklch(72.14% 0.00551 211.04)",
+          "oklch(83.57% 0.00551 211.04)",
+          "oklch(95.00% 0.00551 211.04)"
+        ]
+      },
+      "accent": {
+        "role": "secondary",
+        "displayName": "Reading Amber",
+        "tonalRamp": [
+          "oklch(15.00% 0.09485 72.91)",
+          "oklch(26.43% 0.09485 72.91)",
+          "oklch(37.86% 0.09485 72.91)",
+          "oklch(49.29% 0.09485 72.91)",
+          "oklch(60.71% 0.09485 72.91)",
+          "oklch(72.14% 0.09485 72.91)",
+          "oklch(83.57% 0.09485 72.91)",
+          "oklch(95.00% 0.09485 72.91)"
+        ]
+      },
+      "focus": {
+        "role": "secondary",
+        "displayName": "Focus Amber",
+        "tonalRamp": [
+          "oklch(15.00% 0.10862 73.74)",
+          "oklch(26.43% 0.10862 73.74)",
+          "oklch(37.86% 0.10862 73.74)",
+          "oklch(49.29% 0.10862 73.74)",
+          "oklch(60.71% 0.10862 73.74)",
+          "oklch(72.14% 0.10862 73.74)",
+          "oklch(83.57% 0.10862 73.74)",
+          "oklch(95.00% 0.10862 73.74)"
+        ]
+      },
+      "light": {
+        "role": "primary",
+        "displayName": "Light Steel",
+        "tonalRamp": [
+          "oklch(15.00% 0.00948 222.06)",
+          "oklch(26.43% 0.00948 222.06)",
+          "oklch(37.86% 0.00948 222.06)",
+          "oklch(49.29% 0.00948 222.06)",
+          "oklch(60.71% 0.00948 222.06)",
+          "oklch(72.14% 0.00948 222.06)",
+          "oklch(83.57% 0.00948 222.06)",
+          "oklch(95.00% 0.00948 222.06)"
+        ]
+      },
+      "steel": {
+        "role": "primary",
+        "displayName": "Steel Blue",
+        "tonalRamp": [
+          "oklch(15.00% 0.02178 227.59)",
+          "oklch(26.43% 0.02178 227.59)",
+          "oklch(37.86% 0.02178 227.59)",
+          "oklch(49.29% 0.02178 227.59)",
+          "oklch(60.71% 0.02178 227.59)",
+          "oklch(72.14% 0.02178 227.59)",
+          "oklch(83.57% 0.02178 227.59)",
+          "oklch(95.00% 0.02178 227.59)"
+        ]
+      },
+      "shade": {
+        "role": "primary",
+        "displayName": "Steel Shade",
+        "tonalRamp": [
+          "oklch(15.00% 0.03319 228.46)",
+          "oklch(26.43% 0.03319 228.46)",
+          "oklch(37.86% 0.03319 228.46)",
+          "oklch(49.29% 0.03319 228.46)",
+          "oklch(60.71% 0.03319 228.46)",
+          "oklch(72.14% 0.03319 228.46)",
+          "oklch(83.57% 0.03319 228.46)",
+          "oklch(95.00% 0.03319 228.46)"
+        ]
+      },
+      "recess": {
+        "role": "primary",
+        "displayName": "Mechanical Recess",
+        "tonalRamp": [
+          "oklch(15.00% 0.03950 232.61)",
+          "oklch(26.43% 0.03950 232.61)",
+          "oklch(37.86% 0.03950 232.61)",
+          "oklch(49.29% 0.03950 232.61)",
+          "oklch(60.71% 0.03950 232.61)",
+          "oklch(72.14% 0.03950 232.61)",
+          "oklch(83.57% 0.03950 232.61)",
+          "oklch(95.00% 0.03950 232.61)"
+        ]
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "Hardware Amber",
+        "tonalRamp": [
+          "oklch(15.00% 0.13368 80.73)",
+          "oklch(26.43% 0.13368 80.73)",
+          "oklch(37.86% 0.13368 80.73)",
+          "oklch(49.29% 0.13368 80.73)",
+          "oklch(60.71% 0.13368 80.73)",
+          "oklch(72.14% 0.13368 80.73)",
+          "oklch(83.57% 0.13368 80.73)",
+          "oklch(95.00% 0.13368 80.73)"
+        ]
+      },
+      "amber-shade": {
+        "role": "secondary",
+        "displayName": "Hardware Amber Shade",
+        "tonalRamp": [
+          "oklch(15.00% 0.12753 73.12)",
+          "oklch(26.43% 0.12753 73.12)",
+          "oklch(37.86% 0.12753 73.12)",
+          "oklch(49.29% 0.12753 73.12)",
+          "oklch(60.71% 0.12753 73.12)",
+          "oklch(72.14% 0.12753 73.12)",
+          "oklch(83.57% 0.12753 73.12)",
+          "oklch(95.00% 0.12753 73.12)"
+        ]
+      },
+      "signal": {
+        "role": "tertiary",
+        "displayName": "Signal Green",
+        "tonalRamp": [
+          "oklch(15.00% 0.08128 173.23)",
+          "oklch(26.43% 0.08128 173.23)",
+          "oklch(37.86% 0.08128 173.23)",
+          "oklch(49.29% 0.08128 173.23)",
+          "oklch(60.71% 0.08128 173.23)",
+          "oklch(72.14% 0.08128 173.23)",
+          "oklch(83.57% 0.08128 173.23)",
+          "oklch(95.00% 0.08128 173.23)"
+        ]
+      },
+      "display-glass": {
+        "role": "tertiary",
+        "displayName": "Display Glass",
+        "tonalRamp": [
+          "oklch(15.00% 0.03586 200.89)",
+          "oklch(26.43% 0.03586 200.89)",
+          "oklch(37.86% 0.03586 200.89)",
+          "oklch(49.29% 0.03586 200.89)",
+          "oklch(60.71% 0.03586 200.89)",
+          "oklch(72.14% 0.03586 200.89)",
+          "oklch(83.57% 0.03586 200.89)",
+          "oklch(95.00% 0.03586 200.89)"
+        ]
+      },
+      "key-border": {
+        "role": "neutral",
+        "displayName": "Key Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.02648 229.26)",
+          "oklch(26.43% 0.02648 229.26)",
+          "oklch(37.86% 0.02648 229.26)",
+          "oklch(49.29% 0.02648 229.26)",
+          "oklch(60.71% 0.02648 229.26)",
+          "oklch(72.14% 0.02648 229.26)",
+          "oklch(83.57% 0.02648 229.26)",
+          "oklch(95.00% 0.02648 229.26)"
+        ]
+      },
+      "library-accent": {
+        "role": "secondary",
+        "displayName": "Library Amber",
+        "tonalRamp": [
+          "oklch(15.00% 0.09734 73.69)",
+          "oklch(26.43% 0.09734 73.69)",
+          "oklch(37.86% 0.09734 73.69)",
+          "oklch(49.29% 0.09734 73.69)",
+          "oklch(60.71% 0.09734 73.69)",
+          "oklch(72.14% 0.09734 73.69)",
+          "oklch(83.57% 0.09734 73.69)",
+          "oklch(95.00% 0.09734 73.69)"
+        ]
+      },
+      "library-dark": {
+        "role": "neutral",
+        "displayName": "Library Dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.03264 230.06)",
+          "oklch(26.43% 0.03264 230.06)",
+          "oklch(37.86% 0.03264 230.06)",
+          "oklch(49.29% 0.03264 230.06)",
+          "oklch(60.71% 0.03264 230.06)",
+          "oklch(72.14% 0.03264 230.06)",
+          "oklch(83.57% 0.03264 230.06)",
+          "oklch(95.00% 0.03264 230.06)"
+        ]
+      },
+      "terminal-panel": {
+        "role": "neutral",
+        "displayName": "Terminal Panel",
+        "tonalRamp": [
+          "oklch(15.00% 0.02277 230.13)",
+          "oklch(26.43% 0.02277 230.13)",
+          "oklch(37.86% 0.02277 230.13)",
+          "oklch(49.29% 0.02277 230.13)",
+          "oklch(60.71% 0.02277 230.13)",
+          "oklch(72.14% 0.02277 230.13)",
+          "oklch(83.57% 0.02277 230.13)",
+          "oklch(95.00% 0.02277 230.13)"
+        ]
+      },
+      "terminal-field": {
+        "role": "neutral",
+        "displayName": "Terminal Field",
+        "tonalRamp": [
+          "oklch(15.00% 0.02521 230.06)",
+          "oklch(26.43% 0.02521 230.06)",
+          "oklch(37.86% 0.02521 230.06)",
+          "oklch(49.29% 0.02521 230.06)",
+          "oklch(60.71% 0.02521 230.06)",
+          "oklch(72.14% 0.02521 230.06)",
+          "oklch(83.57% 0.02521 230.06)",
+          "oklch(95.00% 0.02521 230.06)"
+        ]
+      },
+      "terminal-text": {
+        "role": "neutral",
+        "displayName": "Terminal Text",
+        "tonalRamp": [
+          "oklch(15.00% 0.01932 204.84)",
+          "oklch(26.43% 0.01932 204.84)",
+          "oklch(37.86% 0.01932 204.84)",
+          "oklch(49.29% 0.01932 204.84)",
+          "oklch(60.71% 0.01932 204.84)",
+          "oklch(72.14% 0.01932 204.84)",
+          "oklch(83.57% 0.01932 204.84)",
+          "oklch(95.00% 0.01932 204.84)"
+        ]
+      },
+      "terminal-divider": {
+        "role": "neutral",
+        "displayName": "Terminal Divider",
+        "tonalRamp": [
+          "oklch(15.00% 0.02718 228.26)",
+          "oklch(26.43% 0.02718 228.26)",
+          "oklch(37.86% 0.02718 228.26)",
+          "oklch(49.29% 0.02718 228.26)",
+          "oklch(60.71% 0.02718 228.26)",
+          "oklch(72.14% 0.02718 228.26)",
+          "oklch(83.57% 0.02718 228.26)",
+          "oklch(95.00% 0.02718 228.26)"
+        ]
+      },
+      "terminal-border": {
+        "role": "neutral",
+        "displayName": "Terminal Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.02542 235.50)",
+          "oklch(26.43% 0.02542 235.50)",
+          "oklch(37.86% 0.02542 235.50)",
+          "oklch(49.29% 0.02542 235.50)",
+          "oklch(60.71% 0.02542 235.50)",
+          "oklch(72.14% 0.02542 235.50)",
+          "oklch(83.57% 0.02542 235.50)",
+          "oklch(95.00% 0.02542 235.50)"
+        ]
+      },
+      "terminal-selected": {
+        "role": "neutral",
+        "displayName": "Terminal Selected",
+        "tonalRamp": [
+          "oklch(15.00% 0.03241 221.84)",
+          "oklch(26.43% 0.03241 221.84)",
+          "oklch(37.86% 0.03241 221.84)",
+          "oklch(49.29% 0.03241 221.84)",
+          "oklch(60.71% 0.03241 221.84)",
+          "oklch(72.14% 0.03241 221.84)",
+          "oklch(83.57% 0.03241 221.84)",
+          "oklch(95.00% 0.03241 221.84)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Guide title",
+        "purpose": "Oxanium title, 42px at 800px and 35px at 480px."
+      },
+      "headline": {
+        "displayName": "Step heading",
+        "purpose": "Inter action headings, 22px on narrow screens."
+      },
+      "body": {
+        "displayName": "Reading copy",
+        "purpose": "Inter prose, 15px on narrow screens and 10pt in print."
+      },
+      "intro": {
+        "displayName": "Introduction",
+        "purpose": "Muted lead constrained to 67ch."
+      },
+      "number": {
+        "displayName": "Step numeral",
+        "purpose": "Oxanium sequence rail with tabular numerals."
+      },
+      "brand": {
+        "displayName": "AutoArm wordmark",
+        "purpose": "Quiet Oxanium resource-header anchor."
+      },
+      "label": {
+        "displayName": "Supporting label",
+        "purpose": "Navigation, example labels and movement captions."
+      },
+      "caption": {
+        "displayName": "Figure caption",
+        "purpose": "Muted description below visual evidence."
+      },
+      "code": {
+        "displayName": "Literal command",
+        "purpose": "Exact endpoint markers and commands."
+      },
+      "key": {
+        "displayName": "Movement key",
+        "purpose": "Inter lettering in physical keycaps."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "anchor-scroll",
+        "value": "smooth",
+        "purpose": "Guide in-page navigation only; scroll-behavior:auto for reduced-motion preference and print."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "guide-stack",
+        "value": "800px"
+      },
+      {
+        "name": "guide-narrow",
+        "value": "480px"
+      },
+      {
+        "name": "library-stack",
+        "value": "640px"
+      }
+    ],
+    "illustrations": [
+      {
+        "name": "Step 6 isometric arm",
+        "source": "docs/assets/getting-started/arm-isometric-pb.svg",
+        "sourceHtml": "<figure class=\"visual iso-visual\"><img src=\"assets/getting-started/arm-isometric-pb.svg\" width=\"850\" height=\"940\" alt=\"The same complete arm in a classical bent-elbow pose, with its drill facing downward and a programmable block and control seat next to its base\"><figcaption>The same arm in a classical bent-elbow pose. <a href=\"assets/getting-started/arm-isometric-pb.svg\">Open the full diagram</a>.</figcaption></figure>",
+        "alt": "The same complete arm in a classical bent-elbow pose, with its drill facing downward and a programmable block and control seat next to its base",
+        "caption": "The same arm in a classical bent-elbow pose.",
+        "pose": "Both lower paired hinge heads rotate backward 45° together, carrying the double pistons and joined crossbar; the upper serial chain folds forward and the drill faces forward/down. All thirteen actuators, mounting orientations, sequence and attachments remain."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Print action",
+      "kind": "button",
+      "description": "The guide print affordance, styled as a quiet underlined text action.",
+      "html": "<button class=\"ds-print\" type=\"button\">Print guide</button>",
+      "css": ".ds-print{font-family:Inter,\"Segoe UI\",sans-serif;border:0;padding:0;background:transparent;color:var(--ink,#263e4b);text-decoration:underline;text-underline-offset:4px;font-size:13px;line-height:1.65;cursor:pointer}.ds-print:focus-visible{outline:3px solid var(--focus,#9e6d20);outline-offset:5px;}@media print{.ds-print{display:none}}",
+      "refersTo": "print-action"
+    },
+    {
+      "name": "Resource navigation",
+      "kind": "nav",
+      "description": "Wrapping guide resource links; no active-tab treatment.",
+      "html": "<nav class=\"ds-resources\" aria-label=\"Guide resources\"><a class=\"ds-resource-link\" href=\"#parts-library\">Parts library</a><a class=\"ds-resource-link\" href=\"#guide-download\">Download guide</a></nav>",
+      "css": ".ds-resources{font-family:Inter,\"Segoe UI\",sans-serif;display:flex;flex-wrap:wrap;gap:22px;font-size:13px;line-height:1.65}.ds-resource-link{color:var(--ink,#263e4b);text-underline-offset:4px;text-decoration-thickness:1px}.ds-resource-link:hover{color:var(--accent,#815716)}.ds-resource-link:focus-visible{outline:3px solid var(--focus,#9e6d20);outline-offset:5px;}@media(max-width:480px){.ds-resources{justify-content:flex-end;gap:10px 16px;font-size:12px}}@media print{.ds-resources{display:none}}"
+    },
+    {
+      "name": "Guide jump navigation",
+      "kind": "nav",
+      "description": "The four jump groups of the existing nine-step guide.",
+      "html": "<nav class=\"ds-contents\" aria-label=\"Guide sections\"><a class=\"ds-jump\" href=\"#ds-step-1\">1–4 &nbsp; Build &amp; name</a><a class=\"ds-jump\" href=\"#ds-step-5\">5–7 &nbsp; Connect &amp; run</a><a class=\"ds-jump\" href=\"#ds-step-8\">8 &nbsp; Take control</a><a class=\"ds-jump\" href=\"#ds-step-9\">9 &nbsp; Go further</a></nav>",
+      "css": ".ds-contents{font-family:Inter,\"Segoe UI\",sans-serif;display:flex;flex-wrap:wrap;gap:10px 24px;border-top:1px solid var(--line,#d4dfe2);border-bottom:1px solid var(--line,#d4dfe2);padding:19px 0;margin-bottom:12px;font-size:13px;line-height:1.65}.ds-jump{color:var(--ink,#263e4b);text-decoration:none}.ds-jump:hover{color:var(--accent,#815716)}.ds-jump:focus-visible{outline:3px solid var(--focus,#9e6d20);outline-offset:5px;}@media(max-width:480px){.ds-contents{gap:10px 20px}}@media print{.ds-contents{display:none}}",
+      "refersTo": "guide-navigation"
+    },
+    {
+      "name": "Numbered guide step",
+      "kind": "custom",
+      "description": "The amber number rail and reading copy; this excerpt shows the first action.",
+      "html": "<section class=\"ds-step\" id=\"ds-step-1\" aria-labelledby=\"ds-heading-1\"><span class=\"ds-number\" aria-hidden=\"true\">1</span><div class=\"ds-copy\"><h2 class=\"ds-heading\" id=\"ds-heading-1\">Place your first actuator</h2><p class=\"ds-paragraph\">Place a rotor on your grid. This first actuator will be the base of your arm.</p><p class=\"ds-secondary\">A hinge or piston can also be the first actuator. This guide uses a rotor.</p></div></section>",
+      "css": ".ds-step{font-family:Inter,\"Segoe UI\",sans-serif;display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1.12fr);column-gap:24px;align-items:start;padding:60px 0;border-bottom:1px solid var(--line,#d4dfe2);color:var(--ink,#263e4b);font-size:16px;line-height:1.65}.ds-number{font-family:Oxanium,sans-serif;color:var(--accent,#815716);font-size:25px;font-weight:500;line-height:1.3;padding-top:3px;font-variant-numeric:tabular-nums}.ds-heading{font-size:25px;font-weight:600;line-height:1.3;letter-spacing:-.02em;margin:0 0 17px;text-wrap:balance}.ds-paragraph{max-width:65ch;margin:0 0 16px}.ds-secondary{max-width:65ch;color:var(--muted,#496370);font-size:14px;margin:0}@media(max-width:800px){.ds-step{grid-template-columns:36px minmax(0,1fr);column-gap:16px;padding:44px 0}}@media(max-width:480px){.ds-step{grid-template-columns:28px minmax(0,1fr);column-gap:12px;padding:36px 0}.ds-heading{font-size:22px}.ds-number{font-size:23px}.ds-paragraph{font-size:15px}.ds-secondary{font-size:13px}}@media print{.ds-step{padding:24px 0;break-inside:avoid;font-size:10pt}.ds-heading{font-size:15pt}.ds-paragraph,.ds-secondary{font-size:10pt}}",
+      "refersTo": "step-number"
+    },
+    {
+      "name": "Endpoint name example",
+      "kind": "custom",
+      "description": "An exact naming example rendered as literal text rather than an editable field.",
+      "html": "<div class=\"ds-name-example\"><span class=\"ds-example-label\">Example</span><code class=\"ds-name\">Arm 1 - Base</code></div>",
+      "css": ".ds-name-example{font-family:Inter,\"Segoe UI\",sans-serif;margin:24px 0;color:var(--ink,#263e4b);line-height:1.65}.ds-example-label{display:block;color:var(--muted,#496370);font-size:13px;margin-bottom:7px}.ds-name{display:block;width:fit-content;font-family:\"Cascadia Mono\",Consolas,monospace;font-size:17px;background:var(--wash,#edf2f3);padding:10px 14px;border-radius:3px;overflow-wrap:anywhere}@media(max-width:480px){.ds-name{font-size:15px}}",
+      "refersTo": "endpoint-example"
+    },
+    {
+      "name": "Movement key",
+      "kind": "custom",
+      "description": "A physical keycap and direction caption, with the bottom edge as its depth cue.",
+      "html": "<div class=\"ds-control\"><kbd class=\"ds-key\">W</kbd><span class=\"ds-direction\">Forward</span></div>",
+      "css": ".ds-control{font-family:Inter,\"Segoe UI\",sans-serif;display:grid;justify-items:center;gap:10px;text-align:center;line-height:1.65}.ds-key{display:grid;place-items:center;min-width:65px;height:54px;padding:0 13px;border:1px solid #9db1bb;border-bottom-width:3px;border-radius:5px;background:#e5edf0;font-family:Inter,sans-serif;font-size:18px;font-weight:600;color:var(--ink,#263e4b)}.ds-direction{font-size:13px;color:var(--muted,#496370)}",
+      "refersTo": "movement-key"
+    },
+    {
+      "name": "Library view selector",
+      "kind": "input",
+      "description": "Native radio inputs select both, side or isometric asset views in the preview.",
+      "html": "<fieldset class=\"ds-views\"><legend class=\"ds-legend\">Choose views</legend><label class=\"ds-view-label\"><input class=\"ds-view-input\" type=\"radio\" name=\"ds-library-view\" value=\"both\" checked>Both views</label><label class=\"ds-view-label\"><input class=\"ds-view-input\" type=\"radio\" name=\"ds-library-view\" value=\"side\">Side</label><label class=\"ds-view-label\"><input class=\"ds-view-input\" type=\"radio\" name=\"ds-library-view\" value=\"isometric\">Isometric</label></fieldset>",
+      "css": ".ds-views{display:flex;flex-wrap:wrap;gap:16px;border:0;padding:0;margin:0;color:var(--ink,#263e4b);font-family:\"Segoe UI\",Arial,sans-serif;line-height:1.5}.ds-legend{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.ds-view-label{display:inline-flex;align-items:center;gap:7px;font-size:14px;cursor:pointer}.ds-view-input{accent-color:var(--ink,#263e4b);width:16px;height:16px;margin:0}.ds-view-input:focus-visible{outline:3px solid #8c611f;outline-offset:5px}"
+    },
+    {
+      "name": "Reusable armor block illustration",
+      "kind": "custom",
+      "description": "An excerpt of the approved armor block: its three actual isometric base faces, without small hardware details.",
+      "html": "<figure class=\"ds-block-figure\"><svg class=\"ds-block-svg\" xmlns=\"http://www.w3.org/2000/svg\" width=\"320\" height=\"320\" viewBox=\"0 0 320 320\" role=\"img\" aria-labelledby=\"ds-block-title ds-block-desc\"><title id=\"ds-block-title\">Armor block — isometric base faces</title><desc id=\"ds-block-desc\">The three base faces extracted from the approved schematic light armor block.</desc><g stroke-linejoin=\"round\" stroke-linecap=\"round\"><polygon data-part=\"base\" points=\"160,36 267.39,98 160,160 52.61,98\" fill=\"#e5edf0\" stroke=\"#263e4b\" stroke-width=\"2.2\"/><polygon data-part=\"base\" points=\"267.39,222 160,284 160,160 267.39,98\" fill=\"#849da9\" stroke=\"#263e4b\" stroke-width=\"2.2\"/><polygon data-part=\"base\" points=\"160,284 52.61,222 52.61,98 160,160\" fill=\"#b4c5cd\" stroke=\"#263e4b\" stroke-width=\"2.2\"/></g></svg><figcaption class=\"ds-block-caption\">Isometric</figcaption></figure>",
+      "css": ".ds-block-figure{margin:0;min-width:0;color:var(--ink,#263e4b);font-family:\"Segoe UI\",Arial,sans-serif;line-height:1.5}.ds-block-svg{display:block;width:224px;max-width:100%;height:auto;margin:0 auto}.ds-block-caption{text-align:center;font-size:13px;margin:8px 0 0;color:var(--muted,#496370)}"
+    },
+    {
+      "name": "Unsupported examples",
+      "kind": "custom",
+      "description": "The actual support-limit aside, shown as a compact text excerpt; the guide pairs its three articles with schematic SVGs and #ad5447 crosses/axis marks.",
+      "html": "<aside class=\"ds-unsupported-examples\" aria-labelledby=\"ds-unsupported-heading\"> <h3 id=\"ds-unsupported-heading\">What not to do</h3> <p>Parallel hinges and pistons, as shown on the left, are supported when their stages line up.</p> <article class=\"ds-unsupported-example\"><h4>Parallel stages that don’t line up</h4><p>Parallel placement is supported, but the hinges and pistons must line up. Offset stages like these are not supported.</p></article> <article class=\"ds-unsupported-example\"><h4>Hydraulic structures</h4><p>A piston used as a brace to drive a hinged linkage is not supported.</p></article> </aside>",
+      "css": ".ds-unsupported-examples{font-family:Inter,\"Segoe UI\",sans-serif;color:var(--ink,#263e4b);line-height:1.65}.ds-unsupported-examples h3{font-size:22px;line-height:1.35;margin:0 0 12px;font-weight:600}.ds-unsupported-examples>p{margin:0 0 28px;color:var(--muted,#496370);font-size:14px}.ds-unsupported-example{padding:26px 0;border-top:1px solid var(--line,#d4dfe2)}.ds-unsupported-example h4{color:#91483d;font-size:17px;line-height:1.4;margin:0 0 10px;font-weight:600}.ds-unsupported-example p{margin:0;font-size:14px;max-width:55ch}@media(max-width:800px){.ds-unsupported-examples{max-width:520px}}@media print{.ds-unsupported-example{break-inside:avoid;padding:10px 0}.ds-unsupported-example p{font-size:10pt}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Clean technical diagrams with recognizable game shapes",
+    "overview": "This is the built documentation design for `docs/getting-started.html` and the approved reusable SVG library in `docs/assets/blocks`. It records the user's chosen technical illustration style; it does not establish a visual identity for the in-game script. `PRODUCT.md` supplies the durable commitment to recognizable Space Engineers shapes and the title “Getting Started with AutoArm.”\n\nPaper, quiet dividers and readable prose give the mechanical illustrations room. Steel-blue faces, dark recesses and limited amber details identify parts without simulated textures. The guide pairs each numbered action with geometry or a terminal mockup. The supplied nine-step order is local to this guide, not a template for every documentation page.\n\nThis is an extracted implementation record, not a seed or a new concept. Source authority is the guide's inline CSS, the library's `manifest.json`, SVG geometry and reuse notes, and `.impeccable/guide-direction.md`. Existing review evidence is `.impeccable/review/desktop.png` (1265 × 6296) and `mobile.png` (375 × 9044); the completed review returned **ship** with no material fixes. No additional rendering or detector pass was performed for this record.",
+    "keyCharacteristics": [
+      "Numbered actions with directly adjacent visual evidence.",
+      "Steel-blue schematic geometry with restrained amber emphasis.",
+      "Oxanium display and terminal lettering; Inter for reading.",
+      "Flat page surfaces, clear mechanical silhouettes and labeled joints.",
+      "Responsive stacking, readable scrolling diagrams and a print layout."
+    ],
+    "rules": [
+      {
+        "name": "The Evidence Accent Rule",
+        "body": "Amber marks step numbers, actionable states and selected mechanical details; it does not fill decorative page panels.",
+        "section": "colors"
+      },
+      {
+        "name": "The Literal Marker Rule",
+        "body": "Render names and commands as code; retain the exact `<MyArmName> - Base`, `<MyArmName> - Head` and `On` spelling in this guide.",
+        "section": "typography"
+      },
+      {
+        "name": "The Readable Geometry Rule",
+        "body": "Reflow text and stack figures; preserve the front diagram's readable labels through local scrolling and its full-diagram link.",
+        "section": "layout"
+      },
+      {
+        "name": "The Schematic Shape Rule",
+        "body": "Preserve recognizable game geometry and projection consistency without presenting the symbols as CAD drawings or exact game bounding volumes.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** preserve the approved steel-blue and amber SVG world and recognizable game-part silhouettes.",
+      "**Do** pair each guide action with its relevant geometry, terminal target or movement mapping.",
+      "**Do** keep the supplied nine-step order and matching front/isometric arm sequence on this guide.",
+      "**Do** retain exact endpoint naming syntax, readable labels, keyboard focus and full-diagram links.",
+      "**Do** use the manifest's scale and anchors when composing reusable parts.",
+      "**Do** maintain stacked mobile layouts, local front-diagram scrolling and the existing print treatment."
+    ],
+    "donts": [
+      "**Don't** replace the user's chosen diagram style with a new visual identity during a documentation extension.",
+      "**Don't** treat individually fitted library assets as a common physical scale.",
+      "**Don't** add operation effects or photographic textures to the approved schematic part symbols.",
+      "**Don't** shrink the long front diagram until its labels become unreadable on a phone.",
+      "**Don't** describe schematic geometry or terminal mockups as a validated in-game construction or live UI.",
+      "**Don't** apply this documentation design record to the script's in-game behavior or unrelated repository work."
+    ]
+  }
+}

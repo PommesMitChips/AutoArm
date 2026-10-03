@@ -1,0 +1,380 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-03T17:19:54.074Z",
+  "title": "Design System: AutoArm panel assembler",
+  "extensions": {
+    "colorMeta": {
+      "page": {
+        "role": "neutral",
+        "displayName": "Deep Steel",
+        "tonalRamp": [
+          "oklch(15% 0.0326 230.06)",
+          "oklch(25% 0.0326 230.06)",
+          "oklch(35% 0.0326 230.06)",
+          "oklch(45% 0.0326 230.06)",
+          "oklch(55% 0.0326 230.06)",
+          "oklch(65% 0.0326 230.06)",
+          "oklch(80% 0.0326 230.06)",
+          "oklch(95% 0.0326 230.06)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Panel Steel",
+        "tonalRamp": [
+          "oklch(15% 0.0228 230.13)",
+          "oklch(25% 0.0228 230.13)",
+          "oklch(35% 0.0228 230.13)",
+          "oklch(45% 0.0228 230.13)",
+          "oklch(55% 0.0228 230.13)",
+          "oklch(65% 0.0228 230.13)",
+          "oklch(80% 0.0228 230.13)",
+          "oklch(95% 0.0228 230.13)"
+        ]
+      },
+      "field": {
+        "role": "neutral",
+        "displayName": "Field Steel",
+        "tonalRamp": [
+          "oklch(15% 0.0252 230.06)",
+          "oklch(25% 0.0252 230.06)",
+          "oklch(35% 0.0252 230.06)",
+          "oklch(45% 0.0252 230.06)",
+          "oklch(55% 0.0252 230.06)",
+          "oklch(65% 0.0252 230.06)",
+          "oklch(80% 0.0252 230.06)",
+          "oklch(95% 0.0252 230.06)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Divider Steel",
+        "tonalRamp": [
+          "oklch(15% 0.0272 228.26)",
+          "oklch(25% 0.0272 228.26)",
+          "oklch(35% 0.0272 228.26)",
+          "oklch(45% 0.0272 228.26)",
+          "oklch(55% 0.0272 228.26)",
+          "oklch(65% 0.0272 228.26)",
+          "oklch(80% 0.0272 228.26)",
+          "oklch(95% 0.0272 228.26)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Light Steel Ink",
+        "tonalRamp": [
+          "oklch(15% 0.0095 222.06)",
+          "oklch(25% 0.0095 222.06)",
+          "oklch(35% 0.0095 222.06)",
+          "oklch(45% 0.0095 222.06)",
+          "oklch(55% 0.0095 222.06)",
+          "oklch(65% 0.0095 222.06)",
+          "oklch(80% 0.0095 222.06)",
+          "oklch(95% 0.0095 222.06)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Steel",
+        "tonalRamp": [
+          "oklch(15% 0.0218 227.59)",
+          "oklch(25% 0.0218 227.59)",
+          "oklch(35% 0.0218 227.59)",
+          "oklch(45% 0.0218 227.59)",
+          "oklch(55% 0.0218 227.59)",
+          "oklch(65% 0.0218 227.59)",
+          "oklch(80% 0.0218 227.59)",
+          "oklch(95% 0.0218 227.59)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Action Amber",
+        "tonalRamp": [
+          "oklch(15% 0.1337 80.73)",
+          "oklch(25% 0.1337 80.73)",
+          "oklch(35% 0.1337 80.73)",
+          "oklch(45% 0.1337 80.73)",
+          "oklch(55% 0.1337 80.73)",
+          "oklch(65% 0.1337 80.73)",
+          "oklch(80% 0.1337 80.73)",
+          "oklch(95% 0.1337 80.73)"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Amber Hover",
+        "tonalRamp": [
+          "oklch(15% 0.1182 82.70)",
+          "oklch(25% 0.1182 82.70)",
+          "oklch(35% 0.1182 82.70)",
+          "oklch(45% 0.1182 82.70)",
+          "oklch(55% 0.1182 82.70)",
+          "oklch(65% 0.1182 82.70)",
+          "oklch(80% 0.1182 82.70)",
+          "oklch(95% 0.1182 82.70)"
+        ]
+      },
+      "surface-active": {
+        "role": "neutral",
+        "displayName": "Active Recess",
+        "tonalRamp": [
+          "oklch(15% 0.0395 232.61)",
+          "oklch(25% 0.0395 232.61)",
+          "oklch(35% 0.0395 232.61)",
+          "oklch(45% 0.0395 232.61)",
+          "oklch(55% 0.0395 232.61)",
+          "oklch(65% 0.0395 232.61)",
+          "oklch(80% 0.0395 232.61)",
+          "oklch(95% 0.0395 232.61)"
+        ]
+      },
+      "tile-line": {
+        "role": "neutral",
+        "displayName": "Tile Divider",
+        "tonalRamp": [
+          "oklch(15% 0.0340 232.56)",
+          "oklch(25% 0.0340 232.56)",
+          "oklch(35% 0.0340 232.56)",
+          "oklch(45% 0.0340 232.56)",
+          "oklch(55% 0.0340 232.56)",
+          "oklch(65% 0.0340 232.56)",
+          "oklch(80% 0.0340 232.56)",
+          "oklch(95% 0.0340 232.56)"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Artwork Canvas",
+        "tonalRamp": [
+          "oklch(15% 0.0349 254.06)",
+          "oklch(25% 0.0349 254.06)",
+          "oklch(35% 0.0349 254.06)",
+          "oklch(45% 0.0349 254.06)",
+          "oklch(55% 0.0349 254.06)",
+          "oklch(65% 0.0349 254.06)",
+          "oklch(80% 0.0349 254.06)",
+          "oklch(95% 0.0349 254.06)"
+        ]
+      },
+      "error": {
+        "role": "secondary",
+        "displayName": "Error Peach",
+        "tonalRamp": [
+          "oklch(15% 0.0833 28.96)",
+          "oklch(25% 0.0833 28.96)",
+          "oklch(35% 0.0833 28.96)",
+          "oklch(45% 0.0833 28.96)",
+          "oklch(55% 0.0833 28.96)",
+          "oklch(65% 0.0833 28.96)",
+          "oklch(80% 0.0833 28.96)",
+          "oklch(95% 0.0833 28.96)"
+        ]
+      },
+      "selection-hover": {
+        "role": "secondary",
+        "displayName": "Hover Orange",
+        "tonalRamp": [
+          "oklch(15% 0.1527 63.86)",
+          "oklch(25% 0.1527 63.86)",
+          "oklch(35% 0.1527 63.86)",
+          "oklch(45% 0.1527 63.86)",
+          "oklch(55% 0.1527 63.86)",
+          "oklch(65% 0.1527 63.86)",
+          "oklch(80% 0.1527 63.86)",
+          "oklch(95% 0.1527 63.86)"
+        ]
+      },
+      "selection-staged": {
+        "role": "secondary",
+        "displayName": "Staged Yellow",
+        "tonalRamp": [
+          "oklch(15% 0.1540 97.93)",
+          "oklch(25% 0.1540 97.93)",
+          "oklch(35% 0.1540 97.93)",
+          "oklch(45% 0.1540 97.93)",
+          "oklch(55% 0.1540 97.93)",
+          "oklch(65% 0.1540 97.93)",
+          "oklch(80% 0.1540 97.93)",
+          "oklch(95% 0.1540 97.93)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Tool heading",
+        "purpose": "Oxanium utility identity; reduces to 22px at the narrowest breakpoint."
+      },
+      "title": {
+        "displayName": "Pane and section heading",
+        "purpose": "Bold Inter headings for compact workspace regions."
+      },
+      "body": {
+        "displayName": "Controls",
+        "purpose": "Normal controls and preview empty-state text."
+      },
+      "caption": {
+        "displayName": "Supporting text",
+        "purpose": "Checkboxes, named colour rows and status messages."
+      },
+      "label": {
+        "displayName": "Compact label",
+        "purpose": "Field labels, filenames, dimensions and compact actions."
+      },
+      "code": {
+        "displayName": "Hex value",
+        "purpose": "Editable color hex values."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating-feedback",
+        "value": "0 6px 20px #0005",
+        "purpose": "Selection controls and notifications only."
+      },
+      {
+        "name": "drag-ghost",
+        "value": "0 5px 16px #0004",
+        "purpose": "Temporary pointer drag label."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-state",
+        "value": "background-color .1s ease-out, border-color .1s ease-out",
+        "purpose": "Button hover changes only under prefers-reduced-motion: no-preference."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-workspace",
+        "value": "1600px",
+        "purpose": "Wider fixed panes at and above this width."
+      },
+      {
+        "name": "compact-workspace",
+        "value": "1100px",
+        "purpose": "Narrower fixed panes and padding at and below this width."
+      },
+      {
+        "name": "pane-navigation",
+        "value": "900px",
+        "purpose": "One selected pane with mobile navigation at and below this width."
+      },
+      {
+        "name": "narrow-controls",
+        "value": "540px",
+        "purpose": "Denser title, toolbar and preview at and below this width."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Amber export action; the same treatment marks explicit selection confirmation.",
+      "html": "<button class=\"ds-primary\" type=\"button\">Export PNG</button>",
+      "css": ".ds-primary{font:600 13px/1.45 Inter,\"Segoe UI\",sans-serif;padding:7px 9px;cursor:pointer;border:1px solid var(--accent,#e9b34c);border-radius:3px;background:var(--accent,#e9b34c);color:var(--page,#172c36)}.ds-primary:hover{background:var(--accent-hover,#f1c46c);border-color:var(--muted,#b4c5cd)}.ds-primary:disabled{opacity:.45;cursor:default}.ds-primary:focus-visible{outline:2px solid var(--accent,#e9b34c);outline-offset:2px}@media(prefers-reduced-motion:no-preference){.ds-primary{transition:background-color .1s ease-out,border-color .1s ease-out}}"
+    },
+    {
+      "name": "Secondary action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Flat field-colored template and utility actions.",
+      "html": "<button class=\"ds-secondary\" type=\"button\">Load</button>",
+      "css": ".ds-secondary{font:400 13px/1.45 Inter,\"Segoe UI\",sans-serif;padding:7px 9px;cursor:pointer;border:1px solid var(--line,#50636c);border-radius:3px;background:var(--field,#293941);color:var(--ink,#e5edf0)}.ds-secondary:hover{background:var(--surface-active,#314b59);border-color:var(--muted,#b4c5cd)}.ds-secondary:disabled{opacity:.45;cursor:default}.ds-secondary:focus-visible{outline:2px solid var(--accent,#e9b34c);outline-offset:2px}@media(prefers-reduced-motion:no-preference){.ds-secondary{transition:background-color .1s ease-out,border-color .1s ease-out}}"
+    },
+    {
+      "name": "Filename search",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Native search field with an explicit full-opacity muted placeholder.",
+      "html": "<input class=\"ds-search\" type=\"search\" placeholder=\"Search filenames\" aria-label=\"Search panels\">",
+      "css": ".ds-search{font:400 13px/1.45 Inter,\"Segoe UI\",sans-serif;border:1px solid var(--line,#50636c);border-radius:3px;background:var(--field,#293941);color:var(--ink,#e5edf0);padding:6px 8px;min-width:0;width:100%;accent-color:var(--accent,#e9b34c);caret-color:var(--accent,#e9b34c)}.ds-search::placeholder{color:var(--muted,#b4c5cd);opacity:1}.ds-search:hover{border-color:var(--line,#50636c)}.ds-search:invalid{border-color:var(--error,#ffb9ae)}.ds-search:focus-visible{outline:2px solid var(--accent,#e9b34c);outline-offset:2px}"
+    },
+    {
+      "name": "Mobile pane navigation",
+      "kind": "nav",
+      "refersTo": "pane-tab",
+      "description": "Three equal-width pane controls; the chosen pane has amber borders and an active recess fill.",
+      "html": "<nav class=\"ds-pane-tabs\" aria-label=\"Utility panes\"><button class=\"ds-pane-tab\" type=\"button\" aria-selected=\"false\">Panel library</button><button class=\"ds-pane-tab\" type=\"button\" aria-selected=\"false\">Assembly groups</button><button class=\"ds-pane-tab\" type=\"button\" aria-selected=\"true\">Preview</button></nav>",
+      "css": ".ds-pane-tabs{display:flex;border-bottom:1px solid var(--line,#50636c);padding:7px 12px;gap:6px;background:var(--page,#172c36)}.ds-pane-tab{font:400 13px/1.45 Inter,\"Segoe UI\",sans-serif;padding:7px 9px;cursor:pointer;border:1px solid var(--line,#50636c);border-radius:3px;background:var(--field,#293941);color:var(--ink,#e5edf0)}.ds-pane-tab:hover{background:var(--surface-active,#314b59);border-color:var(--muted,#b4c5cd)}.ds-pane-tab:disabled{opacity:.45;cursor:default}.ds-pane-tab:focus-visible{outline:2px solid var(--accent,#e9b34c);outline-offset:2px}@media(prefers-reduced-motion:no-preference){.ds-pane-tab{transition:background-color .1s ease-out,border-color .1s ease-out}}.ds-pane-tab{flex:1}.ds-pane-tab[aria-selected=true]{border-color:var(--accent,#e9b34c);background:var(--surface-active,#314b59)}"
+    },
+    {
+      "name": "Assembly group destination",
+      "kind": "chip",
+      "refersTo": "group-tab",
+      "description": "Wrapping group destination with its panel count; also accepts dragged panels in the app.",
+      "html": "<div class=\"ds-group-tabs\"><button class=\"ds-group-tab ds-group-active\" type=\"button\" aria-label=\"Assembly group: AutoArm guide\">AutoArm guide<small class=\"ds-group-count\">9</small></button><button class=\"ds-group-tab\" type=\"button\" aria-label=\"Assembly group: ToolSwap guide\">ToolSwap guide<small class=\"ds-group-count\">9</small></button></div>",
+      "css": ".ds-group-tabs{display:flex;flex-wrap:wrap;gap:5px;max-height:108px;overflow:auto;background:var(--surface,#202e35)}.ds-group-tab{font:400 11px/1.45 Inter,\"Segoe UI\",sans-serif;padding:7px 9px;cursor:pointer;border:1px solid var(--line,#50636c);border-radius:3px;background:var(--field,#293941);color:var(--ink,#e5edf0)}.ds-group-tab:hover{background:var(--surface-active,#314b59);border-color:var(--muted,#b4c5cd)}.ds-group-tab:disabled{opacity:.45;cursor:default}.ds-group-tab:focus-visible{outline:2px solid var(--accent,#e9b34c);outline-offset:2px}@media(prefers-reduced-motion:no-preference){.ds-group-tab{transition:background-color .1s ease-out,border-color .1s ease-out}}.ds-group-tab{text-align:left;flex:1 1 120px;min-width:0;overflow-wrap:anywhere}.ds-group-active{border-color:var(--accent,#e9b34c);background:var(--surface-active,#314b59)}.ds-group-count{margin-left:4px;color:var(--muted,#b4c5cd)}"
+    },
+    {
+      "name": "Library thumbnail tile",
+      "kind": "card",
+      "refersTo": "library-tile",
+      "description": "Filename above contained artwork, a flat square border and grab cursor. The standalone snippet translates the approved facing panel to inline SVG; the shipping tile uses its provenance-tagged PNG thumbnail.",
+      "html": "<div class=\"ds-library-grid\"><button class=\"ds-library-tile\" type=\"button\" title=\"autoarm-03-facing.svg\" aria-label=\"Add autoarm-03-facing.svg\"><strong class=\"ds-library-filename\">autoarm-03-facing.svg</strong><span class=\"ds-library-thumbnail\"><svg class=\"ds-panel-image\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 620 639\" aria-hidden=\"true\"><text font-family=\"Oxanium,sans-serif\" font-size=\"32\" font-weight=\"500\" fill=\"#f8faf9\"><tspan x=\"24\" y=\"60\">AutoArm Commands</tspan></text><text font-family=\"Inter,sans-serif\" font-size=\"23\" font-weight=\"600\" fill=\"#e9b34c\"><tspan x=\"24\" y=\"103\">Aim the head</tspan></text><text font-family=\"Inter,sans-serif\" font-size=\"15.5\" font-weight=\"400\" fill=\"#e5edf0\"><tspan x=\"24\" y=\"140.5\">These actions change orientation while holding position. They do not</tspan><tspan x=\"24\" y=\"164.5\">translate the arm. Run On first; HRZ/VRT direction actions need an active</tspan><tspan x=\"24\" y=\"188.5\">cockpit.</tspan></text><line x1=\"24\" y1=\"219\" x2=\"596\" y2=\"219\" stroke=\"#496370\" stroke-width=\"1\"/><text x=\"24\" y=\"251\" font-family=\"Consolas,monospace\" font-size=\"17\" fill=\"#f8faf9\">Face &lt;Forward|Back|Left|Right|Up|Down&gt;</text><text font-family=\"Inter,sans-serif\" font-size=\"15.5\" fill=\"#e5edf0\"><tspan x=\"24\" y=\"278.5\">Aim toward a direction in the selected view.</tspan></text><text x=\"24\" y=\"309.5\" font-family=\"Consolas,monospace\" font-size=\"13.5\" fill=\"#b4c5cd\">Example: Face Up</text><line x1=\"24\" y1=\"337\" x2=\"596\" y2=\"337\" stroke=\"#496370\" stroke-width=\"1\"/><text x=\"24\" y=\"369\" font-family=\"Consolas,monospace\" font-size=\"17\" fill=\"#f8faf9\">Forward / Back</text><text font-family=\"Inter,sans-serif\" font-size=\"15.5\" fill=\"#e5edf0\"><tspan x=\"24\" y=\"396.5\">Standalone forms of Face Forward and Face Back.</tspan></text><line x1=\"24\" y1=\"425\" x2=\"596\" y2=\"425\" stroke=\"#496370\" stroke-width=\"1\"/><text x=\"24\" y=\"457\" font-family=\"Consolas,monospace\" font-size=\"17\" fill=\"#f8faf9\">Left / Right</text><text font-family=\"Inter,sans-serif\" font-size=\"15.5\" fill=\"#e5edf0\"><tspan x=\"24\" y=\"484.5\">Standalone forms of Face Left and Face Right.</tspan></text><line x1=\"24\" y1=\"513\" x2=\"596\" y2=\"513\" stroke=\"#496370\" stroke-width=\"1\"/><text x=\"24\" y=\"545\" font-family=\"Consolas,monospace\" font-size=\"17\" fill=\"#f8faf9\">Up / Down</text><text font-family=\"Inter,sans-serif\" font-size=\"15.5\" fill=\"#e5edf0\"><tspan x=\"24\" y=\"572.5\">Standalone forms of Face Up and Face Down.</tspan></text><line x1=\"24\" y1=\"616\" x2=\"596\" y2=\"616\" stroke=\"#496370\" stroke-width=\"1\"/></svg></span></button></div>",
+      "css": ".ds-library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;align-content:start;background:var(--page,#172c36)}.ds-library-tile{display:flex;flex-direction:column;gap:6px;padding:7px 3px;border:1px solid var(--tile-line,#354b57);border-radius:0;min-width:0;align-items:stretch;background:none;color:var(--ink,#e5edf0);font:400 13px/1.45 Inter,\"Segoe UI\",sans-serif;cursor:grab}.ds-library-tile:hover{background:var(--surface-active,#314b59);border-color:var(--muted,#b4c5cd)}.ds-library-tile:active{cursor:grabbing}.ds-library-filename{display:block;width:100%;font-size:11px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.ds-library-thumbnail{display:flex;justify-content:center;align-items:center;width:100%;height:108px;background:var(--canvas,#1b2838);overflow:hidden}.ds-panel-image{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain}.ds-library-tile:focus-visible{outline:2px solid var(--accent,#e9b34c);outline-offset:2px}@media(prefers-reduced-motion:no-preference){.ds-library-tile{transition:background-color .1s ease-out,border-color .1s ease-out}}@media(max-width:900px){.ds-library-filename{font-size:12px}}"
+    },
+    {
+      "name": "Draft selection controls",
+      "kind": "custom",
+      "refersTo": "selection-controls",
+      "description": "Bottom-right editing overlay with modifier instructions and explicit confirmation; shown in normal flow for the component specimen.",
+      "html": "<aside class=\"ds-selection\" aria-label=\"Colour selection controls\"><strong class=\"ds-selection-name\">Guide headings</strong><div class=\"ds-shortcuts\"><span>Click</span><span>Add</span><span>Ctrl + click</span><span>Remove</span><span>Shift + click</span><span>Add same colour</span><span>Ctrl + Shift + click</span><span>Remove same colour</span></div><p class=\"ds-selection-summary\">3 selected · confirm to apply</p><div class=\"ds-selection-actions\"><button class=\"ds-confirm\" type=\"button\">Confirm selection</button><button class=\"ds-cancel\" type=\"button\">Cancel</button></div></aside>",
+      "css": ".ds-selection{max-width:calc(100vw - 32px);width:285px;padding:13px 14px;background:var(--field,#293941);color:var(--ink,#e5edf0);box-shadow:0 6px 20px #0005;border-radius:4px;font:400 11px/1.45 Inter,\"Segoe UI\",sans-serif}.ds-selection-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;margin-bottom:9px}.ds-shortcuts{display:grid;grid-template-columns:auto 1fr;gap:5px 12px}.ds-shortcuts span:nth-child(odd){color:var(--muted,#b4c5cd)}.ds-selection-summary{margin:9px 0 0;color:var(--muted,#b4c5cd)}.ds-selection-actions{display:flex;gap:7px;margin-top:10px}.ds-confirm{font:600 11px/1.45 Inter,\"Segoe UI\",sans-serif;padding:6px 8px;cursor:pointer;border:1px solid var(--accent,#e9b34c);border-radius:3px;background:var(--accent,#e9b34c);color:var(--page,#172c36)}.ds-confirm:hover{background:var(--accent-hover,#f1c46c);border-color:var(--muted,#b4c5cd)}.ds-confirm:disabled{opacity:.45;cursor:default}.ds-confirm:focus-visible{outline:2px solid var(--accent,#e9b34c);outline-offset:2px}@media(prefers-reduced-motion:no-preference){.ds-confirm{transition:background-color .1s ease-out,border-color .1s ease-out}}.ds-cancel{font:400 11px/1.45 Inter,\"Segoe UI\",sans-serif;padding:6px 8px;cursor:pointer;border:1px solid var(--line,#50636c);border-radius:3px;background:var(--field,#293941);color:var(--ink,#e5edf0)}.ds-cancel:hover{background:var(--surface-active,#314b59);border-color:var(--muted,#b4c5cd)}.ds-cancel:disabled{opacity:.45;cursor:default}.ds-cancel:focus-visible{outline:2px solid var(--accent,#e9b34c);outline-offset:2px}@media(prefers-reduced-motion:no-preference){.ds-cancel{transition:background-color .1s ease-out,border-color .1s ease-out}}"
+    },
+    {
+      "name": "Export notification",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "Polite status notification, download link and authored SVG dismiss control; shown in normal flow for the specimen.",
+      "html": "<div class=\"ds-toast\" role=\"status\" aria-live=\"polite\"><div class=\"ds-toast-content\"><span>Exported autoarm-guide.png.</span></div><button class=\"ds-dismiss\" type=\"button\" aria-label=\"Dismiss notification\"><svg class=\"ds-dismiss-icon\" viewBox=\"0 0 16 16\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m4 4 8 8M12 4 4 12\"/></svg></button></div>",
+      "css": ".ds-toast{display:flex;gap:12px;align-items:flex-start;max-width:min(460px,calc(100vw - 32px));padding:13px 14px;background:var(--field,#293941);box-shadow:0 6px 20px #0005;border-radius:4px;color:var(--ink,#e5edf0);font:400 12px/1.45 Inter,\"Segoe UI\",sans-serif}.ds-toast-content{display:flex;flex-direction:column;gap:5px;min-width:0;overflow-wrap:anywhere}.ds-download{color:var(--accent,#e9b34c);text-underline-offset:3px}.ds-download:hover{color:var(--accent,#e9b34c)}.ds-download:focus-visible{outline:2px solid var(--accent,#e9b34c);outline-offset:2px}.ds-dismiss{font:400 13px/1.45 Inter,\"Segoe UI\",sans-serif;padding:7px 9px;cursor:pointer;border:1px solid var(--line,#50636c);border-radius:3px;background:var(--field,#293941);color:var(--ink,#e5edf0)}.ds-dismiss:hover{background:var(--surface-active,#314b59);border-color:var(--muted,#b4c5cd)}.ds-dismiss:disabled{opacity:.45;cursor:default}.ds-dismiss:focus-visible{outline:2px solid var(--accent,#e9b34c);outline-offset:2px}@media(prefers-reduced-motion:no-preference){.ds-dismiss{transition:background-color .1s ease-out,border-color .1s ease-out}}.ds-dismiss{background:none;border:0;padding:0 2px;font-size:18px;line-height:1}.ds-dismiss:hover{background:var(--surface-active,#314b59)}.ds-toast-error{color:var(--error,#ffb9ae)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Flat steel-and-amber Operate workspace",
+    "overview": "The assembler extends the approved AutoArm documentation world into a compact offline utility. Oxanium identifies the tool; Inter carries filenames, labels and controls. Flat steel surfaces keep the native panel artwork prominent, while amber marks actions, focus and placement feedback.\n\nThe workspace fits the window and gives the library, assembly settings and preview their own scrolling regions. A compact toolbar keeps template and export actions available. Selection editing uses a visible draft and explicit confirmation; the preview exposes output dimensions beside its heading.",
+    "keyCharacteristics": [
+      "Flat steel surfaces with amber actions and visible keyboard focus.",
+      "Filename-first thumbnail tiles and compact labelled controls.",
+      "Window-fit panes with independent scrolling and mobile pane navigation.",
+      "Transparent native SVG assemblies with zoom, pan and expanding Posters.",
+      "Orange hover targets, yellow staged membership and explicit confirmation."
+    ],
+    "rules": [
+      {
+        "name": "The Draft Color Rule",
+        "body": "Orange previews a target and yellow records staged membership; only Confirm selection commits the draft. These overlays never become export artwork.",
+        "section": "colors"
+      },
+      {
+        "name": "The Local Scroll Rule",
+        "body": "Keep the workspace fitted to the window; scroll library contents, settings and artwork inside their own panes instead of lengthening the document.",
+        "section": "layout"
+      },
+      {
+        "name": "The Overlay Depth Rule",
+        "body": "Reserve elevation for floating feedback and drag affordances; repeated workspace tiles stay flat.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do preserve the approved steel-and-amber world and Oxanium/Inter role split.",
+      "Do keep filenames above thumbnails, labelled controls and visible keyboard focus.",
+      "Do keep the window-fit workspace and independently scrolling panes.",
+      "Do preserve the orange/yellow draft states, explicit confirmation and original-paint restoration.",
+      "Do compose exports from native SVGs and preserve thumbnail provenance."
+    ],
+    "donts": [
+      "Don't turn preview backgrounds, zoom or selection overlays into exported artwork.",
+      "Don't apply floating-overlay shadows to the flat library tiles and pane surfaces.",
+      "Don't replace compact utility typography with the guide's larger reading scale.",
+      "Don't treat Poster width as a fixed canvas boundary or a two-column limit.",
+      "Don't apply this local utility record to unrelated screens or the in-game script."
+    ]
+  }
+}

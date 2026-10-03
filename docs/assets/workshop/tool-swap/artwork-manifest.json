@@ -1,0 +1,808 @@
+{
+  "artwork": [
+    {
+      "filename": "tool-stands.png",
+      "scene": [
+        {
+          "part": "block",
+          "pos": [
+            -352,
+            -48,
+            0
+          ],
+          "role": "foundation"
+        },
+        {
+          "part": "block",
+          "pos": [
+            -288,
+            -48,
+            0
+          ],
+          "role": "foundation"
+        },
+        {
+          "part": "block",
+          "pos": [
+            -224,
+            -48,
+            0
+          ],
+          "role": "foundation"
+        },
+        {
+          "part": "block",
+          "pos": [
+            -160,
+            -48,
+            0
+          ],
+          "role": "foundation"
+        },
+        {
+          "part": "block",
+          "pos": [
+            -96,
+            -48,
+            0
+          ],
+          "role": "foundation"
+        },
+        {
+          "part": "block",
+          "pos": [
+            -32,
+            -48,
+            0
+          ],
+          "role": "foundation"
+        },
+        {
+          "part": "block",
+          "pos": [
+            32,
+            -48,
+            0
+          ],
+          "role": "foundation"
+        },
+        {
+          "part": "block",
+          "pos": [
+            96,
+            -48,
+            0
+          ],
+          "role": "foundation"
+        },
+        {
+          "part": "block",
+          "pos": [
+            160,
+            -48,
+            0
+          ],
+          "role": "foundation"
+        },
+        {
+          "part": "merge",
+          "pos": [
+            -352.0,
+            48,
+            32.0
+          ],
+          "rotation": [
+            [
+              3.749399456654644e-33,
+              -6.123233995736766e-17,
+              -1.0
+            ],
+            [
+              1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              6.123233995736766e-17,
+              -1.0,
+              6.123233995736766e-17
+            ]
+          ],
+          "role": "stand-merge"
+        },
+        {
+          "part": "merge",
+          "pos": [
+            -352.0,
+            112,
+            -32.0
+          ],
+          "rotation": [
+            [
+              3.749399456654644e-33,
+              6.123233995736766e-17,
+              -1.0
+            ],
+            [
+              -1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              6.123233995736766e-17,
+              1.0,
+              6.123233995736766e-17
+            ]
+          ],
+          "role": "tool-merge"
+        },
+        {
+          "part": "rotor-base",
+          "pos": [
+            -352.0,
+            176,
+            32.0
+          ],
+          "rotation": [
+            [
+              3.749399456654644e-33,
+              6.123233995736766e-17,
+              -1.0
+            ],
+            [
+              -1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              6.123233995736766e-17,
+              1.0,
+              6.123233995736766e-17
+            ]
+          ],
+          "role": "tool-mount"
+        },
+        {
+          "part": "rack-drill",
+          "pos": [
+            -352.0,
+            176,
+            32.0
+          ],
+          "rotation": [
+            [
+              3.749399456654644e-33,
+              -6.123233995736766e-17,
+              -1.0
+            ],
+            [
+              1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              6.123233995736766e-17,
+              -1.0,
+              6.123233995736766e-17
+            ]
+          ],
+          "role": "tool-reference"
+        },
+        {
+          "part": "merge",
+          "pos": [
+            160.0,
+            48,
+            32.0
+          ],
+          "rotation": [
+            [
+              3.749399456654644e-33,
+              -6.123233995736766e-17,
+              -1.0
+            ],
+            [
+              1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              6.123233995736766e-17,
+              -1.0,
+              6.123233995736766e-17
+            ]
+          ],
+          "role": "stand-merge"
+        },
+        {
+          "part": "merge",
+          "pos": [
+            160.0,
+            112,
+            -32.0
+          ],
+          "rotation": [
+            [
+              3.749399456654644e-33,
+              6.123233995736766e-17,
+              -1.0
+            ],
+            [
+              -1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              6.123233995736766e-17,
+              1.0,
+              6.123233995736766e-17
+            ]
+          ],
+          "role": "tool-merge"
+        },
+        {
+          "part": "rotor-base",
+          "pos": [
+            160.0,
+            176,
+            32.0
+          ],
+          "rotation": [
+            [
+              3.749399456654644e-33,
+              6.123233995736766e-17,
+              -1.0
+            ],
+            [
+              -1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              6.123233995736766e-17,
+              1.0,
+              6.123233995736766e-17
+            ]
+          ],
+          "role": "tool-mount"
+        },
+        {
+          "part": "rack-welder",
+          "pos": [
+            160.0,
+            176,
+            32.0
+          ],
+          "rotation": [
+            [
+              3.749399456654644e-33,
+              -6.123233995736766e-17,
+              -1.0
+            ],
+            [
+              1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              6.123233995736766e-17,
+              -1.0,
+              6.123233995736766e-17
+            ]
+          ],
+          "role": "tool-reference"
+        }
+      ],
+      "labels": [],
+      "camera": {
+        "scale": 0.4944206008583691,
+        "origin": [
+          368.2131581360426,
+          264.89270386266094
+        ],
+        "view": "isometric"
+      }
+    },
+    {
+      "filename": "arm-rotor-head.png",
+      "scene": [
+        {
+          "part": "block",
+          "pos": [
+            216,
+            144,
+            0
+          ],
+          "role": "arm-body"
+        },
+        {
+          "part": "hinge",
+          "pos": [
+            184,
+            176,
+            0
+          ],
+          "rotation": [
+            [
+              6.123233995736766e-17,
+              -1.0,
+              0
+            ],
+            [
+              1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "role": "last-arm-joint"
+        },
+        {
+          "part": "rotor-head",
+          "pos": [
+            96,
+            176,
+            0
+          ],
+          "rotation": [
+            [
+              6.123233995736766e-17,
+              1.0,
+              0
+            ],
+            [
+              -1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "role": "arm-tip"
+        }
+      ],
+      "labels": [
+        "Loose rotor head",
+        "Last arm joint"
+      ],
+      "camera": {
+        "scale": 1.359466793436105,
+        "origin": [
+          126.91742429040562,
+          289.4378671737444
+        ],
+        "view": "isometric"
+      }
+    },
+    {
+      "filename": "tool-mount.png",
+      "scene": [
+        {
+          "part": "merge",
+          "pos": [
+            -64,
+            48,
+            0
+          ],
+          "rotation": [
+            [
+              6.123233995736766e-17,
+              -1.0,
+              0
+            ],
+            [
+              1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "role": "stand-merge"
+        },
+        {
+          "part": "merge",
+          "pos": [
+            -128,
+            112,
+            0
+          ],
+          "rotation": [
+            [
+              6.123233995736766e-17,
+              1.0,
+              0
+            ],
+            [
+              -1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "role": "tool-merge"
+        },
+        {
+          "part": "rotor-base",
+          "pos": [
+            -64,
+            176,
+            0
+          ],
+          "rotation": [
+            [
+              6.123233995736766e-17,
+              1.0,
+              0
+            ],
+            [
+              -1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "role": "tool-mount"
+        },
+        {
+          "part": "rack-drill",
+          "pos": [
+            -64,
+            176,
+            0
+          ],
+          "rotation": [
+            [
+              6.123233995736766e-17,
+              -1.0,
+              0
+            ],
+            [
+              1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "role": "tool-reference"
+        },
+        {
+          "part": "block",
+          "pos": [
+            216,
+            144,
+            0
+          ],
+          "role": "arm-body"
+        },
+        {
+          "part": "hinge",
+          "pos": [
+            184,
+            176,
+            0
+          ],
+          "rotation": [
+            [
+              6.123233995736766e-17,
+              -1.0,
+              0
+            ],
+            [
+              1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "role": "last-arm-joint"
+        },
+        {
+          "part": "rotor-head",
+          "pos": [
+            96,
+            176,
+            0
+          ],
+          "rotation": [
+            [
+              6.123233995736766e-17,
+              1.0,
+              0
+            ],
+            [
+              -1.0,
+              6.123233995736766e-17,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ],
+          "role": "arm-tip"
+        },
+        {
+          "part": "block",
+          "pos": [
+            -96,
+            -48,
+            0
+          ],
+          "role": "foundation"
+        }
+      ],
+      "labels": [
+        "Rotor base / mount",
+        "Arm rotor head",
+        "Connected merges"
+      ],
+      "camera": {
+        "scale": 0.7834229810261454,
+        "origin": [
+          311.70794838956897,
+          316.25662612507176
+        ],
+        "view": "isometric"
+      }
+    },
+    {
+      "filename": "programmable-block.png",
+      "source": "existing programmable-block model"
+    }
+  ],
+  "surfaceOrdering": "scene-wide BSP splitting of visible planar faces and original edge segments",
+  "mechanicalChecks": {
+    "pickupAxis": "+X on tool rotor base; arm spindle approaches along -X",
+    "toolWorkingDirection": "-X for every drill cutter and welder electrode",
+    "rackOccupancy": [
+      [
+        "working head",
+        "tool housing",
+        "rotor base"
+      ],
+      [
+        "air",
+        "tool merge",
+        "air"
+      ],
+      [
+        "air",
+        "stand merge",
+        "air"
+      ]
+    ],
+    "rackCellBoundsXY": {
+      "working head": [
+        [
+          -192,
+          -128
+        ],
+        [
+          144,
+          208
+        ]
+      ],
+      "tool housing": [
+        [
+          -128,
+          -64
+        ],
+        [
+          144,
+          208
+        ]
+      ],
+      "rotor base": [
+        [
+          -64,
+          0
+        ],
+        [
+          144,
+          208
+        ]
+      ],
+      "tool merge": [
+        [
+          -128,
+          -64
+        ],
+        [
+          80,
+          144
+        ]
+      ],
+      "stand merge": [
+        [
+          -128,
+          -64
+        ],
+        [
+          16,
+          80
+        ]
+      ]
+    },
+    "toolGeometryBoundsXYZ": {
+      "drill": [
+        [
+          -192.0,
+          -64.0
+        ],
+        [
+          144.0,
+          208.35
+        ],
+        [
+          -32.0,
+          32.35
+        ]
+      ],
+      "welder": [
+        [
+          -192.0,
+          -64.0
+        ],
+        [
+          144.0,
+          208.35
+        ],
+        [
+          -32.0,
+          43.0
+        ]
+      ]
+    },
+    "mergeMatingFace": [
+      -96.0,
+      80.0,
+      0
+    ],
+    "standMergeFaceNormal": [
+      6.123233995736766e-17,
+      1.0,
+      0
+    ],
+    "toolMergeFaceNormal": [
+      6.123233995736766e-17,
+      -1.0,
+      0
+    ],
+    "mergeCellCentres": {
+      "tool": [
+        -96,
+        112,
+        0
+      ],
+      "stand": [
+        -96,
+        48,
+        0
+      ]
+    },
+    "toolSocket": [
+      -10.0,
+      176.0,
+      0
+    ],
+    "armSpindleTipBeforePickup": [
+      61.0,
+      176.0,
+      0
+    ],
+    "rigidToolBackingFace": [
+      -64.0,
+      176.0,
+      0
+    ],
+    "armHeadAttachment": [
+      96.0,
+      176.0,
+      0
+    ],
+    "verified": [
+      "merge faces coincide vertically at the middle column",
+      "merge face normals oppose along Y",
+      "no structural blocks in either air column",
+      "rotor socket and loose spindle are coaxial",
+      "tool and base backing faces coincide",
+      "all cutting/welding bits share the tool axis and face left/away",
+      "loose rotor head is attached to last arm joint"
+    ]
+  },
+  "standDirectionChecks": {
+    "appliesTo": "tool-stands.png only",
+    "rackYawDegrees": -90,
+    "verified": [
+      "working ends point screen-right and up",
+      "working ends recede away from the viewer",
+      "sockets oppose the bits and face the foreground/left",
+      "two merge blocks remain vertically below each housing",
+      "no structural blocks in either air column"
+    ],
+    "racks": {
+      "drill": {
+        "workingAxisWorld": [
+          -6.123233995736766e-17,
+          6.123233995736766e-17,
+          -1.0
+        ],
+        "workingAxisScreen": [
+          0.8660254037844385,
+          -0.5000000000000001
+        ],
+        "workingDepth": -1.0,
+        "socketAxisWorld": [
+          6.123233995736766e-17,
+          6.123233995736766e-17,
+          1.0
+        ],
+        "socketAxisScreen": [
+          -0.8660254037844385,
+          0.49999999999999994
+        ],
+        "socketDepth": 1.0000000000000002,
+        "mergeMatingCentre": [
+          -96.0,
+          80.0,
+          3.552713678800501e-15
+        ]
+      },
+      "welder": {
+        "workingAxisWorld": [
+          -6.123233995736766e-17,
+          6.123233995736766e-17,
+          -1.0
+        ],
+        "workingAxisScreen": [
+          0.8660254037844385,
+          -0.5000000000000001
+        ],
+        "workingDepth": -1.0,
+        "socketAxisWorld": [
+          6.123233995736766e-17,
+          6.123233995736766e-17,
+          1.0
+        ],
+        "socketAxisScreen": [
+          -0.8660254037844385,
+          0.49999999999999994
+        ],
+        "socketDepth": 1.0000000000000002,
+        "mergeMatingCentre": [
+          -96.0,
+          80.0,
+          3.552713678800501e-15
+        ]
+      }
+    }
+  }
+}

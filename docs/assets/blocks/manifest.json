@@ -1,0 +1,409 @@
+{
+  "version": 1,
+  "palette": {
+    "ink": "#263e4b",
+    "light": "#e5edf0",
+    "steel": "#b4c5cd",
+    "shade": "#849da9",
+    "dark": "#496370",
+    "recess": "#314b59",
+    "amber": "#e9b34c",
+    "amberShade": "#c98c30",
+    "signal": "#58a28d",
+    "display": "#bddfe1"
+  },
+  "assets": [
+    {
+      "file": "rotor-side.svg",
+      "name": "Rotor",
+      "view": "side",
+      "units": "schematic",
+      "projection": "orthographic",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 2.75556,
+      "anchors": {
+        "mount": [
+          160.0,
+          284.0
+        ],
+        "head": [
+          160.0,
+          38.76
+        ],
+        "axis": [
+          160.0,
+          126.93
+        ]
+      }
+    },
+    {
+      "file": "rotor-isometric.svg",
+      "name": "Rotor",
+      "view": "isometric",
+      "units": "schematic",
+      "projection": "true-isometric-30deg",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 1.85591,
+      "anchors": {
+        "mount": [
+          160.0,
+          237.6
+        ],
+        "head": [
+          160.0,
+          72.43
+        ],
+        "axis": [
+          160.0,
+          131.82
+        ]
+      }
+    },
+    {
+      "file": "hinge-side.svg",
+      "name": "Hinge",
+      "view": "side",
+      "units": "schematic",
+      "projection": "orthographic",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 2.81818,
+      "anchors": {
+        "mount": [
+          160.0,
+          284.0
+        ],
+        "head": [
+          160.0,
+          36.0
+        ],
+        "axis": [
+          160.0,
+          154.36
+        ]
+      }
+    },
+    {
+      "file": "hinge-isometric.svg",
+      "name": "Hinge",
+      "view": "isometric",
+      "units": "schematic",
+      "projection": "true-isometric-30deg",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 1.73427,
+      "anchors": {
+        "mount": [
+          160.0,
+          234.57
+        ],
+        "head": [
+          160.0,
+          81.96
+        ],
+        "axis": [
+          160.0,
+          154.8
+        ]
+      }
+    },
+    {
+      "file": "piston-side.svg",
+      "name": "Piston",
+      "view": "side",
+      "units": "schematic",
+      "projection": "orthographic",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 1.19231,
+      "anchors": {
+        "mount": [
+          160.0,
+          284.0
+        ],
+        "head": [
+          160.0,
+          36.0
+        ],
+        "axis": [
+          160.0,
+          133.77
+        ]
+      }
+    },
+    {
+      "file": "piston-isometric.svg",
+      "name": "Piston",
+      "view": "isometric",
+      "units": "schematic",
+      "projection": "true-isometric-30deg",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 0.93585,
+      "anchors": {
+        "mount": [
+          162.63,
+          257.33
+        ],
+        "head": [
+          162.63,
+          62.67
+        ],
+        "axis": [
+          162.63,
+          139.41
+        ]
+      }
+    },
+    {
+      "file": "drill-side.svg",
+      "name": "Drill",
+      "view": "side",
+      "units": "schematic",
+      "projection": "orthographic",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 1.58974,
+      "anchors": {
+        "mount": [
+          160.0,
+          284.0
+        ],
+        "tip": [
+          160.0,
+          34.41
+        ],
+        "axis": [
+          160.0,
+          109.13
+        ]
+      }
+    },
+    {
+      "file": "drill-isometric.svg",
+      "name": "Drill",
+      "view": "isometric",
+      "units": "schematic",
+      "projection": "true-isometric-30deg",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 1.17463,
+      "anchors": {
+        "mount": [
+          160.0,
+          250.52
+        ],
+        "tip": [
+          160.0,
+          66.11
+        ],
+        "axis": [
+          160.0,
+          121.31
+        ]
+      }
+    },
+    {
+      "file": "welder-side.svg",
+      "name": "Welder",
+      "view": "side",
+      "units": "schematic",
+      "projection": "orthographic",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 1.71034,
+      "anchors": {
+        "mount": [
+          160.0,
+          284.0
+        ],
+        "tip": [
+          160.0,
+          36.0
+        ],
+        "axis": [
+          160.0,
+          147.17
+        ]
+      }
+    },
+    {
+      "file": "welder-isometric.svg",
+      "name": "Welder",
+      "view": "isometric",
+      "units": "schematic",
+      "projection": "true-isometric-30deg",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 1.40458,
+      "anchors": {
+        "mount": [
+          165.56,
+          243.97
+        ],
+        "tip": [
+          165.56,
+          40.31
+        ],
+        "axis": [
+          165.56,
+          131.6
+        ]
+      }
+    },
+    {
+      "file": "block-side.svg",
+      "name": "Block",
+      "view": "side",
+      "units": "schematic",
+      "projection": "orthographic",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 3.875,
+      "anchors": {
+        "mount": [
+          160.0,
+          284.0
+        ],
+        "top": [
+          160.0,
+          36.0
+        ]
+      }
+    },
+    {
+      "file": "block-isometric.svg",
+      "name": "Block",
+      "view": "isometric",
+      "units": "schematic",
+      "projection": "true-isometric-30deg",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 1.9375,
+      "anchors": {
+        "mount": [
+          160.0,
+          222.0
+        ],
+        "top": [
+          160.0,
+          98.0
+        ]
+      }
+    },
+    {
+      "file": "programmable-block-side.svg",
+      "name": "Programmable block",
+      "view": "side",
+      "units": "schematic",
+      "projection": "orthographic",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 3.875,
+      "anchors": {
+        "mount": [
+          160.0,
+          284.0
+        ],
+        "top": [
+          160.0,
+          36.0
+        ]
+      }
+    },
+    {
+      "file": "programmable-block-isometric.svg",
+      "name": "Programmable block",
+      "view": "isometric",
+      "units": "schematic",
+      "projection": "true-isometric-30deg",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 2.04959,
+      "anchors": {
+        "mount": [
+          161.95,
+          225.59
+        ],
+        "top": [
+          161.95,
+          94.41
+        ]
+      }
+    },
+    {
+      "file": "controller-side.svg",
+      "name": "Control seat",
+      "view": "side",
+      "units": "schematic",
+      "projection": "orthographic",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 2.08403,
+      "anchors": {
+        "mount": [
+          160.0,
+          284.0
+        ],
+        "top": [
+          160.0,
+          75.6
+        ]
+      }
+    },
+    {
+      "file": "controller-isometric.svg",
+      "name": "Control seat",
+      "view": "isometric",
+      "units": "schematic",
+      "projection": "true-isometric-30deg",
+      "canvas": [
+        320,
+        320
+      ],
+      "scale": 1.62357,
+      "anchors": {
+        "mount": [
+          163.16,
+          228.8
+        ],
+        "top": [
+          163.16,
+          66.44
+        ]
+      }
+    }
+  ]
+}

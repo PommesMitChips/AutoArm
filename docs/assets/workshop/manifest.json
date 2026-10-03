@@ -1,0 +1,198 @@
+{
+  "version": 1,
+  "backgroundsChecked": [
+    "#1b2838",
+    "#171a21"
+  ],
+  "images": [
+    {
+      "filename": "01-rotor-on-grid.png",
+      "source": "assets/getting-started/rotor-on-grid.svg",
+      "title": "Rotor mounted on a grid",
+      "placeholder": "IMAGE_01_ROTOR_ON_GRID",
+      "width": 1240,
+      "height": 852,
+      "transparent": true,
+      "sourceSha256": "9cb1a902dd1c78aa1b58339cd71d35e28eee966bf9ee5602cc5eff1dfc86822a",
+      "alpha": {
+        "minimum": 0,
+        "maximum": 255,
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": 69561
+    },
+    {
+      "filename": "02-name-base.png",
+      "source": "assets/getting-started/name-base-terminal.svg",
+      "title": "Terminal: Arm 1 - Base",
+      "placeholder": "IMAGE_02_NAME_BASE",
+      "width": 1240,
+      "height": 1032,
+      "transparent": true,
+      "sourceSha256": "22e6cb077da0a2fe13bee694ed2adae159b5a158a3b2ea950ea120d858a91e16",
+      "alpha": {
+        "minimum": 0,
+        "maximum": 255,
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": 25025
+    },
+    {
+      "filename": "03-arm-front.png",
+      "source": "assets/getting-started/arm-front.svg",
+      "title": "Complete arm, front view",
+      "placeholder": "IMAGE_03_ARM_FRONT",
+      "width": 1040,
+      "height": 2699,
+      "transparent": true,
+      "sourceSha256": "93700aa8be0f67700d00ee2f6703d0a9dc87c361774763da7188ee258f1c4c46",
+      "alpha": {
+        "minimum": 0,
+        "maximum": 255,
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": 115647
+    },
+    {
+      "filename": "03a-misaligned-stages.png",
+      "source": "assets/getting-started/unsupported-misaligned.svg",
+      "title": "Unsupported misaligned parallel stages",
+      "placeholder": "IMAGE_03A_MISALIGNED_STAGES",
+      "width": 880,
+      "height": 1020,
+      "transparent": true,
+      "sourceSha256": "4522283e60aa4aef0bcefbb773943b52df01148f2037f886042d7bb25065491c",
+      "alpha": {
+        "minimum": 0,
+        "maximum": 255,
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": 26258
+    },
+    {
+      "filename": "03b-hydraulic-linkage.png",
+      "source": "assets/getting-started/unsupported-hydraulic.svg",
+      "title": "Unsupported hydraulic linkage",
+      "placeholder": "IMAGE_03B_HYDRAULIC_LINKAGE",
+      "width": 1000,
+      "height": 640,
+      "transparent": true,
+      "sourceSha256": "d47aecfb0d3e293b555805485405978b92f7266ab9cbe591b02a754c6ddce9be",
+      "alpha": {
+        "minimum": 0,
+        "maximum": 255,
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": 62758
+    },
+    {
+      "filename": "04-name-head.png",
+      "source": "assets/getting-started/name-head-terminal.svg",
+      "title": "Terminal: Arm 1 - Head",
+      "placeholder": "IMAGE_04_NAME_HEAD",
+      "width": 1240,
+      "height": 1032,
+      "transparent": true,
+      "sourceSha256": "98c05ff85be828efb53a46aba790f951b1debf05371d0af0aaef6eac9ad9d8b0",
+      "alpha": {
+        "minimum": 0,
+        "maximum": 255,
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": 24430
+    },
+    {
+      "filename": "05-controller.png",
+      "source": "assets/blocks/controller-isometric.svg",
+      "title": "Control seat",
+      "placeholder": "IMAGE_05_CONTROLLER",
+      "width": 640,
+      "height": 640,
+      "transparent": true,
+      "sourceSha256": "28ebf2ab072743364e3ecf850507a81dfcbb8fee6ea45091d6c79f85cdd2eb5b",
+      "alpha": {
+        "minimum": 0,
+        "maximum": 255,
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": 44534
+    },
+    {
+      "filename": "06-arm-and-programmable-block.png",
+      "source": "assets/getting-started/arm-isometric-pb.svg",
+      "title": "Classical arm pose with programmable block",
+      "placeholder": "IMAGE_06_ARM_AND_PROGRAMMABLE_BLOCK",
+      "width": 1240,
+      "height": 1371,
+      "transparent": true,
+      "sourceSha256": "d758fd240cc51833022d66fd7579d54b483e016bba9a4002e2bcd2f698f866ff",
+      "alpha": {
+        "minimum": 0,
+        "maximum": 255,
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": 271324
+    },
+    {
+      "filename": "07-run-on.png",
+      "source": "assets/getting-started/run-terminal.svg",
+      "title": "Terminal: Argument On and Run",
+      "placeholder": "IMAGE_07_RUN_ON",
+      "width": 1240,
+      "height": 1373,
+      "transparent": true,
+      "sourceSha256": "4e4b0b26956b0dd9fee9555a2818c247d10b8413bbe25c0752ac102c5e6dd381",
+      "alpha": {
+        "minimum": 0,
+        "maximum": 255,
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": 32989
+    }
+  ]
+}

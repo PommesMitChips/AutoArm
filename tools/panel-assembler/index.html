@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AutoArm · Panel assembler</title><style>/*__FONT_CSS__*//*__UI_CSS__*/</style>
+</head><body data-pane="preview">
+  <header><h1>Panel assembler</h1></header>
+  <div class="toolbar" aria-label="Templates and export">
+    <label>Template <select id="template-choice" aria-label="Choose template"></select></label><button id="load-preset">Load</button><button id="import-template">Import template</button><button id="save-template">Save template</button><span class="spacer"></span>
+    <label class="export-target">Export <select id="export-target"><option value="current">Current group</option><option value="all">All groups as one image</option><option value="groups">Each group in a ZIP</option></select></label>
+    <label>Scale <select id="export-scale"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select></label><button id="export-svg">SVG</button><button id="export-png" class="primary">Export PNG</button>
+  </div>
+  <nav class="pane-tabs" aria-label="Utility panes"><button data-pane="library" aria-selected="false">Panel library</button><button data-pane="assembly" aria-selected="false">Assembly groups</button><button data-pane="preview" aria-selected="true">Preview</button></nav>
+  <main>
+    <aside class="library" aria-label="SVG library">
+      <div class="library-heading"><h2>Panel library</h2><small id="asset-count"></small></div><input id="search" type="search" placeholder="Search filenames" aria-label="Search panels"><select id="category" aria-label="Filter panel family"><option value="">All panels</option></select><div id="asset-list" class="asset-list"></div><button id="import-svg" class="import">Import SVG files</button>
+    </aside>
+    <section class="settings" aria-label="Assembly settings">
+      <div class="settings-heading"><h2>Assembly groups</h2><div class="group-bar"><select id="group-choice" aria-label="Current assembly group"></select><button id="new-group" class="icon-button" aria-label="Add group" title="Add group"></button><button id="delete-group" class="icon-button" aria-label="Remove group" title="Remove group"></button></div><div id="group-tabs" class="group-tabs" aria-label="Drop panels into a group"></div></div>
+      <div class="settings-scroll">
+        <label class="field"><span>Group name</span><input id="group-name" maxlength="200"></label><label class="field"><span>Output filename</span><input id="group-filename" maxlength="100"></label>
+        <div class="pair"><label class="field"><span>Layout</span><select id="group-layout"><option value="vertical">Vertical stack</option><option value="horizontal">Horizontal row</option><option value="poster">Poster</option></select></label><label class="field"><span id="group-width-label">Width at 1×, px</span><input id="group-width" type="number" min="100" max="8000" step="any"></label></div>
+        <div class="pair"><label class="field"><span>Panel spacing, px</span><input id="group-gap" type="number" min="0" max="2000" step="any"></label><label class="field"><span>Outer padding, px</span><input id="group-padding" type="number" min="0" max="2000" step="any"></label></div>
+        <div id="poster-settings" hidden><label class="field"><span>Minimum poster height, px</span><input id="group-minHeight" type="number" min="100" max="100000" step="any"></label><div class="poster-actions"><label class="check"><input id="poster-snap" type="checkbox" checked>Snap to shared edges</label><button id="poster-add-column">Add column</button></div></div>
+        <div class="section"><div class="section-title"><h2>Panel order</h2><small id="panel-count"></small></div><ol id="panel-order" class="order-list" aria-label="Drop and reorder panels"></ol></div>
+        <details class="section" id="template-expansion" open><summary>Template</summary><div>
+          <label class="field"><span>Template name</span><input id="template-name" maxlength="200"></label>
+          <h2 class="subheading">Colour groups</h2><div class="new-colour-group"><input id="new-colour-name" placeholder="New colour group name" aria-label="New colour group name" maxlength="200"><button id="create-colour-group">Create</button></div>
+          <div id="colour-groups-list" class="colour-groups-list"></div>
+          <div id="colour-group-properties"><label class="field"><span>Colour group name</span><input id="colour-group-name" maxlength="200"></label><div id="named-group-colour"></div><p id="colour-group-members" class="group-members"></p><button id="clear-colour-group" class="reset">Clear group selection</button></div>
+          <details class="section"><summary>Base template colours</summary><div><label class="field"><span>Colour preset</span><select id="colour-preset"><option value="original">Original panel colours</option><option value="workshop">Workshop light text</option><option value="paper">Dark text for light surfaces</option><option value="contrast">High contrast</option><option value="custom">Custom</option></select></label><div id="template-colours"></div><label class="field"><span>Line recolouring applies to</span><select id="line-scope"><option value="rules">Panel separator rules</option><option value="all">All strokes, including illustrations</option></select></label></div></details>
+        </div></details>
+        <details class="section"><summary>Group colour overrides</summary><div id="group-colours"></div></details>
+        <details class="section" id="panel-properties"><summary>Selected panel</summary><div><p id="selected-panel-name" class="selected-name muted"></p><div id="poster-placement-fields" class="triple" hidden><label class="field"><span>X, px</span><input id="panel-x" type="number" min="0" step="any"></label><label class="field"><span>Y, px</span><input id="panel-y" type="number" min="0" step="any"></label><label class="field"><span>Width, px</span><input id="panel-width" type="number" min="1" step="any"></label></div><div id="panel-colours"></div><label class="field"><span>Editable element</span><select id="element-choice" aria-label="Select an SVG element"></select></label><p id="element-description" class="element-description"></p><div id="element-colours"></div><button id="reset-element" class="reset">Reset selected element</button></div></details>
+      </div>
+    </section>
+    <section class="preview-column" aria-label="Assembly preview">
+      <div class="preview-heading"><div class="preview-title"><h2>Preview</h2><span id="dimensions"></span></div><span class="spacer"></span><div class="zoom-controls"><button id="zoom-out" aria-label="Zoom out">−</button><output id="zoom-readout">100%</output><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-fit">Fit</button></div><select id="preview-background" aria-label="Preview background"><option value="dark">Dark backdrop</option><option value="light">Light backdrop</option></select></div>
+      <div id="preview" class="preview-frame"></div>
+    </section>
+  </main>
+  <div id="status" class="toast" role="status" aria-live="polite" hidden><div class="toast-content"><span id="status-message"></span><a id="download-link" hidden>Download file</a></div><button id="close-status" class="close" aria-label="Dismiss notification"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 4 8 8M12 4 4 12"/></svg></button></div>
+  <div id="selection-controls" class="selection-controls" hidden><strong id="edit-group-label"></strong><div class="selection-shortcuts"><span>Click</span><span>Add</span><span>Ctrl + click</span><span>Remove</span><span>Shift + click</span><span>Add same colour</span><span>Ctrl + Shift + click</span><span>Remove same colour</span></div><p id="selection-summary"></p><div class="selection-actions"><button id="confirm-selection" class="primary">Confirm selection</button><button id="cancel-selection">Cancel</button></div></div>
+  <input type="file" id="template-file" accept=".json,application/json" hidden><input type="file" id="svg-files" accept=".svg,image/svg+xml" multiple hidden>
+  <script id="initial-data" type="application/json">/*__INITIAL_DATA__*/</script><script>/*__CORE_JS__*/</script><script>/*__APP_JS__*/</script>
+</body></html>

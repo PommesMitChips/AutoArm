@@ -34,7 +34,7 @@ internal static class ScriptPack
     {
         using var dll = new MemoryStream();
         var result = compilation.Emit(dll);
-        foreach (var d in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error || d.Id == "CS0162" || d.Id == "CS0649").Take(20)) Console.Error.WriteLine(d);
+        foreach (var d in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error || d.Id == "CS0162" || d.Id == "CS0649" || d.Id == "CS0414").Take(20)) Console.Error.WriteLine(d);
         if (!result.Success) throw new Exception("C# 6 compilation failed.");
     }
 
@@ -239,7 +239,7 @@ internal static class ScriptPack
         var packed = (automaticArm ? "// AutoArm v" : "// MArmOS mixed mining arm v") + version.Trim('"') + " - paste this ENTIRE file into the programmable block.\n" +
             "// Starts OFF. Stop before replacing; Check, then On. No collision avoidance.\n" +
             "// Settings remain editable. Full source: " + Path.GetFileName(tree.FilePath) + ".\n" + settings +
-            "// Generated implementation: edit the readable source and run tools/" + (automaticArm ? "Build-AutoArm.ps1" : "Build.ps1") + ".\n" + compact + "\n";
+            "// Generated implementation: edit the track src files and run Build.ps1.\n" + compact + "\n";
         if (automaticArm) packed = "// AutoArm " + version.Trim('"') + "\n// PB script. Settings: Custom Data.\n" + settings + compact + "\n";
         var packedCompilation = Compile(packed, output);
         Check(packedCompilation);
@@ -262,11 +262,14 @@ internal static class ScriptPack
         var namespaceAliases = fast ? new NamespaceCompression.Result(packed, new List<RepetitionCompression.Decision>()) : NamespaceCompression.Run(packed);
         packed = namespaceAliases.Source;
         repetitions.Report.AddRange(namespaceAliases.Report);
+        var syntax=SyntaxCompression.Run(packed,!expressionBodies);
+        packed=syntax.Source;
+        repetitions.Report.AddRange(syntax.Report);
         if (fast) repetitions.Report.Add(new RepetitionCompression.Decision("mode", "token-only", 0, 0, true, "No forwarding helpers; preserve runtime call structure."));
         Check(Compile(packed, output));
         if (packed.Length > 100000) throw new Exception($"Packed script still exceeds 100,000 characters: {packed.Length}.");
         File.WriteAllText(output, packed, new UTF8Encoding(false));
-        var mapPath = Path.Combine(Path.GetDirectoryName(output)!, "tools", "ScriptPack", "obj", Path.GetFileNameWithoutExtension(output) + ".names.json");
+        var mapPath = Path.Combine(Path.GetDirectoryName(output)!, ".build", Path.GetFileNameWithoutExtension(output) + ".names.json");
         Directory.CreateDirectory(Path.GetDirectoryName(mapPath)!);
         File.WriteAllText(mapPath, JsonSerializer.Serialize(symbols.Select(kv => new { symbol = kv.Key.ToDisplayString(), name = kv.Value }), new JsonSerializerOptions { WriteIndented = true }));
         File.WriteAllText(Path.ChangeExtension(mapPath, ".compression.json"), JsonSerializer.Serialize(repetitions.Report, new JsonSerializerOptions { WriteIndented = true }));

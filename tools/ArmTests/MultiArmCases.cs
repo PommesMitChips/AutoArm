@@ -5,7 +5,7 @@ using VRageMath;
 
 internal static partial class Scenarios
 {
-    internal static void RunHosts(Type armType,Type toolType) { StartupSavedDriveCases(armType); ConfigurationViewCases(armType,toolType); MultiArmCases(armType,toolType); PilotPairCases(armType); MultiToolPilotCases(armType,toolType); Console.WriteLine($"Full host integration: PASS ({Tests.Assertions} assertions)."); }
+    internal static void RunHosts(Type armType,Type toolType) { StartupSavedDriveCases(armType); ConfigurationViewCases(armType,toolType); MultiArmCases(armType,toolType); PilotPairCases(armType); MultiToolPilotCases(armType,toolType); ArmClaimCases(armType); Console.WriteLine($"Full host integration: PASS ({Tests.Assertions} assertions)."); }
     static object Core(object host,string name)=>((IDictionary)Get(host,"Arms")!)[name]!;
     static void HostFrame(object host,Rig rig,string command="",double dt=1d/60,UpdateType? kind=null)
     { InvokeFrame(host,rig,command,kind??(command.Length==0?UpdateType.Update1:UpdateType.Terminal),command.Length==0?dt:0); }
@@ -53,7 +53,7 @@ internal static partial class Scenarios
             Check(Enabled(Core(scoped,"Arm 1"))&&!Enabled(Core(scoped,"Arm 2")),"Nonconforming shared layout silently enabled or stopped a valid neighbor.");
         }
         HostStartupInput(armType); MultiHostInput(armType); HostServices(armType); MultiToolHost(armType,toolType); MultiToolHost(armType,toolType,true); MultiToolHost(armType,toolType,true,true); MultiToolHost(armType,toolType,true,false,true);
-        File.WriteAllText(Path.Combine(Tests.Workspace,"examples/CustomData.ini"),rig.PB.CustomData);
+        File.WriteAllText(Path.Combine(Tests.RepoRoot,"docs/examples/CustomData.ini"),rig.PB.CustomData);
         Console.WriteLine("Multi-arm hosts: selected-only input, scoped/implicit commands, global inheritance and overrides, joint-kind/parallel rejection, independent Home/restart, cross-PB input selection and shared ToolSwap routing.");
     }
     static void HostStartupInput(Type type)
@@ -278,6 +278,18 @@ internal static partial class Scenarios
                 HostFrame(arm,f.Rig,"On(Arm 1)"); for(int i=0;i<80;i++) Tick();
                 Check(!Enabled(Core(arm,"Arm 1"))&&Enabled(Core(otherArm,"Arm 2"))&&f.Markers[0].CustomData==rejected,"Unsupported head format mutated data or stopped another arm.");
             }
+        }
+        if(!automatic&&!split&&!manual&&pilotChannel.Length==0)
+        {
+            var receiver=new Rig(f.Rig,"Replacement Arm PB");var empty=new MyIni();empty.Set("global","Format",7);RecordProxy.Of(receiver.PB).Values["CustomData"]=empty.ToString();
+            inventory.Add(receiver.PB);receiver.ExternalInventory=inventory;
+            bus.Bind(receiver);var replacement=Tests.Create(armType,receiver);BindClaimRun(arm,f.Rig);BindClaimRun(tools,toolRig);
+            HostFrame(replacement,receiver,"Claim Arm 1");
+            Check(!((System.Collections.IDictionary)Get(arm,"Arms")!).Contains("Arm 1")&&((System.Collections.IDictionary)Get(replacement,"Arms")!).Contains("Arm 1"),"Real ToolSwap blocked the ownership transfer.");
+            HostFrame(replacement,receiver,"On(Arm 1)");
+            for(int i=0;i<600&&!Enabled(Core(replacement,"Arm 1"));i++){Tick();HostFrame(replacement,receiver);}
+            Check(Enabled(Core(replacement,"Arm 1"))&&Enabled(Core(arm,"Arm 2")),"Transferred arm did not become ready with its existing shared ToolSwap PB: "+string.Join(" | ",receiver.Log.TakeLast(3))+" / "+string.Join(" | ",toolRig.Log.TakeLast(3))+" / "+string.Join(" | ",f.Rig.Log.TakeLast(3)));
+            HostFrame(replacement,receiver,"StopAll");
         }
         HostFrame(arm,f.Rig,"StopAll"); if(split) HostFrame(otherArm,g.Rig,"StopAll"); Tick(); NoVelocity(f.Rig); NoVelocity(g.Rig);
     }

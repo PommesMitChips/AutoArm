@@ -1,0 +1,733 @@
+{
+  "version": 1,
+  "scriptBuild": "1.1",
+  "sourceFiles": [
+    "stable/AutoArm_Source.txt",
+    "stable/AutoArm_ToolSwap_Source.txt"
+  ],
+  "panels": [
+    {
+      "file": "00-using-commands",
+      "family": "AutoArm + ToolSwap",
+      "title": "Using commands",
+      "intro": "Enter an argument in the appropriate programmable block and press Run. Verbs ignore case; arm and tool names use exact case.",
+      "rows": [
+        {
+          "syntax": "On",
+          "description": "An untargeted command applies to that PB's selected arm.",
+          "verbs": [],
+          "example": "On(Arm 2)"
+        },
+        {
+          "syntax": "<command> <arguments>, <arm>",
+          "description": "Target a named arm using a trailing comma, or place the arguments and arm name in parentheses.",
+          "verbs": [],
+          "example": "MoveTo(2,0,1,Arm 2)"
+        },
+        {
+          "syntax": "<command>; <command>",
+          "description": "A semicolon or newline creates an immediate batch. Commands do not wait for motion to finish.",
+          "verbs": [],
+          "note": "Use Path for ordered waypoints. Run each Tool or Park operation separately."
+        }
+      ],
+      "notes": [
+        "The AutoArm tool commands below are forwarded to its paired ToolSwap PB. ToolSwap's own PB does not accept AutoArm motion or tuning commands.",
+        "Reference checked against the current local scripts, build 5.1.0."
+      ]
+    },
+    {
+      "file": "autoarm-01-control",
+      "family": "AutoArm",
+      "title": "Control and setup",
+      "intro": "Use these commands in the AutoArm PB.",
+      "rows": [
+        {
+          "syntax": "On",
+          "description": "Load settings, discover equipment and enable arm control.",
+          "verbs": [
+            "on"
+          ]
+        },
+        {
+          "syntax": "Off / Stop",
+          "description": "Stop the target arm and cancel an active tool operation.",
+          "verbs": [
+            "off",
+            "stop"
+          ]
+        },
+        {
+          "syntax": "Toggle",
+          "description": "Switch arm control between ON and OFF.",
+          "verbs": [
+            "toggle"
+          ]
+        },
+        {
+          "syntax": "Hold",
+          "description": "Recapture and hold the current head pose. Can enable control when OFF.",
+          "verbs": [
+            "hold"
+          ]
+        },
+        {
+          "syntax": "Reload",
+          "description": "Apply Custom Data configuration while remaining OFF.",
+          "verbs": [
+            "reload"
+          ]
+        },
+        {
+          "syntax": "Rescan",
+          "description": "Rediscover topology and settings while remaining OFF.",
+          "verbs": [
+            "rescan"
+          ]
+        },
+        {
+          "syntax": "StopAll",
+          "description": "Stop every arm hosted by this AutoArm PB. Takes no arm argument.",
+          "verbs": [
+            "stopall"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "autoarm-02-selection-input",
+      "family": "AutoArm",
+      "title": "Arm selection and input",
+      "intro": "Without an explicit target, commands act on this PB's selected arm. Mode and input changes are temporary; use Custom Data for startup defaults.",
+      "rows": [
+        {
+          "syntax": "Select <arm>",
+          "description": "Select an arm and pair the sole occupied cockpit.",
+          "verbs": [
+            "select"
+          ],
+          "example": "Select Arm 1",
+          "note": "Use Select(HRZ, Arm 1) to pair and set HEAD, HRZ or VRT. Exactly one cockpit must be occupied."
+        },
+        {
+          "syntax": "Release <arm>",
+          "description": "Remove that arm's cockpit pairing; the arm holds its pose.",
+          "verbs": [
+            "release"
+          ],
+          "example": "Release(Arm 1)"
+        },
+        {
+          "syntax": "Mode <HEAD|HRZ|VRT>",
+          "description": "Change the movement view while preserving the held pose.",
+          "verbs": [
+            "mode",
+            "movementmode",
+            "controlmode"
+          ],
+          "aliases": "MovementMode, ControlMode",
+          "note": "HEAD: head axes. HRZ: cockpit axes. VRT: cockpit up/left/backward. Reload restores the configured view."
+        },
+        {
+          "syntax": "ReadKeyboard <On|Off|Toggle>",
+          "description": "Enable or disable translational cockpit input.",
+          "verbs": [
+            "readkeyboard",
+            "-rk"
+          ],
+          "aliases": "-rk"
+        },
+        {
+          "syntax": "ReadRoll <On|Off|Toggle>",
+          "description": "Enable or disable Q/E roll input.",
+          "verbs": [
+            "readroll"
+          ]
+        },
+        {
+          "syntax": "ReadMouse <On|Off|Toggle>",
+          "description": "Enable or disable mouse turning.",
+          "verbs": [
+            "readmouse",
+            "-rm"
+          ],
+          "aliases": "-rm"
+        }
+      ]
+    },
+    {
+      "file": "autoarm-03-facing",
+      "family": "AutoArm",
+      "title": "Aim the head",
+      "intro": "These actions change orientation while holding position. They do not translate the arm. Run On first; HRZ/VRT direction actions need an active cockpit.",
+      "rows": [
+        {
+          "syntax": "Face <Forward|Back|Left|Right|Up|Down>",
+          "description": "Aim toward a direction in the selected view.",
+          "verbs": [
+            "face"
+          ],
+          "example": "Face Up"
+        },
+        {
+          "syntax": "Forward / Back",
+          "description": "Standalone forms of Face Forward and Face Back.",
+          "verbs": [
+            "forward",
+            "back"
+          ]
+        },
+        {
+          "syntax": "Left / Right",
+          "description": "Standalone forms of Face Left and Face Right.",
+          "verbs": [
+            "left",
+            "right"
+          ]
+        },
+        {
+          "syntax": "Up / Down",
+          "description": "Standalone forms of Face Up and Face Down.",
+          "verbs": [
+            "up",
+            "down"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "autoarm-04-rotation",
+      "family": "AutoArm",
+      "title": "Rotation steps",
+      "intro": "Run On first. Named steps use the current StepSize; position stays held.",
+      "rows": [
+        {
+          "syntax": "Step <Yaw|Pitch|Roll> [degrees]",
+          "description": "Rotate the target. Omit the angle to use StepSize; an explicit angle may be any finite value.",
+          "verbs": [
+            "step"
+          ],
+          "example": "Step Yaw 15"
+        },
+        {
+          "syntax": "Yaw <degrees>",
+          "description": "Apply signed yaw, from -180 to +180 degrees.",
+          "verbs": [
+            "yaw"
+          ]
+        },
+        {
+          "syntax": "Pitch <degrees>",
+          "description": "Apply signed pitch, from -180 to +180 degrees.",
+          "verbs": [
+            "pitch"
+          ]
+        },
+        {
+          "syntax": "Roll <degrees>",
+          "description": "Apply signed roll, from -180 to +180 degrees.",
+          "verbs": [
+            "roll"
+          ]
+        },
+        {
+          "syntax": "YawLeft / YawRight",
+          "description": "Apply +StepSize / -StepSize yaw.",
+          "verbs": [
+            "yawleft",
+            "yawright"
+          ]
+        },
+        {
+          "syntax": "PitchUp / PitchDown",
+          "description": "Apply +StepSize / -StepSize pitch.",
+          "verbs": [
+            "pitchup",
+            "pitchdown"
+          ]
+        },
+        {
+          "syntax": "RollLeft / RollRight",
+          "description": "Apply -StepSize / +StepSize roll.",
+          "verbs": [
+            "rollleft",
+            "rollright"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "autoarm-05-speed-limits",
+      "family": "AutoArm",
+      "title": "Speed and tolerance",
+      "intro": "All ranges are inclusive. These runtime changes are temporary; edit Custom Data for persistent defaults.",
+      "rows": [
+        {
+          "syntax": "Speed <m/s>",
+          "description": "Head translation speed: 0 to 5 m/s.",
+          "verbs": [
+            "speed",
+            "-s"
+          ],
+          "aliases": "-s",
+          "note": "The persistent configuration key is HeadSpeed."
+        },
+        {
+          "syntax": "TurnSpeed <degrees/s>",
+          "description": "Head turn rate: 0.01 to 30 degrees/s.",
+          "verbs": [
+            "turnspeed"
+          ],
+          "note": "The persistent configuration key is HeadTurnSpeed."
+        },
+        {
+          "syntax": "StepSize <degrees>",
+          "description": "Default rotation increment: 0.01 to 180 degrees.",
+          "verbs": [
+            "stepsize",
+            "stepangle"
+          ],
+          "aliases": "StepAngle"
+        },
+        {
+          "syntax": "JointSpeed <RPM>",
+          "description": "Rotor and hinge speed cap: 0.01 to 5 RPM.",
+          "verbs": [
+            "jointspeed"
+          ]
+        },
+        {
+          "syntax": "PistonSpeed <m/s>",
+          "description": "Piston speed cap: 0.01 to 2 m/s.",
+          "verbs": [
+            "pistonspeed"
+          ]
+        },
+        {
+          "syntax": "HomeSpeed <RPM> <m/s>",
+          "description": "Home rotary and piston caps: 0.01\u20135 RPM and 0.01\u20132 m/s.",
+          "verbs": [
+            "homespeed"
+          ],
+          "example": "HomeSpeed 0.5 0.1"
+        },
+        {
+          "syntax": "OrientationTolerance <degrees>",
+          "description": "Allowed orientation error: 0 to 30 degrees. Stops control when changed; run On to recapture.",
+          "verbs": [
+            "orientationtolerance"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "autoarm-06-home",
+      "family": "AutoArm",
+      "title": "Save and return Home",
+      "intro": "Home is a saved set of actuator positions. It must match the current topology and equipment.",
+      "rows": [
+        {
+          "syntax": "SetHome",
+          "description": "Save the current actuator positions. Stops the arm and leaves it OFF.",
+          "verbs": [
+            "sethome",
+            "-sh"
+          ],
+          "aliases": "-sh"
+        },
+        {
+          "syntax": "GoHome",
+          "description": "Return to saved Home and stop on completion. Does not require a preceding On; pilot input cancels it.",
+          "verbs": [
+            "gohome",
+            "-gh"
+          ],
+          "aliases": "-gh",
+          "note": "Requires valid configuration, a matching saved Home and equipment permission."
+        },
+        {
+          "syntax": "HomeInfo",
+          "description": "Show information about the saved Home.",
+          "verbs": [
+            "homeinfo"
+          ]
+        },
+        {
+          "syntax": "HomeSpeed <RPM> <m/s>",
+          "description": "Set the rotary and piston speed caps used by GoHome.",
+          "verbs": [
+            "homespeed"
+          ],
+          "example": "HomeSpeed 0.5 0.1"
+        }
+      ]
+    },
+    {
+      "file": "autoarm-07-poses-paths",
+      "family": "AutoArm",
+      "title": "Explicit poses and paths",
+      "intro": "Run On first. MoveTo, OrientTo and MoveToPosOri use the base's Forward / Left / Up frame; positions are metres relative to the base.",
+      "rows": [
+        {
+          "syntax": "MoveTo <x> <y> <z>",
+          "description": "Move to a base-relative position while holding orientation.",
+          "verbs": [
+            "moveto"
+          ],
+          "example": "MoveTo 2 0 1"
+        },
+        {
+          "syntax": "OrientTo <fx> <fy> <fz> <ux> <uy> <uz>",
+          "description": "Set forward and up direction vectors while holding position.",
+          "verbs": [
+            "orientto"
+          ],
+          "example": "OrientTo 1 0 0 0 0 1"
+        },
+        {
+          "syntax": "MoveToPosOri <x> <y> <z> <fx> <fy> <fz> <ux> <uy> <uz>",
+          "description": "Set both the base-relative position and orientation.",
+          "verbs": [
+            "movetoposori"
+          ],
+          "note": "Vectors must be finite and form a valid orientation frame."
+        },
+        {
+          "syntax": "Path x y z fx fy fz ux uy uz | ...",
+          "description": "Execute 1\u201332 world-space poses, with nine numbers per pose and | between rows. The controller validates the whole path before motion and holds the final pose.",
+          "verbs": [
+            "path"
+          ],
+          "note": "Unlike the three pose commands, Path uses world coordinates. Requires ready equipment and Speed > 0. Maximum text length: 12,000 characters.",
+          "example": "Path <pose row> | <pose row>, Arm 2"
+        }
+      ]
+    },
+    {
+      "file": "autoarm-08-reports",
+      "family": "AutoArm",
+      "title": "Reports and diagnostics",
+      "intro": "Reports appear in the PB's status output. Status returns to the live display after a pinned report.",
+      "rows": [
+        {
+          "syntax": "Info",
+          "description": "Print the detailed controller report.",
+          "verbs": [
+            "info",
+            "headinfo",
+            "help",
+            "settings"
+          ],
+          "aliases": "HeadInfo, Help, Settings"
+        },
+        {
+          "syntax": "Status",
+          "description": "Resume the live status display.",
+          "verbs": [
+            "status"
+          ]
+        },
+        {
+          "syntax": "Check",
+          "description": "Validate configuration, topology and markers.",
+          "verbs": [
+            "check"
+          ]
+        },
+        {
+          "syntax": "Joints",
+          "description": "List detected joint groups and their movement/orientation weights.",
+          "verbs": [
+            "joints"
+          ]
+        },
+        {
+          "syntax": "Bindings",
+          "description": "Show toolbar actions, movement views and mouse switches.",
+          "verbs": [
+            "bindings"
+          ]
+        },
+        {
+          "syntax": "Version",
+          "description": "Print the controller version banner.",
+          "verbs": [
+            "version"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "autoarm-09-pivot-probe",
+      "family": "AutoArm",
+      "title": "PivotProbe diagnostics",
+      "intro": "An evidence tool for manual pivot trials. It does not calibrate pivots. Keep the controller OFF, topology ready and owned target velocities zero.",
+      "rows": [
+        {
+          "syntax": "PivotProbe",
+          "description": "Print the probe syntax help.",
+          "verbs": [
+            "pivotprobe"
+          ]
+        },
+        {
+          "syntax": "PivotProbe Start <group>",
+          "description": "Capture the starting snapshot of a rotor/hinge group. Group numbers start at 1; identify them with Joints.",
+          "verbs": [],
+          "example": "PivotProbe Start 1, Arm 2"
+        },
+        {
+          "syntax": "PivotProbe End",
+          "description": "Measure the manual trial and print residuals.",
+          "verbs": [],
+          "note": "After Start, manually jog only that group by 1\u201315 degrees, zero its targets and let it settle before End."
+        },
+        {
+          "syntax": "PivotProbe Report",
+          "description": "Print accepted trials; up to 12 are kept in RAM.",
+          "verbs": []
+        },
+        {
+          "syntax": "PivotProbe Reset",
+          "description": "Clear snapshots and trials without changing blocks.",
+          "verbs": []
+        }
+      ],
+      "notes": [
+        "Use the space form shown above. PivotProbe(Start,1) exceeds the host's default arity check; an explicit final arm target is required for that parenthesized form."
+      ]
+    },
+    {
+      "file": "autoarm-10-shortcuts-compatibility",
+      "family": "AutoArm",
+      "title": "Toolbar shortcuts and compatibility",
+      "intro": "Arguments 1\u20139 are fixed aiming shortcuts. They are not tool numbers: use Tool 1 or Tool 2 to change tools.",
+      "rows": [
+        {
+          "syntax": "DumpTrace",
+          "description": "Print Info plus a compatibility note. It does not export a trace.",
+          "verbs": [
+            "dumptrace"
+          ]
+        },
+        {
+          "syntax": "TraceClear",
+          "description": "Recognized no-op: reports that there is no trace buffer.",
+          "verbs": [
+            "traceclear"
+          ]
+        },
+        {
+          "syntax": "MiningArm <command>",
+          "description": "Optional legacy prefix accepted before an AutoArm command; not a standalone action.",
+          "verbs": []
+        }
+      ],
+      "shortcuts": [
+        [
+          "1",
+          "PitchUp"
+        ],
+        [
+          "2",
+          "Back"
+        ],
+        [
+          "3",
+          "PitchDown"
+        ],
+        [
+          "4",
+          "Left"
+        ],
+        [
+          "5",
+          "Down"
+        ],
+        [
+          "6",
+          "Right"
+        ],
+        [
+          "7",
+          "YawLeft"
+        ],
+        [
+          "8",
+          "Forward"
+        ],
+        [
+          "9",
+          "YawRight"
+        ]
+      ],
+      "notes": [
+        "Move, RelMove and RunFromPanel are recognized legacy names that this controller explicitly rejects."
+      ]
+    },
+    {
+      "file": "autoarm-11-tool-commands",
+      "family": "AutoArm",
+      "title": "Commands forwarded to ToolSwap",
+      "intro": "These commands run on AutoArm and are sent to its configured ToolSwap partner. Tool numbers and exact names must identify a discovered or configured profile.",
+      "rows": [
+        {
+          "syntax": "Tool <number|exact name>",
+          "description": "Park the current tool if needed, then pick up the requested tool. Successful pickup returns to control.",
+          "verbs": [
+            "tool",
+            "toolswap"
+          ],
+          "aliases": "ToolSwap",
+          "example": "Tool(2,Arm 1)",
+          "note": "Accepts an exact profile name or exact marker name. Use a number if a name is ambiguous."
+        },
+        {
+          "syntax": "Park [positive park number]",
+          "description": "Return the mounted tool to its stand and detach it. Omitting the number uses automatic matching; a number selects a configured ParkMerge port.",
+          "verbs": [
+            "park"
+          ],
+          "example": "Park 2",
+          "note": "Parking leaves the arm OFF. Run On to control the bare arm again."
+        },
+        {
+          "syntax": "ToolScan",
+          "description": "Explicit equipment scan and reconciliation. Remains OFF.",
+          "verbs": [
+            "toolscan"
+          ]
+        },
+        {
+          "syntax": "ToolInfo",
+          "description": "Print the tool equipment and operation report.",
+          "verbs": [
+            "toolinfo"
+          ]
+        },
+        {
+          "syntax": "SwapCancel",
+          "description": "Cancel and stop the tool operation without rolling it back. Inspect the equipment, then run On.",
+          "verbs": [
+            "swapcancel"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "toolswap-01-tool-operations",
+      "family": "ToolSwap",
+      "title": "Swap, park and scan",
+      "intro": "Use these arguments directly in the ToolSwap PB after successful On / initialization. AutoArm can also forward them. Run each equipment operation separately.",
+      "rows": [
+        {
+          "syntax": "Tool <number|exact name>",
+          "description": "Swap to a discovered or configured tool; park the current tool first.",
+          "verbs": [
+            "tool",
+            "toolswap"
+          ],
+          "aliases": "ToolSwap",
+          "example": "Tool 2",
+          "note": "Names may be an exact profile or marker name. Ambiguous names need a tool number."
+        },
+        {
+          "syntax": "Park [positive park number]",
+          "description": "Park and detach the current tool. A positive number selects the configured <ArmName> - ParkMerge N port.",
+          "verbs": [
+            "park"
+          ],
+          "note": "Without a number, use automatic matching. Parking remains OFF."
+        },
+        {
+          "syntax": "ToolScan",
+          "description": "Explicitly scan and reconcile the equipment. Remains OFF.",
+          "verbs": [
+            "toolscan"
+          ]
+        },
+        {
+          "syntax": "SwapCancel",
+          "description": "Cancel and stop the active operation without rollback. Inspect equipment, then run On.",
+          "verbs": [
+            "swapcancel"
+          ],
+          "note": "Stop an automatic swap before requesting another equipment operation."
+        }
+      ]
+    },
+    {
+      "file": "toolswap-02-control-reports",
+      "family": "ToolSwap",
+      "title": "Control, selection and reports",
+      "intro": "These are ToolSwap PB commands. AutoArm motion, Home, input and tuning commands belong in the AutoArm PB.",
+      "rows": [
+        {
+          "syntax": "On",
+          "description": "Configure and scan ToolSwap, reconcile equipment and request arm control after successful readiness.",
+          "verbs": [
+            "on"
+          ]
+        },
+        {
+          "syntax": "Reload",
+          "description": "Reload ToolSwap configuration while OFF.",
+          "verbs": [
+            "reload"
+          ]
+        },
+        {
+          "syntax": "Off / Stop",
+          "description": "Cancel and stop the equipment operation.",
+          "verbs": [
+            "off",
+            "stop"
+          ],
+          "note": "SwapCancel also cancels an operation."
+        },
+        {
+          "syntax": "ToolInfo",
+          "description": "Print the equipment and operation report.",
+          "verbs": [
+            "toolinfo",
+            "info",
+            "status"
+          ],
+          "aliases": "Info, Status"
+        },
+        {
+          "syntax": "Version",
+          "description": "Print the ToolSwap build version.",
+          "verbs": [
+            "version"
+          ]
+        },
+        {
+          "syntax": "Select <arm>",
+          "description": "Choose this ToolSwap PB's selected command target. Does not pair a cockpit or change the movement view.",
+          "verbs": [
+            "select"
+          ],
+          "example": "Select Arm 2"
+        },
+        {
+          "syntax": "StopAll",
+          "description": "Cancel every arm hosted by this ToolSwap PB. Takes no target argument.",
+          "verbs": [
+            "stopall"
+          ]
+        }
+      ],
+      "notes": [
+        "Release and Rescan are not ToolSwap commands. Set movement views and cockpit pairings through AutoArm instead."
+      ]
+    }
+  ],
+  "omittedFromPanels": {
+    "AutoArm": [
+      "onoff",
+      "-oo"
+    ],
+    "ToolSwap": []
+  }
+}

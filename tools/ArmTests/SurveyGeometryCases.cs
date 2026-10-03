@@ -8,7 +8,7 @@ internal static partial class Scenarios
 {
     // Import a read-only survey into proxy grids so the actual topology and
     // clearance implementations can consume its geometry. No game is touched.
-    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false,bool encounters=false,string? selfMode=null,bool armProfile=false,string? posture=null)
+    internal static void SurveyGeometryCases(Type armType,Type collisionType,string path,bool profile=false,bool encounters=false,string? selfMode=null,bool armProfile=false,string? posture=null,Type? plannerType=null)
     {
         string[] lines=File.ReadAllLines(path);
         Check(lines.Any(l=>l.StartsWith("RESULT STABLE ENDPOINTS")),"Survey endpoints were not stable.");
@@ -23,7 +23,7 @@ internal static partial class Scenarios
             foreach(var row in lines.Where(l=>l.StartsWith("CELLS "+id+" |")))
             {var values=row.Split('|')[1].Split(' ',StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();for(int x=values[0];x<=values[1];x++)cells.Add(new(x,values[2],values[3]));}
             GridCells(g,cells,Vector3D.Zero);var v=RecordProxy.Of(g).Values;
-            v["EntityId"]=id;v["GridSize"]=float.Parse(p[1][5..],System.Globalization.CultureInfo.InvariantCulture);v["WorldMatrix"]=ParseFrame(string.Join(" | ",p.Skip(3)).Substring(6));
+            v["EntityId"]=id;v["Closed"]=false;v["GridSize"]=float.Parse(p[1][5..],System.Globalization.CultureInfo.InvariantCulture);v["WorldMatrix"]=ParseFrame(string.Join(" | ",p.Skip(3)).Substring(6));
         }
         var configs=new Dictionary<long,string>();
         for(int i=0;i<lines.Length;i++)if(lines[i].StartsWith("CUSTOM DATA ")&&lines[i].EndsWith(" BEGIN"))
@@ -180,11 +180,43 @@ internal static partial class Scenarios
             foreach(var b in blocks.Values){RecordProxy.Of(b).Values["WorldMatrix"]=local[b.EntityId]*b.CubeGrid.WorldMatrix;SetModelAabb(b);}
             foreach(var j in joints){RecordProxy.Of(j.Top).Values["WorldMatrix"]=topLocal[j.Top.EntityId]*j.TopGrid.WorldMatrix;SetModelAabb(j.Top);}
         }
+        if(plannerType!=null){
+            var plannerRig=new Rig(rig,"Planner PB");var pv=RecordProxy.Of(plannerRig.PB).Values;pv["CubeGrid"]=rig.PB.CubeGrid;pv["Position"]=pv["Min"]=pv["Max"]=new Vector3I(-30,0,0);bus.Bind(plannerRig);
+            var pc=new MyIni();pc.Set("Planner","Format",1);pc.Set("Planner","ArmPB","@"+rig.PB.EntityId);pc.Set("Planner","Arm","Arm 1");pc.Set("Planner","NodeLimit",1024);pv["CustomData"]=pc.ToString();
+            var ac=new MyIni();ac.TryParse(rig.PB.CustomData);ac.Set("global","Peers",ac.Get("global","Peers").ToString()+"\nPlanner PB | Plan");RecordProxy.Of(rig.PB).Values["CustomData"]=ac.ToString();ArmReady("Arm 1");ArmReady("Arm 2");
+            for(int i=0;i<150;i++){ArmFrame();CollisionFrame(collision);}var planner=JointCreate(plannerType,plannerRig);
+            foreach(string name in new[]{"Arm 1","Arm 2"}){
+                // This stage deliberately plans one arm against a stationary peer.
+                // A second ON controller can change its posture during idle hold.
+                ArmFrame("Stop("+(name=="Arm 1"?"Arm 2":"Arm 1")+")");Kinematics();ArmReady(name);for(int i=0;i<150;i++){ArmFrame();CollisionFrame(collision);}
+                JointFrame(planner,plannerRig,"Select "+name);var end=(MatrixD)Get(Get(Core(arm,name),"Topology")!,"EndPose")!;var baseBlock=rig.Blocks.Single(b=>b.CustomName==name+" - Base");
+                foreach(var goal in new[]{end.Translation+baseBlock.WorldMatrix.Up*.1,end.Translation}){var relativeGoal=goal-baseBlock.GetPosition();
+                string command="PreviewTo "+NumberForTest(Vector3D.Dot(relativeGoal,baseBlock.WorldMatrix.Forward))+" "+NumberForTest(Vector3D.Dot(relativeGoal,baseBlock.WorldMatrix.Left))+" "+NumberForTest(Vector3D.Dot(relativeGoal,baseBlock.WorldMatrix.Up));JointFrame(planner,plannerRig,command);
+                int ticks=0;for(;ticks<3000&&(string)Get(planner,"Phase")! !="Idle"&&(string)Get(planner,"Phase")! !="Preview";ticks++){ArmFrame();CollisionFrame(collision);JointFrame(planner,plannerRig);}
+                Console.WriteLine("SURVEY joint planning "+name+" | ticks "+ticks+" | "+plannerRig.Log.Last());
+                Check((string)Get(planner,"Phase")! =="Preview","Survey planner failed its smoke preview.");
+                int paths=bus.Sent.Count(m=>m.Source==plannerRig.PB.EntityId&&m.Data.Contains("Operation=PATH"));
+                JointFrame(planner,plannerRig,command.Replace("PreviewTo","MoveTo"));
+                for(ticks=0;ticks<15000&&(string)Get(planner,"Phase")! !="Complete"&&(string)Get(planner,"Phase")! !="Idle";ticks++){Kinematics();ArmFrame();CollisionFrame(collision);JointFrame(planner,plannerRig);}
+                Console.WriteLine("SURVEY joint execution "+name+" | ticks "+ticks+" | "+plannerRig.Log.Last());
+                if((string)Get(planner,"Phase")! !="Complete"){
+                    var core=Core(arm,name);var clients=(System.Collections.IDictionary)Get(Get(core,"Services")!,"Peers")!;var client=clients[plannerRig.PB.EntityId]!;var failed=Get(client,"Path");
+                    if(failed!=null){var targets=(double[][])Get(failed,"Joints")!;int step=(int)Get(failed,"Completed")!;int column=0;foreach(var group in Groups(core))foreach(var member in ((System.Collections.IEnumerable)Get(group,"M")!).Cast<object>()){var block=(IMyMechanicalConnectionBlock)Get(member,"B")!;Console.WriteLine("GUIDE DEBUG "+block.EntityId+" q="+Q(block)+" target="+targets[step][column++]+" rate="+(block is IMyMotorStator rr?rr.TargetVelocityRad:((IMyPistonBase)block).Velocity));}}
+                    Console.WriteLine("GUIDE DEBUG head error "+Get(core,"LastPositionError")+" / "+Get(core,"LastOrientationErrorDeg"));
+                }
+                Check((string)Get(planner,"Phase")! =="Complete","Survey joint execution failed: "+plannerRig.Log.Last()+" / "+rig.Log.Last());
+                Check(bus.Sent.Count(m=>m.Source==plannerRig.PB.EntityId&&m.Data.Contains("Operation=PATH"))>paths,"Survey execution published no checked route.");
+                var reached=(MatrixD)Get(Get(Core(arm,name),"Topology")!,"EndPose")!;Check(Vector3D.Distance(reached.Translation,goal)<.005,"Survey route missed actual head goal.");
+                }
+                Console.WriteLine("SURVEY round trip "+name+": PASS; live Collision, actual commanded joint-rate plant, 5 mm head tolerance.");
+            }
+            ArmFrame("StopAll");NoVelocity(rig);return;
+        }
         var benchRig=new Rig(rig,"Arm Bench");RecordProxy.Of(benchRig.PB).Values["CubeGrid"]=rig.PB.CubeGrid;bus.Bind(benchRig);
         var config=new MyIni();config.TryParse(rig.PB.CustomData);config.Set("global","Peers",config.Get("global","Peers").ToString()+"\nArm Bench | Plan");RecordProxy.Of(rig.PB).Values["CustomData"]=config.ToString();
         ArmReady("Arm 1");ArmReady("Arm 2");
         for(int i=0;i<100;i++){ArmFrame();CollisionFrame(collision);}
-        var bench=Tests.Create(Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_Bench.txt"))),benchRig);
+        var bench=Tests.Create(Tests.Script(File.ReadAllText(Path.Combine(Tests.Workspace,"AutoArm_Bench_Source.txt"))),benchRig);
         if(posture!=null) {
             HostFrame(bench,benchRig,"Rebase");
             for(int i=0;i<900&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();ArmFrame();CollisionFrame(collision);HostFrame(bench,benchRig);}
@@ -203,7 +235,7 @@ internal static partial class Scenarios
             HostFrame(bench,benchRig,command);
             for(int i=0;i<(encounters?216100:22000)&&(int)Get(bench,"Phase")! !=0;i++) {Kinematics();ArmFrame();CollisionFrame(collision);HostFrame(bench,benchRig);}
             Console.WriteLine("Imported ideal kinematic "+command+": "+benchRig.Log.Last());
-            if(posture!=null) {var report=new MyIni();report.TryParse(benchRig.PB.CustomData);File.WriteAllText(Path.Combine(Tests.Workspace,"tools/ArmTests/obj/posture-"+command.ToLowerInvariant()+".txt"),report.EndContent);CollisionFrame(collision,"Info");Console.WriteLine(collisionRig.Log.Last());}
+            if(posture!=null) {var report=new MyIni();report.TryParse(benchRig.PB.CustomData);File.WriteAllText(Path.Combine(Tests.Workspace,".build/posture-"+command.ToLowerInvariant()+".txt"),report.EndContent);CollisionFrame(collision,"Info");Console.WriteLine(collisionRig.Log.Last());}
             if(!benchRig.Log.Last().StartsWith("PASS:"))
             {
                 foreach(var message in bus.Sent.Where(s=>s.Source==collisionPB.EntityId).TakeLast(2))Console.WriteLine(message.Data);
@@ -218,7 +250,7 @@ internal static partial class Scenarios
                 }
             }
             if(encounters) {
-                File.WriteAllText(Path.Combine(Tests.Workspace,"tools/ArmTests/obj/encounter-"+command.ToLowerInvariant()+".txt"),(string)Get(bench,"SavedReport")!);
+                File.WriteAllText(Path.Combine(Tests.Workspace,".build/encounter-"+command.ToLowerInvariant()+".txt"),(string)Get(bench,"SavedReport")!);
                 Console.WriteLine("Encounter report recorded for "+command+"; model results do not establish live physics clearance.");
             }
         }

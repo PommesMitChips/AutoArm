@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "name": "Command reference",
+  "theme": {
+    "lineScope": "rules"
+  },
+  "scale": 1,
+  "groups": [
+    {
+      "id": "autoarm-commands",
+      "name": "AutoArm commands",
+      "filename": "autoarm-commands",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/00-using-commands.svg"
+        },
+        {
+          "asset": "commands/autoarm-01-control.svg"
+        },
+        {
+          "asset": "commands/autoarm-02-selection-input.svg"
+        },
+        {
+          "asset": "commands/autoarm-03-facing.svg"
+        },
+        {
+          "asset": "commands/autoarm-04-rotation.svg"
+        },
+        {
+          "asset": "commands/autoarm-05-speed-limits.svg"
+        },
+        {
+          "asset": "commands/autoarm-06-home.svg"
+        },
+        {
+          "asset": "commands/autoarm-07-poses-paths.svg"
+        },
+        {
+          "asset": "commands/autoarm-08-reports.svg"
+        },
+        {
+          "asset": "commands/autoarm-09-pivot-probe.svg"
+        },
+        {
+          "asset": "commands/autoarm-10-shortcuts-compatibility.svg"
+        },
+        {
+          "asset": "commands/autoarm-11-tool-commands.svg"
+        }
+      ]
+    },
+    {
+      "id": "toolswap-commands",
+      "name": "ToolSwap commands",
+      "filename": "toolswap-commands",
+      "layout": "vertical",
+      "width": 620,
+      "gap": 20,
+      "padding": 0,
+      "theme": {},
+      "panels": [
+        {
+          "asset": "commands/toolswap-01-tool-operations.svg"
+        },
+        {
+          "asset": "commands/toolswap-02-control-reports.svg"
+        }
+      ]
+    }
+  ]
+}

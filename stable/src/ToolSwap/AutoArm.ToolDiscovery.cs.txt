@@ -1,0 +1,98 @@
+// Tool hardware belongs to the occupied-cell region cut at facing merge pairs.
+// Names select only the reference block; detected identities live on that block.
+sealed partial class ToolSwapController
+{
+    bool AutoProfiles;
+    const string HeadData = "AutoArm Tool";
+    int HeadNumber(string name)
+    {
+        string prefix = ArmName + " - Head "; int number;
+        if (!name.StartsWith(prefix, StringComparison.Ordinal)) return 0;
+        string tail = name.Substring(prefix.Length); int split = tail.IndexOf(" - ", StringComparison.Ordinal);
+        return split > 0 && split + 3 < tail.Length && int.TryParse(tail.Substring(0, split), out number) && number > 0 ? number : 0;
+    }
+    bool AutoHeads(List<string> heads, out string why)
+    {
+        why = ""; var names = new SortedDictionary<int, string>();
+        foreach (var block in Inventory)
+        {
+            if (block.Closed || !block.IsSameConstructAs(P.Me)) continue;
+            int number = HeadNumber(block.CustomName); if (number == 0) continue;
+            if (names.ContainsKey(number)) { why = "More than one named block for " + ArmName + " - Head " + number + ". Keep that name only on its reference block."; return false; }
+            names.Add(number, block.CustomName);
+        }
+        foreach (var pair in names) heads.Add(pair.Value);
+        if (heads.Count == 0) { why = "Name one block per tool: " + ArmName + " - Head 1 - Drill."; return false; }
+        return true;
+    }
+    MyIni ReadHead(Profile head)
+    {
+        var data = AutoConfig.Saved(head.Marker.CustomData);
+        if (data.ContainsSection(HeadData) && data.Get(HeadData, "Format").ToInt32() != 1) throw new Exception(head.MarkerName + ": delete its AutoArm Tool section (unsupported Format).");
+        return data;
+    }
+    void HeadHint(Profile head)
+    {
+        var data = ReadHead(head);
+        if (data.Get(HeadData, "Arm").ToString() != ArmName) return;
+        var mount = P.GridTerminalSystem.GetBlockWithId(data.Get(HeadData, "Mount").ToInt64()) as IMyMotorStator;
+        if (mount != null && !mount.Closed && mount.CubeGrid.EntityId == head.Marker.CubeGrid.EntityId && ToolGeometry.Rotor(mount))
+        { head.Coupler = mount; head.CouplerName = mount.CustomName; }
+    }
+    bool DiscoverHardware(Profile head, out string why)
+    {
+        why = "";
+        var candidates = new List<IMyMotorStator>();
+        foreach (var block in Inventory)
+        {
+            var rotor = block as IMyMotorStator;
+            if (rotor == null || rotor.Closed || !ToolGeometry.Rotor(rotor) || !Scan.Blocks.Contains(rotor.EntityId)) continue;
+            if (!rotor.IsAttached || rotor.Top != null && ArmGrids.ContainsKey(rotor.Top.CubeGrid.EntityId)) candidates.Add(rotor);
+        }
+        if (head.Coupler == null || !candidates.Contains(head.Coupler))
+        {
+            if (candidates.Count != 1) { why = head.MarkerName + ": need exactly one eligible rotor base inside the tool; found " + candidates.Count; return false; }
+            head.Coupler = candidates[0];
+        }
+        head.CouplerName = head.Coupler.CustomName;
+        foreach (var other in Profiles) if (other != head && other.Coupler == head.Coupler) { why = "Tool regions share a rotor base."; return false; }
+        var data = ReadHead(head);
+        if (ScanHead) foreach (var merge in Scan.Merges)
+        {
+            IMyShipMergeBlock stand;
+            if (ToolGeometry.TryLockedPartner(merge, Axis, out stand) && !Scan.Blocks.Contains(stand.EntityId))
+            { head.Heads.Add(merge); if (ScanStand && !head.Stands.Contains(stand)) head.Stands.Add(stand); }
+        }
+        // Mounted tools have no connected stand pairs. Validate stored ports
+        // against the fresh tool region before reusing their identities.
+        if (ScanHead && head.Heads.Count == 0 && data.Get(HeadData, "Arm").ToString() == ArmName)
+            foreach (string token in data.Get(HeadData, "HeadMerges").ToString().Split(','))
+            {
+                long id; if (!long.TryParse(token, out id)) continue;
+                var merge = P.GridTerminalSystem.GetBlockWithId(id) as IMyShipMergeBlock;
+                if (merge == null || merge.Closed || !Scan.Blocks.Contains(id)) { why = "Stored head merge outside tool: " + head.MarkerName; return false; }
+                head.Heads.Add(merge);
+            }
+        if (ScanStand && head.Stands.Count == 0 && data.Get(HeadData, "Arm").ToString() == ArmName)
+            foreach (string token in data.Get(HeadData, "StandMerges").ToString().Split(','))
+            {
+                long id; if (!long.TryParse(token, out id)) continue;
+                var merge = P.GridTerminalSystem.GetBlockWithId(id) as IMyShipMergeBlock;
+                if (merge != null && !merge.Closed && !Scan.Blocks.Contains(id) && !head.Stands.Contains(merge)) head.Stands.Add(merge);
+            }
+        if (ScanHead && head.Heads.Count == 0 && !head.Coupler.IsAttached) { why = "Park " + head.MarkerName + " on facing connected merge blocks for automatic setup."; return false; }
+        if (!RefreshTip(out why)) return false;
+        var saved = AutoConfig.Saved(P.Storage);
+        head.Relock = saved.Get(SwapSection, "PB").ToInt64() == P.Me.EntityId && saved.Get(SwapSection, "Relock").ToInt64() == head.Coupler.EntityId;
+        return true;
+    }
+    static string PortIds(List<IMyShipMergeBlock> ports)
+    { var ids = new List<string>(); foreach (var port in ports) ids.Add(port.EntityId.ToString()); return string.Join(",", ids); }
+    void SaveHead(Profile head)
+    {
+        var data = ReadHead(head); data.Set(HeadData, "Format", 1); data.Set(HeadData, "Arm", ArmName);
+        data.Set(HeadData, "Marker", head.Marker.EntityId); data.Set(HeadData, "Mount", head.Coupler.EntityId);
+        data.Set(HeadData, "HeadMerges", PortIds(head.Heads)); data.Set(HeadData, "StandMerges", PortIds(head.Stands));
+        string text = data.ToString(); if (text != head.Marker.CustomData) head.Marker.CustomData = text;
+    }
+}

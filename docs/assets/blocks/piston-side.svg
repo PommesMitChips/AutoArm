@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">Piston — side view</title>
+  <desc id="desc">Partly extended piston, with a rectangular base, telescoping stages and separate moving head plate. Transparent, schematic guide artwork.</desc>
+  <metadata>{&quot;view&quot;:&quot;side&quot;,&quot;units&quot;:&quot;schematic&quot;,&quot;projection&quot;:&quot;orthographic&quot;,&quot;canvas&quot;:[320,320],&quot;scale&quot;:1.19231,&quot;anchors&quot;:{&quot;mount&quot;:[160.0,284.0],&quot;head&quot;:[160.0,36.0],&quot;axis&quot;:[160.0,133.77]}}</metadata>
+  <g id="artwork" stroke-linejoin="round" stroke-linecap="round">
+    <polyline data-part="shaft" points="186.23,131.38 186.23,80.12" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="shaft" points="188.62,88.46 188.62,75.35" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="shaft" points="177.88,75.35 177.88,51.5" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="shaft" points="142.12,75.35 142.12,51.5" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="shaft" points="133.77,131.38 133.77,80.12" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="shaft" points="131.38,88.46 131.38,75.35" fill="none" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="shaft" points="177.88,75.35 177.73,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="142.27,75.35 142.12,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="186.23,131.38 186.01,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="133.99,131.38 133.77,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="188.62,88.46 188.37,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="131.63,88.46 131.38,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="177.73,75.35 177.28,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="142.72,75.35 142.27,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="186.01,131.38 185.34,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="134.66,131.38 133.99,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="188.37,88.46 187.64,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="132.36,88.46 131.63,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="177.28,75.35 176.52,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="143.48,75.35 142.72,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="176.52,75.35 175.49,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="144.51,75.35 143.48,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="185.34,131.38 184.23,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="135.77,131.38 134.66,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="187.64,88.46 186.44,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="133.56,88.46 132.36,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="175.49,75.35 174.19,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="145.81,75.35 144.51,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="shaft" points="177.88,75.35 177.73,75.35 177.28,75.35 176.52,75.35 175.49,75.35 174.19,75.35 172.65,75.35 170.89,75.35 168.94,75.35 166.84,75.35 164.63,75.35 162.33,75.35 160,75.35 157.67,75.35 155.37,75.35 153.16,75.35 151.06,75.35 149.11,75.35 147.35,75.35 145.81,75.35 144.51,75.35 143.48,75.35 142.72,75.35 142.27,75.35 142.12,75.35 142.12,51.5 142.27,51.5 142.72,51.5 143.48,51.5 144.51,51.5 145.81,51.5 147.35,51.5 149.11,51.5 151.06,51.5 153.16,51.5 155.37,51.5 157.67,51.5 160,51.5 162.33,51.5 164.63,51.5 166.84,51.5 168.94,51.5 170.89,51.5 172.65,51.5 174.19,51.5 175.49,51.5 176.52,51.5 177.28,51.5 177.73,51.5 177.88,51.5" fill="#e5edf0" stroke="#e5edf0" stroke-width="0.55"/>
+    <polyline data-part="shaft" points="184.23,131.38 182.72,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="137.28,131.38 135.77,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="174.19,75.35 172.65,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="147.35,75.35 145.81,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="186.44,88.46 184.78,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="135.22,88.46 133.56,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="172.65,75.35 170.89,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="149.11,75.35 147.35,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="182.72,131.38 180.81,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="139.19,131.38 137.28,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="170.89,75.35 168.94,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="151.06,75.35 149.11,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="184.78,88.46 182.7,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="137.3,88.46 135.22,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="168.94,75.35 166.84,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="153.16,75.35 151.06,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="shaft" points="186.23,131.38 186.01,131.38 185.34,131.38 184.23,131.38 182.72,131.38 180.81,131.38 178.55,131.38 175.97,131.38 173.12,131.38 170.04,131.38 166.79,131.38 163.42,131.38 160,131.38 156.58,131.38 153.21,131.38 149.96,131.38 146.88,131.38 144.03,131.38 141.45,131.38 139.19,131.38 137.28,131.38 135.77,131.38 134.66,131.38 133.99,131.38 133.77,131.38 133.77,80.12 133.99,80.12 134.66,80.12 135.77,80.12 137.28,80.12 139.19,80.12 141.45,80.12 144.03,80.12 146.88,80.12 149.96,80.12 153.21,80.12 156.58,80.12 160,80.12 163.42,80.12 166.79,80.12 170.04,80.12 173.12,80.12 175.97,80.12 178.55,80.12 180.81,80.12 182.72,80.12 184.23,80.12 185.34,80.12 186.01,80.12 186.23,80.12" fill="#e5edf0" stroke="#e5edf0" stroke-width="0.55"/>
+    <polyline data-part="shaft" points="166.84,75.35 164.63,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="155.37,75.35 153.16,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="180.81,131.38 178.55,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="141.45,131.38 139.19,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="shaft" points="188.62,88.46 188.37,88.46 187.64,88.46 186.44,88.46 184.78,88.46 182.7,88.46 180.23,88.46 177.42,88.46 174.31,88.46 170.95,88.46 167.41,88.46 163.74,88.46 160,88.46 156.26,88.46 152.59,88.46 149.05,88.46 145.69,88.46 142.58,88.46 139.77,88.46 137.3,88.46 135.22,88.46 133.56,88.46 132.36,88.46 131.63,88.46 131.38,88.46 131.38,75.35 131.63,75.35 132.36,75.35 133.56,75.35 135.22,75.35 137.3,75.35 139.77,75.35 142.58,75.35 145.69,75.35 149.05,75.35 152.59,75.35 156.26,75.35 160,75.35 163.74,75.35 167.41,75.35 170.95,75.35 174.31,75.35 177.42,75.35 180.23,75.35 182.7,75.35 184.78,75.35 186.44,75.35 187.64,75.35 188.37,75.35 188.62,75.35" fill="#496370" stroke="#496370" stroke-width="0.55"/>
+    <polyline data-part="shaft" points="164.63,75.35 162.33,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="157.67,75.35 155.37,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="162.33,75.35 160,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="160,75.35 157.67,75.35" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="182.7,88.46 180.23,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="139.77,88.46 137.3,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="178.55,131.38 175.97,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="144.03,131.38 141.45,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="180.23,88.46 177.42,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="142.58,88.46 139.77,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="175.97,131.38 173.12,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="146.88,131.38 144.03,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="173.12,131.38 170.04,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="149.96,131.38 146.88,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="177.42,88.46 174.31,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="145.69,88.46 142.58,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="170.04,131.38 166.79,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="153.21,131.38 149.96,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="174.31,88.46 170.95,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="149.05,88.46 145.69,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="166.79,131.38 163.42,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="156.58,131.38 153.21,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="163.42,131.38 160,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="160,131.38 156.58,131.38" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="170.95,88.46 167.41,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="152.59,88.46 149.05,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="167.41,88.46 163.74,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="156.26,88.46 152.59,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="163.74,88.46 160,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polyline data-part="shaft" points="160,88.46 156.26,88.46" fill="none" stroke="#263e4b" stroke-width="1.8"/>
+    <polygon data-part="base" points="198.15,284 189.81,284 189.81,272.08 198.15,272.08" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="130.19,284 121.85,284 121.85,272.08 130.19,272.08" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="198.15,272.08 189.81,272.08 189.81,140.92 198.15,140.92" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="130.19,272.08 121.85,272.08 121.85,140.92 130.19,140.92" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="198.15,146.88 189.81,146.88 189.81,131.38 198.15,131.38" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="130.19,146.88 121.85,146.88 121.85,131.38 130.19,131.38" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="head" points="198.15,51.5 189.81,51.5 189.81,36 198.15,36" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="head" points="130.19,51.5 121.85,51.5 121.85,36 130.19,36" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="189.81,284 130.19,284 130.19,272.08 189.81,272.08" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="189.81,272.08 130.19,272.08 130.19,140.92 189.81,140.92" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="base" points="189.81,146.88 130.19,146.88 130.19,131.38 189.81,131.38" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="head" points="189.81,51.5 130.19,51.5 130.19,36 189.81,36" fill="#b4c5cd" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="detail" points="136.15,260.15 183.85,260.15 183.85,169.54 136.15,169.54" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="detail" points="143.31,231.54 176.69,231.54 176.69,198.15 143.31,198.15" fill="#496370" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="detail" points="140.33,141.52 179.67,141.52 179.67,135.56 140.33,135.56" fill="#e9b34c" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="detail" points="148.67,226.17 171.33,226.17 171.33,203.52 148.67,203.52" fill="#314b59" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="detail" points="145.69,253.6 174.31,253.6 174.31,176.1 145.69,176.1" fill="#849da9" stroke="#263e4b" stroke-width="2.2"/>
+    <polyline data-part="detail" points="150.46,222 169.54,222" fill="none" stroke="#849da9" stroke-width="1.4"/>
+    <polyline data-part="detail" points="150.46,214.85 169.54,214.85" fill="none" stroke="#849da9" stroke-width="1.4"/>
+    <polyline data-part="detail" points="150.46,207.69 169.54,207.69" fill="none" stroke="#849da9" stroke-width="1.4"/>
+    <polyline data-part="detail" points="148.08,251.81 171.92,251.81" fill="none" stroke="#314b59" stroke-width="2"/>
+    <polyline data-part="detail" points="148.08,239.88 171.92,239.88" fill="none" stroke="#314b59" stroke-width="2"/>
+    <polyline data-part="detail" points="148.08,227.96 171.92,227.96" fill="none" stroke="#314b59" stroke-width="2"/>
+    <polygon data-part="hardware" points="134.96,269.69 125.42,269.69 125.42,150.46 134.96,150.46" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+    <polygon data-part="hardware" points="194.58,269.69 185.04,269.69 185.04,150.46 194.58,150.46" fill="#e5edf0" stroke="#263e4b" stroke-width="2.2"/>
+  </g>
+</svg>
