@@ -65,7 +65,7 @@ Place a programmable block on the same construct as the arm. This block will run
 ## 7. Load the script and run `On`
 
 1. Open the programmable block's **Edit** window.
-2. Paste the entire [AutoArm Arm script](https://github.com/PommesMitChips/AutoArm/blob/v5.0.4/AutoArm_Compact.txt) and save it.
+2. Paste the entire [AutoArm script](../stable/AutoArm_Compact.txt) and save it.
 3. Enter **`On`** in **Argument**, then press **Run**.
 
 For a fresh programmable block, AutoArm discovers arm names from the base markers and generates its configuration.
@@ -84,6 +84,4 @@ Sit in your cockpit or take control of your ship controller. Use **WASD** and **
 
 ## 9. Go further with AutoArm
 
-See the [full documentation](../README.md) for configuration, tool swapping and more detailed instructions. Also see [troubleshooting](TROUBLESHOOTING.md).
-
-Diagrams use simplified schematic proportions. The terminal mockups are independently drawn vectors based on the supplied game screenshots.
+See the [README](../README.md) for additional scripts and tools, [configuration examples](examples) for Custom Data settings, and [Troubleshooting](TROUBLESHOOTING.md) for common problems.

@@ -27,6 +27,9 @@
   examples belong in docs. Every generated graphic/model/preview and graphic
   package belongs in docs/assets; executable tool distributions belong under
   their tool's dist. Generator code never belongs in docs/assets.
+- Write user-facing documentation as setup and usage instructions. Keep
+  conversation history, migration commentary and internal validation reports out
+  of READMEs and guides.
 - Preserve historical tags and evidence. Ignore temporary caches/compiler output.
   Do not add archived release directories or publish implicitly.
 - Communicate concisely. Use agents only when requested or required by applicable

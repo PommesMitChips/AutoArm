@@ -1,31 +1,74 @@
-# Repository tools
+# Tools
 
-Use root `Build.ps1` for PB builds. `build/Recipes.psm1` contains the original
-host adapters, specialization, validated packing and guarded prototype recipes.
+Run `Build.ps1` from the repository root to build scripts and assets.
+
+## Build scripts
+
+Script builds require PowerShell 7, .NET 10 and the Space Engineers game files.
+
+```powershell
+./Build.ps1 -Track experimental -Scripts All
+./Build.ps1 -Track experimental -Scripts AutoArm,ToolSwap
+./Build.ps1 -Track stable -Collection Release
+./Build.ps1 -Track experimental -Scripts AutoArm -SourceOnly
+./Build.ps1 -List
+```
+
+| Option | Use |
+| --- | --- |
+| `-Track` | Choose `stable` or `experimental`. Default: `experimental`. |
+| `-Scripts` | Build one script, a comma-separated list, or `All`. |
+| `-Collection` | Build a set of scripts; see the table below. |
+| `-SourceOnly` | Assemble readable source without compiling or compacting it. |
+| `-Test` | Build the release scripts and run the regression tests. |
+| `-GameBin` | Set the path to Space Engineers' `Bin64` folder. |
+| `-WhatIf` | Show what would be built. |
+| `-List` | List available scripts and collections. |
+
+| Collection | Scripts |
+| --- | --- |
+| `Core` | AutoArm, ToolSwap, Collision |
+| `Diagnostics` | Bench, Survey |
+| `Release` | All five release scripts |
+| `Prototypes` | All experimental prototypes |
+| `JointPlanner` | JointPlannerArm, Planner |
+
+Prototype builds use the sources in `experimental/src/`. Use `-RefreshPrototypes`
+to rebuild the prototypes from the current core scripts. The Reallocation
+refresh currently exceeds the programmable block's 100,000-character limit.
+
+## Build assets
+
+Requires Python and Pillow. Update the SVG pack and panel assembler with:
+
+```powershell
+./Build.ps1 -Collection Assets
+```
+
+Use `-Python` to choose a Python executable. Generated artwork goes into
+`docs/assets/`; the assembler's HTML and ZIP go into `tools/panel-assembler/dist/`.
+
+The individual generators are in `asset-builders/`. Block diagrams use Python's
+standard library. Model terminal labels also need fontTools. The `.mjs` image
+converters use Node.js and sharp.
+
+## Tests
+
+```powershell
+./Build.ps1 -Track experimental -Collection Release -Test
+node --test tools/panel-assembler/core.test.cjs
+```
+
+## Files
 
 | Folder or file | Purpose |
 | --- | --- |
-| `ScriptPack/` | C#6/API checking and semantic/token/IL-checked compaction. |
-| `PBCompileChecks/` | Installed SE type-safety and resource/memory rewriting. |
-| `ArmTests/` | Readable and actual compact regression harness and fixtures. |
-| `panel-assembler/` | Offline panel editor; shipped HTML and ZIP are in dist. |
-| `asset-builders/` | Graphics/model generators; outputs go to docs/assets. |
-| `design/` | Design guidance and internal visual-workflow records. |
-| `Test-JointPlanner.ps1` | Prototype simulation and optional profiling. |
-| `PivotEvidence.ps1` | Empirical pivot evidence utility. |
-
-PB tools need PowerShell 7, .NET 10 and installed game assemblies. Asset builders
-need Python and Pillow; outlined labels also need fontTools. The .mjs converters
-need Node.js and sharp, whose module path may be passed as their first argument.
-
-`Build.ps1 -Collection Assets` refreshes the existing SVG pack without discarding
-manual text/artwork edits, then rebuilds the standalone assembler. Individual
-full generators are in asset-builders; output paths are repository-relative.
-Legacy PNG-from-BBCode generators require their historical copy inputs, which
-have been removed. The existing editable SVG panels and assembler remain usable;
-the default Assets collection preserves those SVGs and rebuilds the assembler.
-
-The preserved WIP `*.Program.cs.txt` files are the normal prototype build inputs.
-`-RefreshPrototypes` applies the original guarded recipes to current core sources.
-The reallocation refresh currently exceeds the 100,000-character PB limit;
-its preserved WIP snapshot compacts and validates normally.
+| `build/` | Script assembly and build recipes |
+| `ScriptPack/` | C# checks and script compaction |
+| `PBCompileChecks/` | Compile checks against the game assemblies |
+| `ArmTests/` | Arm control and tool-swap tests |
+| `panel-assembler/` | Arrange SVG panels, change colours and export images |
+| `asset-builders/` | Generate diagrams, models and Workshop images |
+| `design/` | Design notes |
+| `Test-JointPlanner.ps1` | Joint planner simulation and profiling |
+| `PivotEvidence.ps1` | Collect pivot measurements |
