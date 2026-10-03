@@ -28,9 +28,6 @@ version of the same script.
 | --- | --- | --- |
 | AutoArm | Arm control | [Compact](stable/AutoArm_Compact.txt) · [Source](stable/AutoArm_Source.txt) |
 | ToolSwap | Automatic tool changes | [Compact](stable/AutoArm_ToolSwap_Compact.txt) · [Source](stable/AutoArm_ToolSwap_Source.txt) |
-| Collision Safety | Collision checks for the construct and registered arms | [Compact](stable/AutoArm_Collision_Compact.txt) · [Source](stable/AutoArm_Collision_Source.txt) |
-| Motion Bench | Motion tests and measurements | [Compact](stable/AutoArm_Bench_Compact.txt) · [Source](stable/AutoArm_Bench_Source.txt) |
-| Survey | Inspect an arm's geometry and configuration | [Compact](stable/AutoArm_Survey_Compact.txt) · [Source](stable/AutoArm_Survey_Source.txt) |
 
 Install ToolSwap in a second programmable block on the same construct. Tools
 start parked on merge-block stands, with a rotor base on each tool and a matching
