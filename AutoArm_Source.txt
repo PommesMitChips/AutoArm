@@ -42,7 +42,7 @@ public Program()
         }
         string prior = Saved.Get("AutoArm Host", "Selected").ToString();
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Arms.ContainsKey(prior)) Selected = prior;
-        SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
+        if (Order.Count > 0) SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
         Save();
     }
     catch (Exception e) { StopAll(e.Message); }
@@ -50,7 +50,7 @@ public Program()
 }
 public void Save()
 {
-    if (Order.Count == 0) return;
+    if (Order.Count == 0 && Configuration.Get(GlobalSection, "Format").ToInt32() != HostFormat) return;
     bool changed = Saved.Get("AutoArm Host", "PB").ToInt64() != Me.EntityId || Saved.Get("AutoArm Host", "Selected").ToString() != Selected || Saved.Get("AutoArm Host", "InputClock").ToInt64() != InputClock || Saved.Get("AutoArm Host", "InputOwner").ToInt64() != InputOwner;
     if (changed) { Saved.Set("AutoArm Host", "Format", 1); Saved.Set("AutoArm Host", "PB", Me.EntityId); Saved.Set("AutoArm Host", "Selected", Selected); Saved.Set("AutoArm Host", "InputClock", InputClock); Saved.Set("AutoArm Host", "InputOwner", InputOwner); }
     {
@@ -93,7 +93,7 @@ void LoadHost()
     if (!ini.TryParse(Me.CustomData) || ini.Get(GlobalSection, "Format").ToInt32() != HostFormat)
         throw new Exception("Custom Data requires [global] Format=" + HostFormat + ". Delete Custom Data.");
     var names = new List<string>(); ini.GetSections(names); names.Remove(GlobalSection);
-    if (names.Count < 1 || names.Count > 8) throw new Exception("Configure 1..8 named arm sections.");
+    if (names.Count > 8) throw new Exception("Configure at most 8 named arm sections.");
     foreach (string name in names) if (name.Trim() != name || name.Length == 0 || name.IndexOfAny(new char[] { ',', '|', '(', ')', ';', '\r', '\n' }) >= 0 || name.Equals(GlobalSection, StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid arm section name.");
     {
         var peers = new List<IMyProgrammableBlock>(); GridTerminalSystem.GetBlocksOfType(peers);
@@ -114,7 +114,7 @@ void LoadHost()
         Arms.Add(name, new ArmCore(this, name, ConfigFor(name), state));
     }
     if (!Arms.ContainsKey(Selected))
-    { string configured = ini.Get(GlobalSection, "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
+    { string configured = ini.Get(GlobalSection, "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names.Count == 0 ? "" : names[0]; }
     {UpdatePilots();
 }
     HostError = "";
@@ -199,10 +199,46 @@ void SelectArm(string name, bool claim = true, bool pair = false)
     { if (claim) { InputClock++; InputOwner = Me.EntityId; } UpdatePilots(); if (InputOwner == Me.EntityId) AnnounceInput(); }
     Save();
 }
+void UnclaimArm(string name)
+{
+    var data=new MyIni(); if(!data.TryParse(Me.CustomData)||data.Get(GlobalSection,"Format").ToInt32()!=HostFormat)throw new Exception("Invalid Custom Data.");
+    ArmCore core;if(Arms.TryGetValue(name,out core)){core.Stop("Arm unclaimed.");Arms.Remove(name);}
+    else{var state=new MyIni();if(state.TryParse(Saved.Get("State "+name,"Data").ToString()))ArmCore.SavedDrives.Stop(state,name,Me,GridTerminalSystem);}
+    var ids=new List<long>();foreach(var p in Owners)if(p.Value.Name==name)ids.Add(p.Key);foreach(long id in ids)Owners.Remove(id);
+    Order.Remove(name);Pilots.Remove(name);Saved.DeleteSection("Pilot "+name);Saved.DeleteSection("State "+name);data.DeleteSection(name);
+    if(Selected==name)Selected=Order.Count==0?"":Order[0];data.Set(GlobalSection,"SelectedArm",Selected);Me.CustomData=data.ToString();Configuration=data;
+    InputClock++;UpdatePilots();AnnounceInput();Save();Storage=Saved.ToString();InputNote=name+": unclaimed.";HostError="";
+}
+void ClaimArm(string name)
+{
+    if(name.Length==0||name.Equals(GlobalSection,StringComparison.OrdinalIgnoreCase)||name.IndexOfAny(new char[]{',','|','(',')',';','\r','\n'})>=0)throw new Exception("Invalid arm name.");
+    var data=new MyIni();if(!data.TryParse(Me.CustomData)||data.Get(GlobalSection,"Format").ToInt32()!=HostFormat)throw new Exception("Invalid Custom Data.");
+    var sections=new List<string>();data.GetSections(sections);if(!data.ContainsSection(name)&&sections.Count>8)throw new Exception("Arm limit is 8.");
+    var peers=new List<IMyProgrammableBlock>();GridTerminalSystem.GetBlocksOfType(peers);
+    var owners=new List<IMyProgrammableBlock>();var settings=new MyIni();
+    foreach(var peer in peers){if(peer==Me||peer.Closed||!peer.IsSameConstructAs(Me))continue;var ini=new MyIni();if(!ini.TryParse(peer.CustomData)||ini.Get(GlobalSection,"Format").ToInt32()!=HostFormat||!ini.ContainsSection(name))continue;
+        if(!peer.IsFunctional||peer.IsRunning)throw new Exception("Owner unavailable/busy: "+peer.CustomName);owners.Add(peer);
+        if(owners.Count==1){var keys=new List<MyIniKey>();ini.GetKeys(GlobalSection,keys);var own=new List<MyIniKey>();ini.GetKeys(name,own);keys.AddRange(own);foreach(var key in keys)if(key.Name!="Format"&&key.Name!="SelectedArm")settings.Set(name,key.Name,ini.Get(key).ToString());}
+    }
+    if(owners.Count==0&&Arms.ContainsKey(name)){SelectArm(name,true,false);InputNote=name+": already claimed here.";return;}
+    string toolRef=settings.ContainsKey(name,"ToolSwapPB")?settings.Get(name,"ToolSwapPB").ToString():data.Get(data.ContainsKey(name,"ToolSwapPB")?name:GlobalSection,"ToolSwapPB").ToString();toolRef=toolRef.Replace("{arm}",name);
+    var tools=new List<IMyProgrammableBlock>();foreach(var peer in peers){if(peer==Me||peer.Closed||!peer.IsSameConstructAs(Me)||toolRef.Length>0&&toolRef!=peer.CustomName&&toolRef!="@"+peer.EntityId)continue;var ini=new MyIni();if(!ini.TryParse(peer.CustomData)||ini.Get(GlobalSection,"Format").ToInt32()!=2||!ini.ContainsSection(name)||!ini.Get(ini.ContainsKey(name,"Tools.Enabled")?name:GlobalSection,"Tools.Enabled").ToBoolean(true))continue;if(!peer.IsFunctional||peer.IsRunning)throw new Exception("ToolSwap unavailable/busy.");tools.Add(peer);}
+    foreach(var tool in tools)if(!tool.TryRun("Stop("+name+")"))throw new Exception("ToolSwap stop unavailable.");
+    foreach(var owner in owners){bool enabled=owner.Enabled;try{owner.Enabled=true;if(!owner.TryRun("Unclaim "+name))throw new Exception("Owner did not run Unclaim: "+owner.CustomName);var check=new MyIni();if(!check.TryParse(owner.CustomData)||check.ContainsSection(name))throw new Exception("Owner did not release "+name+". Update its Arm script.");}finally{owner.Enabled=enabled;}}
+    var copied=new List<MyIniKey>();settings.GetKeys(name,copied);foreach(var key in copied)data.Set(name,key.Name,settings.Get(key).ToString());if(!data.ContainsSection(name))data.Set(name,"ToolSwapPB","");
+    Me.CustomData=data.ToString();
+    foreach(var peer in tools){var ini=new MyIni();if(!ini.TryParse(peer.CustomData))throw new Exception("ToolSwap config changed.");ini.Set(name,"Link.ArmPB","@"+Me.EntityId);peer.CustomData=ini.ToString();if(!peer.TryRun("Reload("+name+")"))throw new Exception("ToolSwap reload unavailable.");
+    }
+    LoadHost();SelectArm(name,true,false);InputNote=name+": claimed; run On, then Select to pair a cockpit.";
+}
 void Command(string raw)
 {
     string text = raw.Trim(); if (text.Length == 0) return;
     HostError = "";
+    {
+        if(text.StartsWith("Claim ",StringComparison.OrdinalIgnoreCase)){ClaimArm(text.Substring(6).Trim());return;}
+        if(text.StartsWith("Unclaim ",StringComparison.OrdinalIgnoreCase)){UnclaimArm(text.Substring(8).Trim());return;}
+    }
     if (text.StartsWith("Select ", StringComparison.OrdinalIgnoreCase)) { SelectArm(text.Substring(7).Trim(), true, true); return; }
     if (text.StartsWith("Release ", StringComparison.OrdinalIgnoreCase)) { { ReleasePilot(text.Substring(8).Trim()); return; } }
     if (text.Equals("StopAll", StringComparison.OrdinalIgnoreCase)) { StopAll("StopAll command."); return; }

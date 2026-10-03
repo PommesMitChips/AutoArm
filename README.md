@@ -100,6 +100,8 @@ If selection is attempted with multiple occupied cockpits, it fails immediately:
 
 `Release Arm 1` removes its cockpit pairing and leaves it holding. Selecting another arm from the same seat transfers that seat's control, including across Arm PBs. A missing or empty paired cockpit never falls back to another player's seat. Use `MovementMode` in each arm's Custom Data for its startup view; pairing remembers the seat, while runtime `Mode` choices reset on reload.
 
+To move an arm to another Arm PB, run `Claim Arm 1` on the destination PB. It stops that arm, removes its assignment from the previous PB and transfers its effective settings, including joint preferences. Its ToolSwap link follows it. Other arms keep their assignments. If the previous PB was deleted, the destination claims the arm directly. Update both Arm PBs and any linked ToolSwap PB to the current files before transferring. After transfer, run `On`, then `Select Arm 1` from the cockpit you want to pair. `Unclaim Arm 1` removes an assignment without transferring it.
+
 Commands without a target go to that PB's selected arm, which is a shared command target. In multiplayer, use explicit arm arguments for toolbar commands, including `Mode(HRZ, Arm 1)` and `Mode(VRT, Arm 2)` while both players are seated:
 
 ```text
@@ -135,6 +137,8 @@ Use a programmable block **Run** action with one of these arguments. The optiona
 | `On` | Load settings, discover/scan and enable control |
 | `Select Arm 1` / `Select(HRZ, Arm 1)` | Pair the sole occupied cockpit; optionally choose its view |
 | `Release Arm 1` | Remove that arm's cockpit pairing |
+| `Claim Arm 1` | Transfer the arm's assignment to this Arm PB |
+| `Unclaim Arm 1` | Stop the arm and remove its assignment from this PB |
 | `Off` / `Stop` | Stop the target arm |
 | `Hold` | Hold its current head pose |
 | `Reload` / `Rescan` | Reload settings / rediscover while OFF |

@@ -34,7 +34,7 @@ public Program()
         LoadHost();
         string prior = Saved.Get("AutoArm Host", "Selected").ToString();
         if (Saved.Get("AutoArm Host", "PB").ToInt64() == Me.EntityId && Arms.ContainsKey(prior)) Selected = prior;
-        SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
+        if (Order.Count > 0) SelectArm(Selected.Length == 0 ? Order[0] : Selected, InputOwner == 0);
         Save();
     }
     catch (Exception e) { StopAll(e.Message); }
@@ -42,7 +42,7 @@ public Program()
 }
 public void Save()
 {
-    if (Order.Count == 0) return;
+    if (Order.Count == 0 && Configuration.Get(GlobalSection, "Format").ToInt32() != HostFormat) return;
     bool changed = Saved.Get("AutoArm Host", "PB").ToInt64() != Me.EntityId || Saved.Get("AutoArm Host", "Selected").ToString() != Selected || Saved.Get("AutoArm Host", "InputClock").ToInt64() != InputClock || Saved.Get("AutoArm Host", "InputOwner").ToInt64() != InputOwner;
     if (changed) { Saved.Set("AutoArm Host", "Format", 1); Saved.Set("AutoArm Host", "PB", Me.EntityId); Saved.Set("AutoArm Host", "Selected", Selected); Saved.Set("AutoArm Host", "InputClock", InputClock); Saved.Set("AutoArm Host", "InputOwner", InputOwner); }
     foreach (var pair in Arms) if (pair.Value.Storage != pair.Value.SavedData) { Saved.Set("State " + pair.Key, "Data", pair.Value.Storage); pair.Value.SavedData = pair.Value.Storage; changed = true; }
@@ -74,7 +74,7 @@ void LoadHost()
     if (!ini.TryParse(Me.CustomData) || ini.Get(GlobalSection, "Format").ToInt32() != HostFormat)
         throw new Exception("Custom Data requires [global] Format=" + HostFormat + ". Delete Custom Data.");
     var names = new List<string>(); ini.GetSections(names); names.Remove(GlobalSection);
-    if (names.Count < 1 || names.Count > 8) throw new Exception("Configure 1..8 named arm sections.");
+    if (names.Count > 8) throw new Exception("Configure at most 8 named arm sections.");
     foreach (string name in names) if (name.Trim() != name || name.Length == 0 || name.IndexOfAny(new char[] { ',', '|', '(', ')', ';', '\r', '\n' }) >= 0 || name.Equals(GlobalSection, StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid arm section name.");
     var removed = new List<string>(); foreach (string name in Order) if (!names.Contains(name)) removed.Add(name);
     foreach (string name in removed) { Arms[name].Stop("Arm removed from configuration."); Saved.Set("State " + name, "Data", Arms[name].Storage); Arms.Remove(name); }
@@ -86,7 +86,7 @@ void LoadHost()
         Arms.Add(name, new ArmCore(this, name, ConfigFor(name), state));
     }
     if (!Arms.ContainsKey(Selected))
-    { string configured = ini.Get(GlobalSection, "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names[0]; }
+    { string configured = ini.Get(GlobalSection, "SelectedArm").ToString(); Selected = Arms.ContainsKey(configured) ? configured : names.Count == 0 ? "" : names[0]; }
     HostError = "";
 }
 string Effective(string arm, string key)
@@ -145,6 +145,8 @@ void SelectArm(string name, bool claim = true, bool pair = false)
     Selected = name;
     Save();
 }
+
+
 void Command(string raw)
 {
     string text = raw.Trim(); if (text.Length == 0) return;
@@ -344,7 +346,17 @@ public ArmCore(Program host, string name, MyIni config, string storage) { Host =
 void ConfigureLink()
 {
     MyIni ini; string why; if (!AutoConfig.ReadCurrent(this, CustomData, out ini, out why)) throw new Exception(why);
-    Link.Resolve(ini.Get(LinkSection, "ArmPB").ToString());
+    string name = ini.Get(LinkSection, "ArmPB").ToString(); var prior = Link.Peer;
+    Link.Resolve(name);
+    if (prior != null && prior != Link.Peer)
+    {
+        // Epochs and request acknowledgements belong to one owner PB.
+        Link = new ModuleLink(this); Link.Resolve(name);
+        Acquired = Initialised = RemoteReady = RemoteSettled = RemotePilot = Released = ResumeRequested = false;
+        Ack = HelloRequest = StopRequest = BuildRequest = MoveRequest = ResumeRequest = TransitionRequest = SentAnchor = ReportedPath = 0;
+        CompletedWaypoints = ResumeRetries = 0; ResumeSeconds = Clock = Heartbeat = 0;
+        RemoteError = SentPath = TransitionKind = ""; Topology.Head = null; Topology.Groups.Clear();
+    }
 }
 public void Main(string argument, UpdateType source)
 {
@@ -353,7 +365,7 @@ public void Main(string argument, UpdateType source)
     if (Finite(elapsed) && elapsed > 0) { Link.Age += elapsed; Clock += elapsed; Heartbeat += elapsed; if (ResumeRequested) ResumeSeconds += elapsed; }
     try
     {
-        if (Link.Peer == null) ConfigureLink();
+        if (Link.Peer == null || argument.Trim().Equals("Reload", StringComparison.OrdinalIgnoreCase) || argument.Trim().Equals("On", StringComparison.OrdinalIgnoreCase)) ConfigureLink();
         Receive();
         if (!string.IsNullOrWhiteSpace(argument) && argument != LinkTag)
         {

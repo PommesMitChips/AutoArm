@@ -72,7 +72,17 @@ public void Save() { }
 void ConfigureLink()
 {
     MyIni ini; string why; if (!AutoConfig.ReadCurrent(this, Me.CustomData, out ini, out why)) throw new Exception(why);
-    Link.Resolve(ini.Get(LinkSection, "ArmPB").ToString());
+    string name = ini.Get(LinkSection, "ArmPB").ToString(); var prior = Link.Peer;
+    Link.Resolve(name);
+    if (prior != null && prior != Link.Peer)
+    {
+        // Epochs and request acknowledgements belong to one owner PB.
+        Link = new ModuleLink(this); Link.Resolve(name);
+        Acquired = Initialised = RemoteReady = RemoteSettled = RemotePilot = Released = ResumeRequested = false;
+        Ack = HelloRequest = StopRequest = BuildRequest = MoveRequest = ResumeRequest = TransitionRequest = SentAnchor = ReportedPath = 0;
+        CompletedWaypoints = ResumeRetries = 0; ResumeSeconds = Clock = Heartbeat = 0;
+        RemoteError = SentPath = TransitionKind = ""; Topology.Head = null; Topology.Groups.Clear();
+    }
 }
 public void Main(string argument, UpdateType source)
 {
@@ -81,7 +91,7 @@ public void Main(string argument, UpdateType source)
     if (Finite(elapsed) && elapsed > 0) { Link.Age += elapsed; Clock += elapsed; Heartbeat += elapsed; if (ResumeRequested) ResumeSeconds += elapsed; }
     try
     {
-        if (Link.Peer == null) ConfigureLink();
+        if (Link.Peer == null || argument.Trim().Equals("Reload", StringComparison.OrdinalIgnoreCase) || argument.Trim().Equals("On", StringComparison.OrdinalIgnoreCase)) ConfigureLink();
         Receive();
         if (!string.IsNullOrWhiteSpace(argument) && argument != LinkTag)
         {

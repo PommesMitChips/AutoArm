@@ -24,9 +24,9 @@ Measured ordinary outputs before/after this pass:
 | Prototype Arm | 95,570 | 94,974 | 596 |
 | Prototype Planner | 40,082 | 39,980 | 102 |
 
-Counts are UTF-16 code units, matching the PB limit. Arm now has 4,164 characters free. These are compression changes; motion gains, ownership, pairing and configuration formats remain unchanged.
+Counts are UTF-16 code units, matching the PB limit. The table records compression savings before the ownership-transfer feature. With `Claim` and the ToolSwap session reset, current outputs are Arm 98,517, ToolSwap 57,686 and prototype Arm 97,660 characters. Collision, Bench and Planner sizes are unchanged. The production Arm has 1,483 characters free. Compression itself preserves behavior; the new ownership commands do not change motion gains or configuration formats.
 
-Validation includes semantic alias shadowing, scope/declaration guards, dangling-else behavior, readonly defensive-copy preservation, equal constants/nameof, and original/changed executable IL for structural edits. The readable and actual compressed behavior suite passes 206,872 assertions.
+Validation includes semantic alias shadowing, scope/declaration guards, dangling-else behavior, readonly defensive-copy preservation, equal constants/nameof, and original/changed executable IL for structural edits. The readable and actual compressed behavior suite passes 206,932 assertions, including live ownership transfer, missing-owner recovery and shared ToolSwap relinking.
 The regenerated prototype also passes its readable/compact detour checks and both surveyed-arm round trips under live Collision.
 
 `PBCompileChecks --combined` validates the installed type-safety and resource visitors and emits their rewritten tree, matching the compiler pipeline. `--full` retains the additional normalized-text reparse check; the installed visitor can leave an invalid serialized semicolon on expression-bodied declarations even though direct tree emission succeeds. Strict block-only outputs continue to pass that extra check. Neither mode bypasses memory-safety rewriting or aliases protected collection types.

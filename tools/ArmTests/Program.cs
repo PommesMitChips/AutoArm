@@ -106,6 +106,8 @@ internal static class Tests
             }
             if(args.Length==2&&args[1]=="--control-audit")
             { Scenarios.ControlAudit(Script(File.ReadAllText(args[0]))); return 0; }
+            if(args.Length==2&&args[1]=="--arm-claim")
+            {Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;var script=Script(File.ReadAllText(args[0]));if(Path.GetFileName(args[0]).EndsWith("_Compact.txt"))PackedProgramChecks.Register(script,Path.Combine(Workspace,"tools/ScriptPack/obj/"+Path.GetFileNameWithoutExtension(args[0])+".names.json"));Scenarios.ArmClaimCases(script);return 0;}
             if(args.Length==2&&args[1]=="--parallel-base")
             {Workspace=Path.GetDirectoryName(Path.GetFullPath(args[0]))!;Scenarios.ParallelBaseCases(Script(File.ReadAllText(args[0])));return 0;}
             if(args.Length==2&&args[1]=="--pilot-pair")
