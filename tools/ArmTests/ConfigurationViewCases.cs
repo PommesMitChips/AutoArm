@@ -11,6 +11,10 @@ internal static partial class Scenarios
         data.Set("Arm 1", "ToolSwapPB", "");
         RecordProxy.Of(rig.PB).Values["CustomData"] = data.ToString();
         var host = Tests.Create(armType, rig);
+        Check((double)Get(Core(host,"Arm 1"),"TurnDeg")! == 10 &&
+            Math.Abs((double)Get(Core(host,"Arm 1"),"HomeJointRpm")! * 6 - 10) < 1e-12 &&
+            (double)Get(Core(host,"Arm 1"),"HomePistonMps")! == 1,
+            "Hosted arm did not inherit the new rotation/Home defaults.");
 
         // Defaults are published after discovery. A live user edit made between
         // discovery and publication must survive, and applies only on reload.

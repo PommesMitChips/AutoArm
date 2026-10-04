@@ -60,7 +60,7 @@ double ResumeSeconds;
 int ResumeRetries;
 bool ExplicitStop;
 int CompletedWaypoints;
-double DefaultMove = .2, DefaultTurn = 5;
+double DefaultMove = 1, DefaultTurn = 10;
 public Program()
 {
     Runtime.UpdateFrequency = UpdateFrequency.Update1;
@@ -206,7 +206,7 @@ void Receive()
         Ack = ini.Get(LinkSection, "Ack").ToInt64(); RemoteReady = ini.Get(LinkSection, "Ready").ToBoolean(); RemoteStopped = ini.Get(LinkSection, "Stopped").ToBoolean();
         RemoteSettled = ini.Get(LinkSection, "Settled").ToBoolean(); RemotePilot = ini.Get(LinkSection, "Pilot").ToBoolean(); RemoteError = ini.Get(LinkSection, "Error").ToString();
         ReportedPath = ini.Get(LinkSection, "PathId").ToInt64(); CompletedWaypoints = ini.Get(LinkSection, "Completed").ToInt32();
-        DefaultMove = ini.Get(LinkSection, "DefaultMove").ToDouble(.2); DefaultTurn = ini.Get(LinkSection, "DefaultTurn").ToDouble(5);
+        DefaultMove = ini.Get(LinkSection, "DefaultMove").ToDouble(1); DefaultTurn = ini.Get(LinkSection, "DefaultTurn").ToDouble(10);
         Acquired = ini.Get(LinkSection, "Lease").ToBoolean();
         if (ResumeRequested && Ack >= ResumeRequest && !Acquired && (ini.Get(LinkSection, "Enabled").ToBoolean() || RemoteError.Length > 0))
         { ResumeRequested = false; Say(RemoteError.Length > 0 ? "Arm resume failed: " + RemoteError : "Tool ready; arm ON."); }

@@ -33,7 +33,7 @@ sealed partial class ToolSwapController
     bool Scanned, AxialPickup, StartAfterScan, SupportProven;
     string MountName = "", Axis = "Auto", Phase = "Idle", Last = "Tools disabled";
     bool EnabledTools, ScanHead = true, ScanStand = true, ScanPark = true, ParkOnly, DockMoved, PassiveScan;
-    double Clearance = .5, Move = .05, Turn = 2, PosTol = .01, AngleTol = 1, Timeout = 30, Elapsed;
+    double Clearance = .5, Move = 1, Turn = 10, PosTol = .01, AngleTol = 1, Timeout = 30, Elapsed;
     int CellLimit = 4096, ScanIndex, Stable, ParkIndex;
     double PhaseBudget, StableSeconds;
     ToolRegionScan Scan;
@@ -108,7 +108,7 @@ sealed partial class ToolSwapController
         MyIni ini;
         if (!AutoConfig.ReadCurrent(P, P.Me.CustomData, out ini, out why)) return false;
         bool enabled = false, sh = true, ss = true, sp = true;
-        var values = new double[] { .5, .05, 2, .01, 1, 30 };
+        var values = new double[] { .5, 1, 10, .01, 1, 30 };
         if (!Bool(ini, EnabledKey, ref enabled, out why) || !Bool(ini, "ScanHeadMerges", ref sh, out why) ||
             !Bool(ini, "ScanStandMerges", ref ss, out why) || !Bool(ini, "ScanParkMerges", ref sp, out why)) return false;
         var minimum = new double[] { .01, .001, .01, .001, .01, 1 }; var maximum = new double[] { 10, 1, 30, .05, 2, 600 };

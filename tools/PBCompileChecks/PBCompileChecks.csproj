@@ -7,6 +7,7 @@
     <GameBin Condition="'$(GameBin)' == ''">C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64</GameBin>
   </PropertyGroup>
   <ItemGroup>
+    <None Update="FrameworkSyntax.ps1" CopyToOutputDirectory="PreserveNewest" />
     <!-- This process must use the game's Roslyn, not ScriptPack's SDK Roslyn. -->
     <Reference Include="Microsoft.CodeAnalysis" HintPath="$(GameBin)/Microsoft.CodeAnalysis.dll" />
     <Reference Include="Microsoft.CodeAnalysis.CSharp" HintPath="$(GameBin)/Microsoft.CodeAnalysis.CSharp.dll" />

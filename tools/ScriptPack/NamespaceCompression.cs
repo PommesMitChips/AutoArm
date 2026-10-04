@@ -24,7 +24,7 @@ internal static class NamespaceCompression
         var owner=model.GetDeclaredSymbol(program)!;
         var used=root.DescendantTokens().Where(t=>t.IsKind(SyntaxKind.IdentifierToken)).Select(t=>t.ValueText).ToHashSet();
         int next=0x1E00;
-        string Fresh() { while(next<0xFFEF) { char c=(char)next++; if(char.IsLetter(c)&&SyntaxFacts.IsIdentifierStartCharacter(c)&&used.Add(c.ToString()))return c.ToString(); } throw new Exception("Identifier pool exhausted."); }
+        string Fresh() { while(next<0xFFEF) { char c=(char)next++; if(PortableIdentifiers.IsLetter(c)&&used.Add(c.ToString()))return c.ToString(); } throw new Exception("Identifier pool exhausted."); }
         string ns=Fresh(), implementation=Fresh(), host=Fresh(), instance=Fresh();
         var bridges=new Dictionary<string,string>();
         foreach(string name in new[]{"Me","GridTerminalSystem","Runtime","IGC","Storage","Echo"})bridges[name]=Fresh();
