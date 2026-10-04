@@ -86,6 +86,8 @@ internal static partial class Scenarios
     static void FCSettingsAndAtomicRefusal(Type type)
     {
         var rig=Fixtures.Serial(out _,out _,out _,out _);var script=Start(type,rig);var ini=FCIni(rig.PB.CustomData);
+        Check(Convert.ToDouble(Get(script,"MoveMps"))==1&&Convert.ToDouble(Get(script,"TurnDeg"))==10,"Fresh arm head speed defaults differ from 1 m/s and 10 deg/s.");
+        Check(Math.Abs(Convert.ToDouble(Get(script,"HomeJointRpm"))*6-10)<1e-12&&Convert.ToDouble(Get(script,"HomePistonMps"))==1,"Fresh GoHome actuator defaults differ from 10 deg/s and 1 m/s.");
         double[] values={.31,6,7,.6,.3,.7,.4,4,2,.8,.25,6,2,.6,.3,.22,4};
         string[] keys={"HeadSpeed","HeadTurnSpeed","StepAngle","JointSpeed","PistonSpeed","HomeJointSpeed","HomePistonSpeed","OrientationTolerance","JointAcceleration","PistonAcceleration","PositionCorrectionCap","OrientationCorrectionCap","TargetLead","PositionIntegralGain","OrientationIntegralGain","PositionIntegralCap","OrientationIntegralCap"};
         for(int i=0;i<keys.Length;i++)ini.Set("Config",keys[i],values[i]);

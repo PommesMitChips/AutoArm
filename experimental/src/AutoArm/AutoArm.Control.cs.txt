@@ -58,10 +58,10 @@ bool ToolWeightsLoaded;
 PilotMode MovementMode = PilotMode.HEAD;
 double MouseSensitivity = .025;
 string Status = "Starting OFF", LastFault = "";
-double MoveMps = 0.20, TurnDeg = 5.0, StepDeg = 5.0;
+double MoveMps = 1.0, TurnDeg = 10.0, StepDeg = 5.0;
 double OrientationToleranceDeg = 3.0;
 double JointRpm = 0.50, PistonMps = 0.20;
-double HomeJointRpm = 0.50, HomePistonMps = 0.20;
+double HomeJointRpm = 10.0 / 6, HomePistonMps = 1.0;
 
 void ApplySettings(AutoSettings s)
 {

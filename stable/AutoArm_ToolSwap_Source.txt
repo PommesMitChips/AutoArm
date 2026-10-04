@@ -335,7 +335,7 @@ double ResumeSeconds;
 int ResumeRetries;
 bool ExplicitStop;
 int CompletedWaypoints;
-double DefaultMove = .2, DefaultTurn = 5;
+double DefaultMove = 1, DefaultTurn = 10;
 public ArmCore(Program host, string name, MyIni config, string storage) { Host = host; ArmName = name; Config = config; Storage = storage;
     Frequency = UpdateFrequency.Update1;
     Link = new ModuleLink(this); Tools = new ToolSwapController(this);
@@ -480,7 +480,7 @@ void Receive()
         Ack = ini.Get(LinkSection, "Ack").ToInt64(); RemoteReady = ini.Get(LinkSection, "Ready").ToBoolean(); RemoteStopped = ini.Get(LinkSection, "Stopped").ToBoolean();
         RemoteSettled = ini.Get(LinkSection, "Settled").ToBoolean(); RemotePilot = ini.Get(LinkSection, "Pilot").ToBoolean(); RemoteError = ini.Get(LinkSection, "Error").ToString();
         ReportedPath = ini.Get(LinkSection, "PathId").ToInt64(); CompletedWaypoints = ini.Get(LinkSection, "Completed").ToInt32();
-        DefaultMove = ini.Get(LinkSection, "DefaultMove").ToDouble(.2); DefaultTurn = ini.Get(LinkSection, "DefaultTurn").ToDouble(5);
+        DefaultMove = ini.Get(LinkSection, "DefaultMove").ToDouble(1); DefaultTurn = ini.Get(LinkSection, "DefaultTurn").ToDouble(10);
         Acquired = ini.Get(LinkSection, "Lease").ToBoolean();
         if (ResumeRequested && Ack >= ResumeRequest && !Acquired && (ini.Get(LinkSection, "Enabled").ToBoolean() || RemoteError.Length > 0))
         { ResumeRequested = false; Say(RemoteError.Length > 0 ? "Arm resume failed: " + RemoteError : "Tool ready; arm ON."); }
@@ -939,7 +939,7 @@ sealed partial class ToolSwapController
     bool Scanned, AxialPickup, StartAfterScan, SupportProven;
     string MountName = "", Axis = "Auto", Phase = "Idle", Last = "Tools disabled";
     bool EnabledTools, ScanHead = true, ScanStand = true, ScanPark = true, ParkOnly, DockMoved, PassiveScan;
-    double Clearance = .5, Move = .05, Turn = 2, PosTol = .01, AngleTol = 1, Timeout = 30, Elapsed;
+    double Clearance = .5, Move = 1, Turn = 10, PosTol = .01, AngleTol = 1, Timeout = 30, Elapsed;
     int CellLimit = 4096, ScanIndex, Stable, ParkIndex;
     double PhaseBudget, StableSeconds;
     ToolRegionScan Scan;
@@ -1014,7 +1014,7 @@ sealed partial class ToolSwapController
         MyIni ini;
         if (!AutoConfig.ReadCurrent(P, P.CustomData, out ini, out why)) return false;
         bool enabled = false, sh = true, ss = true, sp = true;
-        var values = new double[] { .5, .05, 2, .01, 1, 30 };
+        var values = new double[] { .5, 1, 10, .01, 1, 30 };
         if (!Bool(ini, EnabledKey, ref enabled, out why) || !Bool(ini, "ScanHeadMerges", ref sh, out why) ||
             !Bool(ini, "ScanStandMerges", ref ss, out why) || !Bool(ini, "ScanParkMerges", ref sp, out why)) return false;
         var minimum = new double[] { .01, .001, .01, .001, .01, 1 }; var maximum = new double[] { 10, 1, 30, .05, 2, 600 };

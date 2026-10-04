@@ -1175,7 +1175,7 @@ enum PilotMode { HEAD, HRZ, VRT }
 sealed class AutoSettings
 {
     public static readonly string[] Keys = { "HeadSpeed", "HeadTurnSpeed", "StepAngle", "JointSpeed", "PistonSpeed", "HomeJointSpeed", "HomePistonSpeed", OrientationToleranceKey, "JointAcceleration", "PistonAcceleration", "PositionCorrectionCap", "OrientationCorrectionCap", "TargetLead", "PositionIntegralGain", "OrientationIntegralGain", "PositionIntegralCap", "OrientationIntegralCap", "MouseSensitivity", "PositionDamping", "OrientationDamping" };
-    public static readonly double[] Defaults = { .20, 5, 5, .50, .20, .50, .20, 3, 1, .40, .20, 5, 1.50, .50, .25, .20, 5, .025, 0, 0 };
+    public static readonly double[] Defaults = { 1, 10, 5, .50, .20, 10.0 / 6, 1, 3, 1, .40, .20, 5, 1.50, .50, .25, .20, 5, .025, 0, 0 };
     static readonly double[] Min = { 0, .01, .01, .01, .01, .01, .01, 0, .01, .01, 0, 0, .01, 0, 0, 0, 0, 0, 0, 0 };
     static readonly double[] Max = { 5, 30, 180, 5, 2, 5, 2, 30, 20, 10, 5, 30, 10, 5, 5, 5, 30, 10, 3, 3 };
     static readonly string[] Units = { "Head translation m/s", "Head rotation deg/s", "Toolbar step deg", "Rotor/hinge RPM cap", "Piston m/s cap", "Home RPM cap", "Home m/s cap", "Idle orientation band deg", "Rotor RPM/s cap", "Piston m/s^2 cap", "Correction m/s cap", "Correction deg/s cap", "Target lead m", "Bias gain 1/s^2; 0=off", "Angular bias gain 1/s^2; 0=off", "Bias m/s cap", "Bias deg/s cap", "Mouse scale; total rotation capped", "Velocity error damping; 0=off", "Angular velocity error damping; 0=off" };
@@ -1451,10 +1451,10 @@ bool ToolWeightsLoaded;
 PilotMode MovementMode = PilotMode.HEAD;
 double MouseSensitivity = .025;
 string Status = "Starting OFF", LastFault = "";
-double MoveMps = 0.20, TurnDeg = 5.0, StepDeg = 5.0;
+double MoveMps = 1.0, TurnDeg = 10.0, StepDeg = 5.0;
 double OrientationToleranceDeg = 3.0;
 double JointRpm = 0.50, PistonMps = 0.20;
-double HomeJointRpm = 0.50, HomePistonMps = 0.20;
+double HomeJointRpm = 10.0 / 6, HomePistonMps = 1.0;
 
 void ApplySettings(AutoSettings s)
 {

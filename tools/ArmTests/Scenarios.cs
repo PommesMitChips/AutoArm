@@ -198,7 +198,7 @@ internal static partial class Scenarios
         var af=(Vector3D)Get(angularScript,"LastFeedbackAngular")!;
         var ar=(Vector3D)Get(angularScript,"LastRequestedAngular")!;
         var frame=baseRotor.WorldMatrix;
-        var expected=new Vector3D(Vector3D.Dot(facing,frame.Forward),Vector3D.Dot(facing,frame.Left),Vector3D.Dot(facing,frame.Up))*(5*Math.PI/180);
+        var expected=new Vector3D(Vector3D.Dot(facing,frame.Forward),Vector3D.Dot(facing,frame.Left),Vector3D.Dot(facing,frame.Up))*(10*Math.PI/180);
         Check((ap-expected).Length()<1e-10,"Q/E roll direction differs from the original head controls.");
         Check(af.LengthSquared()>1e-8&&(ar-ap-af).Length()<1e-10,"Angular input is not additive to nonzero orientation correction.");
         Run(angularScript,"Stop");NoVelocity(angularRig);

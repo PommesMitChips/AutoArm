@@ -245,7 +245,7 @@ internal static partial class Scenarios
         DualStart(speed); speed.Command("Tool 2"); for(int i=0;i<8;i++) speed.Tick(); DualPlant(speed,"ApproachDock"); for(int i=0;i<12;i++) speed.Tick();
         var path=Get(Get(speed.Arm,"Tools")!,"Path")!;
         Check(((double[])Get(path,"Moves")!)[0]==2 && ((double[])Get(path,"Turns")!)[0]==12,"Travel did not inherit arm movement defaults.");
-        Check(((double[])Get(path,"Moves")!)[1]==.05 && ((bool[])Get(path,"Lines")!)[1],"Final approach lost its slow straight-line policy.");
+        Check(((double[])Get(path,"Moves")!)[1]==1 && ((double[])Get(path,"Turns")!)[1]==10 && ((bool[])Get(path,"Lines")!)[1],"Final approach lost its default speed caps or straight-line policy.");
         var displaced=speed.F.Markers[0].WorldMatrix; displaced.Translation+=Vector3D.Up*4; speed.F.MoveSource(displaced); for(int i=0;i<3;i++) speed.Tick();
         Check(((VRageMath.Vector3D)Get(speed.Arm,"LastRequestedLinear")!).Length()>1,"Manual correction cap still imposed a hidden travel-speed ceiling.");
         speed.Command("Stop"); for(int i=0;i<10;i++) speed.Tick();

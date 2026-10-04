@@ -167,6 +167,7 @@ internal static partial class Scenarios
                 armSettings.Get("global","PositionIntegralGain").ToDouble()==.5,"Headless ToolSwap startup did not publish arm defaults.");
             var toolSettings=new MyIni(); Check(toolSettings.TryParse(toolRig.PB.CustomData)&&toolSettings.ContainsKey("global","Tools.MoveSpeed")&&
                 !toolSettings.ContainsKey("Arm 1","Tools.MoveSpeed"),"Tool defaults shadowed global settings with generated arm overrides.");
+            Check(toolSettings.Get("global","Tools.MoveSpeed").ToDouble()==1&&toolSettings.Get("global","Tools.TurnSpeed").ToDouble()==10,"Fresh ToolSwap speed defaults differ from 1 m/s and 10 deg/s.");
             toolSettings.Set("global","Tools.MoveSpeed",.03); toolSettings.Set("Arm 1","Tools.MoveSpeed",.02);
             RecordProxy.Of(toolRig.PB).Values["CustomData"]=toolSettings.ToString();
             armSettings.Set("global","PositionIntegralGain",.4); armSettings.Set("Arm 1","PositionIntegralGain",.3);

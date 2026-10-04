@@ -309,12 +309,18 @@ readonly Program Host;
 public string CustomData = "", Storage, SavedData, Report = "";
 public MyIni Config;
 public bool ConfigChanged;
-bool ConfigDefaultsNeeded
-{
-    get
-    {
-        return false;
-    }
+bool ConfigDefaultsNeeded
+
+{
+
+    get
+
+    {
+
+        return false;
+
+    }
+
 }
 bool ReadConfig(string text, out MyIni ini, out string why) { ini = Config; why = ""; return true; }
 void WriteConfig(MyIni ini) { Config = ini; ConfigChanged = true; }
@@ -322,40 +328,70 @@ string ConfigText(MyIni ini) { return ""; }
 public UpdateFrequency Frequency = UpdateFrequency.Update10;
 public readonly Queue<MyIGCMessage> Inbox = new Queue<MyIGCMessage>();
 double Elapsed;
-public string Name
-{
-    get
-    {
-        return ArmName;
-    }
+public string Name
+
+{
+
+    get
+
+    {
+
+        return ArmName;
+
+    }
+
 }
-IMyProgrammableBlock Me
-{
-    get
-    {
-        return Host.Me;
-    }
+IMyProgrammableBlock Me
+
+{
+
+    get
+
+    {
+
+        return Host.Me;
+
+    }
+
 }
-IMyGridTerminalSystem GridTerminalSystem
-{
-    get
-    {
-        return Host.GridTerminalSystem;
-    }
+IMyGridTerminalSystem GridTerminalSystem
+
+{
+
+    get
+
+    {
+
+        return Host.GridTerminalSystem;
+
+    }
+
 }
-IMyGridProgramRuntimeInfo Runtime
-{
-    get
-    {
-        return Host.Runtime;
-    }
+IMyGridProgramRuntimeInfo Runtime
+
+{
+
+    get
+
+    {
+
+        return Host.Runtime;
+
+    }
+
 }
-IMyIntergridCommunicationSystem IGC
-{
-    get
-    {
-        return Host.IGC;
-    }
+IMyIntergridCommunicationSystem IGC
+
+{
+
+    get
+
+    {
+
+        return Host.IGC;
+
+    }
+
 }
 void Echo(string text) { Report = text; }
 public void Update(string argument, UpdateType source, double elapsed)
@@ -430,12 +466,18 @@ class AutoTopology
     {
         get { var pose = Focus == null ? End.WorldMatrix : Focus.WorldMatrix; pose.Translation = EndPosition; return pose; }
     }
-    public Vector3D EndPosition
-{
-    get
-    {
-        return Focus == null ? End.GetPosition() : Focus.CubeGrid.GridIntegerToWorld(Focus.Position);
-    }
+    public Vector3D EndPosition
+
+{
+
+    get
+
+    {
+
+        return Focus == null ? End.GetPosition() : Focus.CubeGrid.GridIntegerToWorld(Focus.Position);
+
+    }
+
 }
     IMyTerminalBlock EndpointOverride;
     string EndpointName = "";
@@ -1005,7 +1047,7 @@ enum PilotMode { HEAD, HRZ, VRT }
 sealed class AutoSettings
 {
     public static readonly string[] Keys = { "HeadSpeed", "HeadTurnSpeed", "StepAngle", "JointSpeed", "PistonSpeed", "HomeJointSpeed", "HomePistonSpeed", OrientationToleranceKey, "JointAcceleration", "PistonAcceleration", "PositionCorrectionCap", "OrientationCorrectionCap", "TargetLead", "PositionIntegralGain", "OrientationIntegralGain", "PositionIntegralCap", "OrientationIntegralCap", "MouseSensitivity", "PositionDamping", "OrientationDamping" };
-    public static readonly double[] Defaults = { .20, 5, 5, .50, .20, .50, .20, 3, 1, .40, .20, 5, 1.50, .50, .25, .20, 5, .025, 0, 0 };
+    public static readonly double[] Defaults = { 1, 10, 5, .50, .20, 10.0 / 6, 1, 3, 1, .40, .20, 5, 1.50, .50, .25, .20, 5, .025, 0, 0 };
     static readonly double[] Min = { 0, .01, .01, .01, .01, .01, .01, 0, .01, .01, 0, 0, .01, 0, 0, 0, 0, 0, 0, 0 };
     static readonly double[] Max = { 5, 30, 180, 5, 2, 5, 2, 30, 20, 10, 5, 30, 10, 5, 5, 5, 30, 10, 3, 3 };
     static readonly string[] Units = { "Head translation m/s", "Head rotation deg/s", "Toolbar step deg", "Rotor/hinge RPM cap", "Piston m/s cap", "Home RPM cap", "Home m/s cap", "Idle orientation band deg", "Rotor RPM/s cap", "Piston m/s^2 cap", "Correction m/s cap", "Correction deg/s cap", "Target lead m", "Bias gain 1/s^2; 0=off", "Angular bias gain 1/s^2; 0=off", "Bias m/s cap", "Bias deg/s cap", "Mouse scale; total rotation capped", "Velocity error damping; 0=off", "Angular velocity error damping; 0=off" };
@@ -1211,34 +1253,49 @@ static class AutoConfig
         }
         return true;
     }
-    static bool Valid(double v)
-{
-    return !double.IsNaN(v) && !double.IsInfinity(v) && v >= 0 && v <= 10;
+    static bool Valid(double v)
+
+{
+
+    return !double.IsNaN(v) && !double.IsInfinity(v) && v >= 0 && v <= 10;
+
 }
     static bool Refuse(AutoTopology t, string text, out string why)
     { why = text + " Custom Data and saved state were left untouched."; if (t != null) { t.Ready = false; t.ZeroOwned(); } return false; }
 }
 
 
-const string ConfigSection = "Config";
-const string ToolsSection = "Tools";
+const string ConfigSection = "Config";
+
+const string ToolsSection = "Tools";
 
 
 
-const string HomeSection = "AutoArm Home";
 
-const string ThreeDecimals = "0.000";
-const string EnabledKey = "Enabled";
-const string KeyboardKey = "ReadKeyboard";
-
-const string MovementModeKey = "MovementMode";
+const string HomeSection = "AutoArm Home";
 
 
-const string ToolWeightsSection = "AutoArm Tool Weights";
-const string OrientationToleranceKey = "OrientationTolerance";
-const string MouseKey = "ReadMouse";
-const string ForwardName = "Forward";
-const string RollKey = "ReadRoll";
+const string ThreeDecimals = "0.000";
+
+const string EnabledKey = "Enabled";
+
+const string KeyboardKey = "ReadKeyboard";
+
+
+const string MovementModeKey = "MovementMode";
+
+
+
+const string ToolWeightsSection = "AutoArm Tool Weights";
+
+const string OrientationToleranceKey = "OrientationTolerance";
+
+const string MouseKey = "ReadMouse";
+
+const string ForwardName = "Forward";
+
+const string RollKey = "ReadRoll";
+
 
 // ======================= DIRECT POSE CONTROL =======================
 // The topology/config fragment supplies AutoTopology, AutoGroup, AutoMember and
@@ -1280,10 +1337,10 @@ bool ToolWeightsLoaded;
 PilotMode MovementMode = PilotMode.HEAD;
 double MouseSensitivity = .025;
 string Status = "Starting OFF", LastFault = "";
-double MoveMps = 0.20, TurnDeg = 5.0, StepDeg = 5.0;
+double MoveMps = 1.0, TurnDeg = 10.0, StepDeg = 5.0;
 double OrientationToleranceDeg = 3.0;
 double JointRpm = 0.50, PistonMps = 0.20;
-double HomeJointRpm = 0.50, HomePistonMps = 0.20;
+double HomeJointRpm = 10.0 / 6, HomePistonMps = 1.0;
 
 void ApplySettings(AutoSettings s)
 {
@@ -1981,12 +2038,18 @@ static Vector3D Outside(Vector3D error, double deadband)
     return n > deadband && n > 1e-12 ? error * ((n - deadband) / n) : Vector3D.Zero;
 }
 
-bool BareControl
-{
-    get
-    {
-        return Tools != null && Tools.Focus != null;
-    }
+bool BareControl
+
+{
+
+    get
+
+    {
+
+        return Tools != null && Tools.Focus != null;
+
+    }
+
 }
 void ManualAxes(ref Vector3D f, ref Vector3D u)
 { if (BareControl) { var a = f; f = -u; u = a; } }
@@ -2709,29 +2772,44 @@ static Vector3D ClampLength(Vector3D value, double cap)
     return n > cap && n > 1e-12 ? value * (cap / n) : value;
 }
 
-static Vector3D InFrame(Vector3D value, MatrixD frame)
-{
-    return new Vector3D(Vector3D.Dot(value, frame.Forward), Vector3D.Dot(value, frame.Left), Vector3D.Dot(value, frame.Up));
+static Vector3D InFrame(Vector3D value, MatrixD frame)
+
+{
+
+    return new Vector3D(Vector3D.Dot(value, frame.Forward), Vector3D.Dot(value, frame.Left), Vector3D.Dot(value, frame.Up));
+
 }
 
-static double Clamp(double value, double lo, double hi)
-{
-    return Math.Max(lo, Math.Min(hi, value));
+static double Clamp(double value, double lo, double hi)
+
+{
+
+    return Math.Max(lo, Math.Min(hi, value));
+
 }
 
-static double Wrap(double angle)
-{
-    return angle - Math.Floor((angle + Math.PI) / (2 * Math.PI)) * (2 * Math.PI);
+static double Wrap(double angle)
+
+{
+
+    return angle - Math.Floor((angle + Math.PI) / (2 * Math.PI)) * (2 * Math.PI);
+
 }
 
-static bool Finite(double value)
-{
-    return !double.IsNaN(value) && !double.IsInfinity(value);
+static bool Finite(double value)
+
+{
+
+    return !double.IsNaN(value) && !double.IsInfinity(value);
+
 }
 
-static bool Finite(Vector3D value)
-{
-    return Finite(value.X) && Finite(value.Y) && Finite(value.Z);
+static bool Finite(Vector3D value)
+
+{
+
+    return Finite(value.X) && Finite(value.Y) && Finite(value.Z);
+
 }
 
 static bool Unlimited(IMyMotorStator r)
@@ -2740,9 +2818,12 @@ static bool Unlimited(IMyMotorStator r)
 }
 
 
-static bool ReadDouble(string text, out double value)
-{
-    return double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) && Finite(value);
+static bool ReadDouble(string text, out double value)
+
+{
+
+    return double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) && Finite(value);
+
 }
 
 
@@ -2855,19 +2936,28 @@ class PivotProbeTool
     Vector3D Candidate(Shot s,int i,int k){return k==0?s.Base[i]:k==1?s.Top[i]:(s.Base[i]+s.Top[i])*.5;}
     string Name(int k){return k==0?"Base center":k==1?"Top center":"Midpoint";}
     void Clear(){A=null;G=-1;Fingerprint="";}void Help(){Say("PivotProbe Start <group> | End | Report | Reset");}void Say(string s){P.Say(s);}
-    static double Deg(double a)
-{
-    return a * 180 / Math.PI;
+    static double Deg(double a)
+
+{
+
+    return a * 180 / Math.PI;
+
 }
 
     static bool Unit(ref Vector3D v){double n=v.Length();if(!Finite(v)||!Finite(n)||n<1e-10)return false;v/=n;return true;}
-    static Vector3D Point(Vector3D p, Vector3D o, MatrixD f)
-{
-    return InFrame(p - o, f);
+    static Vector3D Point(Vector3D p, Vector3D o, MatrixD f)
+
+{
+
+    return InFrame(p - o, f);
+
 }
-    static Vector3D Rot(Vector3D v, Vector3D a, double x)
-{
-    return v * Math.Cos(x) + Vector3D.Cross(a, v) * Math.Sin(x) + a * Vector3D.Dot(a, v) * (1 - Math.Cos(x));
+    static Vector3D Rot(Vector3D v, Vector3D a, double x)
+
+{
+
+    return v * Math.Cos(x) + Vector3D.Cross(a, v) * Math.Sin(x) + a * Vector3D.Dot(a, v) * (1 - Math.Cos(x));
+
 }
     static double Angle(Vector3D a,Vector3D b){double n=a.Length()*b.Length();return n>1e-12&&Finite(n)?Math.Acos(Math.Max(-1,Math.Min(1,Vector3D.Dot(a,b)/n)))*180/Math.PI:double.NaN;}
 }
@@ -2878,33 +2968,57 @@ class ArmTipInfo
 {
     public IMyCubeBlock Marker;
     public MatrixD Local;
-    public bool Closed
-{
-    get
-    {
-        return Marker.Closed;
-    }
+    public bool Closed
+
+{
+
+    get
+
+    {
+
+        return Marker.Closed;
+
+    }
+
 }
-    public IMyCubeGrid CubeGrid
-{
-    get
-    {
-        return Marker.CubeGrid;
-    }
+    public IMyCubeGrid CubeGrid
+
+{
+
+    get
+
+    {
+
+        return Marker.CubeGrid;
+
+    }
+
 }
-    public MatrixD WorldMatrix
-{
-    get
-    {
-        return Local * Marker.WorldMatrix;
-    }
+    public MatrixD WorldMatrix
+
+{
+
+    get
+
+    {
+
+        return Local * Marker.WorldMatrix;
+
+    }
+
 }
-    public Vector3I Position
-{
-    get
-    {
-        return CubeGrid.WorldToGridInteger(WorldMatrix.Translation);
-    }
+    public Vector3I Position
+
+{
+
+    get
+
+    {
+
+        return CubeGrid.WorldToGridInteger(WorldMatrix.Translation);
+
+    }
+
 }
 }
 
@@ -3059,12 +3173,18 @@ const string LinkSection = "Link";
 sealed class ModuleLink
 {
     readonly ArmCore P;
-    string ArmName
-{
-    get
-    {
-        return P.ArmName;
-    }
+    string ArmName
+
+{
+
+    get
+
+    {
+
+        return P.ArmName;
+
+    }
+
 }
     public IMyProgrammableBlock Peer;
     public readonly long Epoch;
@@ -3163,40 +3283,70 @@ sealed class ArmPath
     public Vector3D LineStart;
     public bool LineStarted;
     public bool Docking, Capture; public string NavBudgetKey = ""; public double NavBudgetDistance;
-    public double CurrentMove
-{
-    get
-    {
-        return Moves == null ? Move : Moves[Completed];
-    }
+    public double CurrentMove
+
+{
+
+    get
+
+    {
+
+        return Moves == null ? Move : Moves[Completed];
+
+    }
+
 }
-    public double CurrentTurn
-{
-    get
-    {
-        return Turns == null ? Turn : Turns[Completed];
-    }
+    public double CurrentTurn
+
+{
+
+    get
+
+    {
+
+        return Turns == null ? Turn : Turns[Completed];
+
+    }
+
 }
-    public bool Linear
-{
-    get
-    {
-        return Lines != null && Lines[Completed];
-    }
+    public bool Linear
+
+{
+
+    get
+
+    {
+
+        return Lines != null && Lines[Completed];
+
+    }
+
 }
-    public bool Done
-{
-    get
-    {
-        return Completed == Waypoints.Count;
-    }
+    public bool Done
+
+{
+
+    get
+
+    {
+
+        return Completed == Waypoints.Count;
+
+    }
+
 }
-    public MatrixD Current
-{
-    get
-    {
-        return Anchor == null ? Waypoints[Completed] : Waypoints[Completed] * Anchor.WorldMatrix;
-    }
+    public MatrixD Current
+
+{
+
+    get
+
+    {
+
+        return Anchor == null ? Waypoints[Completed] : Waypoints[Completed] * Anchor.WorldMatrix;
+
+    }
+
 }
 }
 ArmPath LocalPath;
@@ -3322,54 +3472,96 @@ sealed class ToolSwapLink
     bool RecoverBare, Resumed;
     ArmPath Path;
     double Move, Turn, PosTol, AngleTol, ReportElapsed, ResumeElapsed;
-    public bool Busy
-{
-    get
-    {
-        return Lease || ResumePending || Queued.Length > 0;
-    }
+    public bool Busy
+
+{
+
+    get
+
+    {
+
+        return Lease || ResumePending || Queued.Length > 0;
+
+    }
+
 }
-    public bool Automatic
-{
-    get
-    {
-        return Lease && Changing;
-    }
+    public bool Automatic
+
+{
+
+    get
+
+    {
+
+        return Lease && Changing;
+
+    }
+
 }
-    public bool Configured
-{
-    get
-    {
-        return PeerName.Length > 0;
-    }
+    public bool Configured
+
+{
+
+    get
+
+    {
+
+        return PeerName.Length > 0;
+
+    }
+
 }
-    public IMyTerminalBlock Endpoint
-{
-    get
-    {
-        return End;
-    }
+    public IMyTerminalBlock Endpoint
+
+{
+
+    get
+
+    {
+
+        return End;
+
+    }
+
 }
-    public IMyCubeBlock EndFrame
-{
-    get
-    {
-        return Frame;
-    }
+    public IMyCubeBlock EndFrame
+
+{
+
+    get
+
+    {
+
+        return Frame;
+
+    }
+
 }
-    public ArmTipInfo Focus
-{
-    get
-    {
-        return Tip;
-    }
+    public ArmTipInfo Focus
+
+{
+
+    get
+
+    {
+
+        return Tip;
+
+    }
+
 }
-    public long IgnoredMount
-{
-    get
-    {
-        return Ignore;
-    }
+    public long IgnoredMount
+
+{
+
+    get
+
+    {
+
+        return Ignore;
+
+    }
+
 }
     public bool IsToolJoint(IMyMechanicalConnectionBlock block) { return Couplers.Contains(block as IMyMotorStator); }
     public ToolSwapLink(ArmCore p) { P = p; Link = new ModuleLink(p); }
@@ -4026,19 +4218,31 @@ public void Limit(double[] rates)
     }
 }
 
-public string Summary
-{
-    get
-    {
-        return Enabled ? GoingHome ? "HOME" : LocalPath != null ? "PATH" : "ON" : Tools.Busy ? "TOOLS" : LastFault.Length > 0 ? LastFault : ConfigValid ? "OFF" : Status;
-    }
+public string Summary
+
+{
+
+    get
+
+    {
+
+        return Enabled ? GoingHome ? "HOME" : LocalPath != null ? "PATH" : "ON" : Tools.Busy ? "TOOLS" : LastFault.Length > 0 ? LastFault : ConfigValid ? "OFF" : Status;
+
+    }
+
 }
-public bool HasLayout
-{
-    get
-    {
-        return ConfigValid && Topology.Fingerprint.Length > 0;
-    }
+public bool HasLayout
+
+{
+
+    get
+
+    {
+
+        return ConfigValid && Topology.Fingerprint.Length > 0;
+
+    }
+
 }
 public void Stop(string why) { if (Tools != null) Tools.InhibitRecovery(); Fault(why); }
 public bool SharedSetting(string field) { return field != "ToolSwapPB" && field != "Peers"; }
@@ -4074,12 +4278,18 @@ public string Shape
         return string.Join("|", rows);
     }
 }
-public string WeightTable
-{
-    get
-    {
-        return AutoConfig.Weights(BodyGroups());
-    }
+public string WeightTable
+
+{
+
+    get
+
+    {
+
+        return AutoConfig.Weights(BodyGroups());
+
+    }
+
 }
 public bool ApplyWeights(string table, out string why)
 {
