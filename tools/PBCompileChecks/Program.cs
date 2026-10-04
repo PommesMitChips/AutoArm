@@ -22,6 +22,7 @@ internal static class Program
                 .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p)).ToArray();
             Regression(rewriter, references);
             bool full=args.Contains("--full"),combined=full||args.Contains("--combined"),noUnused=args.Contains("--no-unused");
+            FrameworkSyntax(args.Where(p=>p!="--full"&&p!="--combined"&&p!="--no-unused").ToArray());
             foreach (string path in args.Where(p=>p!="--full"&&p!="--combined"&&p!="--no-unused"))
             {
                 var result = Rewrite(File.ReadAllText(path), path, rewriter, references);
@@ -44,6 +45,21 @@ internal static class Program
             if (args.Length == 0) throw new Exception("Supply PB script paths to validate.");
         }
         catch (Exception e) { Console.Error.WriteLine(e); Environment.ExitCode = 1; }
+    }
+
+    static void FrameworkSyntax(string[] paths)
+    {
+        var native = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), @"System32\WindowsPowerShell\v1.0\powershell.exe");
+        var start = new System.Diagnostics.ProcessStartInfo(native) { UseShellExecute = false, CreateNoWindow = true,
+            RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (string argument in new[] { "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", Path.Combine(AppContext.BaseDirectory, "FrameworkSyntax.ps1") })
+            start.ArgumentList.Add(argument);
+        using var process = System.Diagnostics.Process.Start(start) ?? throw new Exception("Native Framework parser did not start.");
+        var stdout = process.StandardOutput.ReadToEndAsync(); var stderr = process.StandardError.ReadToEndAsync();
+        process.StandardInput.Write(System.Text.Json.JsonSerializer.Serialize(new { GameBin, Paths = paths.Select(Path.GetFullPath).ToArray() }));
+        process.StandardInput.Close(); process.WaitForExit();
+        Console.Write(stdout.GetAwaiter().GetResult()); string errors = stderr.GetAwaiter().GetResult();
+        if (process.ExitCode != 0) throw new Exception("Native .NET Framework syntax check failed.\n" + errors);
     }
 
     static Assembly? Resolve(AssemblyLoadContext context, AssemblyName name)

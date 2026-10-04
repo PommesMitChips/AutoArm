@@ -34,7 +34,7 @@ internal static class RepetitionCompression
             while (next < 0xFFEF)
             {
                 char c = (char)next++;
-                if (char.IsLetter(c) && SyntaxFacts.IsIdentifierStartCharacter(c) && used.Add(c.ToString())) return c.ToString();
+                if (PortableIdentifiers.IsLetter(c) && used.Add(c.ToString())) return c.ToString();
             }
             throw new Exception("No unused single-character compression identifier.");
         }

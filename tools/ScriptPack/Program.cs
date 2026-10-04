@@ -75,6 +75,7 @@ internal static class ScriptPack
             if (args[0] == "inspect") { Inspect(compilation); return; }
             if (args[0] == "test") { Regression.Run(args[1], args[2]); return; }
             if (args[0] != "pack" && args[0] != "pack-fast" && args[0] != "pack-pb" && args[0] != "pack-safe" || args.Length != 3) throw new Exception("Unknown command or missing output path.");
+            PortableIdentifiers.Check();
             CompressionChecks.Run();
             Pack(source, compilation, args[2], args[0] != "pack" && args[0] != "pack-safe", args[0] != "pack-pb" && args[0] != "pack-safe");
         }
@@ -416,7 +417,7 @@ internal static class ScriptPack
             for (int code = range.First; code <= range.Last; code++)
             {
                 char letter = (char)code;
-                if (char.IsLetter(letter) && SyntaxFacts.IsIdentifierStartCharacter(letter)) alphabet.Append(letter);
+                if (PortableIdentifiers.IsLetter(letter)) alphabet.Append(letter);
             }
         return alphabet.ToString();
     }
